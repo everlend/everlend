@@ -10,12 +10,14 @@ use solana_sdk::{
     transport,
 };
 
+pub mod liquidity_oracle;
 pub mod depositor;
 pub mod pool;
 pub mod pool_borrow_authority;
 pub mod pool_market;
 pub mod users;
 
+pub use liquidity_oracle::*;
 pub use depositor::*;
 pub use pool::*;
 pub use pool_borrow_authority::*;
@@ -30,6 +32,13 @@ pub fn program_test() -> ProgramTest {
         everlend_ulp::id(),
         processor!(everlend_ulp::processor::Processor::process_instruction),
     );
+
+    program.add_program(
+        "everlend_lo",
+        everlend_lo::id(),
+        processor!(everlend_lo::processor::Processor::process_instruction),
+    );
+
     program.add_program(
         "everlend_depositor",
         everlend_depositor::id(),

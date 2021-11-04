@@ -17,3 +17,8 @@ mod ulp {
     mod update_pool_borrow_authority;
     mod withdraw;
 }
+
+mod lo {
+    mod init_liquidity_oracle;
+    mod update_liquidity_oracle;
+}
