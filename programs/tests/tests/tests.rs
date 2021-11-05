@@ -1,7 +1,9 @@
 mod utils;
 
 mod depositor {
+    mod create_transit;
     mod deposit;
+    mod init;
 }
 
 mod ulp {

@@ -12,18 +12,18 @@ pub fn check_deposit(instruction: &AccountInfo, amount: u64) -> Result<(), Progr
     }
 
     // Load next instruction
-    let mm_instruction =
+    let money_market_instruction =
         sysvar::instructions::load_instruction_at_checked((index - 1) as usize, instruction)
             .unwrap();
 
     // Check that instruction is money market instruction
     // TODO: unfix money market program ids
-    if mm_instruction.program_id != spl_token_lending::id() {
+    if money_market_instruction.program_id != spl_token_lending::id() {
         return Err(DepositorError::IncorrectInstructionProgramId.into());
     }
 
     // TODO: add more checks
-    check_amount_from_deposit_instruction(mm_instruction.data, amount)?;
+    check_amount_from_deposit_instruction(money_market_instruction.data, amount)?;
 
     Ok(())
 }

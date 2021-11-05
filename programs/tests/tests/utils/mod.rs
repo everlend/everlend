@@ -13,13 +13,13 @@ use solana_sdk::{
 pub mod pool;
 pub mod pool_borrow_authority;
 pub mod pool_market;
-pub mod rebalancing;
+pub mod depositor;
 pub mod users;
 
 pub use pool::*;
 pub use pool_borrow_authority::*;
 pub use pool_market::*;
-pub use rebalancing::*;
+pub use depositor::*;
 pub use users::*;
 
 pub const EXP: u64 = 1_000_000_000;
