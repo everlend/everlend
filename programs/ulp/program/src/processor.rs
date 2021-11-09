@@ -436,7 +436,7 @@ impl Processor {
             .checked_div(total_minted as u128)
             .ok_or(ProgramError::InvalidArgument)? as u64;
 
-        // Burn from soruce pool token
+        // Burn from source pool token
         spl_token_burn(
             pool_mint_info.clone(),
             source_info.clone(),

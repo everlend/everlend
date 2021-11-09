@@ -149,3 +149,19 @@ pub async fn mint_tokens(
 
     context.banks_client.process_transaction(tx).await
 }
+
+pub async fn get_amount_allowed(
+    context: &mut ProgramTestContext,
+    test_pool: &TestPool,
+    test_pool_borrow_authority: &TestPoolBorrowAuthority,
+) -> u64 {
+    let token_amount = get_token_balance(context, &test_pool.token_account.pubkey()).await;
+    let total_amount_borrowed = test_pool.get_data(context).await.total_amount_borrowed;
+    let total_pool_amount = token_amount + total_amount_borrowed;
+
+    test_pool_borrow_authority
+        .get_data(context)
+        .await
+        .get_amount_allowed(total_pool_amount)
+        .unwrap()
+}

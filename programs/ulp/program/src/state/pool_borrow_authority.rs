@@ -47,6 +47,10 @@ impl PoolBorrowAuthority {
 
     /// Repay funds
     pub fn repay(&mut self, amount: u64) -> ProgramResult {
+        if self.amount_borrowed.lt(&amount) {
+            return Err(LiquidityPoolsError::RepayAmountCheckFailed.into());
+        }
+
         self.amount_borrowed = self
             .amount_borrowed
             .checked_sub(amount)
