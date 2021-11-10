@@ -1,5 +1,5 @@
 use crate::utils::*;
-use everlend_lo::{error::LiquidityOracleError, id, instruction};
+use everlend_liquidity_oracle::{error::LiquidityOracleError, id, instruction};
 use solana_program::instruction::InstructionError;
 use solana_program_test::*;
 use solana_sdk::{signer::Signer, transaction::Transaction, transaction::TransactionError};

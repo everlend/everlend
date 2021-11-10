@@ -881,7 +881,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "everlend-lo"
+name = "everlend-liquidity-oracle"
 version = "0.1.0"
 dependencies = [
  "borsh",
@@ -897,7 +897,7 @@ name = "everlend-tests"
 version = "0.1.0"
 dependencies = [
  "everlend-depositor",
- "everlend-lo",
+ "everlend-liquidity-oracle",
  "everlend-ulp",
  "solana-program",
  "solana-program-test",

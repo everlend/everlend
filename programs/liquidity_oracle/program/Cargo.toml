@@ -1,5 +1,5 @@
 [package]
-name = "everlend-lo"
+name = "everlend-liquidity-oracle"
 version = "0.1.0"
 edition = "2018"
 

@@ -34,9 +34,9 @@ pub fn program_test() -> ProgramTest {
     );
 
     program.add_program(
-        "everlend_lo",
-        everlend_lo::id(),
-        processor!(everlend_lo::processor::Processor::process_instruction),
+        "everlend_liquidity_oracle",
+        everlend_liquidity_oracle::id(),
+        processor!(everlend_liquidity_oracle::processor::Processor::process_instruction),
     );
 
     program.add_program(

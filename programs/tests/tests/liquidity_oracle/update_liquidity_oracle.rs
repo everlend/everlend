@@ -19,7 +19,7 @@ async fn success() {
 
     let p_k = Pubkey::new_unique();
     test_liquidity_oracle
-        .update(&mut context, p_k.to_bytes())
+        .update(&mut context, p_k)
         .await
         .unwrap();
 
@@ -34,13 +34,13 @@ async fn fail_wrong_liquidity_oracle_authority() {
 
     let pb_k = Pubkey::new_unique();
     test_liquidity_oracle
-        .update(&mut context, pb_k.to_bytes())
+        .update(&mut context, pb_k)
         .await
         .unwrap();
 
     context.warp_to_slot(5).unwrap();
 
-    let pb_k = context.payer.pubkey().to_bytes();
+    let pb_k = context.payer.pubkey();
     assert_eq!(
         test_liquidity_oracle
             .update(&mut context, pb_k)

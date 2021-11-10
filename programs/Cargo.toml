@@ -3,6 +3,6 @@ members = [
   "depositor/program",
   "ulp/program",
   "ulp/cli",
-  "lo/program",
+  "liquidity_oracle/program",
   "tests",
 ]
