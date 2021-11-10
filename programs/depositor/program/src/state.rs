@@ -32,13 +32,10 @@ pub struct Depositor {
 
 impl Depositor {
     /// Initialize a voting pool
-    pub fn init(&mut self, params: InitDepositorParams) {
+    pub fn init(&mut self) {
         self.account_type = AccountType::Depositor;
     }
 }
-
-/// Initialize a depositor params
-pub struct InitDepositorParams {}
 
 impl Sealed for Depositor {}
 impl Pack for Depositor {

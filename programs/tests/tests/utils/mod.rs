@@ -10,16 +10,16 @@ use solana_sdk::{
     transport,
 };
 
+pub mod depositor;
 pub mod pool;
 pub mod pool_borrow_authority;
 pub mod pool_market;
-pub mod depositor;
 pub mod users;
 
+pub use depositor::*;
 pub use pool::*;
 pub use pool_borrow_authority::*;
 pub use pool_market::*;
-pub use depositor::*;
 pub use users::*;
 
 pub const EXP: u64 = 1_000_000_000;
@@ -52,11 +52,16 @@ pub async fn get_account(context: &mut ProgramTestContext, pubkey: &Pubkey) -> A
         .expect("account empty")
 }
 
-pub async fn get_token_balance(context: &mut ProgramTestContext, pubkey: &Pubkey) -> u64 {
+pub async fn get_token_account_data(
+    context: &mut ProgramTestContext,
+    pubkey: &Pubkey,
+) -> spl_token::state::Account {
     let account = get_account(context, pubkey).await;
-    let account_info: spl_token::state::Account =
-        spl_token::state::Account::unpack_from_slice(account.data.as_slice()).unwrap();
+    spl_token::state::Account::unpack_from_slice(account.data.as_slice()).unwrap()
+}
 
+pub async fn get_token_balance(context: &mut ProgramTestContext, pubkey: &Pubkey) -> u64 {
+    let account_info = get_token_account_data(context, pubkey).await;
     account_info.amount
 }
 

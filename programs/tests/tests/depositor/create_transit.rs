@@ -1,6 +1,7 @@
 #![cfg(feature = "test-bpf")]
 
 use crate::utils::*;
+use everlend_depositor::{find_program_address, find_transit_program_address};
 use solana_program_test::*;
 use solana_sdk::{signature::Keypair, signer::Signer};
 
@@ -32,8 +33,19 @@ async fn success() {
         .await
         .unwrap();
 
-    // assert_eq!(
-    //     get_token_balance(&mut context, &user.destination).await,
-    //     100,
-    // );
+    let (transit_pubkey, _) = find_transit_program_address(
+        &everlend_depositor::id(),
+        &test_depositor.depositor.pubkey(),
+        &token_mint.pubkey(),
+    );
+
+    let (depositor_authority, _) = find_program_address(
+        &everlend_depositor::id(),
+        &test_depositor.depositor.pubkey(),
+    );
+
+    let transit = get_token_account_data(&mut context, &transit_pubkey).await;
+
+    assert_eq!(transit.mint, token_mint.pubkey());
+    assert_eq!(transit.owner, depositor_authority);
 }

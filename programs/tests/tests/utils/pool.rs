@@ -162,7 +162,7 @@ impl TestPool {
                 amount,
             )],
             Some(&context.payer.pubkey()),
-            &[&context.payer, &borrow_authority],
+            &[&context.payer, borrow_authority],
             context.last_blockhash,
         );
 

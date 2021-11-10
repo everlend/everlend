@@ -1,5 +1,5 @@
 use solana_program::{
-    account_info::AccountInfo, program::invoke_signed, program_error::ProgramError,
+    account_info::AccountInfo, msg, program::invoke_signed, program_error::ProgramError,
 };
 
 /// ULP borrow tokens
@@ -8,6 +8,7 @@ pub fn ulp_borrow<'a>(
     pool_market: AccountInfo<'a>,
     pool: AccountInfo<'a>,
     pool_borrow_authority: AccountInfo<'a>,
+    pool_market_authority: AccountInfo<'a>,
     destination: AccountInfo<'a>,
     token_account: AccountInfo<'a>,
     borrow_authority: AccountInfo<'a>,
@@ -31,6 +32,7 @@ pub fn ulp_borrow<'a>(
             pool_market,
             pool,
             pool_borrow_authority,
+            pool_market_authority,
             destination,
             token_account,
             borrow_authority,

@@ -16,9 +16,7 @@ pub enum DepositorInstruction {
     ///
     /// Accounts:
     /// [W] Depositor account - uninitialized
-    /// [R] Depositor authority
     /// [R] Rent sysvar
-    /// [R] Token program id
     Init,
 
     /// Create transit token account for liquidity
@@ -44,7 +42,7 @@ pub enum DepositorInstruction {
     /// [W] Pool token account (for token mint)
     /// [W] Transit token account (for token mint)
     /// [R] Token mint
-    /// [RS] Depositor
+    /// [RS] Rebalancer
     /// [R] Sysvar instructions program id
     /// [R] Token program id
     Deposit {
@@ -59,7 +57,6 @@ pub fn init(program_id: &Pubkey, depositor: &Pubkey) -> Instruction {
     let accounts = vec![
         AccountMeta::new(*depositor, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
-        AccountMeta::new_readonly(spl_token::id(), false),
     ];
 
     Instruction::new_with_borsh(*program_id, &DepositorInstruction::Init, accounts)
@@ -103,17 +100,20 @@ pub fn deposit(
     rebalancer: &Pubkey,
     amount: u64,
 ) -> Instruction {
+    let (pool_market_authority, _) = find_program_address(&everlend_ulp::id(), pool_market);
     let (transit, _) = find_transit_program_address(program_id, depositor, token_mint);
 
     let accounts = vec![
         AccountMeta::new_readonly(*depositor, false),
         AccountMeta::new_readonly(*pool_market, false),
-        AccountMeta::new_readonly(*pool, false),
-        AccountMeta::new_readonly(*pool_borrow_authority, false),
+        AccountMeta::new(*pool, false),
+        AccountMeta::new(*pool_borrow_authority, false),
+        AccountMeta::new_readonly(pool_market_authority, false),
         AccountMeta::new(*pool_token_account, false),
         AccountMeta::new(transit, false),
         AccountMeta::new_readonly(*token_mint, false),
         AccountMeta::new_readonly(*rebalancer, true),
+        AccountMeta::new_readonly(everlend_ulp::id(), false),
         AccountMeta::new_readonly(sysvar::instructions::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
     ];

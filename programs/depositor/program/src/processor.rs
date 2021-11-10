@@ -3,7 +3,7 @@
 use crate::{
     find_transit_program_address,
     instruction::DepositorInstruction,
-    state::{Depositor, InitDepositorParams},
+    state::Depositor,
     utils::{
         assert_account_key, assert_owned_by, assert_rent_exempt, assert_uninitialized,
         check_deposit, create_account, spl_initialize_account, ulp_borrow,
@@ -20,7 +20,6 @@ use solana_program::{
     rent::Rent,
     sysvar::Sysvar,
 };
-use spl_token::state::Account;
 
 /// Program state handler.
 pub struct Processor {}
@@ -39,7 +38,7 @@ impl Processor {
         let mut depositor = Depositor::unpack_unchecked(&depositor_info.data.borrow())?;
         assert_uninitialized(&depositor)?;
 
-        depositor.init(InitDepositorParams {});
+        depositor.init();
 
         Depositor::pack(depositor, *depositor_info.data.borrow_mut())?;
 
@@ -65,7 +64,7 @@ impl Processor {
         // Check initialized
         Depositor::unpack(&depositor_info.data.borrow())?;
 
-        // Create transit account
+        // Create transit account for SPL program
         let (transit_pubkey, bump_seed) =
             find_transit_program_address(program_id, depositor_info.key, token_mint_info.key);
         assert_account_key(transit_info, &transit_pubkey)?;
@@ -76,8 +75,8 @@ impl Processor {
             &[bump_seed],
         ];
 
-        create_account::<Account>(
-            program_id,
+        create_account::<spl_token::state::Account>(
+            &spl_token::id(),
             from_info.clone(),
             transit_info.clone(),
             &[signers_seeds],
@@ -102,30 +101,33 @@ impl Processor {
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_info = next_account_info(account_info_iter)?;
         let pool_borrow_authority_info = next_account_info(account_info_iter)?;
-        let token_account_info = next_account_info(account_info_iter)?;
+        let pool_market_authority_info = next_account_info(account_info_iter)?;
+        let pool_token_account_info = next_account_info(account_info_iter)?;
         let transit_info = next_account_info(account_info_iter)?;
         let token_mint_info = next_account_info(account_info_iter)?;
         let rebalancer_info = next_account_info(account_info_iter)?;
-        let instructions_info = next_account_info(account_info_iter)?;
+        let _everlend_ulp_info = next_account_info(account_info_iter)?;
+        let _instructions_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
         if !rebalancer_info.is_signer {
             return Err(ProgramError::MissingRequiredSignature);
         }
 
-        // Borrow from ULP to staging account
+        // Borrow from ULP to transit account
         ulp_borrow(
             pool_market_info.clone(),
             pool_info.clone(),
             pool_borrow_authority_info.clone(),
+            pool_market_authority_info.clone(),
             transit_info.clone(),
-            token_account_info.clone(),
+            pool_token_account_info.clone(),
             rebalancer_info.clone(),
             amount,
             &[],
         )?;
 
-        check_deposit(instructions_info, amount)?;
+        // check_deposit(instructions_info, amount)?;
 
         // ...
 
