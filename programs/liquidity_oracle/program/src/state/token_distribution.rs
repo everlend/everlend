@@ -1,4 +1,4 @@
-//! Currency distribution state definitions.
+//! Token distribution state definitions.
 
 use super::AccountType;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
@@ -16,7 +16,7 @@ pub type DistributionArray = [LiquidityDistribution; LENDINGS_SIZE];
 
 #[repr(C)]
 #[derive(Debug, Clone, BorshDeserialize, BorshSerialize, BorshSchema, PartialEq, Default)]
-pub struct CurrencyDistribution {
+pub struct TokenDistribution {
     // Account type.
     pub account_type: AccountType,
     //Last update slot
@@ -30,22 +30,22 @@ pub struct LiquidityDistribution {
     pub percent: f64,         //f64 Len 8
 }
 
-impl CurrencyDistribution {
+impl TokenDistribution {
     /// Initialize a liquidity oracle.
     pub fn init(&mut self) {
-        self.account_type = AccountType::CurrencyDistribution;
+        self.account_type = AccountType::TokenDistribution;
     }
 
-    /// Update a liquidity oracle currency distribution
+    /// Update a liquidity oracle token distribution
     pub fn update(&mut self, slot: Slot, distribution: DistributionArray) {
         self.slot = slot;
         self.distribution = distribution;
     }
 }
 
-impl Sealed for CurrencyDistribution {}
+impl Sealed for TokenDistribution {}
 
-impl Pack for CurrencyDistribution {
+impl Pack for TokenDistribution {
     // Enum + Slot size + LDistribution size * LENDINGS_SIZE
     const LEN: usize = 1 + 8 + (40 * LENDINGS_SIZE);
 
@@ -59,16 +59,16 @@ impl Pack for CurrencyDistribution {
             msg!("Failed to deserialize");
             msg!(
                 "Actual LEN: {}",
-                std::mem::size_of::<CurrencyDistribution>()
+                std::mem::size_of::<TokenDistribution>()
             );
             ProgramError::InvalidAccountData
         })
     }
 }
 
-impl IsInitialized for CurrencyDistribution {
+impl IsInitialized for TokenDistribution {
     fn is_initialized(&self) -> bool {
         self.account_type != AccountType::Uninitialized
-            && self.account_type == AccountType::CurrencyDistribution
+            && self.account_type == AccountType::TokenDistribution
     }
 }

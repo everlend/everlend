@@ -1,7 +1,7 @@
 //! Instruction states definitions.
 
 use crate::{
-    find_liquidity_oracle_currency_distribution_program_address, state::DistributionArray,
+    find_liquidity_oracle_token_distribution_program_address, state::DistributionArray,
 };
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
@@ -27,29 +27,29 @@ pub enum LiquidityOracleInstruction {
     /// [RS] Authority - liquidity oracle authority to update state.
     UpdateLiquidityOracleAuthority { authority: Pubkey },
 
-    /// Initializes a new currency distribution account.
+    /// Initializes a new token distribution account.
     ///
     /// Accounts:
-    /// [R] Liquidity oracle - off-chain created account.
-    /// [RW] CurrencyDistribution - currency distribution account.
+    /// [R]  Liquidity oracle - off-chain created account.
+    /// [R]  Token mint account
+    /// [RW] TokenDistribution - token distribution account.
     /// [RS] Authority - liquidity oracle authority to update state.
-    /// [R] Clock sysvar.
-    /// [R] Rent sysvar
-    /// [R] System program id
-    CreateCurrencyDistribution {
-        currency: String,
+    /// [R]  Clock sysvar.
+    /// [R]  Rent sysvar
+    /// [R]  System program id
+    CreateTokenDistribution {
         value: DistributionArray,
     },
 
-    /// Updates currency distribution account.
+    /// Updates token distribution account.
     ///
     /// Accounts:
     /// [R] Liquidity oracle - off-chain created account.
+    /// [R]  Token mint account
+    /// [RW] TokenDistribution - token distribution to update state
     /// [RS] Authority - liquidity oracle authority.
-    /// [RW] CurrencyDistribution - currency distribution to update state
     /// [R] Clock sysvar.
-    UpdateCurrencyDistribution {
-        currency: String,
+    UpdateTokenDistribution {
         value: DistributionArray,
     },
 }
@@ -91,23 +91,24 @@ pub fn update_liquidity_oracle_authority(
     )
 }
 
-/// Creates 'CreateCurrencyDistribution' instruction.
-pub fn create_currency_distribution(
+/// Creates 'CreateTokenDistribution' instruction.
+pub fn create_token_distribution(
     program_id: &Pubkey,
     liquidity_oracle: &Pubkey,
     authority: &Pubkey,
-    currency: String,
+    token_mint: &Pubkey,
     distribution_array: DistributionArray,
 ) -> Instruction {
-    let (currency_distribution, _) = find_liquidity_oracle_currency_distribution_program_address(
+    let (token_distribution, _) = find_liquidity_oracle_token_distribution_program_address(
         program_id,
         liquidity_oracle,
-        &currency,
+        &token_mint,
     );
 
     let accounts = vec![
         AccountMeta::new_readonly(*liquidity_oracle, false),
-        AccountMeta::new(currency_distribution, false),
+        AccountMeta::new_readonly(*token_mint, false),
+        AccountMeta::new(token_distribution, false),
         AccountMeta::new_readonly(*authority, true),
         AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
@@ -116,38 +117,37 @@ pub fn create_currency_distribution(
 
     Instruction::new_with_borsh(
         *program_id,
-        &LiquidityOracleInstruction::CreateCurrencyDistribution {
-            currency: currency.to_string(),
+        &LiquidityOracleInstruction::CreateTokenDistribution {
             value: distribution_array,
         },
         accounts,
     )
 }
 
-pub fn update_currency_distribution(
+pub fn update_token_distribution(
     program_id: &Pubkey,
     liquidity_oracle: &Pubkey,
     authority: &Pubkey,
-    currency: String,
+    token_mint: &Pubkey,
     distribution_array: DistributionArray,
 ) -> Instruction {
-    let (currency_distribution, _) = find_liquidity_oracle_currency_distribution_program_address(
+    let (token_distribution, _) = find_liquidity_oracle_token_distribution_program_address(
         program_id,
         liquidity_oracle,
-        &currency,
+        token_mint,
     );
 
     let accounts = vec![
         AccountMeta::new_readonly(*liquidity_oracle, false),
-        AccountMeta::new(currency_distribution, false),
+        AccountMeta::new_readonly(*token_mint, false),
+        AccountMeta::new(token_distribution, false),
         AccountMeta::new_readonly(*authority, true),
         AccountMeta::new_readonly(sysvar::clock::id(), false),
     ];
 
     Instruction::new_with_borsh(
         *program_id,
-        &LiquidityOracleInstruction::UpdateCurrencyDistribution {
-            currency: currency.to_string(),
+        &LiquidityOracleInstruction::UpdateTokenDistribution {
             value: distribution_array,
         },
         accounts,

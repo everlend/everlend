@@ -9,11 +9,11 @@ use solana_program_test::*;
 use solana_sdk::{signer::Signer, transaction::TransactionError};
 
 const WARP_SLOT: Slot = 3;
-const CURRENCY: &str = "SOL";
 
 #[tokio::test]
 async fn success() {
     let mut context = program_test().start_with_context().await;
+    let token_mint: Pubkey = Pubkey::new_unique();
 
     let test_liquidity_oracle = TestLiquidityOracle::new();
     test_liquidity_oracle.init(&mut context).await.unwrap();
@@ -26,16 +26,16 @@ async fn success() {
         percent: 100 as f64,
     };
 
-    let test_currency_distribution =
-        TestCurrencyDistribution::new(CURRENCY.to_string(), distribution);
+    let test_token_distribution =
+        TestTokenDistribution::new(token_mint, distribution);
     let authority = context.payer.pubkey();
 
-    test_currency_distribution
+    test_token_distribution
         .init(&mut context, &test_liquidity_oracle, authority)
         .await
         .unwrap();
 
-    let result_distribution = test_currency_distribution
+    let result_distribution = test_token_distribution
         .get_data(&mut context, &id(), &test_liquidity_oracle)
         .await;
 
@@ -46,6 +46,7 @@ async fn success() {
 #[tokio::test]
 async fn fail_second_time_init() {
     let mut context = program_test().start_with_context().await;
+    let token_mint: Pubkey = Pubkey::new_unique();
 
     let test_liquidity_oracle = TestLiquidityOracle::new();
     test_liquidity_oracle.init(&mut context).await.unwrap();
@@ -58,11 +59,11 @@ async fn fail_second_time_init() {
         percent: 100 as f64,
     };
 
-    let test_currency_distribution =
-        TestCurrencyDistribution::new(CURRENCY.to_string(), distribution);
+    let test_token_distribution =
+        TestTokenDistribution::new(token_mint, distribution);
     let authority = context.payer.pubkey();
 
-    test_currency_distribution
+    test_token_distribution
         .init(&mut context, &test_liquidity_oracle, authority)
         .await
         .unwrap();
@@ -70,7 +71,7 @@ async fn fail_second_time_init() {
     context.warp_to_slot(WARP_SLOT + 2).unwrap();
 
     assert_eq!(
-        test_currency_distribution
+        test_token_distribution
             .init(&mut context, &test_liquidity_oracle, authority)
             .await
             .unwrap_err()

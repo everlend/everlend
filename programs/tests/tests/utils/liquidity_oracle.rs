@@ -1,8 +1,8 @@
 use super::get_account;
 
 use everlend_liquidity_oracle::{
-    find_liquidity_oracle_currency_distribution_program_address, id, instruction,
-    state::CurrencyDistribution, state::DistributionArray, state::LiquidityOracle,
+    find_liquidity_oracle_token_distribution_program_address, id, instruction,
+    state::TokenDistribution, state::DistributionArray, state::LiquidityOracle,
 };
 use solana_program_test::*;
 use solana_sdk::pubkey::Pubkey;
@@ -73,17 +73,17 @@ impl TestLiquidityOracle {
     }
 }
 
-pub struct TestCurrencyDistribution {
+pub struct TestTokenDistribution {
     pub keypair: Keypair,
-    pub currency: String,
+    pub token_mint: Pubkey,
     pub distribution: DistributionArray,
 }
 
-impl TestCurrencyDistribution {
-    pub fn new(currency: String, distribution_array: DistributionArray) -> Self {
-        TestCurrencyDistribution {
+impl TestTokenDistribution {
+    pub fn new(token_mint: Pubkey, distribution_array: DistributionArray) -> Self {
+        TestTokenDistribution {
             keypair: Keypair::new(),
-            currency,
+            token_mint,
             distribution: distribution_array,
         }
     }
@@ -95,11 +95,11 @@ impl TestCurrencyDistribution {
         authority: Pubkey,
     ) -> transport::Result<()> {
         let tx = Transaction::new_signed_with_payer(
-            &[instruction::create_currency_distribution(
+            &[instruction::create_token_distribution(
                 &id(),
                 &liquidity_oracle.keypair.pubkey(),
                 &authority,
-                self.currency.to_string(),
+                &self.token_mint,
                 self.distribution,
             )],
             Some(&context.payer.pubkey()),
@@ -118,11 +118,11 @@ impl TestCurrencyDistribution {
         distribution: DistributionArray,
     ) -> transport::Result<()> {
         let tx = Transaction::new_signed_with_payer(
-            &[instruction::update_currency_distribution(
+            &[instruction::update_token_distribution(
                 &id(),
                 &liquidity_oracle.keypair.pubkey(),
                 &authority,
-                self.currency.to_string(),
+                &self.token_mint,
                 distribution,
             )],
             Some(&context.payer.pubkey()),
@@ -138,15 +138,15 @@ impl TestCurrencyDistribution {
         context: &mut ProgramTestContext,
         program_id: &Pubkey,
         liquidity_oracle: &TestLiquidityOracle,
-    ) -> CurrencyDistribution {
-        let (currency_distribution, _) =
-            find_liquidity_oracle_currency_distribution_program_address(
+    ) -> TokenDistribution {
+        let (token_distribution, _) =
+            find_liquidity_oracle_token_distribution_program_address(
                 program_id,
                 &liquidity_oracle.keypair.pubkey(),
-                &self.currency,
+                &self.token_mint,
             );
 
-        let account = get_account(context, &currency_distribution).await;
-        CurrencyDistribution::unpack_unchecked(&account.data).unwrap()
+        let account = get_account(context, &token_distribution).await;
+        TokenDistribution::unpack_unchecked(&account.data).unwrap()
     }
 }

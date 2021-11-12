@@ -1,10 +1,10 @@
 //! State types.
 
-mod currency_distribution;
+mod token_distribution;
 mod liquidity_oracle;
 
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-pub use currency_distribution::*;
+pub use token_distribution::*;
 pub use liquidity_oracle::*;
 
 /// Enum representing the account type managed by the program
@@ -14,8 +14,8 @@ pub enum AccountType {
     Uninitialized,
     /// Liquidity oracle
     LiquidityOracle,
-    /// Currency distribution
-    CurrencyDistribution,
+    /// Token distribution
+    TokenDistribution,
 }
 
 impl Default for AccountType {

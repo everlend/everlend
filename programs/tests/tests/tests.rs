@@ -19,8 +19,8 @@ mod ulp {
 }
 
 mod liquidity_oracle {
-    mod create_currency_distribution;
+    mod create_token_distribution;
     mod init_liquidity_oracle;
-    mod update_currency_distribution;
+    mod update_token_distribution;
     mod update_liquidity_oracle;
 }
