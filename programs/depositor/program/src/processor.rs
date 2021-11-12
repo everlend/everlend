@@ -107,7 +107,7 @@ impl Processor {
         let token_mint_info = next_account_info(account_info_iter)?;
         let rebalancer_info = next_account_info(account_info_iter)?;
         let _everlend_ulp_info = next_account_info(account_info_iter)?;
-        let _instructions_info = next_account_info(account_info_iter)?;
+        let instructions_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
         if !rebalancer_info.is_signer {

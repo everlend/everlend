@@ -35,11 +35,11 @@ pub fn program_test() -> ProgramTest {
         everlend_depositor::id(),
         processor!(everlend_depositor::processor::Processor::process_instruction),
     );
-    // program.add_program(
-    //     "spl_token_lending",
-    //     spl_token_lending::id(),
-    //     processor!(spl_token_lending::processor::Processor::process_instruction),
-    // );
+    program.add_program(
+        "spl_token_lending",
+        spl_token_lending::id(),
+        processor!(spl_token_lending::processor::process_instruction),
+    );
     program
 }
 

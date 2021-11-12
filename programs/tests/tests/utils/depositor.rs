@@ -1,7 +1,7 @@
 use super::{
     get_account, pool_borrow_authority::TestPoolBorrowAuthority, TestPool, TestPoolMarket,
 };
-use everlend_depositor::state::Depositor;
+use everlend_depositor::{find_transit_program_address, state::Depositor};
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{
@@ -84,28 +84,36 @@ impl TestDepositor {
     pub async fn deposit(
         &self,
         context: &mut ProgramTestContext,
-        test_pool_market: &TestPoolMarket,
-        test_pool: &TestPool,
-        test_pool_borrow_authority: &TestPoolBorrowAuthority,
+        general_pool_market: &TestPoolMarket,
+        general_pool: &TestPool,
+        general_pool_borrow_authority: &TestPoolBorrowAuthority,
+        mm_pool_market: &TestPoolMarket,
+        mm_pool: &TestPool,
         amount: u64,
     ) -> transport::Result<()> {
+        let (transit_pubkey, _) = find_transit_program_address(
+            &everlend_depositor::id(),
+            &self.depositor.pubkey(),
+            &general_pool.token_mint.pubkey(),
+        );
+
         let tx = Transaction::new_signed_with_payer(
             &[
                 everlend_depositor::instruction::deposit(
                     &everlend_depositor::id(),
                     &self.depositor.pubkey(),
-                    &test_pool_market.pool_market.pubkey(),
-                    &test_pool.pool_pubkey,
-                    &test_pool_borrow_authority.pool_borrow_authority_pubkey,
-                    &test_pool.token_account.pubkey(),
-                    &test_pool.token_mint.pubkey(),
+                    &general_pool_market.pool_market.pubkey(),
+                    &general_pool.pool_pubkey,
+                    &general_pool_borrow_authority.pool_borrow_authority_pubkey,
+                    &general_pool.token_account.pubkey(),
+                    &general_pool.token_mint.pubkey(),
                     &self.rebalancer.pubkey(),
                     amount,
                 ),
                 // spl_token_lending::instruction::deposit_reserve_liquidity(
                 //     spl_token_lending::id(),
                 //     amount,
-                //     source_liquidity_pubkey,
+                //     transit_pubkey,
                 //     destination_collateral_pubkey,
                 //     reserve_pubkey,
                 //     reserve_liquidity_supply_pubkey,
