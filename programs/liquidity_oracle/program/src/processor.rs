@@ -60,11 +60,11 @@ impl Processor {
     /// Process `UpdateLiquidityOracleAuthority` instruction.
     pub fn update_liquidity_oracle_authority(
         program_id: &Pubkey,
-        accounts: &[AccountInfo],
-        authority: Pubkey,
+        accounts: &[AccountInfo]
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let liquidity_oracle_info = next_account_info(account_info_iter)?;
+        let update_authority = next_account_info(account_info_iter)?;
         let authority_info = next_account_info(account_info_iter)?;
 
         // Check signer
@@ -82,7 +82,7 @@ impl Processor {
         }
 
         // Update
-        liquidity_oracle.update(authority);
+        liquidity_oracle.update(*update_authority.key);
 
         // Save state
         LiquidityOracle::pack(liquidity_oracle, *liquidity_oracle_info.data.borrow_mut())?;
@@ -220,9 +220,9 @@ impl Processor {
                 msg!("LiquidityOracleInstruction: InitLiquidityOracle");
                 Self::init_liquidity_oracle(program_id, accounts)
             }
-            LiquidityOracleInstruction::UpdateLiquidityOracleAuthority { authority } => {
+            LiquidityOracleInstruction::UpdateLiquidityOracleAuthority => {
                 msg!("LiquidityOracleInstruction: UpdateLiquidityOracleAuthority");
-                Self::update_liquidity_oracle_authority(program_id, accounts, authority)
+                Self::update_liquidity_oracle_authority(program_id, accounts)
             }
             LiquidityOracleInstruction::CreateTokenDistribution { value } => {
                 msg!("LiquidityOracleInstruction: CreateTokenDistribution");

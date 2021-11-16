@@ -50,7 +50,7 @@ impl TestLiquidityOracle {
     pub async fn update(
         &self,
         context: &mut ProgramTestContext,
-        authority: Pubkey,
+        authority: &Pubkey,
     ) -> transport::Result<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::update_liquidity_oracle_authority(

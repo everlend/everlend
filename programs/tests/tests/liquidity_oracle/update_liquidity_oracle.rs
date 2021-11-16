@@ -1,7 +1,7 @@
 use crate::utils::*;
-use solana_program::{instruction::InstructionError, pubkey::Pubkey};
+use solana_program::{instruction::InstructionError, pubkey::Pubkey, msg};
 use solana_program_test::*;
-use solana_sdk::{signer::Signer, transaction::TransactionError};
+use solana_sdk::{signer::Signer, transaction::TransactionError, signature::Keypair};
 
 async fn setup() -> (ProgramTestContext, TestLiquidityOracle) {
     let mut context = program_test().start_with_context().await;
@@ -19,7 +19,7 @@ async fn success() {
 
     let p_k = Pubkey::new_unique();
     test_liquidity_oracle
-        .update(&mut context, p_k)
+        .update(&mut context, &p_k)
         .await
         .unwrap();
 
@@ -34,7 +34,7 @@ async fn fail_wrong_liquidity_oracle_authority() {
 
     let pb_k = Pubkey::new_unique();
     test_liquidity_oracle
-        .update(&mut context, pb_k)
+        .update(&mut context, &pb_k)
         .await
         .unwrap();
 
@@ -43,7 +43,7 @@ async fn fail_wrong_liquidity_oracle_authority() {
     let pb_k = context.payer.pubkey();
     assert_eq!(
         test_liquidity_oracle
-            .update(&mut context, pb_k)
+            .update(&mut context, &pb_k)
             .await
             .unwrap_err()
             .unwrap(),

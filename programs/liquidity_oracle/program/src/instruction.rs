@@ -24,8 +24,9 @@ pub enum LiquidityOracleInstruction {
     ///
     /// Accounts:
     /// [W] Liquidity oracle - account.
+    /// [R] Update Authority
     /// [RS] Authority - liquidity oracle authority to update state.
-    UpdateLiquidityOracleAuthority { authority: Pubkey },
+    UpdateLiquidityOracleAuthority,
 
     /// Initializes a new token distribution account.
     ///
@@ -77,16 +78,17 @@ pub fn update_liquidity_oracle_authority(
     program_id: &Pubkey,
     liquidity_oracle: &Pubkey,
     authority: &Pubkey,
-    update_authority: Pubkey,
+    update_authority: &Pubkey,
 ) -> Instruction {
     let accounts = vec![
         AccountMeta::new(*liquidity_oracle, false),
+        AccountMeta::new_readonly(*update_authority, false),
         AccountMeta::new_readonly(*authority, true),
     ];
 
     Instruction::new_with_borsh(
         *program_id,
-        &LiquidityOracleInstruction::UpdateLiquidityOracleAuthority { authority: update_authority },
+        &LiquidityOracleInstruction::UpdateLiquidityOracleAuthority,
         accounts,
     )
 }
