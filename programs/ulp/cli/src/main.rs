@@ -1,6 +1,10 @@
 use clap::{
     crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
 };
+use everlend_ulp::{
+    find_pool_borrow_authority_program_address, find_pool_program_address, id, instruction,
+    state::{ui_bp_to_bp, AccountType, Pool, PoolBorrowAuthority, PoolMarket},
+};
 use solana_account_decoder::UiAccountEncoding;
 use solana_clap_utils::{
     fee_payer::fee_payer_arg,
@@ -24,10 +28,6 @@ use solana_sdk::{
     transaction::Transaction,
 };
 use std::{env, process::exit};
-use everlend_ulp::{
-    find_pool_borrow_authority_program_address, find_pool_program_address, id, instruction,
-    state::{ui_bp_to_bp, AccountType, Pool, PoolBorrowAuthority, PoolMarket},
-};
 
 #[allow(dead_code)]
 struct Config {
