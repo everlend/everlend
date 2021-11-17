@@ -1,7 +1,12 @@
 #![cfg(feature = "test-bpf")]
 
 use crate::utils::*;
+use solana_program::instruction::InstructionError;
 use solana_program_test::*;
+use solana_sdk::{
+    pubkey::Pubkey, signer::Signer, transaction::Transaction, transaction::TransactionError,
+};
+use everlend_ulp::{error::LiquidityPoolsError, id, instruction};
 
 async fn setup() -> (
     ProgramTestContext,
@@ -84,5 +89,224 @@ async fn success() {
     assert_eq!(
         test_pool.get_data(&mut context).await.total_amount_borrowed,
         0
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_pool_market_pubkey_argument() {
+    let (mut context, _test_pool_market, test_pool, test_pool_borrow_authority, user) =
+        setup().await;
+
+    let amount = 1;
+    let interest_amount = 1;
+
+    let tx = Transaction::new_signed_with_payer(
+        &[instruction::repay(
+            &id(),
+            // Wrong pool market pubkey
+            &Pubkey::new_unique(),
+            &test_pool.pool_pubkey,
+            &test_pool_borrow_authority.pool_borrow_authority_pubkey,
+            &user.token_account,
+            &test_pool.token_account.pubkey(),
+            &user.pubkey(),
+            amount,
+            interest_amount,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer, &user.owner],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(0, InstructionError::IncorrectProgramId)
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_pool_pubkey_argument() {
+    let (mut context, test_pool_market, test_pool, test_pool_borrow_authority, user) =
+        setup().await;
+
+    let amount = 1;
+    let interest_amount = 1;
+
+    let tx = Transaction::new_signed_with_payer(
+        &[instruction::repay(
+            &id(),
+            // Wrong pool market pubkey
+            &test_pool_market.pool_market.pubkey(),
+            &Pubkey::new_unique(),
+            // &test_pool.pool_pubkey,
+            &test_pool_borrow_authority.pool_borrow_authority_pubkey,
+            &user.token_account,
+            &test_pool.token_account.pubkey(),
+            &user.pubkey(),
+            amount,
+            interest_amount,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer, &user.owner],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(0, InstructionError::IncorrectProgramId)
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_pool_borrow_authority_argument() {
+    let (mut context, test_pool_market, test_pool, _test_pool_borrow_authority, user) =
+        setup().await;
+
+    let amount = 1;
+    let interest_amount = 1;
+
+    let tx = Transaction::new_signed_with_payer(
+        &[instruction::repay(
+            &id(),
+            // Wrong pool market pubkey
+            &test_pool_market.pool_market.pubkey(),
+            // &Pubkey::new_unique(),
+            &test_pool.pool_pubkey,
+            &Pubkey::new_unique(),
+            // &test_pool_borrow_authority.pool_borrow_authority_pubkey,
+            &user.token_account,
+            &test_pool.token_account.pubkey(),
+            &user.pubkey(),
+            amount,
+            interest_amount,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer, &user.owner],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(0, InstructionError::IncorrectProgramId)
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_pool_market() {
+    let (mut context, _test_pool_market, test_pool, test_pool_borrow_authority, user) =
+        setup().await;
+
+    let amount = 1;
+    let interest_amount = 1;
+
+    let test_pool_market = TestPoolMarket::new();
+    test_pool_market.init(&mut context).await.unwrap();
+
+    let tx = Transaction::new_signed_with_payer(
+        &[instruction::repay(
+            &id(),
+            &test_pool_market.pool_market.pubkey(),
+            &test_pool.pool_pubkey,
+            &test_pool_borrow_authority.pool_borrow_authority_pubkey,
+            &user.token_account,
+            &test_pool.token_account.pubkey(),
+            &user.pubkey(),
+            amount,
+            interest_amount,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer, &user.owner],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_pool_token_account() {
+    let (mut context, test_pool_market, test_pool, test_pool_borrow_authority, user) =
+        setup().await;
+
+    let amount = 1;
+    let interest_amount = 1;
+
+    let tx = Transaction::new_signed_with_payer(
+        &[instruction::repay(
+            &id(),
+            &test_pool_market.pool_market.pubkey(),
+            &test_pool.pool_pubkey,
+            &test_pool_borrow_authority.pool_borrow_authority_pubkey,
+            &user.token_account,
+            &Pubkey::new_unique(),
+            &user.pubkey(),
+            amount,
+            interest_amount,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer, &user.owner],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_repay_amount() {
+    let (mut context, test_pool_market, test_pool, test_pool_borrow_authority, user) =
+        setup().await;
+
+    let amount = 1;
+    let interest_amount = 1;
+
+    let err = test_pool
+        .repay(
+            &mut context,
+            &test_pool_market,
+            &test_pool_borrow_authority,
+            &user,
+            amount,
+            interest_amount,
+        )
+        .await
+        .unwrap_err()
+        .unwrap();
+
+    assert_eq!(
+        err,
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(LiquidityPoolsError::RepayAmountCheckFailed as u32)
+        )
     );
 }

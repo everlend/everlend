@@ -51,6 +51,10 @@ impl Pool {
 
     /// Repay funds
     pub fn repay(&mut self, amount: u64) -> ProgramResult {
+        if self.total_amount_borrowed.lt(&amount) {
+            return Err(LiquidityPoolsError::RepayAmountCheckFailed.into());
+        }
+
         self.total_amount_borrowed = self
             .total_amount_borrowed
             .checked_sub(amount)

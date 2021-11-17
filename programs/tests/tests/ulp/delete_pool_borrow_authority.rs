@@ -1,6 +1,8 @@
 #![cfg(feature = "test-bpf")]
 
 use crate::utils::*;
+use solana_program::instruction::InstructionError;
+use solana_sdk::transaction::TransactionError;
 use everlend_ulp::state::AccountType;
 use solana_program_test::*;
 
@@ -71,5 +73,21 @@ async fn success_recreate() {
     assert_eq!(
         pool_borrow_authority.account_type,
         AccountType::PoolBorrowAuthority
+    );
+}
+
+#[tokio::test]
+async fn fail_delete_pool_borrow_authority() {
+    let (mut context, test_pool_market, test_pool) = setup().await;
+
+    let test_pool_borrow_authority = TestPoolBorrowAuthority::new(&test_pool, None);
+
+    assert_eq!(
+        test_pool_borrow_authority
+            .delete(&mut context, &test_pool_market, &test_pool)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(0, InstructionError::IncorrectProgramId)
     );
 }
