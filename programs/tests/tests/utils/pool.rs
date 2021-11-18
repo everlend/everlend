@@ -1,5 +1,5 @@
 use super::{
-    create_mint, get_account, pool_borrow_authority::TestPoolBorrowAuthority, LiquidityProvider,
+    get_account, get_liquidity_mint, pool_borrow_authority::TestPoolBorrowAuthority, LiquidityProvider,
     TestPoolMarket, User,
 };
 use everlend_ulp::{find_pool_program_address, id, instruction, state::Pool};
@@ -14,23 +14,24 @@ use solana_sdk::{
 #[derive(Debug)]
 pub struct TestPool {
     pub pool_pubkey: Pubkey,
-    pub token_mint: Keypair,
+    pub token_mint_pubkey: Pubkey,
     pub token_account: Keypair,
     pub pool_mint: Keypair,
 }
 
 impl TestPool {
-    pub fn new(test_pool_market: &TestPoolMarket) -> Self {
-        let token_mint = Keypair::new();
+    pub fn new(test_pool_market: &TestPoolMarket, token_mint_pubkey: Option<Pubkey>) -> Self {
+        let token_mint_pubkey = token_mint_pubkey.unwrap_or(get_liquidity_mint().1);
+
         let (pool_pubkey, _) = find_pool_program_address(
             &id(),
             &test_pool_market.pool_market.pubkey(),
-            &token_mint.pubkey(),
+            &token_mint_pubkey,
         );
 
         Self {
             pool_pubkey,
-            token_mint,
+            token_mint_pubkey,
             token_account: Keypair::new(),
             pool_mint: Keypair::new(),
         }
@@ -46,8 +47,6 @@ impl TestPool {
         context: &mut ProgramTestContext,
         test_pool_market: &TestPoolMarket,
     ) -> transport::Result<()> {
-        create_mint(context, &self.token_mint, &context.payer.pubkey()).await?;
-
         let rent = context.banks_client.get_rent().await.unwrap();
         let tx = Transaction::new_signed_with_payer(
             &[
@@ -68,7 +67,7 @@ impl TestPool {
                 instruction::create_pool(
                     &id(),
                     &test_pool_market.pool_market.pubkey(),
-                    &self.token_mint.pubkey(),
+                    &self.token_mint_pubkey,
                     &self.token_account.pubkey(),
                     &self.pool_mint.pubkey(),
                     &test_pool_market.manager.pubkey(),

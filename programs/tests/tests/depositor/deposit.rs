@@ -2,10 +2,11 @@
 
 use crate::utils::*;
 use solana_program_test::*;
-use solana_sdk::{signature::Keypair, signer::Signer};
+use solana_sdk::signature::Keypair;
 
 async fn setup() -> (
     ProgramTestContext,
+    TestLending,
     TestPoolMarket,
     TestPool,
     TestPoolBorrowAuthority,
@@ -14,16 +15,20 @@ async fn setup() -> (
     LiquidityProvider,
     TestDepositor,
 ) {
-    let mut context = program_test().start_with_context().await;
+    let (mut context, spl_lending, _) = presetup().await;
 
     let rebalancer = Keypair::new();
 
-    // 0. Prepare pool
+    // 0. Prepare lending
+    let reserve = get_reserve_account_data(&mut context, &spl_lending.reserve_pubkey).await;
+    println!("{:#?}", reserve);
+
+    // 1. Prepare pool
 
     let general_pool_market = TestPoolMarket::new();
     general_pool_market.init(&mut context).await.unwrap();
 
-    let general_pool = TestPool::new(&general_pool_market);
+    let general_pool = TestPool::new(&general_pool_market, None);
     general_pool
         .create(&mut context, &general_pool_market)
         .await
@@ -42,6 +47,8 @@ async fn setup() -> (
         .await
         .unwrap();
 
+    // 1.1 Add liquidity to general pool
+
     let liquidity_provider = add_liquidity_provider(&mut context, &general_pool, 9999 * EXP)
         .await
         .unwrap();
@@ -56,33 +63,34 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    // 1. Prepare money market pool
+    // 2. Prepare money market pool
 
     let mm_pool_market = TestPoolMarket::new();
     mm_pool_market.init(&mut context).await.unwrap();
 
-    let mm_pool = TestPool::new(&mm_pool_market);
+    let mm_pool = TestPool::new(&mm_pool_market, Some(reserve.collateral.mint_pubkey));
     mm_pool.create(&mut context, &mm_pool_market).await.unwrap();
 
-    // 2. Prepare depositor
+    // 3. Prepare depositor
 
     let test_depositor = TestDepositor::new(Some(rebalancer));
     test_depositor.init(&mut context).await.unwrap();
 
-    // 2.1 Create transit account for liquidity token
+    // 3.1 Create transit account for liquidity token
     test_depositor
-        .create_transit(&mut context, &general_pool.token_mint.pubkey())
+        .create_transit(&mut context, &general_pool.token_mint_pubkey)
         .await
         .unwrap();
 
-    // 2.2 Create transit account for collateral token
+    // 3.2 Create transit account for collateral token
     test_depositor
-        .create_transit(&mut context, &mm_pool.token_mint.pubkey())
+        .create_transit(&mut context, &mm_pool.token_mint_pubkey)
         .await
         .unwrap();
 
     (
         context,
+        spl_lending,
         general_pool_market,
         general_pool,
         general_pool_borrow_authority,
@@ -97,6 +105,7 @@ async fn setup() -> (
 async fn success() {
     let (
         mut context,
+        spl_lending,
         general_pool_market,
         general_pool,
         general_pool_borrow_authority,
@@ -109,6 +118,7 @@ async fn success() {
     test_depositor
         .deposit(
             &mut context,
+            &spl_lending,
             &general_pool_market,
             &general_pool,
             &general_pool_borrow_authority,

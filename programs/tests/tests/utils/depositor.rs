@@ -1,5 +1,6 @@
 use super::{
-    get_account, pool_borrow_authority::TestPoolBorrowAuthority, TestPool, TestPoolMarket,
+    get_account, get_reserve_account_data, pool_borrow_authority::TestPoolBorrowAuthority,
+    TestLending, TestPool, TestPoolMarket,
 };
 use everlend_depositor::{find_transit_program_address, state::Depositor};
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
@@ -81,9 +82,11 @@ impl TestDepositor {
         context.banks_client.process_transaction(tx).await
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn deposit(
         &self,
         context: &mut ProgramTestContext,
+        spl_lending: &TestLending,
         general_pool_market: &TestPoolMarket,
         general_pool: &TestPool,
         general_pool_borrow_authority: &TestPoolBorrowAuthority,
@@ -91,11 +94,19 @@ impl TestDepositor {
         mm_pool: &TestPool,
         amount: u64,
     ) -> transport::Result<()> {
-        let (transit_pubkey, _) = find_transit_program_address(
+        let (liquidity_transit_pubkey, _) = find_transit_program_address(
             &everlend_depositor::id(),
             &self.depositor.pubkey(),
-            &general_pool.token_mint.pubkey(),
+            &general_pool.token_mint_pubkey,
         );
+
+        let (collateral_transit_pubkey, _) = find_transit_program_address(
+            &everlend_depositor::id(),
+            &self.depositor.pubkey(),
+            &mm_pool.token_mint_pubkey,
+        );
+
+        let reserve = get_reserve_account_data(context, &spl_lending.reserve_pubkey).await;
 
         let tx = Transaction::new_signed_with_payer(
             &[
@@ -106,21 +117,21 @@ impl TestDepositor {
                     &general_pool.pool_pubkey,
                     &general_pool_borrow_authority.pool_borrow_authority_pubkey,
                     &general_pool.token_account.pubkey(),
-                    &general_pool.token_mint.pubkey(),
+                    &general_pool.token_mint_pubkey,
                     &self.rebalancer.pubkey(),
                     amount,
                 ),
-                // spl_token_lending::instruction::deposit_reserve_liquidity(
-                //     spl_token_lending::id(),
-                //     amount,
-                //     transit_pubkey,
-                //     destination_collateral_pubkey,
-                //     reserve_pubkey,
-                //     reserve_liquidity_supply_pubkey,
-                //     reserve_collateral_mint_pubkey,
-                //     lending_market_pubkey,
-                //     user_transfer_authority_pubkey,
-                // ),
+                spl_token_lending::instruction::deposit_reserve_liquidity(
+                    spl_token_lending::id(),
+                    amount,
+                    liquidity_transit_pubkey,
+                    collateral_transit_pubkey,
+                    spl_lending.reserve_pubkey,
+                    reserve.liquidity.supply_pubkey,
+                    reserve.collateral.mint_pubkey,
+                    spl_lending.market_pubkey,
+                    self.rebalancer.pubkey(),
+                ),
             ],
             Some(&context.payer.pubkey()),
             &[&context.payer, &self.rebalancer],

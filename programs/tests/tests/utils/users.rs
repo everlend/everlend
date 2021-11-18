@@ -35,7 +35,7 @@ pub async fn add_liquidity_provider(
     create_token_account(
         context,
         &token_account,
-        &test_pool.token_mint.pubkey(),
+        &test_pool.token_mint_pubkey,
         &user.pubkey(),
     )
     .await?;
@@ -50,7 +50,7 @@ pub async fn add_liquidity_provider(
 
     mint_tokens(
         context,
-        &test_pool.token_mint.pubkey(),
+        &test_pool.token_mint_pubkey,
         &token_account.pubkey(),
         mint_amount,
     )

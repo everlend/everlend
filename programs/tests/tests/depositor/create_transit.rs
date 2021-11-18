@@ -6,7 +6,7 @@ use solana_program_test::*;
 use solana_sdk::{signature::Keypair, signer::Signer};
 
 async fn setup() -> (ProgramTestContext, TestDepositor) {
-    let mut context = program_test().start_with_context().await;
+    let mut context = presetup().await.0;
 
     let test_depositor = TestDepositor::new(None);
     test_depositor.init(&mut context).await.unwrap();

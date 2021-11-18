@@ -50,7 +50,7 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
         let depositor_info = next_account_info(account_info_iter)?;
         let transit_info = next_account_info(account_info_iter)?;
-        let token_mint_info = next_account_info(account_info_iter)?;
+        let mint_info = next_account_info(account_info_iter)?;
         let depositor_authority_info = next_account_info(account_info_iter)?;
         let from_info = next_account_info(account_info_iter)?;
         let rent_info = next_account_info(account_info_iter)?;
@@ -66,12 +66,12 @@ impl Processor {
 
         // Create transit account for SPL program
         let (transit_pubkey, bump_seed) =
-            find_transit_program_address(program_id, depositor_info.key, token_mint_info.key);
+            find_transit_program_address(program_id, depositor_info.key, mint_info.key);
         assert_account_key(transit_info, &transit_pubkey)?;
 
         let signers_seeds = &[
             &depositor_info.key.to_bytes()[..32],
-            &token_mint_info.key.to_bytes()[..32],
+            &mint_info.key.to_bytes()[..32],
             &[bump_seed],
         ];
 
@@ -86,7 +86,7 @@ impl Processor {
         // Initialize transit token account for spl token
         spl_initialize_account(
             transit_info.clone(),
-            token_mint_info.clone(),
+            mint_info.clone(),
             depositor_authority_info.clone(),
             rent_info.clone(),
         )?;
@@ -103,8 +103,8 @@ impl Processor {
         let pool_borrow_authority_info = next_account_info(account_info_iter)?;
         let pool_market_authority_info = next_account_info(account_info_iter)?;
         let pool_token_account_info = next_account_info(account_info_iter)?;
-        let transit_info = next_account_info(account_info_iter)?;
-        let token_mint_info = next_account_info(account_info_iter)?;
+        let liquidity_transit_info = next_account_info(account_info_iter)?;
+        let liquidity_mint_info = next_account_info(account_info_iter)?;
         let rebalancer_info = next_account_info(account_info_iter)?;
         let _everlend_ulp_info = next_account_info(account_info_iter)?;
         let instructions_info = next_account_info(account_info_iter)?;
@@ -120,14 +120,14 @@ impl Processor {
             pool_info.clone(),
             pool_borrow_authority_info.clone(),
             pool_market_authority_info.clone(),
-            transit_info.clone(),
+            liquidity_transit_info.clone(),
             pool_token_account_info.clone(),
             rebalancer_info.clone(),
             amount,
             &[],
         )?;
 
-        // check_deposit(instructions_info, amount)?;
+        check_deposit(instructions_info, amount)?;
 
         // ...
 

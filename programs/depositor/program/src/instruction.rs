@@ -67,16 +67,16 @@ pub fn init(program_id: &Pubkey, depositor: &Pubkey) -> Instruction {
 pub fn create_transit(
     program_id: &Pubkey,
     depositor: &Pubkey,
-    token_mint: &Pubkey,
+    mint: &Pubkey,
     from: &Pubkey,
 ) -> Instruction {
     let (depositor_authority, _) = find_program_address(program_id, depositor);
-    let (transit, _) = find_transit_program_address(program_id, depositor, token_mint);
+    let (transit, _) = find_transit_program_address(program_id, depositor, mint);
 
     let accounts = vec![
         AccountMeta::new_readonly(*depositor, false),
         AccountMeta::new(transit, false),
-        AccountMeta::new_readonly(*token_mint, false),
+        AccountMeta::new_readonly(*mint, false),
         AccountMeta::new_readonly(depositor_authority, false),
         AccountMeta::new(*from, true),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
@@ -96,12 +96,13 @@ pub fn deposit(
     pool: &Pubkey,
     pool_borrow_authority: &Pubkey,
     pool_token_account: &Pubkey,
-    token_mint: &Pubkey,
+    liquidity_mint: &Pubkey,
     rebalancer: &Pubkey,
     amount: u64,
 ) -> Instruction {
     let (pool_market_authority, _) = find_program_address(&everlend_ulp::id(), pool_market);
-    let (transit, _) = find_transit_program_address(program_id, depositor, token_mint);
+    let (liquidity_transit, _) =
+        find_transit_program_address(program_id, depositor, liquidity_mint);
 
     let accounts = vec![
         AccountMeta::new_readonly(*depositor, false),
@@ -110,8 +111,8 @@ pub fn deposit(
         AccountMeta::new(*pool_borrow_authority, false),
         AccountMeta::new_readonly(pool_market_authority, false),
         AccountMeta::new(*pool_token_account, false),
-        AccountMeta::new(transit, false),
-        AccountMeta::new_readonly(*token_mint, false),
+        AccountMeta::new(liquidity_transit, false),
+        AccountMeta::new_readonly(*liquidity_mint, false),
         AccountMeta::new_readonly(*rebalancer, true),
         AccountMeta::new_readonly(everlend_ulp::id(), false),
         AccountMeta::new_readonly(sysvar::instructions::id(), false),

@@ -3,6 +3,7 @@
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::*;
 use solana_program_test::{ProgramTest, ProgramTestContext};
+use solana_sdk::signature::read_keypair_file;
 use solana_sdk::{
     account::Account,
     signature::{Keypair, Signer},
@@ -11,12 +12,14 @@ use solana_sdk::{
 };
 
 pub mod depositor;
+pub mod lending;
 pub mod pool;
 pub mod pool_borrow_authority;
 pub mod pool_market;
 pub mod users;
 
 pub use depositor::*;
+pub use lending::*;
 pub use pool::*;
 pub use pool_borrow_authority::*;
 pub use pool_market::*;
@@ -37,6 +40,7 @@ pub fn program_test() -> ProgramTest {
     );
     program.add_program(
         "spl_token_lending",
+        // Pubkey::from_str(SPL_LENDING_PROGRAM_ID).unwrap(),
         spl_token_lending::id(),
         processor!(spl_token_lending::processor::process_instruction),
     );
@@ -63,6 +67,28 @@ pub async fn get_token_account_data(
 pub async fn get_token_balance(context: &mut ProgramTestContext, pubkey: &Pubkey) -> u64 {
     let account_info = get_token_account_data(context, pubkey).await;
     account_info.amount
+}
+
+pub fn get_liquidity_mint() -> (Keypair, Pubkey) {
+    let keypair = read_keypair_file("tests/fixtures/lending/liquidity.json").unwrap();
+    let pubkey = keypair.pubkey();
+
+    (keypair, pubkey)
+}
+
+pub async fn presetup() -> (ProgramTestContext, TestLending, TestPythOracle) {
+    let mut test = program_test();
+    let sol_oracle = add_sol_oracle(&mut test);
+    let spl_lending = add_spl_lending(&mut test);
+
+    let mut context = test.start_with_context().await;
+    let payer_pubkey = context.payer.pubkey();
+
+    create_mint(&mut context, &get_liquidity_mint().0, &payer_pubkey)
+        .await
+        .unwrap();
+
+    (context, spl_lending, sol_oracle)
 }
 
 pub async fn create_token_account(
