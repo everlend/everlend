@@ -11,6 +11,7 @@ use solana_sdk::{
     transport,
 };
 
+pub mod liquidity_oracle;
 pub mod depositor;
 pub mod lending;
 pub mod pool;
@@ -18,6 +19,7 @@ pub mod pool_borrow_authority;
 pub mod pool_market;
 pub mod users;
 
+pub use liquidity_oracle::*;
 pub use depositor::*;
 pub use lending::*;
 pub use pool::*;
@@ -33,6 +35,13 @@ pub fn program_test() -> ProgramTest {
         everlend_ulp::id(),
         processor!(everlend_ulp::processor::Processor::process_instruction),
     );
+
+    program.add_program(
+        "everlend_liquidity_oracle",
+        everlend_liquidity_oracle::id(),
+        processor!(everlend_liquidity_oracle::processor::Processor::process_instruction),
+    );
+
     program.add_program(
         "everlend_depositor",
         everlend_depositor::id(),
@@ -179,4 +188,20 @@ pub async fn mint_tokens(
     );
 
     context.banks_client.process_transaction(tx).await
+}
+
+pub async fn get_amount_allowed(
+    context: &mut ProgramTestContext,
+    test_pool: &TestPool,
+    test_pool_borrow_authority: &TestPoolBorrowAuthority,
+) -> u64 {
+    let token_amount = get_token_balance(context, &test_pool.token_account.pubkey()).await;
+    let total_amount_borrowed = test_pool.get_data(context).await.total_amount_borrowed;
+    let total_pool_amount = token_amount + total_amount_borrowed;
+
+    test_pool_borrow_authority
+        .get_data(context)
+        .await
+        .get_amount_allowed(total_pool_amount)
+        .unwrap()
 }
