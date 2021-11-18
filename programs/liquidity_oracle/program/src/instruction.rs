@@ -1,8 +1,6 @@
 //! Instruction states definitions.
 
-use crate::{
-    find_liquidity_oracle_token_distribution_program_address, state::DistributionArray,
-};
+use crate::{find_liquidity_oracle_token_distribution_program_address, state::DistributionArray};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
     instruction::{AccountMeta, Instruction},
@@ -38,9 +36,7 @@ pub enum LiquidityOracleInstruction {
     /// [R]  Clock sysvar.
     /// [R]  Rent sysvar
     /// [R]  System program id
-    CreateTokenDistribution {
-        value: DistributionArray,
-    },
+    CreateTokenDistribution { value: DistributionArray },
 
     /// Updates token distribution account.
     ///
@@ -50,9 +46,7 @@ pub enum LiquidityOracleInstruction {
     /// [RW] TokenDistribution - token distribution to update state
     /// [RS] Authority - liquidity oracle authority.
     /// [R] Clock sysvar.
-    UpdateTokenDistribution {
-        value: DistributionArray,
-    },
+    UpdateTokenDistribution { value: DistributionArray },
 }
 
 /// Creates 'InitLiquidityOracle' instruction.
@@ -104,7 +98,7 @@ pub fn create_token_distribution(
     let (token_distribution, _) = find_liquidity_oracle_token_distribution_program_address(
         program_id,
         liquidity_oracle,
-        &token_mint,
+        token_mint,
     );
 
     let accounts = vec![

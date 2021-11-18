@@ -1,7 +1,7 @@
 use crate::utils::*;
-use solana_program::{instruction::InstructionError, pubkey::Pubkey, msg};
+use solana_program::{instruction::InstructionError, pubkey::Pubkey};
 use solana_program_test::*;
-use solana_sdk::{signer::Signer, transaction::TransactionError, signature::Keypair};
+use solana_sdk::{signer::Signer, transaction::TransactionError};
 
 async fn setup() -> (ProgramTestContext, TestLiquidityOracle) {
     let mut context = program_test().start_with_context().await;
