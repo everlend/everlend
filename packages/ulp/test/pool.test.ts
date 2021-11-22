@@ -16,6 +16,8 @@ describe('Pool', () => {
   let destination: PublicKey
 
   beforeAll(async () => {
+    console.log(payerPublicKey)
+
     const {
       data: { tokenMint, poolMint },
     } = await Pool.load(connection, POOL_PUBKEY)

@@ -1,5 +1,6 @@
 use crate::utils::*;
-use everlend_liquidity_oracle::{error::LiquidityOracleError, id, instruction};
+use everlend_liquidity_oracle::{id, instruction};
+use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program_test::*;
 use solana_sdk::{signer::Signer, transaction::Transaction, transaction::TransactionError};
@@ -40,9 +41,6 @@ async fn fail_second_time_init() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(
-            0,
-            InstructionError::Custom(LiquidityOracleError::AlreadyInitialized as u32)
-        )
+        TransactionError::InstructionError(0, InstructionError::AccountAlreadyInitialized)
     );
 }

@@ -1,7 +1,7 @@
 //! PoolBorrowAuthority state definitions
 use super::*;
-use crate::error::LiquidityPoolsError;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+use everlend_utils::EverlendError;
 use solana_program::{
     entrypoint::ProgramResult,
     msg,
@@ -41,20 +41,20 @@ impl PoolBorrowAuthority {
         self.amount_borrowed = self
             .amount_borrowed
             .checked_add(amount)
-            .ok_or(LiquidityPoolsError::MathOverflow)?;
+            .ok_or(EverlendError::MathOverflow)?;
         Ok(())
     }
 
     /// Repay funds
     pub fn repay(&mut self, amount: u64) -> ProgramResult {
         if self.amount_borrowed.lt(&amount) {
-            return Err(LiquidityPoolsError::RepayAmountCheckFailed.into());
+            return Err(EverlendError::RepayAmountCheckFailed.into());
         }
 
         self.amount_borrowed = self
             .amount_borrowed
             .checked_sub(amount)
-            .ok_or(LiquidityPoolsError::MathOverflow)?;
+            .ok_or(EverlendError::MathOverflow)?;
         Ok(())
     }
 
@@ -67,15 +67,15 @@ impl PoolBorrowAuthority {
     pub fn get_amount_allowed(&self, total_pool_amount: u64) -> Result<u64, ProgramError> {
         Ok((total_pool_amount as u128)
             .checked_mul(self.share_allowed as u128)
-            .ok_or(LiquidityPoolsError::MathOverflow)?
+            .ok_or(EverlendError::MathOverflow)?
             .checked_div(10_000)
-            .ok_or(LiquidityPoolsError::MathOverflow)? as u64)
+            .ok_or(EverlendError::MathOverflow)? as u64)
     }
 
     /// Check amount allowed
     pub fn check_amount_allowed(&self, total_pool_amount: u64) -> ProgramResult {
         if self.amount_borrowed > self.get_amount_allowed(total_pool_amount)? {
-            Err(LiquidityPoolsError::AmountAllowedCheckFailed.into())
+            Err(EverlendError::AmountAllowedCheckFailed.into())
         } else {
             Ok(())
         }

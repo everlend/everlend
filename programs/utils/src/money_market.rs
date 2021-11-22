@@ -1,4 +1,4 @@
-use crate::error::DepositorError;
+use crate::EverlendError;
 use solana_program::{account_info::AccountInfo, program_error::ProgramError, sysvar};
 use std::convert::TryInto;
 
@@ -8,7 +8,7 @@ pub fn check_deposit(instruction: &AccountInfo, amount: u64) -> Result<(), Progr
 
     // Instruction should be first in transaction
     if index != 0 {
-        return Err(DepositorError::InvalidInstructionOrder.into());
+        return Err(EverlendError::InvalidInstructionOrder.into());
     }
 
     // Load next instruction
@@ -19,7 +19,7 @@ pub fn check_deposit(instruction: &AccountInfo, amount: u64) -> Result<(), Progr
     // Check that instruction is money market instruction
     // TODO: unfix money market program ids
     if money_market_instruction.program_id != spl_token_lending::id() {
-        return Err(DepositorError::IncorrectInstructionProgramId.into());
+        return Err(EverlendError::IncorrectInstructionProgramId.into());
     }
 
     // TODO: add more checks
@@ -37,6 +37,6 @@ pub fn check_amount_from_deposit_instruction(
     if amount == expected_amount {
         Ok(())
     } else {
-        Err(DepositorError::WrongInstructionAmount.into())
+        Err(EverlendError::WrongInstructionAmount.into())
     }
 }

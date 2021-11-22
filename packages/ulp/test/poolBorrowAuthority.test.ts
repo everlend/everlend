@@ -11,6 +11,9 @@ describe('PoolBorrowAuthority', () => {
         POOL_BORROW_AUTHORITY_PUBKEY,
       )
 
+      console.log(poolBorrowAuthority)
+      console.log(poolBorrowAuthority.publicKey.toString())
+
       expect(poolBorrowAuthority.publicKey).toEqual(POOL_BORROW_AUTHORITY_PUBKEY)
       expect(poolBorrowAuthority.data.accountType).toEqual(AccountType.PoolBorrowAuthority)
     })

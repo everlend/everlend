@@ -1,19 +1,14 @@
 {
   "compilerOptions": {
-    "outDir": "./dist",
     "module": "commonjs",
-    "target": "es6",
+    "target": "esnext",
     "declaration": true,
     "removeComments": true,
     "moduleResolution": "node",
     "sourceMap": true,
-    "downlevelIteration": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
-    "skipLibCheck": true
   },
-  "include": [
-    "./src"
-  ],
+  "exclude": ["node_modules", "dist"]
 }

@@ -1,3 +1,12 @@
+# Package manager
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+!.yarn/plugins
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
+
 # JetBrains
 .idea/
 
@@ -8,6 +17,9 @@
 !.vscode/launch.json
 !.vscode/extensions.json
 *.code-workspace
+
+# Dependencies
+node_modules/
 
 # Local History for Visual Studio Code
 .history/

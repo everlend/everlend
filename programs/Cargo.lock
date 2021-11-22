@@ -871,6 +871,7 @@ version = "0.1.0"
 dependencies = [
  "borsh",
  "everlend-ulp",
+ "everlend-utils",
  "num-derive",
  "num-traits",
  "solana-program",
@@ -885,6 +886,7 @@ name = "everlend-liquidity-oracle"
 version = "0.1.0"
 dependencies = [
  "borsh",
+ "everlend-utils",
  "num-derive",
  "num-traits",
  "solana-program",
@@ -899,6 +901,7 @@ dependencies = [
  "everlend-depositor",
  "everlend-liquidity-oracle",
  "everlend-ulp",
+ "everlend-utils",
  "solana-program",
  "solana-program-test",
  "solana-sdk",
@@ -911,6 +914,7 @@ name = "everlend-ulp"
 version = "0.1.0"
 dependencies = [
  "borsh",
+ "everlend-utils",
  "num-derive",
  "num-traits",
  "solana-program",
@@ -935,6 +939,20 @@ dependencies = [
  "solana-program",
  "solana-sdk",
  "spl-token 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "everlend-utils"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "num-derive",
+ "num-traits",
+ "solana-program",
+ "solana-sdk",
+ "spl-token 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "spl-token-lending 0.1.0 (git+https://github.com/solendprotocol/solana-program-library)",
+ "thiserror",
 ]
 
 [[package]]

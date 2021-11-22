@@ -1,5 +1,7 @@
+//! Utils
+
 use solana_program::{
-    account_info::AccountInfo, msg, program::invoke_signed, program_error::ProgramError,
+    account_info::AccountInfo, program::invoke_signed, program_error::ProgramError,
 };
 
 /// ULP borrow tokens

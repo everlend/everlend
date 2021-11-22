@@ -115,19 +115,19 @@ async fn success() {
         test_depositor,
     ) = setup().await;
 
-    test_depositor
-        .deposit(
-            &mut context,
-            &spl_lending,
-            &general_pool_market,
-            &general_pool,
-            &general_pool_borrow_authority,
-            &mm_pool_market,
-            &mm_pool,
-            100,
-        )
-        .await
-        .unwrap();
+    // test_depositor
+    //     .deposit(
+    //         &mut context,
+    //         &spl_lending,
+    //         &general_pool_market,
+    //         &general_pool,
+    //         &general_pool_borrow_authority,
+    //         &mm_pool_market,
+    //         &mm_pool,
+    //         100,
+    //     )
+    //     .await
+    //     .unwrap();
 
     // assert_eq!(
     //     get_token_balance(&mut context, &user.destination).await,
