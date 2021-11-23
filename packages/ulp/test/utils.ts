@@ -1,7 +1,7 @@
 import { ASSOCIATED_TOKEN_PROGRAM_ID, MintLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import { Connection, Keypair, PublicKey, sendAndConfirmTransaction } from '@solana/web3.js'
 import BN from 'bn.js'
-import { CreateAssociatedTokenAccount, CreateMint, MintTo } from '../src'
+import { CreateAssociatedTokenAccount, CreateMint, MintTo } from '@everlend/common'
 
 export const ENDPOINT = 'http://localhost:8899'
 export const connection = new Connection(ENDPOINT, 'recent')

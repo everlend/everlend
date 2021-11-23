@@ -7,7 +7,7 @@ import {
   TransactionInstruction,
 } from '@solana/web3.js'
 import BN from 'bn.js'
-import { Borsh } from '../base'
+import { Borsh } from '@everlend/common'
 import { LiquidityPoolsProgram } from '../program'
 
 export class CreatePoolBorrowAuthorityArgs extends Borsh.Data<{ shareAllowed: BN }> {

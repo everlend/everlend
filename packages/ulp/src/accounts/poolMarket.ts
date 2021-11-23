@@ -1,8 +1,7 @@
 import { AccountType, LiquidityPoolsProgram } from '../program'
 import { AccountInfo, PublicKey } from '@solana/web3.js'
 import { Buffer } from 'buffer'
-import { Account, Borsh } from '../base'
-import { ERROR_INVALID_OWNER } from '../errors'
+import { Account, Borsh, Errors } from '@everlend/common'
 
 type Args = {
   accountType: AccountType
@@ -25,7 +24,7 @@ export class PoolMarket extends Account<PoolMarketData> {
     super(key, info)
 
     if (!this.assertOwner(LiquidityPoolsProgram.PUBKEY)) {
-      throw ERROR_INVALID_OWNER()
+      throw Errors.ERROR_INVALID_OWNER()
     }
 
     this.data = PoolMarketData.deserialize(this.info.data)

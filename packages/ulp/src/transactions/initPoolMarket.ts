@@ -5,7 +5,7 @@ import {
   TransactionCtorFields,
   TransactionInstruction,
 } from '@solana/web3.js'
-import { Borsh } from '../base'
+import { Borsh } from '@everlend/common'
 import { LiquidityPoolsProgram } from '../program'
 
 export class InitPoolMarketArgs extends Borsh.Data {

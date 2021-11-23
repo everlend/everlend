@@ -1,5 +1,5 @@
 {
-  "name": "@everlend/ulp",
+  "name": "@everlend/common",
   "version": "0.0.1",
   "license": "MIT",
   "main": "dist/index.js",
@@ -12,16 +12,11 @@
   },
   "scripts": {
     "build": "rimraf dist && tsc -p ./tsconfig.build.json",
-    "clean": "yarn cache clean && rm -rf node_modules",
-    "test": "jest",
-    "test:watch": "jest --watch"
+    "clean": "yarn cache clean && rm -rf node_modules"
   },
   "devDependencies": {
-    "@types/jest": "^27.0.2",
     "@types/node": "^16.11.1",
-    "jest": "^27.3.0",
     "rimraf": "^3.0.2",
-    "ts-jest": "^27.0.7",
     "ts-node": "^10.3.0",
     "typescript": "^4.4.4"
   },
@@ -31,7 +26,6 @@
     ]
   },
   "dependencies": {
-    "@everlend/common": "workspace:^0.0.1",
     "@solana/spl-token": "^0.1.5",
     "@solana/web3.js": "^1.16.1",
     "borsh": "^0.6.0",

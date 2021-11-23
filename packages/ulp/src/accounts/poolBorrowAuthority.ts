@@ -2,8 +2,7 @@ import { AccountInfo, Connection, PublicKey } from '@solana/web3.js'
 import BN from 'bn.js'
 import bs58 from 'bs58'
 import { Buffer } from 'buffer'
-import { ERROR_INVALID_OWNER } from '../errors'
-import { Account, Borsh } from '../base'
+import { Account, Borsh, Errors } from '@everlend/common'
 import { AccountType, LiquidityPoolsProgram } from '../program'
 
 type Args = {
@@ -39,7 +38,7 @@ export class PoolBorrowAuthority extends Account<PoolBorrowAuthorityData> {
     super(publicKey, info)
 
     if (!this.assertOwner(LiquidityPoolsProgram.PUBKEY)) {
-      throw ERROR_INVALID_OWNER()
+      throw Errors.ERROR_INVALID_OWNER()
     }
 
     this.data = PoolBorrowAuthorityData.deserialize(this.info.data)

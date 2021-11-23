@@ -3,7 +3,7 @@ import { Connection, Keypair, PublicKey, SystemProgram, Transaction } from '@sol
 import BN from 'bn.js'
 import { Pool, PoolBorrowAuthority, PoolMarket } from './accounts'
 import { LiquidityPoolsProgram } from './program'
-import { CreateAssociatedTokenAccount, findAssociatedTokenAccount } from './shared'
+import { CreateAssociatedTokenAccount, findAssociatedTokenAccount } from '@everlend/common'
 import { Borrow, CreatePool, Deposit, InitPoolMarket, Repay, Withdraw } from './transactions'
 
 export type ActionResult = {

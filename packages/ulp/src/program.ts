@@ -1,5 +1,5 @@
 import { PublicKey } from '@solana/web3.js'
-import { Program } from './base'
+import { Program } from '@everlend/common'
 
 export enum AccountType {
   Uninitialized = 0,
