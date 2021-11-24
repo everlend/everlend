@@ -13,7 +13,6 @@ pub const SOL_PYTH_PRICE: &str = "J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix";
 pub const SPL_LENDING_PROGRAM_ID: &str = "Bp1MJ1qr4g8t9AQJjm5H6zDB2NmRrkJL8H8zuvb1g7oV";
 pub const SPL_LENDING_MARKET: &str = "CRw4TuphJ487tdTnsEKCuQkMYgGELck3Aa9Zh89xDPB";
 pub const SPL_LENDING_RESERVE: &str = "8UzkB5ik7oqpcMVc4DFsj89ezD6TAiBW5GAi9W124L7F";
-pub const SPL_LENDING_COLLATERL_MINT: &str = "2ph19hndAMfQ2XMGDQgdN4XjByNKAYB3acZFjHC85E6r";
 
 pub const SOL_PRICE: i64 = 10000;
 
@@ -91,7 +90,7 @@ pub fn add_lending(
     market_pubkey: Pubkey,
     reserve_pubkey: Pubkey,
 ) -> TestLending {
-    // Market
+    // Add market
     test.add_account_with_file_data(
         market_pubkey,
         u32::MAX as u64,
@@ -101,12 +100,43 @@ pub fn add_lending(
 
     // Reserve
     let filename = &format!("{}.bin", reserve_pubkey.to_string());
-    let reserve_data = read_file(find_file(filename).unwrap_or_else(|| {
+    let mut reserve_data = read_file(find_file(filename).unwrap_or_else(|| {
         panic!("Unable to locate {}", filename);
     }));
-    let reserve =
-        spl_token_lending::state::Reserve::unpack_from_slice(reserve_data.as_slice()).unwrap();
+    let mut reserve =
+        spl_token_lending::state::Reserve::unpack_from_slice(reserve_data.as_mut_slice()).unwrap();
 
+    // The same slot for deposit
+    reserve.last_update.update_slot(10);
+
+    // Add sub token accounts
+    test.add_account_with_file_data(
+        reserve.liquidity.supply_pubkey,
+        u32::MAX as u64,
+        spl_token::id(),
+        &format!("{}.bin", reserve.liquidity.supply_pubkey.to_string()),
+    );
+    test.add_account_with_file_data(
+        reserve.liquidity.fee_receiver,
+        u32::MAX as u64,
+        spl_token::id(),
+        &format!("{}.bin", reserve.liquidity.fee_receiver.to_string()),
+    );
+    test.add_account_with_file_data(
+        reserve.collateral.mint_pubkey,
+        u32::MAX as u64,
+        spl_token::id(),
+        &format!("{}.bin", reserve.collateral.mint_pubkey.to_string()),
+    );
+    test.add_account_with_file_data(
+        reserve.collateral.supply_pubkey,
+        u32::MAX as u64,
+        spl_token::id(),
+        &format!("{}.bin", reserve.collateral.supply_pubkey.to_string()),
+    );
+
+    // Add reserve
+    spl_token_lending::state::Reserve::pack(reserve, &mut reserve_data).unwrap();
     test.add_account(
         reserve_pubkey,
         Account {
@@ -116,14 +146,6 @@ pub fn add_lending(
             executable: false,
             rent_epoch: 0,
         },
-    );
-
-    // Collateral mint
-    test.add_account_with_file_data(
-        reserve.collateral.mint_pubkey,
-        u32::MAX as u64,
-        spl_token::id(),
-        &format!("{}.bin", reserve.collateral.mint_pubkey.to_string()),
     );
 
     TestLending {

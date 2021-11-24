@@ -126,7 +126,7 @@ impl Processor {
             &[],
         )?;
 
-        check_deposit(instructions_info, amount)?;
+        // check_deposit(instructions_info, amount)?;
 
         // ...
 

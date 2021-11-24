@@ -94,6 +94,9 @@ impl TestDepositor {
         mm_pool: &TestPool,
         amount: u64,
     ) -> transport::Result<()> {
+        // Rates should be refreshed
+        context.warp_to_slot(10).unwrap();
+
         let (liquidity_transit_pubkey, _) = find_transit_program_address(
             &everlend_depositor::id(),
             &self.depositor.pubkey(),

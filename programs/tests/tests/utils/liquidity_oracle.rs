@@ -2,7 +2,7 @@ use super::get_account;
 
 use everlend_liquidity_oracle::{
     find_liquidity_oracle_token_distribution_program_address, id, instruction,
-    state::TokenDistribution, state::DistributionArray, state::LiquidityOracle,
+    state::DistributionArray, state::LiquidityOracle, state::TokenDistribution,
 };
 use solana_program_test::*;
 use solana_sdk::pubkey::Pubkey;
@@ -139,12 +139,11 @@ impl TestTokenDistribution {
         program_id: &Pubkey,
         liquidity_oracle: &TestLiquidityOracle,
     ) -> TokenDistribution {
-        let (token_distribution, _) =
-            find_liquidity_oracle_token_distribution_program_address(
-                program_id,
-                &liquidity_oracle.keypair.pubkey(),
-                &self.token_mint,
-            );
+        let (token_distribution, _) = find_liquidity_oracle_token_distribution_program_address(
+            program_id,
+            &liquidity_oracle.keypair.pubkey(),
+            &self.token_mint,
+        );
 
         let account = get_account(context, &token_distribution).await;
         TokenDistribution::unpack_unchecked(&account.data).unwrap()

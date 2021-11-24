@@ -13,7 +13,7 @@ pub fn check_deposit(instruction: &AccountInfo, amount: u64) -> Result<(), Progr
 
     // Load next instruction
     let money_market_instruction =
-        sysvar::instructions::load_instruction_at_checked((index - 1) as usize, instruction)
+        sysvar::instructions::load_instruction_at_checked((index + 1) as usize, instruction)
             .unwrap();
 
     // Check that instruction is money market instruction
