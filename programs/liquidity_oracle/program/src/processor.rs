@@ -1,15 +1,14 @@
 //! Program state processor.
 
 use crate::{
-    error::LiquidityOracleError,
     find_liquidity_oracle_token_distribution_program_address,
     instruction::LiquidityOracleInstruction,
-    state::{TokenDistribution, DistributionArray, InitLiquidityOracleParams, LiquidityOracle},
-    utils::*,
+    state::{DistributionArray, InitLiquidityOracleParams, LiquidityOracle, TokenDistribution},
 };
 
 use crate::state::AccountType;
 use borsh::BorshDeserialize;
+use everlend_utils::{assert_owned_by, assert_signer, assert_uninitialized, create_account};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     clock::Clock,
@@ -40,11 +39,7 @@ impl Processor {
         // Get state
         let mut liquidity_oracle =
             LiquidityOracle::unpack_unchecked(&liquidity_oracle_info.data.borrow())?;
-
-        //Check init once
-        if liquidity_oracle.account_type != AccountType::Uninitialized {
-            return Err(LiquidityOracleError::AlreadyInitialized.into());
-        }
+        assert_uninitialized(&liquidity_oracle)?;
 
         // Initialize
         liquidity_oracle.init(InitLiquidityOracleParams {
@@ -60,7 +55,7 @@ impl Processor {
     /// Process `UpdateLiquidityOracleAuthority` instruction.
     pub fn update_liquidity_oracle_authority(
         program_id: &Pubkey,
-        accounts: &[AccountInfo]
+        accounts: &[AccountInfo],
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let liquidity_oracle_info = next_account_info(account_info_iter)?;
@@ -130,9 +125,8 @@ impl Processor {
         // Init account type
         distribution.init();
         if token_distribution_account.data.borrow().len() > 0 {
-            distribution = TokenDistribution::unpack_unchecked(
-                &token_distribution_account.data.borrow(),
-            )?;
+            distribution =
+                TokenDistribution::unpack_unchecked(&token_distribution_account.data.borrow())?;
             assert_uninitialized(&distribution)?;
         }
 
@@ -153,10 +147,7 @@ impl Processor {
 
         distribution.update(clock.slot, value);
 
-        TokenDistribution::pack(
-            distribution,
-            *token_distribution_account.data.borrow_mut(),
-        )?;
+        TokenDistribution::pack(distribution, *token_distribution_account.data.borrow_mut())?;
 
         Ok(())
     }
@@ -193,16 +184,11 @@ impl Processor {
         }
 
         let mut distribution =
-            TokenDistribution::unpack_unchecked(&token_distribution_account.data.borrow())?;
-
-        assert_initialized(&distribution)?;
+            TokenDistribution::unpack(&token_distribution_account.data.borrow())?;
 
         distribution.update(clock.slot, value);
 
-        TokenDistribution::pack(
-            distribution,
-            *token_distribution_account.data.borrow_mut(),
-        )?;
+        TokenDistribution::pack(distribution, *token_distribution_account.data.borrow_mut())?;
 
         Ok(())
     }

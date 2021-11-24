@@ -1,5 +1,6 @@
 [workspace]
 members = [
+  "utils",
   "depositor/program",
   "ulp/program",
   "ulp/cli",

@@ -1,8 +1,8 @@
 //! Pool state definitions
-use crate::error::LiquidityPoolsError;
 
 use super::*;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+use everlend_utils::EverlendError;
 use solana_program::{
     entrypoint::ProgramResult,
     msg,
@@ -45,20 +45,20 @@ impl Pool {
         self.total_amount_borrowed = self
             .total_amount_borrowed
             .checked_add(amount)
-            .ok_or(LiquidityPoolsError::MathOverflow)?;
+            .ok_or(EverlendError::MathOverflow)?;
         Ok(())
     }
 
     /// Repay funds
     pub fn repay(&mut self, amount: u64) -> ProgramResult {
         if self.total_amount_borrowed.lt(&amount) {
-            return Err(LiquidityPoolsError::RepayAmountCheckFailed.into());
+            return Err(EverlendError::RepayAmountCheckFailed.into());
         }
 
         self.total_amount_borrowed = self
             .total_amount_borrowed
             .checked_sub(amount)
-            .ok_or(LiquidityPoolsError::MathOverflow)?;
+            .ok_or(EverlendError::MathOverflow)?;
         Ok(())
     }
 }

@@ -1,15 +1,14 @@
 //! Program state processor
 
 use crate::{
-    find_transit_program_address,
-    instruction::DepositorInstruction,
-    state::Depositor,
-    utils::{
-        assert_account_key, assert_owned_by, assert_rent_exempt, assert_uninitialized,
-        check_deposit, create_account, spl_initialize_account, ulp_borrow,
-    },
+    find_transit_program_address, instruction::DepositorInstruction, state::Depositor,
+    utils::ulp_borrow,
 };
 use borsh::BorshDeserialize;
+use everlend_utils::{
+    assert_account_key, assert_owned_by, assert_rent_exempt, assert_uninitialized, check_deposit,
+    create_account, spl_initialize_account,
+};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,

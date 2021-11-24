@@ -1,12 +1,13 @@
 #![cfg(feature = "test-bpf")]
 
 use crate::utils::*;
+use everlend_ulp::{id, instruction};
+use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program_test::*;
 use solana_sdk::{
     pubkey::Pubkey, signer::Signer, transaction::Transaction, transaction::TransactionError,
 };
-use everlend_ulp::{error::LiquidityPoolsError, id, instruction};
 
 async fn setup() -> (
     ProgramTestContext,
@@ -306,7 +307,7 @@ async fn fail_with_invalid_repay_amount() {
         err,
         TransactionError::InstructionError(
             0,
-            InstructionError::Custom(LiquidityPoolsError::RepayAmountCheckFailed as u32)
+            InstructionError::Custom(EverlendError::RepayAmountCheckFailed as u32)
         )
     );
 }

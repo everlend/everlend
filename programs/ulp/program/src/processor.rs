@@ -1,7 +1,6 @@
 //! Program state processor
 
 use crate::{
-    error::LiquidityPoolsError,
     find_pool_borrow_authority_program_address, find_pool_program_address, find_program_address,
     instruction::LiquidityPoolsInstruction,
     state::{
@@ -11,6 +10,10 @@ use crate::{
     utils::*,
 };
 use borsh::BorshDeserialize;
+use everlend_utils::{
+    assert_rent_exempt, assert_uninitialized, create_account, spl_initialize_account,
+    spl_initialize_mint, spl_token_burn, spl_token_mint_to, spl_token_transfer, EverlendError,
+};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
@@ -290,7 +293,7 @@ impl Processor {
         **pool_borrow_authority_info.lamports.borrow_mut() = 0;
         **receiver_info.lamports.borrow_mut() = receiver_starting_lamports
             .checked_add(pool_borrow_authority_lamports)
-            .ok_or(LiquidityPoolsError::MathOverflow)?;
+            .ok_or(EverlendError::MathOverflow)?;
 
         PoolBorrowAuthority::pack(
             Default::default(),
