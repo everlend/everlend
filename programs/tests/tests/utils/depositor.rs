@@ -1,8 +1,6 @@
-use super::{
-    get_account, get_reserve_account_data, pool_borrow_authority::TestPoolBorrowAuthority,
-    TestLending, TestPool, TestPoolMarket,
-};
-use everlend_depositor::{find_transit_program_address, state::Depositor};
+use super::{get_account, get_reserve_account_data, TestPool, TestPoolMarket, TestSPLTokenLending};
+use everlend_depositor::state::Depositor;
+use everlend_utils::accounts;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{
@@ -14,17 +12,12 @@ use solana_sdk::{
 #[derive(Debug)]
 pub struct TestDepositor {
     pub depositor: Keypair,
-    pub rebalancer: Keypair,
 }
 
 impl TestDepositor {
-    pub fn new(rebalancer: Option<Keypair>) -> Self {
+    pub fn new() -> Self {
         let depositor = Keypair::new();
-        let rebalancer = rebalancer.unwrap_or_else(Keypair::new);
-        Self {
-            depositor,
-            rebalancer,
-        }
+        Self { depositor }
     }
 
     pub async fn get_data(&self, context: &mut ProgramTestContext) -> Depositor {
@@ -36,12 +29,6 @@ impl TestDepositor {
         let rent = context.banks_client.get_rent().await.unwrap();
         let tx = Transaction::new_signed_with_payer(
             &[
-                // Transfer some lamports to cover fee for rebalancer
-                system_instruction::transfer(
-                    &context.payer.pubkey(),
-                    &self.rebalancer.pubkey(),
-                    999999999,
-                ),
                 system_instruction::create_account(
                     &context.payer.pubkey(),
                     &self.depositor.pubkey(),
@@ -86,55 +73,45 @@ impl TestDepositor {
     pub async fn deposit(
         &self,
         context: &mut ProgramTestContext,
-        spl_lending: &TestLending,
         general_pool_market: &TestPoolMarket,
         general_pool: &TestPool,
-        general_pool_borrow_authority: &TestPoolBorrowAuthority,
         mm_pool_market: &TestPoolMarket,
         mm_pool: &TestPool,
+        spl_token_lending: &TestSPLTokenLending,
         amount: u64,
     ) -> transport::Result<()> {
-        let (liquidity_transit_pubkey, _) = find_transit_program_address(
-            &everlend_depositor::id(),
-            &self.depositor.pubkey(),
-            &general_pool.token_mint_pubkey,
-        );
+        // Rates should be refreshed
+        context.warp_to_slot(10).unwrap();
 
-        let (collateral_transit_pubkey, _) = find_transit_program_address(
-            &everlend_depositor::id(),
-            &self.depositor.pubkey(),
-            &mm_pool.token_mint_pubkey,
-        );
+        let reserve = get_reserve_account_data(context, &spl_token_lending.reserve_pubkey).await;
 
-        let reserve = get_reserve_account_data(context, &spl_lending.reserve_pubkey).await;
+        let liquidity_mint = general_pool.token_mint_pubkey;
+        let collateral_mint = mm_pool.token_mint_pubkey;
+        let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
+
+        let money_market_accounts = accounts::spl_token_lending::deposit(
+            &spl_token_lending.reserve_pubkey,
+            &reserve.liquidity.supply_pubkey,
+            &spl_token_lending.market_pubkey,
+        );
 
         let tx = Transaction::new_signed_with_payer(
-            &[
-                everlend_depositor::instruction::deposit(
-                    &everlend_depositor::id(),
-                    &self.depositor.pubkey(),
-                    &general_pool_market.pool_market.pubkey(),
-                    &general_pool.pool_pubkey,
-                    &general_pool_borrow_authority.pool_borrow_authority_pubkey,
-                    &general_pool.token_account.pubkey(),
-                    &general_pool.token_mint_pubkey,
-                    &self.rebalancer.pubkey(),
-                    amount,
-                ),
-                spl_token_lending::instruction::deposit_reserve_liquidity(
-                    spl_token_lending::id(),
-                    amount,
-                    liquidity_transit_pubkey,
-                    collateral_transit_pubkey,
-                    spl_lending.reserve_pubkey,
-                    reserve.liquidity.supply_pubkey,
-                    reserve.collateral.mint_pubkey,
-                    spl_lending.market_pubkey,
-                    self.rebalancer.pubkey(),
-                ),
-            ],
+            &[everlend_depositor::instruction::deposit(
+                &everlend_depositor::id(),
+                &self.depositor.pubkey(),
+                &general_pool_market.pool_market.pubkey(),
+                &general_pool.token_account.pubkey(),
+                &mm_pool_market.pool_market.pubkey(),
+                &mm_pool.token_account.pubkey(),
+                &mm_pool_collateral_mint,
+                &liquidity_mint,
+                &collateral_mint,
+                &spl_token_lending::id(),
+                money_market_accounts,
+                amount,
+            )],
             Some(&context.payer.pubkey()),
-            &[&context.payer, &self.rebalancer],
+            &[&context.payer],
             context.last_blockhash,
         );
 

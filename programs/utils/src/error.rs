@@ -42,6 +42,9 @@ pub enum EverlendError {
     /// Wrong instruction amount
     #[error("Wrong instruction amount")]
     WrongInstructionAmount,
+
+    #[error("The instruction expected additional pubkeys")]
+    NotEnoughPubkeys,
 }
 
 impl PrintProgramError for EverlendError {

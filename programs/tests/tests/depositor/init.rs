@@ -8,7 +8,7 @@ use solana_program_test::*;
 async fn success() {
     let mut context = program_test().start_with_context().await;
 
-    let test_depositor = TestDepositor::new(None);
+    let test_depositor = TestDepositor::new();
     test_depositor.init(&mut context).await.unwrap();
 
     let depositor = test_depositor.get_data(&mut context).await;

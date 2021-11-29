@@ -12,16 +12,16 @@ use solana_sdk::{
 };
 
 pub mod depositor;
-pub mod lending;
 pub mod liquidity_oracle;
+pub mod money_market;
 pub mod pool;
 pub mod pool_borrow_authority;
 pub mod pool_market;
 pub mod users;
 
 pub use depositor::*;
-pub use lending::*;
 pub use liquidity_oracle::*;
+pub use money_market::*;
 pub use pool::*;
 pub use pool_borrow_authority::*;
 pub use pool_market::*;
@@ -62,6 +62,14 @@ pub async fn get_account(context: &mut ProgramTestContext, pubkey: &Pubkey) -> A
         .expect("account empty")
 }
 
+pub async fn get_mint_data(
+    context: &mut ProgramTestContext,
+    pubkey: &Pubkey,
+) -> spl_token::state::Mint {
+    let account = get_account(context, pubkey).await;
+    spl_token::state::Mint::unpack_from_slice(account.data.as_slice()).unwrap()
+}
+
 pub async fn get_token_account_data(
     context: &mut ProgramTestContext,
     pubkey: &Pubkey,
@@ -82,10 +90,10 @@ pub fn get_liquidity_mint() -> (Keypair, Pubkey) {
     (keypair, pubkey)
 }
 
-pub async fn presetup() -> (ProgramTestContext, TestLending, TestPythOracle) {
+pub async fn presetup() -> (ProgramTestContext, TestSPLTokenLending, TestPythOracle) {
     let mut test = program_test();
     let sol_oracle = add_sol_oracle(&mut test);
-    let spl_lending = add_spl_lending(&mut test);
+    let spl_token_lending = add_spl_token_lending(&mut test);
 
     let mut context = test.start_with_context().await;
     let payer_pubkey = context.payer.pubkey();
@@ -94,7 +102,26 @@ pub async fn presetup() -> (ProgramTestContext, TestLending, TestPythOracle) {
         .await
         .unwrap();
 
-    (context, spl_lending, sol_oracle)
+    (context, spl_token_lending, sol_oracle)
+}
+
+pub async fn transfer(
+    context: &mut ProgramTestContext,
+    pubkey: &Pubkey,
+    amount: u64,
+) -> transport::Result<()> {
+    let tx = Transaction::new_signed_with_payer(
+        &[system_instruction::transfer(
+            &context.payer.pubkey(),
+            pubkey,
+            amount,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    context.banks_client.process_transaction(tx).await
 }
 
 pub async fn create_token_account(

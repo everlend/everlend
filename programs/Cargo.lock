@@ -877,7 +877,7 @@ dependencies = [
  "solana-program",
  "solana-sdk",
  "spl-token 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "spl-token-lending 0.1.0 (git+https://github.com/solendprotocol/solana-program-library)",
+ "spl-token-lending",
  "thiserror",
 ]
 
@@ -906,7 +906,7 @@ dependencies = [
  "solana-program-test",
  "solana-sdk",
  "spl-token 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "spl-token-lending 0.1.0 (git+https://github.com/solana-labs/solana-program-library)",
+ "spl-token-lending",
 ]
 
 [[package]]
@@ -951,7 +951,7 @@ dependencies = [
  "solana-program",
  "solana-sdk",
  "spl-token 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "spl-token-lending 0.1.0 (git+https://github.com/solendprotocol/solana-program-library)",
+ "spl-token-lending",
  "thiserror",
 ]
 
@@ -2132,15 +2132,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "quick-protobuf"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ca6639207ac869e31cca06b8adbc7676278f22b321e51115766009b4f192dbb"
-dependencies = [
- "byteorder",
-]
-
-[[package]]
 name = "quote"
 version = "0.6.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2384,27 +2375,6 @@ checksum = "99371657d3c8e4d816fb6221db98fa408242b0b53bac08f8676a41f8554fe99f"
 dependencies = [
  "libc",
  "winapi",
-]
-
-[[package]]
-name = "rust_decimal"
-version = "1.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "353775f96a1f400edcca737f843cb201af3645912e741e64456a257c770173e8"
-dependencies = [
- "arrayvec",
- "num-traits",
- "serde",
-]
-
-[[package]]
-name = "rust_decimal_macros"
-version = "1.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0847e5bbcded958275518f18a567fea27e53b22b52b549cc3557c88d780b22e"
-dependencies = [
- "quote 1.0.10",
- "rust_decimal",
 ]
 
 [[package]]
@@ -3398,19 +3368,6 @@ dependencies = [
 
 [[package]]
 name = "spl-token"
-version = "3.1.1"
-source = "git+https://github.com/solendprotocol/solana-program-library#a5168c36b279916cc556b2eebb9f96e282045a2d"
-dependencies = [
- "arrayref",
- "num-derive",
- "num-traits",
- "num_enum",
- "solana-program",
- "thiserror",
-]
-
-[[package]]
-name = "spl-token"
 version = "3.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93bfdd5bd7c869cb565c7d7635c4fafe189b988a0bdef81063cd9585c6b8dc01"
@@ -3426,7 +3383,7 @@ dependencies = [
 [[package]]
 name = "spl-token"
 version = "3.2.0"
-source = "git+https://github.com/solana-labs/solana-program-library#fcbc0d3501c3cf18789eb4003cd576f467c6277c"
+source = "git+https://github.com/everlend/solana-program-library#8d49dadbc2c806323a9a5cc6fc2bc310503f5e5a"
 dependencies = [
  "arrayref",
  "num-derive",
@@ -3439,30 +3396,14 @@ dependencies = [
 [[package]]
 name = "spl-token-lending"
 version = "0.1.0"
-source = "git+https://github.com/solana-labs/solana-program-library#fcbc0d3501c3cf18789eb4003cd576f467c6277c"
+source = "git+https://github.com/everlend/solana-program-library#8d49dadbc2c806323a9a5cc6fc2bc310503f5e5a"
 dependencies = [
  "arrayref",
  "bytemuck",
  "num-derive",
  "num-traits",
  "solana-program",
- "spl-token 3.2.0 (git+https://github.com/solana-labs/solana-program-library)",
- "thiserror",
- "uint",
-]
-
-[[package]]
-name = "spl-token-lending"
-version = "0.1.0"
-source = "git+https://github.com/solendprotocol/solana-program-library#a5168c36b279916cc556b2eebb9f96e282045a2d"
-dependencies = [
- "arrayref",
- "bytemuck",
- "num-derive",
- "num-traits",
- "solana-program",
- "spl-token 3.1.1",
- "switchboard-program",
+ "spl-token 3.2.0 (git+https://github.com/everlend/solana-program-library)",
  "thiserror",
  "uint",
 ]
@@ -3490,51 +3431,6 @@ name = "subtle"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
-
-[[package]]
-name = "switchboard-program"
-version = "0.1.59"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57445d78029687264e245eb949e5c928e3aecd64a0afea770fc4fb2a826e60e0"
-dependencies = [
- "bincode",
- "borsh",
- "byteorder",
- "quick-protobuf",
- "solana-program",
- "switchboard-protos",
- "switchboard-utils",
- "zerocopy",
-]
-
-[[package]]
-name = "switchboard-protos"
-version = "0.1.58"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4480f75ff6438a5bf2e92339adca557b239529f12a841a692a5c40978072bebb"
-dependencies = [
- "bincode",
- "borsh",
- "byteorder",
- "quick-protobuf",
-]
-
-[[package]]
-name = "switchboard-utils"
-version = "0.1.32"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0bc027ee269f663f2a6a848ee3c819936dbdbd35d74b9c4fb2aaf3f0360d903f"
-dependencies = [
- "bincode",
- "borsh",
- "byteorder",
- "quick-protobuf",
- "rust_decimal",
- "rust_decimal_macros",
- "solana-program",
- "switchboard-protos",
- "zerocopy",
-]
 
 [[package]]
 name = "symlink"
@@ -4187,27 +4083,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56c1936c4cc7a1c9ab21a1ebb602eb942ba868cbd44a99cb7cdc5892335e1c85"
 dependencies = [
  "linked-hash-map",
-]
-
-[[package]]
-name = "zerocopy"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6580539ad917b7c026220c4b3f2c08d52ce54d6ce0dc491e66002e35388fab46"
-dependencies = [
- "byteorder",
- "zerocopy-derive",
-]
-
-[[package]]
-name = "zerocopy-derive"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d498dbd1fd7beb83c86709ae1c33ca50942889473473d287d56ce4770a18edfb"
-dependencies = [
- "proc-macro2 1.0.32",
- "syn 1.0.81",
- "synstructure",
 ]
 
 [[package]]

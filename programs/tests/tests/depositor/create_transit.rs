@@ -1,14 +1,15 @@
 #![cfg(feature = "test-bpf")]
 
 use crate::utils::*;
-use everlend_depositor::{find_program_address, find_transit_program_address};
+use everlend_depositor::find_transit_program_address;
+use everlend_utils::find_program_address;
 use solana_program_test::*;
 use solana_sdk::{signature::Keypair, signer::Signer};
 
 async fn setup() -> (ProgramTestContext, TestDepositor) {
     let mut context = presetup().await.0;
 
-    let test_depositor = TestDepositor::new(None);
+    let test_depositor = TestDepositor::new();
     test_depositor.init(&mut context).await.unwrap();
 
     (context, test_depositor)
@@ -19,14 +20,11 @@ async fn success() {
     let (mut context, test_depositor) = setup().await;
 
     let token_mint = Keypair::new();
+    let payer_pubkey = context.payer.pubkey();
 
-    create_mint(
-        &mut context,
-        &token_mint,
-        &test_depositor.rebalancer.pubkey(),
-    )
-    .await
-    .unwrap();
+    create_mint(&mut context, &token_mint, &payer_pubkey)
+        .await
+        .unwrap();
 
     test_depositor
         .create_transit(&mut context, &token_mint.pubkey())

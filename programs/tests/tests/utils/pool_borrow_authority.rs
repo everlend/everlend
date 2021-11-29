@@ -1,31 +1,26 @@
 use super::{get_account, get_token_balance, TestPool, TestPoolMarket};
 use everlend_ulp::{
-    find_pool_borrow_authority_program_address, id, instruction,
+    find_pool_borrow_authority_program_address, instruction,
     state::{Pool, PoolBorrowAuthority},
 };
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::ProgramTestContext;
-use solana_sdk::{
-    signature::{Keypair, Signer},
-    transaction::Transaction,
-    transport,
-};
+use solana_sdk::{signature::Signer, transaction::Transaction, transport};
 
 pub const SHARE_ALLOWED: u16 = 5_000; // 50% of the total pool
 
 #[derive(Debug)]
 pub struct TestPoolBorrowAuthority {
     pub pool_borrow_authority_pubkey: Pubkey,
-    pub borrow_authority: Keypair,
+    pub borrow_authority: Pubkey,
 }
 
 impl TestPoolBorrowAuthority {
-    pub fn new(test_pool: &TestPool, borrow_authority: Option<Keypair>) -> Self {
-        let borrow_authority = borrow_authority.unwrap_or_else(Keypair::new);
+    pub fn new(test_pool: &TestPool, borrow_authority: Pubkey) -> Self {
         let (pool_borrow_authority_pubkey, _) = find_pool_borrow_authority_program_address(
-            &id(),
+            &everlend_ulp::id(),
             &test_pool.pool_pubkey,
-            &borrow_authority.pubkey(),
+            &borrow_authority,
         );
 
         Self {
@@ -61,10 +56,10 @@ impl TestPoolBorrowAuthority {
     ) -> transport::Result<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::create_pool_borrow_authority(
-                &id(),
+                &everlend_ulp::id(),
                 &test_pool_market.pool_market.pubkey(),
                 &test_pool.pool_pubkey,
-                &self.borrow_authority.pubkey(),
+                &self.borrow_authority,
                 &test_pool_market.manager.pubkey(),
                 share_allowed,
             )],
@@ -85,9 +80,9 @@ impl TestPoolBorrowAuthority {
     ) -> transport::Result<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::update_pool_borrow_authority(
-                &id(),
+                &everlend_ulp::id(),
                 &test_pool.pool_pubkey,
-                &self.borrow_authority.pubkey(),
+                &self.borrow_authority,
                 &test_pool_market.manager.pubkey(),
                 share_allowed,
             )],
@@ -107,9 +102,9 @@ impl TestPoolBorrowAuthority {
     ) -> transport::Result<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::delete_pool_borrow_authority(
-                &id(),
+                &everlend_ulp::id(),
                 &test_pool.pool_pubkey,
-                &self.borrow_authority.pubkey(),
+                &self.borrow_authority,
                 &context.payer.pubkey(),
                 &test_pool_market.manager.pubkey(),
             )],

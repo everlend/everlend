@@ -1,13 +1,14 @@
 #![cfg(feature = "test-bpf")]
 
 use crate::utils::*;
+use everlend_ulp::instruction;
+use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program_test::*;
 use solana_sdk::{
     pubkey::Pubkey, signer::Signer, transaction::Transaction, transaction::TransactionError,
 };
 use spl_token::error::TokenError;
-use everlend_ulp::{id, instruction};
 
 async fn setup() -> (
     ProgramTestContext,
@@ -96,7 +97,7 @@ async fn fail_with_invalid_pool_mint_pubkey_argument() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
-            &id(),
+            &everlend_ulp::id(),
             &test_pool_market.pool_market.pubkey(),
             &test_pool.pool_pubkey,
             &user.token_account,
@@ -129,7 +130,7 @@ async fn fail_with_invalid_token_account_pubkey_argument() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
-            &id(),
+            &everlend_ulp::id(),
             &test_pool_market.pool_market.pubkey(),
             &test_pool.pool_pubkey,
             &user.token_account,
@@ -164,7 +165,7 @@ async fn fail_with_invalid_destination_argument() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
-            &id(),
+            &everlend_ulp::id(),
             &test_pool_market.pool_market.pubkey(),
             &test_pool.pool_pubkey,
             &user.token_account,
@@ -200,7 +201,7 @@ async fn fail_with_invalid_source_argument() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
-            &id(),
+            &everlend_ulp::id(),
             &test_pool_market.pool_market.pubkey(),
             &test_pool.pool_pubkey,
             //Wrong source
@@ -236,7 +237,7 @@ async fn fail_with_invalid_pool_market_argument() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
-            &id(),
+            &everlend_ulp::id(),
             // Wrong pool market
             &Pubkey::new_unique(),
             &test_pool.pool_pubkey,
@@ -259,7 +260,10 @@ async fn fail_with_invalid_pool_market_argument() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(0, InstructionError::IncorrectProgramId)
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32)
+        )
     );
 }
 
@@ -269,7 +273,7 @@ async fn fail_with_invalid_pool_argument() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
-            &id(),
+            &everlend_ulp::id(),
             &test_pool_market.pool_market.pubkey(),
             //Wrong pool
             &Pubkey::new_unique(),
@@ -292,6 +296,9 @@ async fn fail_with_invalid_pool_argument() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(0, InstructionError::IncorrectProgramId)
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32)
+        )
     );
 }

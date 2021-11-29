@@ -1,9 +1,8 @@
 //! Instruction types
 
-use crate::{
-    find_pool_borrow_authority_program_address, find_pool_program_address, find_program_address,
-};
+use crate::{find_pool_borrow_authority_program_address, find_pool_program_address};
 use borsh::{BorshDeserialize, BorshSerialize};
+use everlend_utils::find_program_address;
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,

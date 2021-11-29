@@ -1,7 +1,7 @@
 //! Program state processor
 
 use crate::{
-    find_pool_borrow_authority_program_address, find_pool_program_address, find_program_address,
+    find_pool_borrow_authority_program_address, find_pool_program_address,
     instruction::LiquidityPoolsInstruction,
     state::{
         InitPoolBorrowAuthorityParams, InitPoolMarketParams, InitPoolParams, Pool,
@@ -11,8 +11,9 @@ use crate::{
 };
 use borsh::BorshDeserialize;
 use everlend_utils::{
-    assert_rent_exempt, assert_uninitialized, create_account, spl_initialize_account,
-    spl_initialize_mint, spl_token_burn, spl_token_mint_to, spl_token_transfer, EverlendError,
+    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
+    create_account, find_program_address, spl_initialize_account, spl_initialize_mint,
+    spl_token_burn, spl_token_mint_to, spl_token_transfer, EverlendError,
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -39,10 +40,7 @@ impl Processor {
 
         assert_rent_exempt(rent, pool_market_info)?;
 
-        if pool_market_info.owner != program_id {
-            msg!("Pool market provided is not owned by the program");
-            return Err(ProgramError::IncorrectProgramId);
-        }
+        assert_owned_by(pool_market_info, program_id)?;
 
         // Get pool market state
         let mut pool_market = PoolMarket::unpack_unchecked(&pool_market_info.data.borrow())?;
@@ -72,32 +70,21 @@ impl Processor {
         let _system_program_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
-        if !manager_info.is_signer {
-            return Err(ProgramError::MissingRequiredSignature);
-        }
+        assert_signer(manager_info)?;
 
-        if pool_market_info.owner != program_id {
-            msg!("Pool market provided is not owned by the program");
-            return Err(ProgramError::IncorrectProgramId);
-        }
+        assert_owned_by(pool_market_info, program_id)?;
 
         // Get pool market state
         let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
 
-        if pool_market.manager != *manager_info.key {
-            msg!("Market manager provided does not match manager in the pool market state");
-            return Err(ProgramError::InvalidArgument);
-        }
+        assert_account_key(manager_info, &pool_market.manager)?;
 
         let token_mint = Mint::unpack(&token_mint_info.data.borrow())?;
 
         // Create pool account
         let (pool_pubkey, bump_seed) =
             find_pool_program_address(program_id, pool_market_info.key, token_mint_info.key);
-        if pool_pubkey != *pool_info.key {
-            msg!("Pool provided does not match generated pool");
-            return Err(ProgramError::InvalidArgument);
-        }
+        assert_account_key(pool_info, &pool_pubkey)?;
 
         let signers_seeds = &[
             &pool_market_info.key.to_bytes()[..32],
@@ -161,32 +148,18 @@ impl Processor {
         let rent = &Rent::from_account_info(rent_info)?;
         let _system_program_info = next_account_info(account_info_iter)?;
 
-        if !manager_info.is_signer {
-            return Err(ProgramError::MissingRequiredSignature);
-        }
+        assert_signer(manager_info)?;
 
-        if pool_market_info.owner != program_id {
-            msg!("Pool market provided is not owned by the program");
-            return Err(ProgramError::IncorrectProgramId);
-        }
-        if pool_info.owner != program_id {
-            msg!("Pool provided is not owned by the program");
-            return Err(ProgramError::IncorrectProgramId);
-        }
+        assert_owned_by(pool_market_info, program_id)?;
+        assert_owned_by(pool_info, program_id)?;
 
         // Get pool market state
         let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
-        if pool_market.manager != *manager_info.key {
-            msg!("Market manager provided does not match manager in the pool market state");
-            return Err(ProgramError::InvalidArgument);
-        }
+        assert_account_key(manager_info, &pool_market.manager)?;
 
         // Get pool state
         let pool = Pool::unpack(&pool_info.data.borrow())?;
-        if pool.pool_market != *pool_market_info.key {
-            msg!("Pool market provided does not match pool market in the pool state");
-            return Err(ProgramError::InvalidArgument);
-        }
+        assert_account_key(pool_market_info, &pool.pool_market)?;
 
         // Create pool borrow authority account
         let (pool_borrow_authority_pubkey, bump_seed) = find_pool_borrow_authority_program_address(
@@ -194,10 +167,7 @@ impl Processor {
             pool_info.key,
             borrow_authority_info.key,
         );
-        if pool_borrow_authority_pubkey != *pool_borrow_authority_info.key {
-            msg!("Pool borrow authority provided does not match generated pool borrow authority");
-            return Err(ProgramError::InvalidArgument);
-        }
+        assert_account_key(pool_borrow_authority_info, &pool_borrow_authority_pubkey)?;
 
         let signers_seeds = &[
             &pool_info.key.to_bytes()[..32],
@@ -242,14 +212,9 @@ impl Processor {
         let pool_borrow_authority_info = next_account_info(account_info_iter)?;
         let manager_info = next_account_info(account_info_iter)?;
 
-        if !manager_info.is_signer {
-            return Err(ProgramError::MissingRequiredSignature);
-        }
+        assert_signer(manager_info)?;
 
-        if pool_borrow_authority_info.owner != program_id {
-            msg!("Pool borrow authority provided is not owned by the program");
-            return Err(ProgramError::IncorrectProgramId);
-        }
+        assert_owned_by(pool_borrow_authority_info, program_id)?;
 
         // Get pool borrow authority state
         let mut pool_borrow_authority =
@@ -275,14 +240,9 @@ impl Processor {
         let receiver_info = next_account_info(account_info_iter)?;
         let manager_info = next_account_info(account_info_iter)?;
 
-        if !manager_info.is_signer {
-            return Err(ProgramError::MissingRequiredSignature);
-        }
+        assert_signer(manager_info)?;
 
-        if pool_borrow_authority_info.owner != program_id {
-            msg!("Pool borrow authority provided is not owned by the program");
-            return Err(ProgramError::IncorrectProgramId);
-        }
+        assert_owned_by(pool_borrow_authority_info, program_id)?;
 
         // Get pool borrow authority state to check initialized
         PoolBorrowAuthority::unpack(&pool_borrow_authority_info.data.borrow())?;
@@ -316,36 +276,17 @@ impl Processor {
         let user_transfer_authority_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
-        if !user_transfer_authority_info.is_signer {
-            return Err(ProgramError::MissingRequiredSignature);
-        }
+        assert_signer(user_transfer_authority_info)?;
 
-        if pool_market_info.owner != program_id {
-            msg!("Pool market provided is not owned by the program");
-            return Err(ProgramError::IncorrectProgramId);
-        }
-        if pool_info.owner != program_id {
-            msg!("Pool provided is not owned by the program");
-            return Err(ProgramError::IncorrectProgramId);
-        }
+        assert_owned_by(pool_market_info, program_id)?;
+        assert_owned_by(pool_info, program_id)?;
 
         // Get pool state
         let pool = Pool::unpack(&pool_info.data.borrow())?;
 
-        if pool.pool_market != *pool_market_info.key {
-            msg!("Pool market provided does not match pool market in the pool state");
-            return Err(ProgramError::InvalidArgument);
-        }
-
-        if pool.token_account != *token_account_info.key {
-            msg!("Pool token account does not match the token account provided");
-            return Err(ProgramError::InvalidArgument);
-        }
-
-        if pool.pool_mint != *pool_mint_info.key {
-            msg!("Pool mint does not match the pool mint provided");
-            return Err(ProgramError::InvalidArgument);
-        }
+        assert_account_key(pool_market_info, &pool.pool_market)?;
+        assert_account_key(token_account_info, &pool.token_account)?;
+        assert_account_key(pool_mint_info, &pool.pool_mint)?;
 
         let total_incoming =
             total_pool_amount(token_account_info.clone(), pool.total_amount_borrowed)?;
@@ -398,36 +339,17 @@ impl Processor {
         let user_transfer_authority_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
-        if !user_transfer_authority_info.is_signer {
-            return Err(ProgramError::MissingRequiredSignature);
-        }
+        assert_signer(user_transfer_authority_info)?;
 
-        if pool_market_info.owner != program_id {
-            msg!("Pool market provided is not owned by the program");
-            return Err(ProgramError::IncorrectProgramId);
-        }
-        if pool_info.owner != program_id {
-            msg!("Pool provided is not owned by the program");
-            return Err(ProgramError::IncorrectProgramId);
-        }
+        assert_owned_by(pool_market_info, program_id)?;
+        assert_owned_by(pool_info, program_id)?;
 
         // Get pool state
         let pool = Pool::unpack(&pool_info.data.borrow())?;
 
-        if pool.pool_market != *pool_market_info.key {
-            msg!("Pool market provided does not match pool market in the pool state");
-            return Err(ProgramError::InvalidArgument);
-        }
-
-        if pool.token_account != *token_account_info.key {
-            msg!("Pool token account does not match the token account provided");
-            return Err(ProgramError::InvalidArgument);
-        }
-
-        if pool.pool_mint != *pool_mint_info.key {
-            msg!("Pool mint does not match the pool mint provided");
-            return Err(ProgramError::InvalidArgument);
-        }
+        assert_account_key(pool_market_info, &pool.pool_market)?;
+        assert_account_key(token_account_info, &pool.token_account)?;
+        assert_account_key(pool_mint_info, &pool.pool_mint)?;
 
         let total_incoming =
             total_pool_amount(token_account_info.clone(), pool.total_amount_borrowed)?;
@@ -475,45 +397,25 @@ impl Processor {
         let borrow_authority_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
-        if !borrow_authority_info.is_signer {
-            return Err(ProgramError::MissingRequiredSignature);
-        }
+        assert_signer(borrow_authority_info)?;
 
-        if pool_market_info.owner != program_id {
-            msg!("Pool market provided is not owned by the program");
-            return Err(ProgramError::IncorrectProgramId);
-        }
-        if pool_info.owner != program_id {
-            msg!("Pool provided is not owned by the program");
-            return Err(ProgramError::IncorrectProgramId);
-        }
-        if pool_borrow_authority_info.owner != program_id {
-            msg!("Pool borrow authority provided is not owned by the program");
-            return Err(ProgramError::IncorrectProgramId);
-        }
+        assert_owned_by(pool_market_info, program_id)?;
+        assert_owned_by(pool_info, program_id)?;
+        assert_owned_by(pool_borrow_authority_info, program_id)?;
 
         // Get pool state
         let mut pool = Pool::unpack(&pool_info.data.borrow())?;
-        if pool.pool_market != *pool_market_info.key {
-            msg!("Pool market provided does not match pool market in the pool state");
-            return Err(ProgramError::InvalidArgument);
-        }
-        if pool.token_account != *token_account_info.key {
-            msg!("Pool token account does not match the token account provided");
-            return Err(ProgramError::InvalidArgument);
-        }
+        assert_account_key(pool_market_info, &pool.pool_market)?;
+        assert_account_key(token_account_info, &pool.token_account)?;
 
         // Get pool borrow authority state
         let mut pool_borrow_authority =
             PoolBorrowAuthority::unpack(&pool_borrow_authority_info.data.borrow())?;
-        if pool_borrow_authority.pool != *pool_info.key {
-            msg!("Pool in pool borrow authority state does not match the pool provided");
-            return Err(ProgramError::InvalidArgument);
-        }
-        if pool_borrow_authority.borrow_authority != *borrow_authority_info.key {
-            msg!("Pool borrow authority does not match the borrow authority provided");
-            return Err(ProgramError::InvalidArgument);
-        }
+        assert_account_key(pool_info, &pool_borrow_authority.pool)?;
+        assert_account_key(
+            borrow_authority_info,
+            &pool_borrow_authority.borrow_authority,
+        )?;
 
         pool_borrow_authority.borrow(amount)?;
         pool_borrow_authority.check_amount_allowed(total_pool_amount(
@@ -561,41 +463,21 @@ impl Processor {
         let user_transfer_authority_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
-        if !user_transfer_authority_info.is_signer {
-            return Err(ProgramError::MissingRequiredSignature);
-        }
+        assert_signer(user_transfer_authority_info)?;
 
-        if pool_market_info.owner != program_id {
-            msg!("Pool market provided is not owned by the program");
-            return Err(ProgramError::IncorrectProgramId);
-        }
-        if pool_info.owner != program_id {
-            msg!("Pool provided is not owned by the program");
-            return Err(ProgramError::IncorrectProgramId);
-        }
-        if pool_borrow_authority_info.owner != program_id {
-            msg!("Pool borrow authority provided is not owned by the program");
-            return Err(ProgramError::IncorrectProgramId);
-        }
+        assert_owned_by(pool_market_info, program_id)?;
+        assert_owned_by(pool_info, program_id)?;
+        assert_owned_by(pool_borrow_authority_info, program_id)?;
 
         // Get pool state
         let mut pool = Pool::unpack(&pool_info.data.borrow())?;
-        if pool.pool_market != *pool_market_info.key {
-            msg!("Pool market provided does not match pool market in the pool state");
-            return Err(ProgramError::InvalidArgument);
-        }
-        if pool.token_account != *token_account_info.key {
-            msg!("Pool token account does not match the token account provided");
-            return Err(ProgramError::InvalidArgument);
-        }
+        assert_account_key(pool_market_info, &pool.pool_market)?;
+        assert_account_key(token_account_info, &pool.token_account)?;
 
         // Get pool borrow authority state
         let mut pool_borrow_authority =
             PoolBorrowAuthority::unpack(&pool_borrow_authority_info.data.borrow())?;
-        if pool_borrow_authority.pool != *pool_info.key {
-            msg!("Pool in pool borrow authority state does not match the pool provided");
-            return Err(ProgramError::InvalidArgument);
-        }
+        assert_account_key(pool_info, &pool_borrow_authority.pool)?;
 
         pool_borrow_authority.repay(amount)?;
         pool.repay(amount)?;
