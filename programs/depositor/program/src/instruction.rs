@@ -42,11 +42,14 @@ pub enum DepositorInstruction {
     /// [R] Pool borrow authority
     /// [W] Pool token account (for token mint)
     /// [W] Transit token account (for token mint)
-    /// [R] Token mint
-    /// [R] Depositor authority
-    /// [RS] Rebalancer
-    /// [R] Sysvar instructions program id
+    /// [W] Liquidity transit account
+    /// [R] Liquidity mint
+    /// [W] Collateral transit account
+    /// [W] Collateral mint
+    /// [R] Sysvar clock program id
+    /// [R] Everlend ULP program id
     /// [R] Token program id
+    /// [R] Money market program id
     Deposit {
         /// Amount to deposit
         amount: u64,
