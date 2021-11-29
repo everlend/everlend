@@ -1,13 +1,13 @@
 #![cfg(feature = "test-bpf")]
 
 use crate::utils::*;
+use everlend_ulp::instruction;
 use solana_program::instruction::InstructionError;
 use solana_program_test::*;
 use solana_sdk::{
     pubkey::Pubkey, signature::Keypair, signer::Signer, transaction::Transaction,
     transaction::TransactionError,
 };
-use everlend_ulp::{id, instruction};
 use spl_token::error::TokenError;
 
 async fn setup() -> (
@@ -28,7 +28,8 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    let test_pool_borrow_authority = TestPoolBorrowAuthority::new(&test_pool, None);
+    let test_pool_borrow_authority =
+        TestPoolBorrowAuthority::new(&test_pool, context.payer.pubkey());
     test_pool_borrow_authority
         .create(&mut context, &test_pool_market, &test_pool, SHARE_ALLOWED)
         .await
@@ -65,7 +66,7 @@ async fn success() {
             &mut context,
             &test_pool_market,
             &test_pool_borrow_authority,
-            &test_pool_borrow_authority.borrow_authority,
+            None,
             &user.token_account,
             amount_allowed,
         )
@@ -96,7 +97,7 @@ async fn fail_wrong_borrow_authority() {
                 &mut context,
                 &test_pool_market,
                 &test_pool_borrow_authority,
-                &Keypair::new(),
+                Some(&Keypair::new()),
                 &user.token_account,
                 amount_allowed,
             )
@@ -121,7 +122,7 @@ async fn fail_invalid_destination() {
                 &mut context,
                 &test_pool_market,
                 &test_pool_borrow_authority,
-                &test_pool_borrow_authority.borrow_authority,
+                None,
                 &user.pool_account,
                 amount_allowed,
             )
@@ -135,7 +136,6 @@ async fn fail_invalid_destination() {
     );
 }
 
-
 #[tokio::test]
 async fn fail_invalid_token_account() {
     let (mut context, test_pool_market, test_pool, test_pool_borrow_authority, user) =
@@ -145,17 +145,17 @@ async fn fail_invalid_token_account() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::borrow(
-            &id(),
+            &everlend_ulp::id(),
             &test_pool_market.pool_market.pubkey(),
             &test_pool.pool_pubkey,
             &test_pool_borrow_authority.pool_borrow_authority_pubkey,
             &user.token_account,
             &Pubkey::new_unique(),
-            &test_pool_borrow_authority.borrow_authority.pubkey(),
+            &context.payer.pubkey(),
             amount_allowed,
         )],
         Some(&context.payer.pubkey()),
-        &[&context.payer, &test_pool_borrow_authority.borrow_authority],
+        &[&context.payer],
         context.last_blockhash,
     );
 
@@ -179,17 +179,17 @@ async fn fail_invalid_pool_market() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::borrow(
-            &id(),
+            &everlend_ulp::id(),
             &Pubkey::new_unique(),
             &test_pool.pool_pubkey,
             &test_pool_borrow_authority.pool_borrow_authority_pubkey,
             &user.token_account,
             &test_pool.token_account.pubkey(),
-            &test_pool_borrow_authority.borrow_authority.pubkey(),
+            &context.payer.pubkey(),
             amount_allowed,
         )],
         Some(&context.payer.pubkey()),
-        &[&context.payer, &test_pool_borrow_authority.borrow_authority],
+        &[&context.payer],
         context.last_blockhash,
     );
 
@@ -213,17 +213,17 @@ async fn fail_invalid_pool() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::borrow(
-            &id(),
+            &everlend_ulp::id(),
             &test_pool_market.pool_market.pubkey(),
             &Pubkey::new_unique(),
             &test_pool_borrow_authority.pool_borrow_authority_pubkey,
             &user.token_account,
             &test_pool.token_account.pubkey(),
-            &test_pool_borrow_authority.borrow_authority.pubkey(),
+            &context.payer.pubkey(),
             amount_allowed,
         )],
         Some(&context.payer.pubkey()),
-        &[&context.payer, &test_pool_borrow_authority.borrow_authority],
+        &[&context.payer],
         context.last_blockhash,
     );
 
@@ -247,17 +247,17 @@ async fn fail_invalid_pool_borrow_authority() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::borrow(
-            &id(),
+            &everlend_ulp::id(),
             &test_pool_market.pool_market.pubkey(),
             &test_pool.pool_pubkey,
             &Pubkey::new_unique(),
             &user.token_account,
             &test_pool.token_account.pubkey(),
-            &test_pool_borrow_authority.borrow_authority.pubkey(),
+            &context.payer.pubkey(),
             amount_allowed,
         )],
         Some(&context.payer.pubkey()),
-        &[&context.payer, &test_pool_borrow_authority.borrow_authority],
+        &[&context.payer],
         context.last_blockhash,
     );
 

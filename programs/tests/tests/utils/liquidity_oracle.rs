@@ -1,7 +1,7 @@
 use super::get_account;
 
 use everlend_liquidity_oracle::{
-    find_liquidity_oracle_token_distribution_program_address, id, instruction,
+    find_liquidity_oracle_token_distribution_program_address, instruction,
     state::DistributionArray, state::LiquidityOracle, state::TokenDistribution,
 };
 use solana_program_test::*;
@@ -31,10 +31,10 @@ impl TestLiquidityOracle {
                     &self.keypair.pubkey(),
                     rent.minimum_balance(LiquidityOracle::LEN),
                     LiquidityOracle::LEN as u64,
-                    &id(),
+                    &everlend_liquidity_oracle::id(),
                 ),
                 instruction::init_liquidity_oracle(
-                    &id(),
+                    &everlend_liquidity_oracle::id(),
                     &self.keypair.pubkey(),
                     &context.payer.pubkey(),
                 ),
@@ -54,7 +54,7 @@ impl TestLiquidityOracle {
     ) -> transport::Result<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::update_liquidity_oracle_authority(
-                &id(),
+                &everlend_liquidity_oracle::id(),
                 &self.keypair.pubkey(),
                 &context.payer.pubkey(),
                 authority,
@@ -96,7 +96,7 @@ impl TestTokenDistribution {
     ) -> transport::Result<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::create_token_distribution(
-                &id(),
+                &everlend_liquidity_oracle::id(),
                 &liquidity_oracle.keypair.pubkey(),
                 &authority,
                 &self.token_mint,
@@ -119,7 +119,7 @@ impl TestTokenDistribution {
     ) -> transport::Result<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::update_token_distribution(
-                &id(),
+                &everlend_liquidity_oracle::id(),
                 &liquidity_oracle.keypair.pubkey(),
                 &authority,
                 &self.token_mint,

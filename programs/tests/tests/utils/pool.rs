@@ -1,8 +1,8 @@
 use super::{
-    get_account, get_liquidity_mint, pool_borrow_authority::TestPoolBorrowAuthority, LiquidityProvider,
-    TestPoolMarket, User,
+    get_account, get_liquidity_mint, pool_borrow_authority::TestPoolBorrowAuthority,
+    LiquidityProvider, TestPoolMarket, User,
 };
-use everlend_ulp::{find_pool_program_address, id, instruction, state::Pool};
+use everlend_ulp::{find_pool_program_address, instruction, state::Pool};
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{
@@ -24,7 +24,7 @@ impl TestPool {
         let token_mint_pubkey = token_mint_pubkey.unwrap_or(get_liquidity_mint().1);
 
         let (pool_pubkey, _) = find_pool_program_address(
-            &id(),
+            &everlend_ulp::id(),
             &test_pool_market.pool_market.pubkey(),
             &token_mint_pubkey,
         );
@@ -65,7 +65,7 @@ impl TestPool {
                     &spl_token::id(),
                 ),
                 instruction::create_pool(
-                    &id(),
+                    &everlend_ulp::id(),
                     &test_pool_market.pool_market.pubkey(),
                     &self.token_mint_pubkey,
                     &self.token_account.pubkey(),
@@ -95,7 +95,7 @@ impl TestPool {
     ) -> transport::Result<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::deposit(
-                &id(),
+                &everlend_ulp::id(),
                 &test_pool_market.pool_market.pubkey(),
                 &self.pool_pubkey,
                 &user.token_account,
@@ -122,7 +122,7 @@ impl TestPool {
     ) -> transport::Result<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::withdraw(
-                &id(),
+                &everlend_ulp::id(),
                 &test_pool_market.pool_market.pubkey(),
                 &self.pool_pubkey,
                 &user.pool_account,
@@ -145,13 +145,15 @@ impl TestPool {
         context: &mut ProgramTestContext,
         test_pool_market: &TestPoolMarket,
         test_pool_borrow_authority: &TestPoolBorrowAuthority,
-        borrow_authority: &Keypair,
+        borrow_authority: Option<&Keypair>,
         destination: &Pubkey,
         amount: u64,
     ) -> transport::Result<()> {
+        let borrow_authority = borrow_authority.unwrap_or(&context.payer);
+
         let tx = Transaction::new_signed_with_payer(
             &[instruction::borrow(
-                &id(),
+                &everlend_ulp::id(),
                 &test_pool_market.pool_market.pubkey(),
                 &self.pool_pubkey,
                 &test_pool_borrow_authority.pool_borrow_authority_pubkey,
@@ -179,7 +181,7 @@ impl TestPool {
     ) -> transport::Result<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::repay(
-                &id(),
+                &everlend_ulp::id(),
                 &test_pool_market.pool_market.pubkey(),
                 &self.pool_pubkey,
                 &test_pool_borrow_authority.pool_borrow_authority_pubkey,

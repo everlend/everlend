@@ -62,35 +62,3 @@ pub async fn add_liquidity_provider(
         pool_account: pool_account.pubkey(),
     })
 }
-
-// pub struct Rebalancer {
-//     pub owner: Keypair,
-//     pub token_account: Pubkey,
-// }
-
-// impl User for Rebalancer {
-//     fn pubkey(&self) -> Pubkey {
-//         self.owner.pubkey()
-//     }
-// }
-
-// pub async fn add_rebalancer(
-//     context: &mut ProgramTestContext,
-//     test_pool: &TestPool,
-// ) -> transport::Result<Rebalancer> {
-//     let user = Keypair::new();
-//     let token_account = Keypair::new();
-
-//     create_token_account(
-//         context,
-//         &token_account,
-//         &test_pool.token_mint.pubkey(),
-//         &user.pubkey(),
-//     )
-//     .await?;
-
-//     Ok(Rebalancer {
-//         owner: user,
-//         token_account: token_account.pubkey(),
-//     })
-// }

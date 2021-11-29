@@ -1,5 +1,5 @@
 use super::get_account;
-use everlend_ulp::{id, instruction, state::PoolMarket};
+use everlend_ulp::{instruction, state::PoolMarket};
 use solana_program::{program_pack::Pack, system_instruction};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{
@@ -42,10 +42,10 @@ impl TestPoolMarket {
                     &self.pool_market.pubkey(),
                     rent.minimum_balance(PoolMarket::LEN),
                     PoolMarket::LEN as u64,
-                    &id(),
+                    &everlend_ulp::id(),
                 ),
                 instruction::init_pool_market(
-                    &id(),
+                    &everlend_ulp::id(),
                     &self.pool_market.pubkey(),
                     &self.manager.pubkey(),
                 ),

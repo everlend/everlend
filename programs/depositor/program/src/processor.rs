@@ -1,19 +1,20 @@
 //! Program state processor
 
 use crate::{
-    find_transit_program_address, instruction::DepositorInstruction, state::Depositor,
-    utils::ulp_borrow,
+    find_transit_program_address,
+    instruction::DepositorInstruction,
+    state::Depositor,
+    utils::{money_market_deposit, ulp_borrow},
 };
 use borsh::BorshDeserialize;
 use everlend_utils::{
-    assert_account_key, assert_owned_by, assert_rent_exempt, assert_uninitialized, check_deposit,
-    create_account, spl_initialize_account,
+    assert_account_key, assert_owned_by, assert_rent_exempt, assert_uninitialized, create_account,
+    find_program_address, spl_initialize_account,
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
     msg,
-    program_error::ProgramError,
     program_pack::Pack,
     pubkey::Pubkey,
     rent::Rent,
@@ -96,22 +97,34 @@ impl Processor {
     /// Process Deposit instruction
     pub fn deposit(program_id: &Pubkey, amount: u64, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
+
         let depositor_info = next_account_info(account_info_iter)?;
+        let depositor_authority_info = next_account_info(account_info_iter)?;
+
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_info = next_account_info(account_info_iter)?;
         let pool_borrow_authority_info = next_account_info(account_info_iter)?;
         let pool_market_authority_info = next_account_info(account_info_iter)?;
         let pool_token_account_info = next_account_info(account_info_iter)?;
+
         let liquidity_transit_info = next_account_info(account_info_iter)?;
         let liquidity_mint_info = next_account_info(account_info_iter)?;
-        let rebalancer_info = next_account_info(account_info_iter)?;
+        let collateral_transit_info = next_account_info(account_info_iter)?;
+        let collateral_mint_info = next_account_info(account_info_iter)?;
+
+        let clock_info = next_account_info(account_info_iter)?;
         let _everlend_ulp_info = next_account_info(account_info_iter)?;
-        let instructions_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
-        if !rebalancer_info.is_signer {
-            return Err(ProgramError::MissingRequiredSignature);
-        }
+        let money_market_program_info = next_account_info(account_info_iter)?;
+
+        // Create depositor authority account
+        let (depositor_authority_pubkey, bump_seed) =
+            find_program_address(program_id, depositor_info.key);
+        assert_account_key(depositor_authority_info, &depositor_authority_pubkey)?;
+        let signers_seeds = &[&depositor_info.key.to_bytes()[..32], &[bump_seed]];
+
+        msg!("Borrow from the pool");
 
         // Borrow from ULP to transit account
         ulp_borrow(
@@ -121,12 +134,26 @@ impl Processor {
             pool_market_authority_info.clone(),
             liquidity_transit_info.clone(),
             pool_token_account_info.clone(),
-            rebalancer_info.clone(),
+            depositor_authority_info.clone(),
             amount,
-            &[],
+            &[signers_seeds],
         )?;
 
-        // check_deposit(instructions_info, amount)?;
+        msg!("Deposit to money market");
+
+        // Deposit to money market
+        money_market_deposit(
+            money_market_program_info.clone(),
+            liquidity_transit_info.clone(),
+            liquidity_mint_info.clone(),
+            collateral_transit_info.clone(),
+            collateral_mint_info.clone(),
+            depositor_authority_info.clone(),
+            account_info_iter,
+            clock_info.clone(),
+            amount,
+            &[signers_seeds],
+        )?;
 
         // ...
 

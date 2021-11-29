@@ -1,7 +1,14 @@
 //! Utils
 
+use std::{slice::Iter, str::FromStr};
+
+use everlend_utils::EverlendError;
 use solana_program::{
-    account_info::AccountInfo, program::invoke_signed, program_error::ProgramError,
+    account_info::{next_account_info, AccountInfo},
+    msg,
+    program::invoke_signed,
+    program_error::ProgramError,
+    pubkey::Pubkey,
 };
 
 /// ULP borrow tokens
@@ -38,6 +45,89 @@ pub fn ulp_borrow<'a>(
             destination,
             token_account,
             borrow_authority,
+        ],
+        signers_seeds,
+    )
+}
+
+/// Money market deposit
+#[allow(clippy::too_many_arguments)]
+pub fn money_market_deposit<'a>(
+    money_market_program: AccountInfo<'a>,
+    source_liquidity: AccountInfo<'a>,
+    liquidity_mint: AccountInfo<'a>,
+    destination_collateral: AccountInfo<'a>,
+    collateral_mint: AccountInfo<'a>,
+    authority: AccountInfo<'a>,
+    money_market_account_info_iter: &mut Iter<AccountInfo<'a>>,
+    clock: AccountInfo<'a>,
+    amount: u64,
+    signers_seeds: &[&[&[u8]]],
+) -> Result<(), ProgramError> {
+    // TODO: Get money market ids from depositor account + replace to match.
+    if *money_market_program.key == spl_token_lending::id() {
+        let reserve_info = next_account_info(money_market_account_info_iter)?;
+        let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
+        let lending_market_info = next_account_info(money_market_account_info_iter)?;
+        let lending_market_authority_info = next_account_info(money_market_account_info_iter)?;
+
+        spl_token_lending_deposit(
+            source_liquidity.clone(),
+            destination_collateral.clone(),
+            reserve_info.clone(),
+            reserve_liquidity_supply_info.clone(),
+            collateral_mint.clone(),
+            lending_market_info.clone(),
+            lending_market_authority_info.clone(),
+            authority.clone(),
+            clock.clone(),
+            amount,
+            signers_seeds,
+        )
+    } else {
+        Err(EverlendError::IncorrectInstructionProgramId.into())
+    }
+}
+
+/// SPL Token lending deposit
+#[allow(clippy::too_many_arguments)]
+pub fn spl_token_lending_deposit<'a>(
+    source_liquidity: AccountInfo<'a>,
+    destination_collateral: AccountInfo<'a>,
+    reserve: AccountInfo<'a>,
+    reserve_liquidity_supply: AccountInfo<'a>,
+    reserve_collateral_mint: AccountInfo<'a>,
+    lending_market: AccountInfo<'a>,
+    lending_market_authority: AccountInfo<'a>,
+    authority: AccountInfo<'a>,
+    clock: AccountInfo<'a>,
+    amount: u64,
+    signers_seeds: &[&[&[u8]]],
+) -> Result<(), ProgramError> {
+    let ix = spl_token_lending::instruction::deposit_reserve_liquidity(
+        spl_token_lending::id(),
+        amount,
+        *source_liquidity.key,
+        *destination_collateral.key,
+        *reserve.key,
+        *reserve_liquidity_supply.key,
+        *reserve_collateral_mint.key,
+        *lending_market.key,
+        *authority.key,
+    );
+
+    invoke_signed(
+        &ix,
+        &[
+            source_liquidity,
+            destination_collateral,
+            reserve,
+            reserve_liquidity_supply,
+            reserve_collateral_mint,
+            lending_market,
+            lending_market_authority,
+            authority,
+            clock,
         ],
         signers_seeds,
     )

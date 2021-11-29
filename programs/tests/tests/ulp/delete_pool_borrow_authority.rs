@@ -1,10 +1,10 @@
 #![cfg(feature = "test-bpf")]
 
 use crate::utils::*;
-use solana_program::instruction::InstructionError;
-use solana_sdk::transaction::TransactionError;
 use everlend_ulp::state::AccountType;
+use solana_program::instruction::InstructionError;
 use solana_program_test::*;
+use solana_sdk::{signer::Signer, transaction::TransactionError};
 
 async fn setup() -> (ProgramTestContext, TestPoolMarket, TestPool) {
     let mut context = presetup().await.0;
@@ -25,7 +25,8 @@ async fn setup() -> (ProgramTestContext, TestPoolMarket, TestPool) {
 async fn success() {
     let (mut context, test_pool_market, test_pool) = setup().await;
 
-    let test_pool_borrow_authority = TestPoolBorrowAuthority::new(&test_pool, None);
+    let test_pool_borrow_authority =
+        TestPoolBorrowAuthority::new(&test_pool, context.payer.pubkey());
     test_pool_borrow_authority
         .create(&mut context, &test_pool_market, &test_pool, SHARE_ALLOWED)
         .await
@@ -50,7 +51,8 @@ async fn success() {
 async fn success_recreate() {
     let (mut context, test_pool_market, test_pool) = setup().await;
 
-    let test_pool_borrow_authority = TestPoolBorrowAuthority::new(&test_pool, None);
+    let test_pool_borrow_authority =
+        TestPoolBorrowAuthority::new(&test_pool, context.payer.pubkey());
     test_pool_borrow_authority
         .create(&mut context, &test_pool_market, &test_pool, SHARE_ALLOWED)
         .await
@@ -80,7 +82,8 @@ async fn success_recreate() {
 async fn fail_delete_pool_borrow_authority() {
     let (mut context, test_pool_market, test_pool) = setup().await;
 
-    let test_pool_borrow_authority = TestPoolBorrowAuthority::new(&test_pool, None);
+    let test_pool_borrow_authority =
+        TestPoolBorrowAuthority::new(&test_pool, context.payer.pubkey());
 
     assert_eq!(
         test_pool_borrow_authority

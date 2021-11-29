@@ -1,13 +1,13 @@
 //! Instruction types
 
+use crate::find_transit_program_address;
 use borsh::{BorshDeserialize, BorshSerialize};
+use everlend_utils::find_program_address;
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
     system_program, sysvar,
 };
-
-use crate::{find_program_address, find_transit_program_address};
 
 /// Instructions supported by the program
 #[derive(Debug, BorshDeserialize, BorshSerialize, PartialEq)]
@@ -36,12 +36,14 @@ pub enum DepositorInstruction {
     ///
     /// Accounts:
     /// [R] Depositor
+    /// [R] Depositor authority
     /// [R] Pool market
     /// [R] Pool
     /// [R] Pool borrow authority
     /// [W] Pool token account (for token mint)
     /// [W] Transit token account (for token mint)
     /// [R] Token mint
+    /// [R] Depositor authority
     /// [RS] Rebalancer
     /// [R] Sysvar instructions program id
     /// [R] Token program id
@@ -97,27 +99,40 @@ pub fn deposit(
     pool_borrow_authority: &Pubkey,
     pool_token_account: &Pubkey,
     liquidity_mint: &Pubkey,
-    rebalancer: &Pubkey,
+    collateral_mint: &Pubkey,
+    money_market_program_id: &Pubkey,
+    money_market_accounts: Vec<AccountMeta>,
     amount: u64,
 ) -> Instruction {
+    let (depositor_authority, _) = find_program_address(program_id, depositor);
     let (pool_market_authority, _) = find_program_address(&everlend_ulp::id(), pool_market);
     let (liquidity_transit, _) =
         find_transit_program_address(program_id, depositor, liquidity_mint);
+    let (collateral_transit, _) =
+        find_transit_program_address(program_id, depositor, collateral_mint);
 
-    let accounts = vec![
+    let mut accounts = vec![
         AccountMeta::new_readonly(*depositor, false),
+        AccountMeta::new_readonly(depositor_authority, false),
+        // Pool
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new(*pool, false),
         AccountMeta::new(*pool_borrow_authority, false),
         AccountMeta::new_readonly(pool_market_authority, false),
         AccountMeta::new(*pool_token_account, false),
+        // Common
         AccountMeta::new(liquidity_transit, false),
         AccountMeta::new_readonly(*liquidity_mint, false),
-        AccountMeta::new_readonly(*rebalancer, true),
+        AccountMeta::new(collateral_transit, false),
+        AccountMeta::new(*collateral_mint, false),
+        AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(everlend_ulp::id(), false),
-        AccountMeta::new_readonly(sysvar::instructions::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
+        // Money market
+        AccountMeta::new_readonly(*money_market_program_id, false),
     ];
+
+    accounts.extend(money_market_accounts);
 
     Instruction::new_with_borsh(
         *program_id,

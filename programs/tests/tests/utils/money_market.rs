@@ -10,9 +10,8 @@ use super::get_account;
 pub const SOL_PYTH_PRODUCT: &str = "3Mnn2fX6rQyUsyELYms1sBJyChWofzSNRoqYzvgMVz5E";
 pub const SOL_PYTH_PRICE: &str = "J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix";
 
-pub const SPL_LENDING_PROGRAM_ID: &str = "Bp1MJ1qr4g8t9AQJjm5H6zDB2NmRrkJL8H8zuvb1g7oV";
-pub const SPL_LENDING_MARKET: &str = "CRw4TuphJ487tdTnsEKCuQkMYgGELck3Aa9Zh89xDPB";
-pub const SPL_LENDING_RESERVE: &str = "8UzkB5ik7oqpcMVc4DFsj89ezD6TAiBW5GAi9W124L7F";
+pub const SPL_TOKEN_LENDING_MARKET: &str = "JEEQ6mvMvzvcuVtBjNhTFb7yNdQSKybVTsFxEhMGfRjK";
+pub const SPL_TOKEN_LENDING_RESERVE: &str = "4LKaeb5dEipZjBF9UzkiDCLJjpfPBokkTa2VD9LMwBem";
 
 pub const SOL_PRICE: i64 = 10000;
 
@@ -80,16 +79,15 @@ pub fn add_sol_oracle(test: &mut ProgramTest) -> TestPythOracle {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct TestLending {
+pub struct TestSPLTokenLending {
     pub market_pubkey: Pubkey,
     pub reserve_pubkey: Pubkey,
 }
 
-pub fn add_lending(
-    test: &mut ProgramTest,
-    market_pubkey: Pubkey,
-    reserve_pubkey: Pubkey,
-) -> TestLending {
+pub fn add_spl_token_lending(test: &mut ProgramTest) -> TestSPLTokenLending {
+    let market_pubkey = Pubkey::from_str(SPL_TOKEN_LENDING_MARKET).unwrap();
+    let reserve_pubkey = Pubkey::from_str(SPL_TOKEN_LENDING_RESERVE).unwrap();
+
     // Add market
     test.add_account_with_file_data(
         market_pubkey,
@@ -148,18 +146,10 @@ pub fn add_lending(
         },
     );
 
-    TestLending {
+    TestSPLTokenLending {
         market_pubkey,
         reserve_pubkey,
     }
-}
-
-pub fn add_spl_lending(test: &mut ProgramTest) -> TestLending {
-    add_lending(
-        test,
-        Pubkey::from_str(SPL_LENDING_MARKET).unwrap(),
-        Pubkey::from_str(SPL_LENDING_RESERVE).unwrap(),
-    )
 }
 
 pub async fn get_reserve_account_data(
