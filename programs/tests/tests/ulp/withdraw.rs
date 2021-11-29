@@ -2,6 +2,7 @@
 
 use crate::utils::*;
 use everlend_ulp::instruction;
+use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program_test::*;
 use solana_sdk::{
@@ -339,7 +340,10 @@ async fn fail_with_invalid_pool_market_argument() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(0, InstructionError::IncorrectProgramId)
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32)
+        )
     );
 }
 
@@ -372,6 +376,9 @@ async fn fail_with_invalid_pool_argument() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(0, InstructionError::IncorrectProgramId)
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32)
+        )
     );
 }

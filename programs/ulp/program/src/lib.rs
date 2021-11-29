@@ -16,11 +16,6 @@ use solana_program::pubkey::Pubkey;
 
 solana_program::declare_id!("sFPqhpo9CJ4sCMPwsaZwmC25WERMW27x1M1be3DY5BM");
 
-/// Generates seed bump for authorities
-pub fn find_program_address(program_id: &Pubkey, pubkey: &Pubkey) -> (Pubkey, u8) {
-    Pubkey::find_program_address(&[&pubkey.to_bytes()[..32]], program_id)
-}
-
 /// Generates pool address
 pub fn find_pool_program_address(
     program_id: &Pubkey,

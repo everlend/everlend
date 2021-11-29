@@ -57,8 +57,6 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    // let borrow_authority = Keypair::from_bytes(&owner.to_bytes()).unwrap();
-
     // 1.1 Add liquidity to general pool
 
     let liquidity_provider = add_liquidity_provider(&mut context, &general_pool, 9999 * EXP)
@@ -100,6 +98,12 @@ async fn setup() -> (
         .await
         .unwrap();
 
+    // 3.3 Create transit account for mm pool collateral token
+    test_depositor
+        .create_transit(&mut context, &mm_pool.pool_mint.pubkey())
+        .await
+        .unwrap();
+
     // 4. Prepare borrow authority
     let (depositor_authority, _) = find_program_address(
         &everlend_depositor::id(),
@@ -137,19 +141,22 @@ async fn success() {
         spl_token_lending,
         general_pool_market,
         general_pool,
-        general_pool_borrow_authority,
+        _general_pool_borrow_authority,
         mm_pool_market,
         mm_pool,
-        liquidity_provider,
+        _liquidity_provider,
         test_depositor,
     ) = setup().await;
+
+    let reserve = get_reserve_account_data(&mut context, &spl_token_lending.reserve_pubkey).await;
+    let reserve_balance_before =
+        get_token_balance(&mut context, &reserve.liquidity.supply_pubkey).await;
 
     test_depositor
         .deposit(
             &mut context,
             &general_pool_market,
             &general_pool,
-            &general_pool_borrow_authority,
             &mm_pool_market,
             &mm_pool,
             &spl_token_lending,
@@ -158,8 +165,12 @@ async fn success() {
         .await
         .unwrap();
 
-    // assert_eq!(
-    //     get_token_balance(&mut context, &user.destination).await,
-    //     100,
-    // );
+    assert_eq!(
+        get_token_balance(&mut context, &mm_pool.token_account.pubkey()).await,
+        100,
+    );
+    assert_eq!(
+        get_token_balance(&mut context, &reserve.liquidity.supply_pubkey).await,
+        reserve_balance_before + 100,
+    );
 }

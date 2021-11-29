@@ -1,7 +1,4 @@
-use super::{
-    get_account, get_reserve_account_data, pool_borrow_authority::TestPoolBorrowAuthority,
-    TestPool, TestPoolMarket, TestSPLTokenLending,
-};
+use super::{get_account, get_reserve_account_data, TestPool, TestPoolMarket, TestSPLTokenLending};
 use everlend_depositor::state::Depositor;
 use everlend_utils::accounts;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
@@ -78,7 +75,6 @@ impl TestDepositor {
         context: &mut ProgramTestContext,
         general_pool_market: &TestPoolMarket,
         general_pool: &TestPool,
-        general_pool_borrow_authority: &TestPoolBorrowAuthority,
         mm_pool_market: &TestPoolMarket,
         mm_pool: &TestPool,
         spl_token_lending: &TestSPLTokenLending,
@@ -91,6 +87,7 @@ impl TestDepositor {
 
         let liquidity_mint = general_pool.token_mint_pubkey;
         let collateral_mint = mm_pool.token_mint_pubkey;
+        let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
 
         let money_market_accounts = accounts::spl_token_lending::deposit(
             &spl_token_lending.reserve_pubkey,
@@ -103,9 +100,10 @@ impl TestDepositor {
                 &everlend_depositor::id(),
                 &self.depositor.pubkey(),
                 &general_pool_market.pool_market.pubkey(),
-                &general_pool.pool_pubkey,
-                &general_pool_borrow_authority.pool_borrow_authority_pubkey,
                 &general_pool.token_account.pubkey(),
+                &mm_pool_market.pool_market.pubkey(),
+                &mm_pool.token_account.pubkey(),
+                &mm_pool_collateral_mint,
                 &liquidity_mint,
                 &collateral_mint,
                 &spl_token_lending::id(),

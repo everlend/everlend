@@ -1,23 +1,21 @@
 //! Utils
 
-use std::{slice::Iter, str::FromStr};
+use std::slice::Iter;
 
 use everlend_utils::EverlendError;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
-    msg,
     program::invoke_signed,
     program_error::ProgramError,
-    pubkey::Pubkey,
 };
 
 /// ULP borrow tokens
 #[allow(clippy::too_many_arguments)]
 pub fn ulp_borrow<'a>(
     pool_market: AccountInfo<'a>,
+    pool_market_authority: AccountInfo<'a>,
     pool: AccountInfo<'a>,
     pool_borrow_authority: AccountInfo<'a>,
-    pool_market_authority: AccountInfo<'a>,
     destination: AccountInfo<'a>,
     token_account: AccountInfo<'a>,
     borrow_authority: AccountInfo<'a>,
@@ -45,6 +43,48 @@ pub fn ulp_borrow<'a>(
             destination,
             token_account,
             borrow_authority,
+        ],
+        signers_seeds,
+    )
+}
+
+/// ULP deposit tokens
+#[allow(clippy::too_many_arguments)]
+pub fn ulp_deposit<'a>(
+    pool_market: AccountInfo<'a>,
+    pool_market_authority: AccountInfo<'a>,
+    pool: AccountInfo<'a>,
+    source: AccountInfo<'a>,
+    destination: AccountInfo<'a>,
+    token_account: AccountInfo<'a>,
+    pool_mint: AccountInfo<'a>,
+    user_transfer_authority: AccountInfo<'a>,
+    amount: u64,
+    signers_seeds: &[&[&[u8]]],
+) -> Result<(), ProgramError> {
+    let ix = everlend_ulp::instruction::deposit(
+        &everlend_ulp::id(),
+        pool_market.key,
+        pool.key,
+        source.key,
+        destination.key,
+        token_account.key,
+        pool_mint.key,
+        user_transfer_authority.key,
+        amount,
+    );
+
+    invoke_signed(
+        &ix,
+        &[
+            pool_market,
+            pool,
+            source,
+            destination,
+            token_account,
+            pool_mint,
+            pool_market_authority,
+            user_transfer_authority,
         ],
         signers_seeds,
     )

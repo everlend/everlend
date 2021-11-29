@@ -2,6 +2,7 @@
 
 use crate::utils::*;
 use everlend_ulp::state::AccountType;
+use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program_test::*;
 use solana_sdk::{signer::Signer, transaction::TransactionError};
@@ -91,6 +92,9 @@ async fn fail_delete_pool_borrow_authority() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(0, InstructionError::IncorrectProgramId)
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32)
+        )
     );
 }
