@@ -2,7 +2,10 @@ use std::str::FromStr;
 
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::{find_file, read_file, ProgramTest, ProgramTestContext};
-use solana_sdk::{account::Account, signature::read_keypair_file, signer::Signer};
+use solana_sdk::{
+    account::Account, signature::read_keypair_file, signer::Signer, transaction::Transaction,
+    transport,
+};
 use spl_token_lending::pyth;
 
 use super::get_account;
@@ -84,6 +87,33 @@ pub struct TestSPLTokenLending {
     pub reserve_pubkey: Pubkey,
 }
 
+impl TestSPLTokenLending {
+    pub async fn get_reserve_data(
+        &self,
+        context: &mut ProgramTestContext,
+    ) -> spl_token_lending::state::Reserve {
+        let account = get_account(context, &self.reserve_pubkey).await;
+        spl_token_lending::state::Reserve::unpack_from_slice(account.data.as_slice()).unwrap()
+    }
+
+    pub async fn refresh_reserve(&self, context: &mut ProgramTestContext) -> transport::Result<()> {
+        let reserve = self.get_reserve_data(context).await;
+
+        let tx = Transaction::new_signed_with_payer(
+            &[spl_token_lending::instruction::refresh_reserve(
+                spl_token_lending::id(),
+                self.reserve_pubkey,
+                reserve.liquidity.oracle_pubkey,
+            )],
+            Some(&context.payer.pubkey()),
+            &[&context.payer],
+            context.last_blockhash,
+        );
+
+        context.banks_client.process_transaction(tx).await
+    }
+}
+
 pub fn add_spl_token_lending(test: &mut ProgramTest) -> TestSPLTokenLending {
     let market_pubkey = Pubkey::from_str(SPL_TOKEN_LENDING_MARKET).unwrap();
     let reserve_pubkey = Pubkey::from_str(SPL_TOKEN_LENDING_RESERVE).unwrap();
@@ -150,12 +180,4 @@ pub fn add_spl_token_lending(test: &mut ProgramTest) -> TestSPLTokenLending {
         market_pubkey,
         reserve_pubkey,
     }
-}
-
-pub async fn get_reserve_account_data(
-    context: &mut ProgramTestContext,
-    pubkey: &Pubkey,
-) -> spl_token_lending::state::Reserve {
-    let account = get_account(context, pubkey).await;
-    spl_token_lending::state::Reserve::unpack_from_slice(account.data.as_slice()).unwrap()
 }

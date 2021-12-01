@@ -2,6 +2,7 @@
 
 //! Universal liquidity pools contract
 
+pub mod cpi;
 pub mod instruction;
 pub mod processor;
 pub mod state;

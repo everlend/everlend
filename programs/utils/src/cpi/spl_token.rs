@@ -6,7 +6,7 @@ use solana_program::{
 };
 
 /// Initialize SPL mint instruction.
-pub fn spl_initialize_mint<'a>(
+pub fn initialize_mint<'a>(
     mint: AccountInfo<'a>,
     mint_authority: AccountInfo<'a>,
     rent: AccountInfo<'a>,
@@ -24,7 +24,7 @@ pub fn spl_initialize_mint<'a>(
 }
 
 /// Initialize SPL accont instruction.
-pub fn spl_initialize_account<'a>(
+pub fn initialize_account<'a>(
     account: AccountInfo<'a>,
     mint: AccountInfo<'a>,
     authority: AccountInfo<'a>,
@@ -41,7 +41,7 @@ pub fn spl_initialize_account<'a>(
 }
 
 /// SPL transfer instruction.
-pub fn spl_token_transfer<'a>(
+pub fn transfer<'a>(
     source: AccountInfo<'a>,
     destination: AccountInfo<'a>,
     authority: AccountInfo<'a>,
@@ -61,7 +61,7 @@ pub fn spl_token_transfer<'a>(
 }
 
 /// SPL mint instruction.
-pub fn spl_token_mint_to<'a>(
+pub fn mint_to<'a>(
     mint: AccountInfo<'a>,
     destination: AccountInfo<'a>,
     authority: AccountInfo<'a>,
@@ -81,7 +81,7 @@ pub fn spl_token_mint_to<'a>(
 }
 
 /// SPL burn instruction.
-pub fn spl_token_burn<'a>(
+pub fn burn<'a>(
     mint: AccountInfo<'a>,
     account: AccountInfo<'a>,
     authority: AccountInfo<'a>,

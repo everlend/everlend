@@ -121,6 +121,22 @@ async fn setup() -> (
         .await
         .unwrap();
 
+    // Rates should be refreshed
+    context.warp_to_slot(10).unwrap();
+
+    test_depositor
+        .deposit(
+            &mut context,
+            &general_pool_market,
+            &general_pool,
+            &mm_pool_market,
+            &mm_pool,
+            &spl_token_lending,
+            100,
+        )
+        .await
+        .unwrap();
+
     (
         context,
         spl_token_lending,
@@ -152,28 +168,31 @@ async fn success() {
     let reserve_balance_before =
         get_token_balance(&mut context, &reserve.liquidity.supply_pubkey).await;
 
-    // Rates should be refreshed
-    context.warp_to_slot(10).unwrap();
-
-    test_depositor
-        .deposit(
-            &mut context,
-            &general_pool_market,
-            &general_pool,
-            &mm_pool_market,
-            &mm_pool,
-            &spl_token_lending,
-            100,
-        )
+    // TODO: Update rates
+    spl_token_lending
+        .refresh_reserve(&mut context)
         .await
         .unwrap();
 
-    assert_eq!(
-        get_token_balance(&mut context, &mm_pool.token_account.pubkey()).await,
-        100,
-    );
-    assert_eq!(
-        get_token_balance(&mut context, &reserve.liquidity.supply_pubkey).await,
-        reserve_balance_before + 100,
-    );
+    // test_depositor
+    //     .withdraw(
+    //         &mut context,
+    //         &general_pool_market,
+    //         &general_pool,
+    //         &mm_pool_market,
+    //         &mm_pool,
+    //         &spl_token_lending,
+    //         100,
+    //     )
+    //     .await
+    //     .unwrap();
+
+    // assert_eq!(
+    //     get_token_balance(&mut context, &mm_pool.token_account.pubkey()).await,
+    //     0,
+    // );
+    // assert_eq!(
+    //     get_token_balance(&mut context, &reserve.liquidity.supply_pubkey).await,
+    //     reserve_balance_before - 100,
+    // );
 }

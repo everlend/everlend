@@ -4,6 +4,7 @@ mod depositor {
     mod create_transit;
     mod deposit;
     mod init;
+    mod withdraw;
 }
 
 mod ulp {
@@ -21,6 +22,6 @@ mod ulp {
 mod liquidity_oracle {
     mod create_token_distribution;
     mod init_liquidity_oracle;
-    mod update_token_distribution;
     mod update_liquidity_oracle;
+    mod update_token_distribution;
 }

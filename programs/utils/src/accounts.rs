@@ -2,7 +2,7 @@ pub mod spl_token_lending {
     use crate::find_program_address;
     use solana_program::{instruction::AccountMeta, pubkey::Pubkey};
 
-    pub fn deposit(
+    pub fn deposit_or_redeem(
         reserve: &Pubkey,
         reserve_liquidity_supply: &Pubkey,
         lending_market: &Pubkey,

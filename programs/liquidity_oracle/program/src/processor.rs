@@ -6,9 +6,8 @@ use crate::{
     state::{DistributionArray, InitLiquidityOracleParams, LiquidityOracle, TokenDistribution},
 };
 
-use crate::state::AccountType;
 use borsh::BorshDeserialize;
-use everlend_utils::{assert_owned_by, assert_signer, assert_uninitialized, create_account};
+use everlend_utils::{assert_owned_by, assert_signer, assert_uninitialized, cpi};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     clock::Clock,
@@ -137,7 +136,7 @@ impl Processor {
         ];
 
         // Create distribution storage account
-        create_account::<TokenDistribution>(
+        cpi::system::create_account::<TokenDistribution>(
             program_id,
             authority_info.clone(),
             token_distribution_account.clone(),

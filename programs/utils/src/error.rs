@@ -31,20 +31,9 @@ pub enum EverlendError {
     #[error("Amount allowed of interest on the borrowing is exceeded")]
     RepayAmountCheckFailed,
 
-    /// Invaliud instruction order
-    #[error("Invalid instruction order")]
-    InvalidInstructionOrder,
-
     /// Incorrect instruction program id
     #[error("Incorrect instruction program id")]
     IncorrectInstructionProgramId,
-
-    /// Wrong instruction amount
-    #[error("Wrong instruction amount")]
-    WrongInstructionAmount,
-
-    #[error("The instruction expected additional pubkeys")]
-    NotEnoughPubkeys,
 }
 
 impl PrintProgramError for EverlendError {

@@ -12,8 +12,7 @@ use crate::{
 use borsh::BorshDeserialize;
 use everlend_utils::{
     assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
-    create_account, find_program_address, spl_initialize_account, spl_initialize_mint,
-    spl_token_burn, spl_token_mint_to, spl_token_transfer, EverlendError,
+    cpi, find_program_address, EverlendError,
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -92,7 +91,7 @@ impl Processor {
             &[bump_seed],
         ];
 
-        create_account::<Pool>(
+        cpi::system::create_account::<Pool>(
             program_id,
             manager_info.clone(),
             pool_info.clone(),
@@ -105,7 +104,7 @@ impl Processor {
         assert_uninitialized(&pool)?;
 
         // Initialize token account for spl token
-        spl_initialize_account(
+        cpi::spl_token::initialize_account(
             token_account_info.clone(),
             token_mint_info.clone(),
             pool_market_authority_info.clone(),
@@ -113,7 +112,7 @@ impl Processor {
         )?;
 
         // Initialize mint (token) for pool
-        spl_initialize_mint(
+        cpi::spl_token::initialize_mint(
             pool_mint_info.clone(),
             pool_market_authority_info.clone(),
             rent_info.clone(),
@@ -175,7 +174,7 @@ impl Processor {
             &[bump_seed],
         ];
 
-        create_account::<PoolBorrowAuthority>(
+        cpi::system::create_account::<PoolBorrowAuthority>(
             program_id,
             manager_info.clone(),
             pool_borrow_authority_info.clone(),
@@ -303,7 +302,7 @@ impl Processor {
         };
 
         // Transfer token from source to token account
-        spl_token_transfer(
+        cpi::spl_token::transfer(
             source_info.clone(),
             token_account_info.clone(),
             user_transfer_authority_info.clone(),
@@ -315,7 +314,7 @@ impl Processor {
         let signers_seeds = &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]];
 
         // Mint to destination pool token
-        spl_token_mint_to(
+        cpi::spl_token::mint_to(
             pool_mint_info.clone(),
             destination_info.clone(),
             pool_market_authority_info.clone(),
@@ -362,7 +361,7 @@ impl Processor {
             .ok_or(ProgramError::InvalidArgument)? as u64;
 
         // Burn from source pool token
-        spl_token_burn(
+        cpi::spl_token::burn(
             pool_mint_info.clone(),
             source_info.clone(),
             user_transfer_authority_info.clone(),
@@ -374,7 +373,7 @@ impl Processor {
         let signers_seeds = &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]];
 
         // Transfer from token account to destination
-        spl_token_transfer(
+        cpi::spl_token::transfer(
             token_account_info.clone(),
             destination_info.clone(),
             pool_market_authority_info.clone(),
@@ -436,7 +435,7 @@ impl Processor {
         let signers_seeds = &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]];
 
         // Transfer from token account to destination borrower
-        spl_token_transfer(
+        cpi::spl_token::transfer(
             token_account_info.clone(),
             destination_info.clone(),
             pool_market_authority_info.clone(),
@@ -491,7 +490,7 @@ impl Processor {
         Pool::pack(pool, *pool_info.data.borrow_mut())?;
 
         // Transfer from source to token account
-        spl_token_transfer(
+        cpi::spl_token::transfer(
             source_info.clone(),
             token_account_info.clone(),
             user_transfer_authority_info.clone(),
