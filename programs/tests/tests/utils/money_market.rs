@@ -1,14 +1,13 @@
-use std::str::FromStr;
-
-use solana_program::{program_pack::Pack, pubkey::Pubkey};
+use super::get_account;
+use solana_program::{clock::Slot, program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::{find_file, read_file, ProgramTest, ProgramTestContext};
 use solana_sdk::{
-    account::Account, signature::read_keypair_file, signer::Signer, transaction::Transaction,
-    transport,
+    account::{Account, AccountSharedData},
+    signature::read_keypair_file,
+    signer::Signer,
 };
 use spl_token_lending::pyth;
-
-use super::get_account;
+use std::str::FromStr;
 
 pub const SOL_PYTH_PRODUCT: &str = "3Mnn2fX6rQyUsyELYms1sBJyChWofzSNRoqYzvgMVz5E";
 pub const SOL_PYTH_PRICE: &str = "J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix";
@@ -96,21 +95,16 @@ impl TestSPLTokenLending {
         spl_token_lending::state::Reserve::unpack_from_slice(account.data.as_slice()).unwrap()
     }
 
-    pub async fn refresh_reserve(&self, context: &mut ProgramTestContext) -> transport::Result<()> {
-        let reserve = self.get_reserve_data(context).await;
+    pub async fn refresh_reserve(&self, context: &mut ProgramTestContext, slot: Slot) {
+        let mut account = get_account(context, &self.reserve_pubkey).await;
+        let mut reserve =
+            spl_token_lending::state::Reserve::unpack_from_slice(account.data.as_mut_slice())
+                .unwrap();
 
-        let tx = Transaction::new_signed_with_payer(
-            &[spl_token_lending::instruction::refresh_reserve(
-                spl_token_lending::id(),
-                self.reserve_pubkey,
-                reserve.liquidity.oracle_pubkey,
-            )],
-            Some(&context.payer.pubkey()),
-            &[&context.payer],
-            context.last_blockhash,
-        );
+        reserve.last_update.update_slot(slot);
+        spl_token_lending::state::Reserve::pack(reserve, &mut account.data).unwrap();
 
-        context.banks_client.process_transaction(tx).await
+        context.set_account(&self.reserve_pubkey, &AccountSharedData::from(account));
     }
 }
 
@@ -128,14 +122,11 @@ pub fn add_spl_token_lending(test: &mut ProgramTest) -> TestSPLTokenLending {
 
     // Reserve
     let filename = &format!("{}.bin", reserve_pubkey.to_string());
-    let mut reserve_data = read_file(find_file(filename).unwrap_or_else(|| {
+    let reserve_data = read_file(find_file(filename).unwrap_or_else(|| {
         panic!("Unable to locate {}", filename);
     }));
-    let mut reserve =
-        spl_token_lending::state::Reserve::unpack_from_slice(reserve_data.as_mut_slice()).unwrap();
-
-    // The same slot for deposit
-    reserve.last_update.update_slot(10);
+    let reserve =
+        spl_token_lending::state::Reserve::unpack_from_slice(reserve_data.as_slice()).unwrap();
 
     // Add sub token accounts
     test.add_account_with_file_data(
@@ -164,7 +155,6 @@ pub fn add_spl_token_lending(test: &mut ProgramTest) -> TestSPLTokenLending {
     );
 
     // Add reserve
-    spl_token_lending::state::Reserve::pack(reserve, &mut reserve_data).unwrap();
     test.add_account(
         reserve_pubkey,
         Account {

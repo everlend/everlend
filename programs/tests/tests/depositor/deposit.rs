@@ -153,7 +153,8 @@ async fn success() {
         get_token_balance(&mut context, &reserve.liquidity.supply_pubkey).await;
 
     // Rates should be refreshed
-    context.warp_to_slot(10).unwrap();
+    context.warp_to_slot(3).unwrap();
+    spl_token_lending.refresh_reserve(&mut context, 3).await;
 
     test_depositor
         .deposit(
