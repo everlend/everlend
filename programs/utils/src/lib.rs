@@ -4,9 +4,11 @@ pub mod accounts;
 mod asserts;
 pub mod cpi;
 mod error;
+mod math;
 
 pub use asserts::*;
 pub use error::*;
+pub use math::*;
 
 use solana_program::pubkey::Pubkey;
 

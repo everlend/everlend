@@ -1,26 +1,13 @@
-//! Depositor state definitions
-use super::*;
+//! Program state definitions
+
+use super::AccountType;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use solana_program::{
     msg,
     program_error::ProgramError,
     program_pack::{IsInitialized, Pack, Sealed},
+    pubkey::Pubkey,
 };
-
-/// Enum representing the account type managed by the program
-#[derive(Clone, Debug, PartialEq, BorshDeserialize, BorshSerialize, BorshSchema)]
-pub enum AccountType {
-    /// If the account has not been initialized, the enum will be 0
-    Uninitialized,
-    /// Depositor
-    Depositor,
-}
-
-impl Default for AccountType {
-    fn default() -> Self {
-        AccountType::Uninitialized
-    }
-}
 
 /// Depositor
 #[repr(C)]
@@ -28,26 +15,42 @@ impl Default for AccountType {
 pub struct Depositor {
     /// Account type - Depositor
     pub account_type: AccountType,
+
+    /// General pool market
+    pub pool_market: Pubkey,
+
+    /// Liquidity oracle
+    pub liquidity_oracle: Pubkey,
 }
 
 impl Depositor {
     /// Initialize a voting pool
-    pub fn init(&mut self) {
+    pub fn init(&mut self, params: InitDepositorParams) {
         self.account_type = AccountType::Depositor;
+        self.pool_market = params.pool_market;
+        self.liquidity_oracle = params.liquidity_oracle;
     }
+}
+
+/// Initialize a depositor params
+pub struct InitDepositorParams {
+    /// General pool market
+    pub pool_market: Pubkey,
+    /// Liquidity oracle
+    pub liquidity_oracle: Pubkey,
 }
 
 impl Sealed for Depositor {}
 impl Pack for Depositor {
-    // 1
-    const LEN: usize = 1;
+    // 1 + 32 + 32
+    const LEN: usize = 65;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;
         self.serialize(&mut slice).unwrap()
     }
 
-    fn unpack_from_slice(src: &[u8]) -> Result<Self, solana_program::program_error::ProgramError> {
+    fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
         Self::try_from_slice(src).map_err(|_| {
             msg!("Failed to deserialize");
             ProgramError::InvalidAccountData

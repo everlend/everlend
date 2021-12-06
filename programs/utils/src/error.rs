@@ -34,6 +34,10 @@ pub enum EverlendError {
     /// Incorrect instruction program id
     #[error("Incorrect instruction program id")]
     IncorrectInstructionProgramId,
+
+    /// Incomplete rebalancing
+    #[error("Incomplete rebalancing")]
+    IncompleteRebalancing,
 }
 
 impl PrintProgramError for EverlendError {

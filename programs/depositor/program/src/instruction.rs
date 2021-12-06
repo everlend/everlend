@@ -1,10 +1,12 @@
 //! Instruction types
 
-use crate::find_transit_program_address;
+use crate::{find_rebalancing_program_address, find_transit_program_address};
 use borsh::{BorshDeserialize, BorshSerialize};
+use everlend_liquidity_oracle::find_liquidity_oracle_token_distribution_program_address;
 use everlend_ulp::{find_pool_borrow_authority_program_address, find_pool_program_address};
 use everlend_utils::find_program_address;
 use solana_program::{
+    clock::Slot,
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
     system_program, sysvar,
@@ -32,6 +34,9 @@ pub enum DepositorInstruction {
     /// [R] Sytem program
     /// [R] Token program id
     CreateTransit,
+
+    /// Start rebalancing
+    StartRebalancing,
 
     /// Deposit funds from General Pool to Money market.
     /// Collect collateral token to MM Pool.
@@ -96,9 +101,16 @@ pub enum DepositorInstruction {
 
 /// Creates 'Init' instruction.
 #[allow(clippy::too_many_arguments)]
-pub fn init(program_id: &Pubkey, depositor: &Pubkey) -> Instruction {
+pub fn init(
+    program_id: &Pubkey,
+    depositor: &Pubkey,
+    pool_market: &Pubkey,
+    liquidity_oracle: &Pubkey,
+) -> Instruction {
     let accounts = vec![
         AccountMeta::new(*depositor, false),
+        AccountMeta::new_readonly(*pool_market, false),
+        AccountMeta::new_readonly(*liquidity_oracle, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
 
@@ -128,6 +140,51 @@ pub fn create_transit(
     ];
 
     Instruction::new_with_borsh(*program_id, &DepositorInstruction::CreateTransit, accounts)
+}
+
+/// Creates 'StartRebalancing' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn start_rebalancing(
+    program_id: &Pubkey,
+    depositor: &Pubkey,
+    mint: &Pubkey,
+    pool_market: &Pubkey,
+    pool_token_account: &Pubkey,
+    liquidity_oracle: &Pubkey,
+    from: &Pubkey,
+) -> Instruction {
+    let (depositor_authority, _) = find_program_address(program_id, depositor);
+    let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, mint);
+    let (token_distribution, _) = find_liquidity_oracle_token_distribution_program_address(
+        &everlend_liquidity_oracle::id(),
+        liquidity_oracle,
+        mint,
+    );
+    let (pool, _) = find_pool_program_address(&everlend_ulp::id(), pool_market, mint);
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*depositor, false),
+        AccountMeta::new_readonly(depositor_authority, false),
+        AccountMeta::new(rebalancing, false),
+        AccountMeta::new_readonly(*mint, false),
+        AccountMeta::new_readonly(*pool_market, false),
+        AccountMeta::new_readonly(pool, false),
+        AccountMeta::new_readonly(*pool_token_account, false),
+        AccountMeta::new_readonly(*liquidity_oracle, false),
+        AccountMeta::new_readonly(token_distribution, false),
+        AccountMeta::new(*from, true),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+        AccountMeta::new_readonly(sysvar::clock::id(), false),
+        AccountMeta::new_readonly(system_program::id(), false),
+        AccountMeta::new_readonly(everlend_liquidity_oracle::id(), false),
+        AccountMeta::new_readonly(spl_token::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &DepositorInstruction::StartRebalancing,
+        accounts,
+    )
 }
 
 /// Creates 'Deposit' instruction.
