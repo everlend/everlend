@@ -94,6 +94,11 @@ impl Rebalancing {
         Ok(())
     }
 
+    /// Return next unexecuted rebalancing step
+    pub fn next_rebalancing_step(&self) -> Option<&RebalancingStep> {
+        self.steps.iter().find(|&&step| step.executed_at.is_none())
+    }
+
     /// Add rebalancing step
     pub fn add_rebalancing_step(&mut self, rebalancing_step: RebalancingStep) {
         self.steps.push(rebalancing_step);

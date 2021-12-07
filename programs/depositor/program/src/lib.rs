@@ -33,8 +33,8 @@ pub fn find_rebalancing_program_address(
 ) -> (Pubkey, u8) {
     Pubkey::find_program_address(
         &[
-            &depositor.to_bytes(),
             "rebalancing".as_bytes(),
+            &depositor.to_bytes(),
             &mint.to_bytes(),
         ],
         program_id,

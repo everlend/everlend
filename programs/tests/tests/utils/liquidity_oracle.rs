@@ -126,7 +126,7 @@ impl TestTokenDistribution {
                 distribution,
             )],
             Some(&context.payer.pubkey()),
-            &[&context.payer, &context.payer],
+            &[&context.payer],
             context.last_blockhash,
         );
 

@@ -17,7 +17,7 @@ async fn setup() -> (
     LiquidityProvider,
     TestDepositor,
 ) {
-    let (mut context, spl_token_lending, _) = presetup().await;
+    let (mut context, money_market, _) = presetup().await;
 
     let owner = Keypair::new();
 
@@ -26,16 +26,16 @@ async fn setup() -> (
         .unwrap();
 
     // 0. Prepare lending
-    let reserve = spl_token_lending.get_reserve_data(&mut context).await;
+    let reserve = money_market.get_reserve_data(&mut context).await;
     println!("{:#?}", reserve);
 
-    let account = get_account(&mut context, &spl_token_lending.market_pubkey).await;
+    let account = get_account(&mut context, &money_market.market_pubkey).await;
     let lending_market =
         spl_token_lending::state::LendingMarket::unpack_from_slice(account.data.as_slice())
             .unwrap();
 
     let authority_signer_seeds = &[
-        &spl_token_lending.market_pubkey.to_bytes()[..32],
+        &money_market.market_pubkey.to_bytes()[..32],
         &[lending_market.bump_seed],
     ];
     let lending_market_authority_pubkey =
@@ -83,8 +83,14 @@ async fn setup() -> (
 
     // 3. Prepare depositor
 
+    let test_liquidity_oracle = TestLiquidityOracle::new();
+    test_liquidity_oracle.init(&mut context).await.unwrap();
+
     let test_depositor = TestDepositor::new();
-    test_depositor.init(&mut context).await.unwrap();
+    test_depositor
+        .init(&mut context, &general_pool_market, &test_liquidity_oracle)
+        .await
+        .unwrap();
 
     // 3.1 Create transit account for liquidity token
     test_depositor
@@ -123,7 +129,7 @@ async fn setup() -> (
 
     (
         context,
-        spl_token_lending,
+        money_market,
         general_pool_market,
         general_pool,
         general_pool_borrow_authority,
@@ -138,7 +144,7 @@ async fn setup() -> (
 async fn success() {
     let (
         mut context,
-        spl_token_lending,
+        money_market,
         general_pool_market,
         general_pool,
         _general_pool_borrow_authority,
@@ -148,13 +154,13 @@ async fn success() {
         test_depositor,
     ) = setup().await;
 
-    let reserve = spl_token_lending.get_reserve_data(&mut context).await;
+    let reserve = money_market.get_reserve_data(&mut context).await;
     let reserve_balance_before =
         get_token_balance(&mut context, &reserve.liquidity.supply_pubkey).await;
 
     // Rates should be refreshed
     context.warp_to_slot(3).unwrap();
-    spl_token_lending.refresh_reserve(&mut context, 3).await;
+    money_market.refresh_reserve(&mut context, 3).await;
 
     test_depositor
         .deposit(
@@ -163,7 +169,7 @@ async fn success() {
             &general_pool,
             &mm_pool_market,
             &mm_pool,
-            &spl_token_lending,
+            &money_market,
             100,
         )
         .await

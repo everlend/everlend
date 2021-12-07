@@ -1,4 +1,4 @@
-use super::{get_account, TestPool, TestPoolMarket, TestSPLTokenLending};
+use super::{get_account, TestLiquidityOracle, TestPool, TestPoolMarket, TestSPLTokenLending};
 use everlend_depositor::state::Depositor;
 use everlend_utils::accounts;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
@@ -25,7 +25,12 @@ impl TestDepositor {
         Depositor::unpack_unchecked(&account.data).unwrap()
     }
 
-    pub async fn init(&self, context: &mut ProgramTestContext) -> transport::Result<()> {
+    pub async fn init(
+        &self,
+        context: &mut ProgramTestContext,
+        general_pool_market: &TestPoolMarket,
+        liquidity_oracle: &TestLiquidityOracle,
+    ) -> transport::Result<()> {
         let rent = context.banks_client.get_rent().await.unwrap();
         let tx = Transaction::new_signed_with_payer(
             &[
@@ -39,6 +44,8 @@ impl TestDepositor {
                 everlend_depositor::instruction::init(
                     &everlend_depositor::id(),
                     &self.depositor.pubkey(),
+                    &general_pool_market.pool_market.pubkey(),
+                    &liquidity_oracle.keypair.pubkey(),
                 ),
             ],
             Some(&context.payer.pubkey()),
@@ -59,6 +66,31 @@ impl TestDepositor {
                 &everlend_depositor::id(),
                 &self.depositor.pubkey(),
                 token_mint,
+                &context.payer.pubkey(),
+            )],
+            Some(&context.payer.pubkey()),
+            &[&context.payer],
+            context.last_blockhash,
+        );
+
+        context.banks_client.process_transaction(tx).await
+    }
+
+    pub async fn start_rebalancing(
+        &self,
+        context: &mut ProgramTestContext,
+        general_pool_market: &TestPoolMarket,
+        general_pool: &TestPool,
+        liquidity_oracle: &TestLiquidityOracle,
+    ) -> transport::Result<()> {
+        let tx = Transaction::new_signed_with_payer(
+            &[everlend_depositor::instruction::start_rebalancing(
+                &everlend_depositor::id(),
+                &self.depositor.pubkey(),
+                &general_pool.token_mint_pubkey,
+                &general_pool_market.pool_market.pubkey(),
+                &general_pool.token_account.pubkey(),
+                &liquidity_oracle.keypair.pubkey(),
                 &context.payer.pubkey(),
             )],
             Some(&context.payer.pubkey()),

@@ -6,7 +6,6 @@ use everlend_liquidity_oracle::find_liquidity_oracle_token_distribution_program_
 use everlend_ulp::{find_pool_borrow_authority_program_address, find_pool_program_address};
 use everlend_utils::find_program_address;
 use solana_program::{
-    clock::Slot,
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
     system_program, sysvar,
@@ -153,7 +152,6 @@ pub fn start_rebalancing(
     liquidity_oracle: &Pubkey,
     from: &Pubkey,
 ) -> Instruction {
-    let (depositor_authority, _) = find_program_address(program_id, depositor);
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, mint);
     let (token_distribution, _) = find_liquidity_oracle_token_distribution_program_address(
         &everlend_liquidity_oracle::id(),
@@ -164,7 +162,6 @@ pub fn start_rebalancing(
 
     let accounts = vec![
         AccountMeta::new_readonly(*depositor, false),
-        AccountMeta::new_readonly(depositor_authority, false),
         AccountMeta::new(rebalancing, false),
         AccountMeta::new_readonly(*mint, false),
         AccountMeta::new_readonly(*pool_market, false),
@@ -174,10 +171,9 @@ pub fn start_rebalancing(
         AccountMeta::new_readonly(token_distribution, false),
         AccountMeta::new(*from, true),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
-        AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
         AccountMeta::new_readonly(everlend_liquidity_oracle::id(), false),
-        AccountMeta::new_readonly(spl_token::id(), false),
+        AccountMeta::new_readonly(everlend_ulp::id(), false),
     ];
 
     Instruction::new_with_borsh(

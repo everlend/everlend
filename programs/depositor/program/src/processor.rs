@@ -17,7 +17,6 @@ use everlend_utils::{
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
-    clock::Clock,
     entrypoint::ProgramResult,
     msg,
     program_pack::Pack,
@@ -111,7 +110,6 @@ impl Processor {
     pub fn start_rebalancing(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let depositor_info = next_account_info(account_info_iter)?;
-        let depositor_authority_info = next_account_info(account_info_iter)?;
         let rebalancing_info = next_account_info(account_info_iter)?;
         let mint_info = next_account_info(account_info_iter)?;
         let pool_market_info = next_account_info(account_info_iter)?;
@@ -122,11 +120,9 @@ impl Processor {
         let from_info = next_account_info(account_info_iter)?;
         let rent_info = next_account_info(account_info_iter)?;
         let rent = &Rent::from_account_info(rent_info)?;
-        let clock_info = next_account_info(account_info_iter)?;
-        let clock = Clock::from_account_info(clock_info)?;
         let _system_program_info = next_account_info(account_info_iter)?;
         let _liquidity_oracle_program_info = next_account_info(account_info_iter)?;
-        let _token_program_info = next_account_info(account_info_iter)?;
+        let _ulp_program_info = next_account_info(account_info_iter)?;
 
         assert_owned_by(depositor_info, program_id)?;
         assert_owned_by(token_distribution_info, &everlend_liquidity_oracle::id())?;
@@ -147,6 +143,7 @@ impl Processor {
             // Create rebalancing account
             0 => {
                 let signers_seeds = &[
+                    "rebalancing".as_bytes(),
                     &depositor_info.key.to_bytes()[..32],
                     &mint_info.key.to_bytes()[..32],
                     &[bump_seed],
