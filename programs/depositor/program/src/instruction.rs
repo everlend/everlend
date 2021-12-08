@@ -35,6 +35,21 @@ pub enum DepositorInstruction {
     CreateTransit,
 
     /// Start rebalancing
+    ///
+    /// Accounts:
+    /// [R] Depositor
+    /// [W] Rebalancing account
+    /// [R] Token mint
+    /// [R] Pool market
+    /// [R] Pool
+    /// [R] Pool token account
+    /// [R] Liquidity oracle
+    /// [R] Token distribution
+    /// [WS] From account
+    /// [R] Rent sysvar
+    /// [R] Sytem program
+    /// [R] Everlend Liquidity Oracle program id
+    /// [R] Everlend ULP program id
     StartRebalancing,
 
     /// Deposit funds from General Pool to Money market.
@@ -43,6 +58,7 @@ pub enum DepositorInstruction {
     /// Accounts:
     /// [R] Depositor
     /// [R] Depositor authority
+    /// [W] Rebalancing account
     /// [R] Pool market
     /// [R] Pool market authority
     /// [R] Pool
@@ -73,6 +89,7 @@ pub enum DepositorInstruction {
     /// Accounts:
     /// [R] Depositor
     /// [R] Depositor authority
+    /// [W] Rebalancing account
     /// [R] Pool market
     /// [R] Pool market authority
     /// [R] Pool
