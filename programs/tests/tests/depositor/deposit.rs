@@ -1,10 +1,11 @@
 #![cfg(feature = "test-bpf")]
 
 use crate::utils::*;
-use everlend_utils::find_program_address;
-use solana_program::{program_pack::Pack, pubkey::Pubkey};
+use everlend_liquidity_oracle::state::{DistributionArray, LiquidityDistribution};
+use everlend_utils::{find_program_address, EverlendError};
+use solana_program::{instruction::InstructionError, program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::*;
-use solana_sdk::{signature::Keypair, signer::Signer};
+use solana_sdk::{signer::Signer, transaction::TransactionError};
 
 async fn setup() -> (
     ProgramTestContext,
@@ -19,11 +20,7 @@ async fn setup() -> (
 ) {
     let (mut context, money_market, _) = presetup().await;
 
-    let owner = Keypair::new();
-
-    transfer(&mut context, &owner.pubkey(), 999999999)
-        .await
-        .unwrap();
+    let payer_pubkey = context.payer.pubkey();
 
     // 0. Prepare lending
     let reserve = money_market.get_reserve_data(&mut context).await;
@@ -83,8 +80,34 @@ async fn setup() -> (
 
     // 3. Prepare depositor
 
+    // 3.1. Prepare liquidity oracle
+
     let test_liquidity_oracle = TestLiquidityOracle::new();
     test_liquidity_oracle.init(&mut context).await.unwrap();
+
+    let mut distribution = DistributionArray::default();
+    distribution[0] = LiquidityDistribution {
+        money_market: spl_token_lending::id(),
+        percent: 500_000_000u64, // 50%
+    };
+
+    let test_token_distribution =
+        TestTokenDistribution::new(general_pool.token_mint_pubkey, distribution);
+
+    test_token_distribution
+        .init(&mut context, &test_liquidity_oracle, payer_pubkey)
+        .await
+        .unwrap();
+
+    test_token_distribution
+        .update(
+            &mut context,
+            &test_liquidity_oracle,
+            payer_pubkey,
+            distribution,
+        )
+        .await
+        .unwrap();
 
     let test_depositor = TestDepositor::new();
     test_depositor
@@ -92,19 +115,19 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    // 3.1 Create transit account for liquidity token
+    // 3.2 Create transit account for liquidity token
     test_depositor
         .create_transit(&mut context, &general_pool.token_mint_pubkey)
         .await
         .unwrap();
 
-    // 3.2 Create transit account for collateral token
+    // 3.3 Create transit account for collateral token
     test_depositor
         .create_transit(&mut context, &mm_pool.token_mint_pubkey)
         .await
         .unwrap();
 
-    // 3.3 Create transit account for mm pool collateral token
+    // 3.4 Create transit account for mm pool collateral token
     test_depositor
         .create_transit(&mut context, &mm_pool.pool_mint.pubkey())
         .await
@@ -123,6 +146,17 @@ async fn setup() -> (
             &general_pool_market,
             &general_pool,
             SHARE_ALLOWED,
+        )
+        .await
+        .unwrap();
+
+    // 5. Start rebalancing
+    test_depositor
+        .start_rebalancing(
+            &mut context,
+            &general_pool_market,
+            &general_pool,
+            &test_liquidity_oracle,
         )
         .await
         .unwrap();
@@ -170,17 +204,56 @@ async fn success() {
             &mm_pool_market,
             &mm_pool,
             &money_market,
-            100,
+            50 * EXP,
         )
         .await
         .unwrap();
 
     assert_eq!(
         get_token_balance(&mut context, &mm_pool.token_account.pubkey()).await,
-        100,
+        50 * EXP,
     );
     assert_eq!(
         get_token_balance(&mut context, &reserve.liquidity.supply_pubkey).await,
-        reserve_balance_before + 100,
+        reserve_balance_before + 50 * EXP,
+    );
+}
+
+#[tokio::test]
+async fn fail_invalid_amount() {
+    let (
+        mut context,
+        money_market,
+        general_pool_market,
+        general_pool,
+        _general_pool_borrow_authority,
+        mm_pool_market,
+        mm_pool,
+        _liquidity_provider,
+        test_depositor,
+    ) = setup().await;
+
+    // Rates should be refreshed
+    context.warp_to_slot(3).unwrap();
+    money_market.refresh_reserve(&mut context, 3).await;
+
+    assert_eq!(
+        test_depositor
+            .deposit(
+                &mut context,
+                &general_pool_market,
+                &general_pool,
+                &mm_pool_market,
+                &mm_pool,
+                &money_market,
+                51 * EXP,
+            )
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidRebalancingAmount as u32),
+        )
     );
 }

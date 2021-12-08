@@ -1,6 +1,7 @@
 //! Rebalancing step state definitions
 
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+use everlend_utils::EverlendError;
 use solana_program::{
     clock::Slot,
     msg,
@@ -61,16 +62,21 @@ impl RebalancingStep {
     /// Execute operation
     pub fn execute(
         &mut self,
+        money_market_program_id: Pubkey,
         operation: RebalancingOperation,
         amount: u64,
         slot: Slot,
     ) -> Result<(), ProgramError> {
+        if self.money_market_program_id != money_market_program_id {
+            return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
+        }
+
         if self.operation != operation {
-            return Err(ProgramError::InvalidArgument);
+            return Err(EverlendError::InvalidRebalancingOperation.into());
         }
 
         if self.amount != amount {
-            return Err(ProgramError::InvalidArgument);
+            return Err(EverlendError::InvalidRebalancingAmount.into());
         }
 
         self.executed_at = Some(slot);

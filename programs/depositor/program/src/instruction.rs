@@ -200,6 +200,7 @@ pub fn deposit(
     amount: u64,
 ) -> Instruction {
     let (depositor_authority, _) = find_program_address(program_id, depositor);
+    let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
 
     let (pool_market_authority, _) = find_program_address(&everlend_ulp::id(), pool_market);
     let (pool, _) = find_pool_program_address(&everlend_ulp::id(), pool_market, liquidity_mint);
@@ -223,6 +224,7 @@ pub fn deposit(
     let mut accounts = vec![
         AccountMeta::new_readonly(*depositor, false),
         AccountMeta::new_readonly(depositor_authority, false),
+        AccountMeta::new(rebalancing, false),
         // Pool
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new_readonly(pool_market_authority, false),
@@ -275,6 +277,7 @@ pub fn withdraw(
     amount: u64,
 ) -> Instruction {
     let (depositor_authority, _) = find_program_address(program_id, depositor);
+    let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
 
     let (pool_market_authority, _) = find_program_address(&everlend_ulp::id(), pool_market);
     let (pool, _) = find_pool_program_address(&everlend_ulp::id(), pool_market, liquidity_mint);
@@ -298,6 +301,7 @@ pub fn withdraw(
     let mut accounts = vec![
         AccountMeta::new_readonly(*depositor, false),
         AccountMeta::new_readonly(depositor_authority, false),
+        AccountMeta::new(rebalancing, false),
         // Pool
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new_readonly(pool_market_authority, false),

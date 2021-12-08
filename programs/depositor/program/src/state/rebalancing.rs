@@ -8,6 +8,7 @@ use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use everlend_liquidity_oracle::state::{TokenDistribution, LENDINGS_SIZE};
 use everlend_utils::amount_percent_diff;
 use solana_program::{
+    clock::Slot,
     msg,
     program_error::ProgramError,
     program_pack::{IsInitialized, Pack, Sealed},
@@ -94,9 +95,21 @@ impl Rebalancing {
         Ok(())
     }
 
-    /// Return next unexecuted rebalancing step
-    pub fn next_rebalancing_step(&self) -> Option<&RebalancingStep> {
-        self.steps.iter().find(|&&step| step.executed_at.is_none())
+    /// Execute next unexecuted rebalancing step
+    pub fn execute_step(
+        &mut self,
+        money_market_program_id: Pubkey,
+        operation: RebalancingOperation,
+        amount: u64,
+        slot: Slot,
+    ) -> Result<(), ProgramError> {
+        let step = self
+            .steps
+            .iter_mut()
+            .find(|&&mut step| step.executed_at.is_none())
+            .unwrap();
+
+        step.execute(money_market_program_id, operation, amount, slot)
     }
 
     /// Add rebalancing step

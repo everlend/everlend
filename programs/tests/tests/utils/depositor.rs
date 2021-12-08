@@ -1,5 +1,8 @@
 use super::{get_account, TestLiquidityOracle, TestPool, TestPoolMarket, TestSPLTokenLending};
-use everlend_depositor::state::Depositor;
+use everlend_depositor::{
+    find_rebalancing_program_address,
+    state::{Depositor, Rebalancing},
+};
 use everlend_utils::accounts;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::ProgramTestContext;
@@ -23,6 +26,20 @@ impl TestDepositor {
     pub async fn get_data(&self, context: &mut ProgramTestContext) -> Depositor {
         let account = get_account(context, &self.depositor.pubkey()).await;
         Depositor::unpack_unchecked(&account.data).unwrap()
+    }
+
+    pub async fn get_rebalancing_data(
+        &self,
+        context: &mut ProgramTestContext,
+        mint: &Pubkey,
+    ) -> Rebalancing {
+        let (rebalancing, _) = find_rebalancing_program_address(
+            &everlend_depositor::id(),
+            &self.depositor.pubkey(),
+            mint,
+        );
+        let account = get_account(context, &rebalancing).await;
+        Rebalancing::unpack_unchecked(&account.data).unwrap()
     }
 
     pub async fn init(

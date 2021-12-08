@@ -35,9 +35,25 @@ pub enum EverlendError {
     #[error("Incorrect instruction program id")]
     IncorrectInstructionProgramId,
 
+    /// Rebalancing money market does not match
+    #[error("Rebalancing money market does not match")]
+    InvalidRebalancingMoneyMarket,
+
+    /// Rebalancing operation does not match
+    #[error("Rebalancing operation does not match")]
+    InvalidRebalancingOperation,
+
+    /// Rebalancing amount does not match
+    #[error("Rebalancing amount does not match")]
+    InvalidRebalancingAmount,
+
     /// Incomplete rebalancing
     #[error("Incomplete rebalancing")]
     IncompleteRebalancing,
+
+    /// Rebalancing is completed
+    #[error("Rebalancing is completed")]
+    RebalancingIsCompleted,
 }
 
 impl PrintProgramError for EverlendError {
