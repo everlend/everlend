@@ -9,8 +9,17 @@ use solana_sdk::{signature::Keypair, signer::Signer};
 async fn setup() -> (ProgramTestContext, TestDepositor) {
     let mut context = presetup().await.0;
 
+    let test_liquidity_oracle = TestLiquidityOracle::new();
+    test_liquidity_oracle.init(&mut context).await.unwrap();
+
+    let general_pool_market = TestPoolMarket::new();
+    general_pool_market.init(&mut context).await.unwrap();
+
     let test_depositor = TestDepositor::new();
-    test_depositor.init(&mut context).await.unwrap();
+    test_depositor
+        .init(&mut context, &general_pool_market, &test_liquidity_oracle)
+        .await
+        .unwrap();
 
     (context, test_depositor)
 }

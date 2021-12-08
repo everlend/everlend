@@ -1,18 +1,25 @@
 //! Program state processor
 
 use crate::{
-    find_transit_program_address,
+    find_rebalancing_program_address, find_transit_program_address,
     instruction::DepositorInstruction,
-    state::Depositor,
+    state::{
+        Depositor, InitDepositorParams, InitRebalancingParams, Rebalancing, RebalancingOperation,
+    },
     utils::{money_market_deposit, money_market_redeem},
 };
 use borsh::BorshDeserialize;
+use everlend_liquidity_oracle::{
+    find_liquidity_oracle_token_distribution_program_address, state::TokenDistribution,
+};
+use everlend_ulp::state::Pool;
 use everlend_utils::{
     assert_account_key, assert_owned_by, assert_rent_exempt, assert_uninitialized, cpi,
-    find_program_address,
+    find_program_address, EverlendError,
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
+    clock::Clock,
     entrypoint::ProgramResult,
     msg,
     program_pack::Pack,
@@ -20,6 +27,7 @@ use solana_program::{
     rent::Rent,
     sysvar::Sysvar,
 };
+use spl_token::state::Account;
 
 /// Program state handler.
 pub struct Processor {}
@@ -28,17 +36,24 @@ impl Processor {
     pub fn init(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let depositor_info = next_account_info(account_info_iter)?;
+        let pool_market_info = next_account_info(account_info_iter)?;
+        let liquidity_oracle_info = next_account_info(account_info_iter)?;
         let rent_info = next_account_info(account_info_iter)?;
         let rent = &Rent::from_account_info(rent_info)?;
 
         assert_rent_exempt(rent, depositor_info)?;
         assert_owned_by(depositor_info, program_id)?;
+        assert_owned_by(pool_market_info, &everlend_ulp::id())?;
+        assert_owned_by(liquidity_oracle_info, &everlend_liquidity_oracle::id())?;
 
         // Get depositor state
         let mut depositor = Depositor::unpack_unchecked(&depositor_info.data.borrow())?;
         assert_uninitialized(&depositor)?;
 
-        depositor.init();
+        depositor.init(InitDepositorParams {
+            pool_market: *pool_market_info.key,
+            liquidity_oracle: *liquidity_oracle_info.key,
+        });
 
         Depositor::pack(depositor, *depositor_info.data.borrow_mut())?;
 
@@ -94,12 +109,120 @@ impl Processor {
         Ok(())
     }
 
+    /// Process StartRebalancing instruction
+    pub fn start_rebalancing(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let depositor_info = next_account_info(account_info_iter)?;
+        let rebalancing_info = next_account_info(account_info_iter)?;
+        let mint_info = next_account_info(account_info_iter)?;
+        let pool_market_info = next_account_info(account_info_iter)?;
+        let pool_info = next_account_info(account_info_iter)?;
+        let pool_token_account_info = next_account_info(account_info_iter)?;
+        let liquidity_oracle_info = next_account_info(account_info_iter)?;
+        let token_distribution_info = next_account_info(account_info_iter)?;
+        let from_info = next_account_info(account_info_iter)?;
+        let rent_info = next_account_info(account_info_iter)?;
+        let rent = &Rent::from_account_info(rent_info)?;
+        let _system_program_info = next_account_info(account_info_iter)?;
+        let _liquidity_oracle_program_info = next_account_info(account_info_iter)?;
+        let _ulp_program_info = next_account_info(account_info_iter)?;
+
+        assert_owned_by(depositor_info, program_id)?;
+        assert_owned_by(token_distribution_info, &everlend_liquidity_oracle::id())?;
+        assert_owned_by(pool_info, &everlend_ulp::id())?;
+
+        // Get depositor state
+        let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
+
+        assert_account_key(pool_market_info, &depositor.pool_market)?;
+        assert_account_key(liquidity_oracle_info, &depositor.liquidity_oracle)?;
+
+        let (rebalancing_pubkey, bump_seed) =
+            find_rebalancing_program_address(program_id, depositor_info.key, mint_info.key);
+        assert_account_key(rebalancing_info, &rebalancing_pubkey)?;
+
+        // Create or get rebalancing account
+        let mut rebalancing = match rebalancing_info.lamports() {
+            // Create rebalancing account
+            0 => {
+                let signers_seeds = &[
+                    "rebalancing".as_bytes(),
+                    &depositor_info.key.to_bytes()[..32],
+                    &mint_info.key.to_bytes()[..32],
+                    &[bump_seed],
+                ];
+
+                cpi::system::create_account::<Rebalancing>(
+                    program_id,
+                    from_info.clone(),
+                    rebalancing_info.clone(),
+                    &[signers_seeds],
+                    rent,
+                )?;
+
+                let mut rebalancing =
+                    Rebalancing::unpack_unchecked(&rebalancing_info.data.borrow())?;
+                rebalancing.init(InitRebalancingParams {
+                    depositor: *depositor_info.key,
+                    mint: *mint_info.key,
+                });
+
+                rebalancing
+            }
+            _ => {
+                let rebalancing = Rebalancing::unpack(&rebalancing_info.data.borrow())?;
+                assert_account_key(depositor_info, &rebalancing.depositor)?;
+                assert_account_key(mint_info, &rebalancing.mint)?;
+
+                rebalancing
+            }
+        };
+
+        assert_owned_by(rebalancing_info, program_id)?;
+
+        // Check rebalancing is completed
+        if !rebalancing.is_completed() {
+            return Err(EverlendError::IncompleteRebalancing.into());
+        }
+
+        // Check token distribution pubkey
+        let (token_distribution_pubkey, _) =
+            find_liquidity_oracle_token_distribution_program_address(
+                &everlend_liquidity_oracle::id(),
+                liquidity_oracle_info.key,
+                mint_info.key,
+            );
+        assert_account_key(token_distribution_info, &token_distribution_pubkey)?;
+
+        let token_distribution = TokenDistribution::unpack(&token_distribution_info.data.borrow())?;
+
+        // Get pool state to calculate total amount
+        let pool = Pool::unpack(&pool_info.data.borrow())?;
+        assert_account_key(pool_market_info, &pool.pool_market)?;
+        assert_account_key(pool_token_account_info, &pool.token_account)?;
+
+        let pool_token_account_amount =
+            Account::unpack_unchecked(&pool_token_account_info.data.borrow())?.amount;
+        let total_amount = pool_token_account_amount
+            .checked_add(pool.total_amount_borrowed)
+            .ok_or(EverlendError::MathOverflow)?;
+
+        // Compute rebalancing steps
+        rebalancing.compute(token_distribution, total_amount)?;
+        msg!("Steps: {:#?}", rebalancing.steps);
+
+        Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
+
+        Ok(())
+    }
+
     /// Process Deposit instruction
     pub fn deposit(program_id: &Pubkey, amount: u64, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
 
         let depositor_info = next_account_info(account_info_iter)?;
         let depositor_authority_info = next_account_info(account_info_iter)?;
+        let rebalancing_info = next_account_info(account_info_iter)?;
 
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_market_authority_info = next_account_info(account_info_iter)?;
@@ -120,12 +243,22 @@ impl Processor {
         let collateral_mint_info = next_account_info(account_info_iter)?;
 
         let clock_info = next_account_info(account_info_iter)?;
+        let clock = Clock::from_account_info(clock_info)?;
         let _everlend_ulp_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
         let money_market_program_info = next_account_info(account_info_iter)?;
 
         assert_owned_by(depositor_info, program_id)?;
+        assert_owned_by(rebalancing_info, program_id)?;
+
+        let mut rebalancing = Rebalancing::unpack(&rebalancing_info.data.borrow())?;
+        assert_account_key(depositor_info, &rebalancing.depositor)?;
+        assert_account_key(liquidity_mint_info, &rebalancing.mint)?;
+
+        if rebalancing.is_completed() {
+            return Err(EverlendError::RebalancingIsCompleted.into());
+        }
 
         // Create depositor authority account
         let (depositor_authority_pubkey, bump_seed) =
@@ -175,6 +308,15 @@ impl Processor {
             &[signers_seeds],
         )?;
 
+        rebalancing.execute_step(
+            *money_market_program_info.key,
+            RebalancingOperation::Deposit,
+            amount,
+            clock.slot,
+        )?;
+
+        Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
+
         Ok(())
     }
 
@@ -184,6 +326,7 @@ impl Processor {
 
         let depositor_info = next_account_info(account_info_iter)?;
         let depositor_authority_info = next_account_info(account_info_iter)?;
+        let rebalancing_info = next_account_info(account_info_iter)?;
 
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_market_authority_info = next_account_info(account_info_iter)?;
@@ -204,12 +347,22 @@ impl Processor {
         let liquidity_mint_info = next_account_info(account_info_iter)?;
 
         let clock_info = next_account_info(account_info_iter)?;
+        let clock = Clock::from_account_info(clock_info)?;
         let _everlend_ulp_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
         let money_market_program_info = next_account_info(account_info_iter)?;
 
         assert_owned_by(depositor_info, program_id)?;
+        assert_owned_by(rebalancing_info, program_id)?;
+
+        let mut rebalancing = Rebalancing::unpack(&rebalancing_info.data.borrow())?;
+        assert_account_key(depositor_info, &rebalancing.depositor)?;
+        assert_account_key(liquidity_mint_info, &rebalancing.mint)?;
+
+        if rebalancing.is_completed() {
+            return Err(EverlendError::RebalancingIsCompleted.into());
+        }
 
         // Create depositor authority account
         let (depositor_authority_pubkey, bump_seed) =
@@ -260,6 +413,15 @@ impl Processor {
             &[signers_seeds],
         )?;
 
+        rebalancing.execute_step(
+            *money_market_program_info.key,
+            RebalancingOperation::Withdraw,
+            amount,
+            clock.slot,
+        )?;
+
+        Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
+
         Ok(())
     }
 
@@ -280,6 +442,11 @@ impl Processor {
             DepositorInstruction::CreateTransit => {
                 msg!("DepositorInstruction: CreateTransit");
                 Self::create_transit(program_id, accounts)
+            }
+
+            DepositorInstruction::StartRebalancing => {
+                msg!("DepositorInstruction: StartRebalancing");
+                Self::start_rebalancing(program_id, accounts)
             }
 
             DepositorInstruction::Deposit { amount } => {
