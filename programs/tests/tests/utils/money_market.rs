@@ -24,6 +24,17 @@ pub struct TestPythOracle {
     pub price: i64,
 }
 
+impl TestPythOracle {
+    pub async fn update(&self, context: &mut ProgramTestContext, slot: Slot) {
+        let mut account = get_account(context, &self.price_pubkey).await;
+        let mut pyth_price = pyth::load_mut::<pyth::Price>(account.data.as_mut_slice()).unwrap();
+
+        pyth_price.valid_slot = slot;
+
+        context.set_account(&self.price_pubkey, &AccountSharedData::from(account));
+    }
+}
+
 pub fn add_pyth_oracle(
     test: &mut ProgramTest,
     product_pubkey: Pubkey,
@@ -94,18 +105,6 @@ impl TestSPLTokenLending {
         let account = get_account(context, &self.reserve_pubkey).await;
         spl_token_lending::state::Reserve::unpack_from_slice(account.data.as_slice()).unwrap()
     }
-
-    pub async fn refresh_reserve(&self, context: &mut ProgramTestContext, slot: Slot) {
-        let mut account = get_account(context, &self.reserve_pubkey).await;
-        let mut reserve =
-            spl_token_lending::state::Reserve::unpack_from_slice(account.data.as_mut_slice())
-                .unwrap();
-
-        reserve.last_update.update_slot(slot);
-        spl_token_lending::state::Reserve::pack(reserve, &mut account.data).unwrap();
-
-        context.set_account(&self.reserve_pubkey, &AccountSharedData::from(account));
-    }
 }
 
 pub fn add_spl_token_lending(test: &mut ProgramTest) -> TestSPLTokenLending {
@@ -122,11 +121,11 @@ pub fn add_spl_token_lending(test: &mut ProgramTest) -> TestSPLTokenLending {
 
     // Reserve
     let filename = &format!("{}.bin", reserve_pubkey.to_string());
-    let reserve_data = read_file(find_file(filename).unwrap_or_else(|| {
+    let mut reserve_data = read_file(find_file(filename).unwrap_or_else(|| {
         panic!("Unable to locate {}", filename);
     }));
-    let reserve =
-        spl_token_lending::state::Reserve::unpack_from_slice(reserve_data.as_slice()).unwrap();
+    let mut reserve =
+        spl_token_lending::state::Reserve::unpack_from_slice(reserve_data.as_mut_slice()).unwrap();
 
     // Add sub token accounts
     test.add_account_with_file_data(
@@ -153,6 +152,9 @@ pub fn add_spl_token_lending(test: &mut ProgramTest) -> TestSPLTokenLending {
         spl_token::id(),
         &format!("{}.bin", reserve.collateral.supply_pubkey.to_string()),
     );
+
+    reserve.last_update.update_slot(0);
+    spl_token_lending::state::Reserve::pack(reserve, &mut reserve_data).unwrap();
 
     // Add reserve
     test.add_account(

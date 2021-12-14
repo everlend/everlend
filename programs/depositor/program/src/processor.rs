@@ -294,6 +294,9 @@ impl Processor {
             &[signers_seeds],
         )?;
 
+        let collateral_amount =
+            Account::unpack_unchecked(&collateral_transit_info.data.borrow())?.amount;
+
         msg!("Collect collateral tokens to MM Pool");
         everlend_ulp::cpi::deposit(
             mm_pool_market_info.clone(),
@@ -304,7 +307,7 @@ impl Processor {
             mm_pool_token_account_info.clone(),
             mm_pool_collateral_mint_info.clone(),
             depositor_authority_info.clone(),
-            amount,
+            collateral_amount,
             &[signers_seeds],
         )?;
 

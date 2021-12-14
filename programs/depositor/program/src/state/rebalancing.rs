@@ -1,7 +1,5 @@
 //! Program state definitions
 
-use std::cmp::Ordering;
-
 use super::{AccountType, RebalancingStep, TOTAL_REBALANCING_STEP};
 use crate::state::RebalancingOperation;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
@@ -14,6 +12,7 @@ use solana_program::{
     program_pack::{IsInitialized, Pack, Sealed},
     pubkey::Pubkey,
 };
+use std::cmp::Ordering;
 
 /// Rebalancing
 #[repr(C)]

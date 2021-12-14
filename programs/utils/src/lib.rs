@@ -1,9 +1,9 @@
 //! Utils
 
-pub mod accounts;
 mod asserts;
 pub mod cpi;
 mod error;
+pub mod integrations;
 mod math;
 
 pub use asserts::*;

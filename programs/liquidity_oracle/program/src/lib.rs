@@ -9,7 +9,7 @@ pub mod entrypoint;
 pub use solana_program;
 use solana_program::pubkey::Pubkey;
 
-solana_program::declare_id!("A4ZYwmedPhFCjTH8q44CFstj7KoW83dL1F9ceypjYZsF");
+solana_program::declare_id!("J5aZDbb9VBPqERc5AKnTUvQeZjDQc7cPHBzFXntPQBG7");
 
 /// Generates liquidity oracle token distribution authority address
 pub fn find_liquidity_oracle_token_distribution_program_address(

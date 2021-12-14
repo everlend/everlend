@@ -3,7 +3,7 @@ use everlend_depositor::{
     find_rebalancing_program_address,
     state::{Depositor, Rebalancing},
 };
-use everlend_utils::accounts;
+use everlend_utils::integrations::{self, MoneyMarketPubkeys};
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{
@@ -126,19 +126,25 @@ impl TestDepositor {
         general_pool: &TestPool,
         mm_pool_market: &TestPoolMarket,
         mm_pool: &TestPool,
-        spl_token_lending: &TestSPLTokenLending,
+        test_spl_token_lending: &TestSPLTokenLending,
         amount: u64,
     ) -> transport::Result<()> {
-        let reserve = spl_token_lending.get_reserve_data(context).await;
+        let reserve = test_spl_token_lending.get_reserve_data(context).await;
 
         let liquidity_mint = general_pool.token_mint_pubkey;
         let collateral_mint = mm_pool.token_mint_pubkey;
         let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
 
-        let money_market_accounts = accounts::spl_token_lending::deposit_or_redeem(
-            &spl_token_lending.reserve_pubkey,
-            &reserve.liquidity.supply_pubkey,
-            &spl_token_lending.market_pubkey,
+        let money_market_pubkeys = integrations::spl_token_lending::AccountPubkeys {
+            reserve: test_spl_token_lending.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: test_spl_token_lending.market_pubkey,
+        };
+
+        let deposit_accounts = integrations::deposit_accounts(
+            &spl_token_lending::id(),
+            &MoneyMarketPubkeys::SPL(money_market_pubkeys),
         );
 
         let tx = Transaction::new_signed_with_payer(
@@ -153,7 +159,7 @@ impl TestDepositor {
                 &liquidity_mint,
                 &collateral_mint,
                 &spl_token_lending::id(),
-                money_market_accounts,
+                deposit_accounts,
                 amount,
             )],
             Some(&context.payer.pubkey()),
@@ -172,19 +178,25 @@ impl TestDepositor {
         general_pool: &TestPool,
         mm_pool_market: &TestPoolMarket,
         mm_pool: &TestPool,
-        spl_token_lending: &TestSPLTokenLending,
+        test_spl_token_lending: &TestSPLTokenLending,
         amount: u64,
     ) -> transport::Result<()> {
-        let reserve = spl_token_lending.get_reserve_data(context).await;
+        let reserve = test_spl_token_lending.get_reserve_data(context).await;
 
         let collateral_mint = mm_pool.token_mint_pubkey;
         let liquidity_mint = general_pool.token_mint_pubkey;
         let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
 
-        let money_market_accounts = accounts::spl_token_lending::deposit_or_redeem(
-            &spl_token_lending.reserve_pubkey,
-            &reserve.liquidity.supply_pubkey,
-            &spl_token_lending.market_pubkey,
+        let money_market_pubkeys = integrations::spl_token_lending::AccountPubkeys {
+            reserve: test_spl_token_lending.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: test_spl_token_lending.market_pubkey,
+        };
+
+        let withdraw_accounts = integrations::withdraw_accounts(
+            &spl_token_lending::id(),
+            &MoneyMarketPubkeys::SPL(money_market_pubkeys),
         );
 
         let tx = Transaction::new_signed_with_payer(
@@ -199,7 +211,7 @@ impl TestDepositor {
                 &collateral_mint,
                 &liquidity_mint,
                 &spl_token_lending::id(),
-                money_market_accounts,
+                withdraw_accounts,
                 amount,
             )],
             Some(&context.payer.pubkey()),

@@ -1,18 +1,23 @@
 [package]
-name = "everlend-tests"
+name = "everlend-e2e-tests"
 version = "0.1.0"
 edition = "2018"
 
-[features]
-test-bpf = []
-
-[dev-dependencies]
+[dependencies]
+anyhow = "1.0.42"
+bs58 = "0.2.5"
+solana-cli-config = "1.8.6"
+solana-account-decoder = "1.8.6"
+solana-client = "1.8.6"
 solana-sdk = "1.8.6"
+solana-logger = "1.8.6"
 solana-program = "1.8.6"
-solana-program-test = "1.8.6"
+tokio = "1.9.0"
+spl-associated-token-account = { version = "1.0.3", features = [ "no-entrypoint" ] }
 spl-token = { version = "3.1", features = [ "no-entrypoint" ] }
 spl-token-lending = { git = "https://github.com/everlend/solana-program-library", features = [ "no-entrypoint" ] }
 everlend-ulp = { path = "../ulp/program", features = [ "no-entrypoint" ] }
 everlend-depositor = { path = "../depositor/program", features = [ "no-entrypoint" ] }
 everlend-liquidity-oracle = { path = "../liquidity_oracle/program", features = [ "no-entrypoint" ] }
 everlend-utils = { path = "../utils" }
+port-variable-rate-lending-instructions = "0.2.9"

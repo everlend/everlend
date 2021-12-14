@@ -2,7 +2,7 @@ use clap::{
     crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
 };
 use everlend_ulp::{
-    find_pool_borrow_authority_program_address, find_pool_program_address, id, instruction,
+    find_pool_borrow_authority_program_address, find_pool_program_address, instruction,
     state::{ui_bp_to_bp, AccountType, Pool, PoolBorrowAuthority, PoolMarket},
 };
 use solana_account_decoder::UiAccountEncoding;
@@ -68,13 +68,13 @@ fn get_program_accounts(
     pubkey: &Pubkey,
 ) -> Result<Vec<(Pubkey, Account)>, ClientError> {
     config.rpc_client.get_program_accounts_with_config(
-        &id(),
+        &everlend_ulp::id(),
         RpcProgramAccountsConfig {
             filters: Some(vec![
                 // Account type
                 RpcFilterType::Memcmp(Memcmp {
                     offset: 0,
-                    bytes: MemcmpEncodedBytes::Binary(
+                    bytes: MemcmpEncodedBytes::Base58(
                         bs58::encode([account_type as u8]).into_string(),
                     ),
                     encoding: Some(MemcmpEncoding::Binary),
@@ -82,7 +82,7 @@ fn get_program_accounts(
                 // Account parent
                 RpcFilterType::Memcmp(Memcmp {
                     offset: 1,
-                    bytes: MemcmpEncodedBytes::Binary(pubkey.to_string()),
+                    bytes: MemcmpEncodedBytes::Base58(pubkey.to_string()),
                     encoding: Some(MemcmpEncoding::Binary),
                 }),
             ]),
@@ -113,10 +113,14 @@ fn command_create_market(config: &Config, market_keypair: Option<Keypair>) -> Co
                 &market_keypair.pubkey(),
                 market_balance,
                 PoolMarket::LEN as u64,
-                &id(),
+                &everlend_ulp::id(),
             ),
             // Initialize pool market account
-            instruction::init_pool_market(&id(), &market_keypair.pubkey(), &config.owner.pubkey()),
+            instruction::init_pool_market(
+                &everlend_ulp::id(),
+                &market_keypair.pubkey(),
+                &config.owner.pubkey(),
+            ),
         ],
         Some(&config.fee_payer.pubkey()),
     );
@@ -124,7 +128,7 @@ fn command_create_market(config: &Config, market_keypair: Option<Keypair>) -> Co
     let (recent_blockhash, fee_calculator) = config.rpc_client.get_recent_blockhash()?;
     check_fee_payer_balance(
         config,
-        total_rent_free_balances + fee_calculator.calculate_fee(&tx.message()),
+        total_rent_free_balances + fee_calculator.calculate_fee(tx.message()),
     )?;
 
     let mut signers = vec![
@@ -140,7 +144,7 @@ fn command_create_market(config: &Config, market_keypair: Option<Keypair>) -> Co
 }
 
 fn command_market_info(config: &Config, market_pubkey: &Pubkey) -> CommandResult {
-    let market_account = config.rpc_client.get_account(&market_pubkey)?;
+    let market_account = config.rpc_client.get_account(market_pubkey)?;
     let market = PoolMarket::unpack(&market_account.data)?;
 
     println!("{:#?}", market);
@@ -171,7 +175,8 @@ fn command_create_pool(
     let token_account = Keypair::new();
     let pool_mint = Keypair::new();
 
-    let (pool_pubkey, _) = find_pool_program_address(&id(), market_pubkey, token_mint);
+    let (pool_pubkey, _) =
+        find_pool_program_address(&everlend_ulp::id(), market_pubkey, token_mint);
 
     println!("Pool: {}", &pool_pubkey);
     println!("Token mint: {}", &token_mint);
@@ -205,9 +210,9 @@ fn command_create_pool(
                 &spl_token::id(),
             ),
             instruction::create_pool(
-                &id(),
-                &market_pubkey,
-                &token_mint,
+                &everlend_ulp::id(),
+                market_pubkey,
+                token_mint,
                 &token_account.pubkey(),
                 &pool_mint.pubkey(),
                 &config.owner.pubkey(),
@@ -219,7 +224,7 @@ fn command_create_pool(
     let (recent_blockhash, fee_calculator) = config.rpc_client.get_recent_blockhash()?;
     check_fee_payer_balance(
         config,
-        total_rent_free_balances + fee_calculator.calculate_fee(&tx.message()),
+        total_rent_free_balances + fee_calculator.calculate_fee(tx.message()),
     )?;
 
     let mut signers = vec![
@@ -236,7 +241,7 @@ fn command_create_pool(
 }
 
 fn command_pool_info(config: &Config, pool_pubkey: &Pubkey) -> CommandResult {
-    let pool_account = config.rpc_client.get_account(&pool_pubkey)?;
+    let pool_account = config.rpc_client.get_account(pool_pubkey)?;
     let pool = Pool::unpack(&pool_account.data)?;
 
     println!("{:#?}", pool);
@@ -264,10 +269,13 @@ fn command_create_pool_borrow_authority(
     borrow_authority: &Pubkey,
     ui_share_allowed: f64,
 ) -> CommandResult {
-    let (pool_borrow_authority_pubkey, _) =
-        find_pool_borrow_authority_program_address(&id(), pool_pubkey, borrow_authority);
+    let (pool_borrow_authority_pubkey, _) = find_pool_borrow_authority_program_address(
+        &everlend_ulp::id(),
+        pool_pubkey,
+        borrow_authority,
+    );
 
-    let pool_account = config.rpc_client.get_account(&pool_pubkey)?;
+    let pool_account = config.rpc_client.get_account(pool_pubkey)?;
     let pool = Pool::unpack(&pool_account.data)?;
 
     println!("Pool borrow authority: {}", &pool_borrow_authority_pubkey);
@@ -279,10 +287,10 @@ fn command_create_pool_borrow_authority(
 
     let mut tx = Transaction::new_with_payer(
         &[instruction::create_pool_borrow_authority(
-            &id(),
+            &everlend_ulp::id(),
             &pool.pool_market,
-            &pool_pubkey,
-            &borrow_authority,
+            pool_pubkey,
+            borrow_authority,
             &config.owner.pubkey(),
             share_allowed,
         )],
@@ -290,7 +298,7 @@ fn command_create_pool_borrow_authority(
     );
 
     let (recent_blockhash, fee_calculator) = config.rpc_client.get_recent_blockhash()?;
-    check_fee_payer_balance(config, fee_calculator.calculate_fee(&tx.message()))?;
+    check_fee_payer_balance(config, fee_calculator.calculate_fee(tx.message()))?;
 
     let mut signers = vec![config.fee_payer.as_ref(), config.owner.as_ref()];
 
@@ -306,8 +314,11 @@ fn command_update_pool_borrow_authority(
     borrow_authority: &Pubkey,
     ui_share_allowed: f64,
 ) -> CommandResult {
-    let (pool_borrow_authority_pubkey, _) =
-        find_pool_borrow_authority_program_address(&id(), pool_pubkey, borrow_authority);
+    let (pool_borrow_authority_pubkey, _) = find_pool_borrow_authority_program_address(
+        &everlend_ulp::id(),
+        pool_pubkey,
+        borrow_authority,
+    );
 
     println!("Pool borrow authority: {}", &pool_borrow_authority_pubkey);
 
@@ -315,9 +326,9 @@ fn command_update_pool_borrow_authority(
 
     let mut tx = Transaction::new_with_payer(
         &[instruction::update_pool_borrow_authority(
-            &id(),
-            &pool_pubkey,
-            &borrow_authority,
+            &everlend_ulp::id(),
+            pool_pubkey,
+            borrow_authority,
             &config.owner.pubkey(),
             share_allowed,
         )],
@@ -325,7 +336,7 @@ fn command_update_pool_borrow_authority(
     );
 
     let (recent_blockhash, fee_calculator) = config.rpc_client.get_recent_blockhash()?;
-    check_fee_payer_balance(config, fee_calculator.calculate_fee(&tx.message()))?;
+    check_fee_payer_balance(config, fee_calculator.calculate_fee(tx.message()))?;
 
     let mut signers = vec![config.fee_payer.as_ref(), config.owner.as_ref()];
 
@@ -340,16 +351,19 @@ fn command_delete_pool_borrow_authority(
     pool_pubkey: &Pubkey,
     borrow_authority: &Pubkey,
 ) -> CommandResult {
-    let (pool_borrow_authority_pubkey, _) =
-        find_pool_borrow_authority_program_address(&id(), pool_pubkey, borrow_authority);
+    let (pool_borrow_authority_pubkey, _) = find_pool_borrow_authority_program_address(
+        &everlend_ulp::id(),
+        pool_pubkey,
+        borrow_authority,
+    );
 
     println!("Pool borrow authority: {}", &pool_borrow_authority_pubkey);
 
     let mut tx = Transaction::new_with_payer(
         &[instruction::delete_pool_borrow_authority(
-            &id(),
-            &pool_pubkey,
-            &borrow_authority,
+            &everlend_ulp::id(),
+            pool_pubkey,
+            borrow_authority,
             &config.fee_payer.pubkey(),
             &config.owner.pubkey(),
         )],
@@ -357,7 +371,7 @@ fn command_delete_pool_borrow_authority(
     );
 
     let (recent_blockhash, fee_calculator) = config.rpc_client.get_recent_blockhash()?;
-    check_fee_payer_balance(config, fee_calculator.calculate_fee(&tx.message()))?;
+    check_fee_payer_balance(config, fee_calculator.calculate_fee(tx.message()))?;
 
     let mut signers = vec![config.fee_payer.as_ref(), config.owner.as_ref()];
 
@@ -381,7 +395,7 @@ fn main() {
                 .global(true)
                 .help("Configuration file to use");
             if let Some(ref config_file) = *solana_cli_config::CONFIG_FILE {
-                arg.default_value(&config_file)
+                arg.default_value(config_file)
             } else {
                 arg
             }
@@ -660,7 +674,7 @@ fn main() {
         }
         _ => unreachable!(),
     }
-    .and_then(|tx| {
+    .and_then(|tx| {    
         if let Some(tx) = tx {
             let signature = config
                 .rpc_client

@@ -10,6 +10,7 @@ use solana_sdk::{signer::Signer, transaction::TransactionError};
 async fn setup() -> (
     ProgramTestContext,
     TestSPLTokenLending,
+    TestPythOracle,
     TestPoolMarket,
     TestPool,
     TestPoolBorrowAuthority,
@@ -18,7 +19,7 @@ async fn setup() -> (
     LiquidityProvider,
     TestDepositor,
 ) {
-    let (mut context, money_market, _) = presetup().await;
+    let (mut context, money_market, pyth_oracle) = presetup().await;
 
     let payer_pubkey = context.payer.pubkey();
 
@@ -164,6 +165,7 @@ async fn setup() -> (
     (
         context,
         money_market,
+        pyth_oracle,
         general_pool_market,
         general_pool,
         general_pool_borrow_authority,
@@ -179,6 +181,7 @@ async fn success() {
     let (
         mut context,
         money_market,
+        pyth_oracle,
         general_pool_market,
         general_pool,
         _general_pool_borrow_authority,
@@ -194,7 +197,7 @@ async fn success() {
 
     // Rates should be refreshed
     context.warp_to_slot(3).unwrap();
-    money_market.refresh_reserve(&mut context, 3).await;
+    pyth_oracle.update(&mut context, 3).await;
 
     test_depositor
         .deposit(
@@ -224,6 +227,7 @@ async fn fail_invalid_amount() {
     let (
         mut context,
         money_market,
+        pyth_oracle,
         general_pool_market,
         general_pool,
         _general_pool_borrow_authority,
@@ -235,7 +239,7 @@ async fn fail_invalid_amount() {
 
     // Rates should be refreshed
     context.warp_to_slot(3).unwrap();
-    money_market.refresh_reserve(&mut context, 3).await;
+    pyth_oracle.update(&mut context, 3).await;
 
     assert_eq!(
         test_depositor

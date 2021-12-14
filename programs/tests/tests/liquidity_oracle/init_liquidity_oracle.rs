@@ -1,6 +1,5 @@
 use crate::utils::*;
-use everlend_liquidity_oracle::{id, instruction};
-use everlend_utils::EverlendError;
+use everlend_liquidity_oracle::instruction;
 use solana_program::instruction::InstructionError;
 use solana_program_test::*;
 use solana_sdk::{signer::Signer, transaction::Transaction, transaction::TransactionError};
@@ -25,7 +24,7 @@ async fn fail_second_time_init() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::init_liquidity_oracle(
-            &id(),
+            &everlend_liquidity_oracle::id(),
             &test_liquidity_oracle.keypair.pubkey(),
             &context.payer.pubkey(),
         )],
