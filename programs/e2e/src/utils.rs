@@ -10,12 +10,17 @@ use solana_sdk::{
 pub const SOL_MINT: &str = "So11111111111111111111111111111111111111112";
 
 pub const SOL_ORACLE: &str = "J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix";
+pub const SOL_LARIX_ORACLE: &str = "6bGUz6bdWAvaUf6PuEdvdAxrWbZ9wF5XkAevDsEKsb7y";
 
 pub const PORT_FINANCE_LENDING_MARKET: &str = "H27Quk3DSbu55T4dCr1NddTTSAezXwHU67FPCZVKLhSW";
 pub const PORT_FINANCE_RESERVE_SOL: &str = "6FeVStQAGPWvfWijDHF7cTWRCi7He6vTT3ubfNhe9SPt";
 pub const PORT_FINANCE_RESERVE_SOL_SUPPLY: &str = "AbKeR7nQdHPDddiDQ71YUsz1F138a7cJMfJVtpdYUSvE";
-pub const PORT_FINANCE_RESERVE_SOL_COLLATERAL: &str =
-    "Hk4Rp3kaPssB6hnjah3Mrqpt5CAXWGoqFT5dVsWA3TaM";
+pub const PORT_FINANCE_RESERVE_SOL_COLLATERAL_MINT: &str = "Hk4Rp3kaPssB6hnjah3Mrqpt5CAXWGoqFT5dVsWA3TaM";
+
+pub const LARIX_LENDING_MARKET: &str = "FRQHVH3U8vdTFHBaFZpsybzFAMofbnvnzgG1wFtrMVTG";
+pub const LARIX_RESERVE_SOL: &str = "DfiaVGeHHtzvTGYqntUde8Pw6E8tgvMnHMnuM7CKXWss";
+pub const LARIX_RESERVE_SOL_SUPPLY: &str = "976jcSPYeasM4ba4VkhGZna6S2o1DGN3WKvCSXYJXbRq";
+pub const LARIX_RESERVE_SOL_COLLATERAL_MINT: &str = "23rfWYGvfCjVxJNW5Ce8E4xXXgjKgZTyJFwuQg6BMB4G";
 
 pub struct Config {
     pub rpc_client: RpcClient,
@@ -28,7 +33,7 @@ pub fn sign_and_send_and_confirm_transaction<T: Signers>(
     mut tx: Transaction,
     keypairs: &T,
 ) -> Result<Signature, ClientError> {
-    let (recent_blockhash, _) = config.rpc_client.get_recent_blockhash()?;
+    let recent_blockhash = config.rpc_client.get_latest_blockhash()?;
 
     tx.try_sign(keypairs, recent_blockhash)?;
 

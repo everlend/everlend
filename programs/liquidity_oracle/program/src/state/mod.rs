@@ -1,11 +1,11 @@
 //! State types.
 
-mod token_distribution;
 mod liquidity_oracle;
+mod token_distribution;
 
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-pub use token_distribution::*;
 pub use liquidity_oracle::*;
+pub use token_distribution::*;
 
 /// Enum representing the account type managed by the program
 #[derive(Clone, Debug, PartialEq, BorshDeserialize, BorshSerialize, BorshSchema)]

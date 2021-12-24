@@ -95,7 +95,11 @@ pub fn create_pool(
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(config, tx, &[&config.fee_payer, &token_account, &pool_mint])?;
+    sign_and_send_and_confirm_transaction(
+        config,
+        tx,
+        &[&config.fee_payer, &token_account, &pool_mint],
+    )?;
 
     Ok((pool_pubkey, token_account.pubkey(), pool_mint.pubkey()))
 }
