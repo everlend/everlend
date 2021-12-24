@@ -48,7 +48,7 @@ impl TokenDistribution {
 
 impl Sealed for TokenDistribution {}
 impl Pack for TokenDistribution {
-    // 1 + (40 * LENDING_SIZE) + 8
+    // 1 + (40 * LENDING_SIZE) + 8 = 409
     const LEN: usize = 1 + (40 * LENDINGS_SIZE) + 8;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {

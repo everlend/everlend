@@ -40,6 +40,9 @@ pub struct RebalancingStep {
     /// Amount
     pub amount: u64,
 
+    /// Collateral amount (0 for deposit)
+    pub collateral_amount: u64,
+
     /// Slot when executed deposit or withdraw
     pub executed_at: Option<Slot>,
 }
@@ -50,11 +53,13 @@ impl RebalancingStep {
         money_market_program_id: Pubkey,
         operation: RebalancingOperation,
         amount: u64,
+        collateral_amount: u64,
     ) -> Self {
         RebalancingStep {
             money_market_program_id,
             operation,
             amount,
+            collateral_amount,
             executed_at: None,
         }
     }

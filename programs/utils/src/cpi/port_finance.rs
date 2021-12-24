@@ -1,10 +1,30 @@
+use port_variable_rate_lending_instructions::state::Reserve;
 use solana_program::{
     account_info::AccountInfo,
+    msg,
     program::{invoke, invoke_signed},
     program_error::ProgramError,
     program_option::COption,
+    program_pack::Pack,
     pubkey::Pubkey,
 };
+
+pub fn compute_collateral_amount(reserve: AccountInfo, amount: u64) -> Result<u64, ProgramError> {
+    let reserve = Reserve::unpack(&reserve.data.borrow())?;
+    let collateral_amount = reserve
+        .collateral_exchange_rate()?
+        .decimal_liquidity_to_collateral(amount.into())?
+        .try_round_u64()?;
+    // .liquidity_to_collateral(amount)?;
+
+    let liquidity_amount = reserve
+        .collateral_exchange_rate()?
+        .collateral_to_liquidity(collateral_amount)?;
+
+    msg!("liquidity_amount: {}", liquidity_amount);
+
+    Ok(collateral_amount)
+}
 
 pub fn refresh_reserve<'a>(
     program_id: &Pubkey,
