@@ -17,9 +17,293 @@ use utils::*;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // TODO: Make tests async.
-    port_finance_e2e().await?;
-    larix_e2e().await?;
+    println!("E2E test");
+
+    let config = {
+        let cli_config = if let Some(ref config_file) = *solana_cli_config::CONFIG_FILE {
+            solana_cli_config::Config::load(config_file).unwrap_or_default()
+        } else {
+            solana_cli_config::Config::default()
+        };
+
+        println!("{:#?}", cli_config);
+
+        let json_rpc_url = cli_config.json_rpc_url;
+        let fee_payer = read_keypair_file("owner_keypair.json").unwrap();
+
+        Config {
+            rpc_client: RpcClient::new_with_commitment(json_rpc_url, CommitmentConfig::confirmed()),
+            verbose: true,
+            fee_payer,
+        }
+    };
+
+    solana_logger::setup_with_default("solana=info");
+
+    let payer_pubkey = config.fee_payer.pubkey();
+    println!("Fee payer: {}", payer_pubkey);
+
+    println!("Running tests...");
+    let sol_mint = Pubkey::from_str(SOL_MINT).unwrap();
+    let sol_oracle = Pubkey::from_str(SOL_ORACLE).unwrap();
+    let sol_larix_oracle = Pubkey::from_str(SOL_LARIX_ORACLE).unwrap();
+    let port_finance_sol_collateral_mint = Pubkey::from_str(PORT_FINANCE_RESERVE_SOL_COLLATERAL_MINT).unwrap();
+    let larix_sol_collateral_mint = Pubkey::from_str(LARIX_RESERVE_SOL_COLLATERAL_MINT).unwrap();
+    let port_finance_program_id = Pubkey::from_str(integrations::PORT_FINANCE_PROGRAM_ID).unwrap();
+    let larix_program_id = Pubkey::from_str(integrations::LARIX_PROGRAM_ID).unwrap();
+
+    let port_finance_pubkeys = integrations::spl_token_lending::AccountPubkeys {
+        reserve: Pubkey::from_str(PORT_FINANCE_RESERVE_SOL).unwrap(),
+        reserve_liquidity_supply: Pubkey::from_str(PORT_FINANCE_RESERVE_SOL_SUPPLY).unwrap(),
+        reserve_liquidity_oracle: sol_oracle,
+        lending_market: Pubkey::from_str(PORT_FINANCE_LENDING_MARKET).unwrap(),
+    };
+
+    let larix_pubkeys = integrations::larix::AccountPubkeys {
+        reserve: Pubkey::from_str(LARIX_RESERVE_SOL).unwrap(),
+        reserve_liquidity_supply: Pubkey::from_str(LARIX_RESERVE_SOL_SUPPLY).unwrap(),
+        reserve_liquidity_oracle: sol_oracle,
+        reserve_larix_liquidity_oracle: sol_larix_oracle,
+        lending_market: Pubkey::from_str(LARIX_LENDING_MARKET).unwrap(),
+    };
+
+    println!("1. General pool");
+    let pool_market_pubkey = ulp::create_market(&config, None)?;
+    let (pool_pubkey, pool_token_account, pool_mint) =
+        ulp::create_pool(&config, &pool_market_pubkey, &sol_mint)?;
+
+    let token_account = get_associated_token_address(&payer_pubkey, &sol_mint);
+    let pool_account = spl_create_associated_token_account(&config, &payer_pubkey, &pool_mint)?;
+
+    println!("2. Deposit liquidity");
+    ulp::deposit(
+        &config,
+        &pool_market_pubkey,
+        &pool_pubkey,
+        &token_account,
+        &pool_account,
+        &pool_token_account,
+        &pool_mint,
+        1000,
+    )?;
+
+    println!("3. MM Pool: Port Finance");
+    let port_finance_mm_pool_market_pubkey = ulp::create_market(&config, None)?;
+    let (_mm_pool_pubkey, port_finance_mm_pool_token_account, port_finance_mm_pool_mint) =
+        ulp::create_pool(&config, &port_finance_mm_pool_market_pubkey, &port_finance_sol_collateral_mint)?;
+
+    println!("3.1 MM Pool: Larix");
+    let larix_mm_pool_market_pubkey = ulp::create_market(&config, None)?;
+    let (_mm_pool_pubkey, larix_mm_pool_token_account, larix_mm_pool_mint) =
+        ulp::create_pool(&config, &larix_mm_pool_market_pubkey, &larix_sol_collateral_mint)?;
+
+    println!("4. Liquidity oracle");
+    let liquidity_oracle_pubkey = liquidity_oracle::init(&config, None)?;
+    let mut distribution = DistributionArray::default();
+    distribution[0] = LiquidityDistribution {
+        money_market: port_finance_program_id,
+        percent: 500_000_000u64, // 50%
+    };
+    distribution[1] = LiquidityDistribution {
+        money_market: larix_program_id,
+        percent: 500_000_000u64, // 50%
+    };
+    liquidity_oracle::create_token_distribution(
+        &config,
+        &liquidity_oracle_pubkey,
+        &sol_mint,
+        &distribution,
+    )?;
+
+    println!("5. Depositor");
+    let depositor_pubkey =
+        depositor::init(&config, None, &pool_market_pubkey, &liquidity_oracle_pubkey)?;
+
+    depositor::create_transit(&config, &depositor_pubkey, &sol_mint)?;
+    depositor::create_transit(&config, &depositor_pubkey, &port_finance_sol_collateral_mint)?;
+    depositor::create_transit(&config, &depositor_pubkey, &larix_sol_collateral_mint)?;
+    depositor::create_transit(&config, &depositor_pubkey, &port_finance_mm_pool_mint)?;
+    depositor::create_transit(&config, &depositor_pubkey, &larix_mm_pool_mint)?;
+
+    println!("6. Prepare borrow authority");
+    let (depositor_authority, _) =
+        &everlend_utils::find_program_address(&everlend_depositor::id(), &depositor_pubkey);
+    ulp::create_pool_borrow_authority(
+        &config,
+        &pool_market_pubkey,
+        &pool_pubkey,
+        depositor_authority,
+        10_000, // 100%
+    )?;
+
+    println!("7. Rebalancing: Start");
+    depositor::start_rebalancing(
+        &config,
+        &depositor_pubkey,
+        &sol_mint,
+        &pool_market_pubkey,
+        &pool_token_account,
+        &liquidity_oracle_pubkey,
+    )?;
+
+    println!("7.1 Rebalancing: Deposit: Port Finance");
+    let deposit_accounts_port_finance = integrations::deposit_accounts(
+        &port_finance_program_id,
+        &MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
+    );
+
+    depositor::deposit(
+        &config,
+        &depositor_pubkey,
+        &pool_market_pubkey,
+        &pool_token_account,
+        &port_finance_mm_pool_market_pubkey,
+        &port_finance_mm_pool_token_account,
+        &sol_mint,
+        &port_finance_sol_collateral_mint,
+        &port_finance_mm_pool_mint,
+        &port_finance_program_id,
+        deposit_accounts_port_finance,
+    )?;
+
+    println!("7.2 Rebalancing: Deposit: Larix");
+    let deposit_accounts_larix = integrations::deposit_accounts(
+        &larix_program_id,
+        &MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
+    );
+
+    depositor::deposit(
+        &config,
+        &depositor_pubkey,
+        &pool_market_pubkey,
+        &pool_token_account,
+        &larix_mm_pool_market_pubkey,
+        &larix_mm_pool_token_account,
+        &sol_mint,
+        &larix_sol_collateral_mint,
+        &larix_mm_pool_mint,
+        &larix_program_id,
+        deposit_accounts_larix,
+    )?;
+
+    println!("8. Update token distribution");
+    distribution[0].percent = 300_000_000u64; // 30%
+    distribution[1].percent = 300_000_000u64; // 30%
+
+    liquidity_oracle::update_token_distribution(
+        &config,
+        &liquidity_oracle_pubkey,
+        &sol_mint,
+        &distribution,
+    )?;
+
+    println!("8.1. Rebalancing: Start");
+    depositor::start_rebalancing(
+        &config,
+        &depositor_pubkey,
+        &sol_mint,
+        &pool_market_pubkey,
+        &pool_token_account,
+        &liquidity_oracle_pubkey,
+    )?;
+
+    println!("8.2. Rebalancing: Withdraw: Port Finance");
+    let withdraw_accounts_port_finance = integrations::withdraw_accounts(
+        &port_finance_program_id,
+        &MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
+    );
+    depositor::withdraw(
+        &config,
+        &depositor_pubkey,
+        &pool_market_pubkey,
+        &pool_token_account,
+        &port_finance_mm_pool_market_pubkey,
+        &port_finance_mm_pool_token_account,
+        &port_finance_sol_collateral_mint,
+        &sol_mint,
+        &port_finance_mm_pool_mint,
+        &port_finance_program_id,
+        withdraw_accounts_port_finance,
+    )?;
+
+    println!("8.3. Rebalancing: Withdraw: Larix");
+    let withdraw_accounts_larix = integrations::withdraw_accounts(
+        &larix_program_id,
+        &MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
+    );
+    depositor::withdraw(
+        &config,
+        &depositor_pubkey,
+        &pool_market_pubkey,
+        &pool_token_account,
+        &larix_mm_pool_market_pubkey,
+        &larix_mm_pool_token_account,
+        &larix_sol_collateral_mint,
+        &sol_mint,
+        &larix_mm_pool_mint,
+        &larix_program_id,
+        withdraw_accounts_larix,
+    )?;
+
+    println!("9. Update token distribution");
+    distribution[0].percent = 000_000_000u64; // 0%
+    distribution[1].percent = 900_000_000u64; // 90%
+    liquidity_oracle::update_token_distribution(
+        &config,
+        &liquidity_oracle_pubkey,
+        &sol_mint,
+        &distribution,
+    )?;
+    println!("9.1. Rebalancing: Start");
+    depositor::start_rebalancing(
+        &config,
+        &depositor_pubkey,
+        &sol_mint,
+        &pool_market_pubkey,
+        &pool_token_account,
+        &liquidity_oracle_pubkey,
+    )?;
+
+    println!("9.2. Rebalancing: Withdraw: Port Finance");
+    let withdraw_accounts = integrations::withdraw_accounts(
+        &port_finance_program_id,
+        &MoneyMarketPubkeys::SPL(port_finance_pubkeys),
+    );
+    depositor::withdraw(
+        &config,
+        &depositor_pubkey,
+        &pool_market_pubkey,
+        &pool_token_account,
+        &port_finance_mm_pool_market_pubkey,
+        &port_finance_mm_pool_token_account,
+        &port_finance_sol_collateral_mint,
+        &sol_mint,
+        &port_finance_mm_pool_mint,
+        &port_finance_program_id,
+        withdraw_accounts,
+    )?;
+
+    println!("9.3. Rebalancing: Deposit Larix");
+    let deposit_accounts_larix = integrations::deposit_accounts(
+        &larix_program_id,
+        &MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
+    );
+
+    depositor::deposit(
+        &config,
+        &depositor_pubkey,
+        &pool_market_pubkey,
+        &pool_token_account,
+        &larix_mm_pool_market_pubkey,
+        &larix_mm_pool_token_account,
+        &sol_mint,
+        &larix_sol_collateral_mint,
+        &larix_mm_pool_mint,
+        &larix_program_id,
+        deposit_accounts_larix,
+    )?;
+
+    println!("Finished!");
 
     Ok(())
 }
@@ -310,6 +594,7 @@ async fn larix_e2e() -> anyhow::Result<()> {
         money_market: larix_program_id,
         percent: 500_000_000u64, // 50%
     };
+
     liquidity_oracle::create_token_distribution(
         &config,
         &liquidity_oracle_pubkey,
@@ -364,7 +649,6 @@ async fn larix_e2e() -> anyhow::Result<()> {
         &mm_pool_mint,
         &larix_program_id,
         deposit_accounts,
-        // 500,
     )?;
 
     println!("8. Update token distribution");
@@ -401,7 +685,6 @@ async fn larix_e2e() -> anyhow::Result<()> {
         &mm_pool_mint,
         &larix_program_id,
         withdraw_accounts,
-        // 200,
     )?;
 
     println!("Finished!");
