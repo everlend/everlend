@@ -286,7 +286,7 @@ async fn main() -> anyhow::Result<()> {
     println!("9.3. Rebalancing: Deposit Larix");
     let deposit_accounts_larix = integrations::deposit_accounts(
         &larix_program_id,
-        &MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
+        &MoneyMarketPubkeys::Larix(larix_pubkeys),
     );
 
     depositor::deposit(
@@ -308,6 +308,7 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[allow(dead_code)]
 async fn port_finance_e2e() -> anyhow::Result<()> {
     println!("Port finance E2E tests");
 
@@ -517,6 +518,7 @@ async fn port_finance_e2e() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[allow(dead_code)]
 async fn larix_e2e() -> anyhow::Result<()> {
     println!("Larix E2E tests");
 
