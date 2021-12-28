@@ -140,7 +140,7 @@ async fn main() -> anyhow::Result<()> {
         &mm_pool_mint,
         &port_finance_program_id,
         deposit_accounts,
-        500,
+        // 500,
     )?;
 
     println!("8. Update token distribution");
@@ -163,6 +163,43 @@ async fn main() -> anyhow::Result<()> {
     println!("8.2. Rebalancing: Withdraw");
     let withdraw_accounts = integrations::withdraw_accounts(
         &port_finance_program_id,
+        &MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
+    );
+    depositor::withdraw(
+        &config,
+        &depositor_pubkey,
+        &pool_market_pubkey,
+        &pool_token_account,
+        &mm_pool_market_pubkey,
+        &mm_pool_token_account,
+        &sol_collateral_mint,
+        &sol_mint,
+        &mm_pool_mint,
+        &port_finance_program_id,
+        withdraw_accounts,
+        // 200,
+    )?;
+
+    println!("9. Update token distribution");
+    distribution[0].percent = 000_000_000u64; // 30%
+    liquidity_oracle::update_token_distribution(
+        &config,
+        &liquidity_oracle_pubkey,
+        &sol_mint,
+        &distribution,
+    )?;
+    println!("9.1. Rebalancing: Start");
+    depositor::start_rebalancing(
+        &config,
+        &depositor_pubkey,
+        &sol_mint,
+        &pool_market_pubkey,
+        &pool_token_account,
+        &liquidity_oracle_pubkey,
+    )?;
+    println!("9.2. Rebalancing: Withdraw");
+    let withdraw_accounts = integrations::withdraw_accounts(
+        &port_finance_program_id,
         &MoneyMarketPubkeys::SPL(port_finance_pubkeys),
     );
     depositor::withdraw(
@@ -177,7 +214,7 @@ async fn main() -> anyhow::Result<()> {
         &mm_pool_mint,
         &port_finance_program_id,
         withdraw_accounts,
-        200,
+        // 300,
     )?;
 
     println!("Finished!");

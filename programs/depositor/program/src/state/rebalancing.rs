@@ -107,25 +107,36 @@ impl Rebalancing {
         Ok(())
     }
 
+    /// Get next unexecuted rebalancing step
+    pub fn next_step(&self) -> &RebalancingStep {
+        self.steps
+            .iter()
+            .find(|&&step| step.executed_at.is_none())
+            .unwrap()
+    }
+
+    /// Get mutable next unexecuted rebalancing step
+    pub fn next_step_mut(&mut self) -> &mut RebalancingStep {
+        self.steps
+            .iter_mut()
+            .find(|&&mut step| step.executed_at.is_none())
+            .unwrap()
+    }
+
     /// Execute next unexecuted rebalancing step
     pub fn execute_step(
         &mut self,
         money_market_program_id: Pubkey,
         operation: RebalancingOperation,
-        amount: u64,
         collateral_amount: Option<u64>,
         slot: Slot,
-    ) -> Result<&RebalancingStep, ProgramError> {
-        // TODO: change to map pubkey -> index0
-        let money_market_index = self.get_money_market_index(&money_market_program_id);
-
-        let step = self
-            .steps
-            .iter_mut()
-            .find(|&&mut step| step.executed_at.is_none())
-            .unwrap();
-
+    ) -> Result<(), ProgramError> {
+        let step = self.next_step_mut();
         let collateral_amount = collateral_amount.unwrap_or(step.collateral_amount);
+
+        step.execute(money_market_program_id, operation, slot)?;
+
+        let money_market_index = self.get_money_market_index(&money_market_program_id);
 
         // Update collateral ammount
         self.money_market_collateral_supply[money_market_index] = match operation {
@@ -139,9 +150,7 @@ impl Rebalancing {
                 .ok_or(EverlendError::MathOverflow)?,
         };
 
-        step.execute(money_market_program_id, operation, amount, slot)?;
-
-        Ok(&*step)
+        Ok(())
     }
 
     /// Get money market index by program id and token distribution

@@ -28,6 +28,7 @@ use solana_program::{
     sysvar::Sysvar,
 };
 use spl_token::state::Account;
+use std::cmp;
 
 /// Program state handler.
 pub struct Processor {}
@@ -217,7 +218,7 @@ impl Processor {
     }
 
     /// Process Deposit instruction
-    pub fn deposit(program_id: &Pubkey, amount: u64, accounts: &[AccountInfo]) -> ProgramResult {
+    pub fn deposit(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
 
         let depositor_info = next_account_info(account_info_iter)?;
@@ -267,6 +268,8 @@ impl Processor {
 
         let signers_seeds = &[&depositor_info.key.to_bytes()[..32], &[bump_seed]];
 
+        let step = rebalancing.next_step();
+
         msg!("Borrow from General Pool");
         everlend_ulp::cpi::borrow(
             pool_market_info.clone(),
@@ -276,7 +279,7 @@ impl Processor {
             liquidity_transit_info.clone(),
             pool_token_account_info.clone(),
             depositor_authority_info.clone(),
-            amount,
+            step.amount,
             &[signers_seeds],
         )?;
 
@@ -290,7 +293,7 @@ impl Processor {
             depositor_authority_info.clone(),
             account_info_iter,
             clock_info.clone(),
-            amount,
+            step.amount,
             &[signers_seeds],
         )?;
 
@@ -314,7 +317,6 @@ impl Processor {
         rebalancing.execute_step(
             *money_market_program_info.key,
             RebalancingOperation::Deposit,
-            amount,
             Some(collateral_amount),
             clock.slot,
         )?;
@@ -325,7 +327,7 @@ impl Processor {
     }
 
     /// Process Withdraw instruction
-    pub fn withdraw(program_id: &Pubkey, amount: u64, accounts: &[AccountInfo]) -> ProgramResult {
+    pub fn withdraw(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
 
         let depositor_info = next_account_info(account_info_iter)?;
@@ -375,13 +377,7 @@ impl Processor {
 
         let signers_seeds = &[&depositor_info.key.to_bytes()[..32], &[bump_seed]];
 
-        let step = rebalancing.execute_step(
-            *money_market_program_info.key,
-            RebalancingOperation::Withdraw,
-            amount,
-            None,
-            clock.slot,
-        )?;
+        let step = rebalancing.next_step();
 
         msg!("Withdraw collateral tokens from MM Pool");
         everlend_ulp::cpi::withdraw(
@@ -413,7 +409,11 @@ impl Processor {
 
         let liquidity_amount =
             Account::unpack_unchecked(&liquidity_transit_info.data.borrow())?.amount;
-        msg!("Diff: {}", liquidity_amount - amount);
+        msg!("Diff: {}", liquidity_amount - step.amount);
+
+        // TODO: Received liquidity amount may be less
+        // https://blog.neodyme.io/posts/lending_disclosure
+        let repay_amount = cmp::min(liquidity_amount, step.amount);
 
         msg!("Repay to General Pool");
         everlend_ulp::cpi::repay(
@@ -424,9 +424,16 @@ impl Processor {
             liquidity_transit_info.clone(),
             pool_token_account_info.clone(),
             depositor_authority_info.clone(),
-            amount,
+            repay_amount,
             0,
             &[signers_seeds],
+        )?;
+
+        rebalancing.execute_step(
+            *money_market_program_info.key,
+            RebalancingOperation::Withdraw,
+            None,
+            clock.slot,
         )?;
 
         Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
@@ -458,14 +465,14 @@ impl Processor {
                 Self::start_rebalancing(program_id, accounts)
             }
 
-            DepositorInstruction::Deposit { amount } => {
+            DepositorInstruction::Deposit => {
                 msg!("DepositorInstruction: Deposit");
-                Self::deposit(program_id, amount, accounts)
+                Self::deposit(program_id, accounts)
             }
 
-            DepositorInstruction::Withdraw { amount } => {
+            DepositorInstruction::Withdraw => {
                 msg!("DepositorInstruction: Withdraw");
-                Self::withdraw(program_id, amount, accounts)
+                Self::withdraw(program_id, accounts)
             }
         }
     }

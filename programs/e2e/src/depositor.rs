@@ -111,7 +111,6 @@ pub fn deposit(
     mm_pool_collateral_mint: &Pubkey,
     money_market_program_id: &Pubkey,
     money_market_accounts: Vec<AccountMeta>,
-    amount: u64,
 ) -> Result<(), ClientError> {
     let tx = Transaction::new_with_payer(
         &[everlend_depositor::instruction::deposit(
@@ -126,7 +125,6 @@ pub fn deposit(
             collateral_mint,
             money_market_program_id,
             money_market_accounts,
-            amount,
         )],
         Some(&config.fee_payer.pubkey()),
     );
@@ -149,7 +147,6 @@ pub fn withdraw(
     mm_pool_collateral_mint: &Pubkey,
     money_market_program_id: &Pubkey,
     money_market_accounts: Vec<AccountMeta>,
-    amount: u64,
 ) -> Result<(), ClientError> {
     let tx = Transaction::new_with_payer(
         &[everlend_depositor::instruction::withdraw(
@@ -164,7 +161,6 @@ pub fn withdraw(
             liquidity_mint,
             money_market_program_id,
             money_market_accounts,
-            amount,
         )],
         Some(&config.fee_payer.pubkey()),
     );

@@ -127,7 +127,6 @@ impl TestDepositor {
         mm_pool_market: &TestPoolMarket,
         mm_pool: &TestPool,
         test_spl_token_lending: &TestSPLTokenLending,
-        amount: u64,
     ) -> transport::Result<()> {
         let reserve = test_spl_token_lending.get_reserve_data(context).await;
 
@@ -160,7 +159,6 @@ impl TestDepositor {
                 &collateral_mint,
                 &spl_token_lending::id(),
                 deposit_accounts,
-                amount,
             )],
             Some(&context.payer.pubkey()),
             &[&context.payer],
@@ -179,7 +177,6 @@ impl TestDepositor {
         mm_pool_market: &TestPoolMarket,
         mm_pool: &TestPool,
         test_spl_token_lending: &TestSPLTokenLending,
-        amount: u64,
     ) -> transport::Result<()> {
         let reserve = test_spl_token_lending.get_reserve_data(context).await;
 
@@ -212,7 +209,6 @@ impl TestDepositor {
                 &liquidity_mint,
                 &spl_token_lending::id(),
                 withdraw_accounts,
-                amount,
             )],
             Some(&context.payer.pubkey()),
             &[&context.payer],

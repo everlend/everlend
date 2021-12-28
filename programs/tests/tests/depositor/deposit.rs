@@ -2,10 +2,10 @@
 
 use crate::utils::*;
 use everlend_liquidity_oracle::state::{DistributionArray, LiquidityDistribution};
-use everlend_utils::{find_program_address, EverlendError};
-use solana_program::{instruction::InstructionError, program_pack::Pack, pubkey::Pubkey};
+use everlend_utils::find_program_address;
+use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::*;
-use solana_sdk::{signer::Signer, transaction::TransactionError};
+use solana_sdk::signer::Signer;
 
 async fn setup() -> (
     ProgramTestContext,
@@ -207,7 +207,7 @@ async fn success() {
             &mm_pool_market,
             &mm_pool,
             &money_market,
-            50 * EXP,
+            // 50 * EXP,
         )
         .await
         .unwrap();
@@ -219,45 +219,5 @@ async fn success() {
     assert_eq!(
         get_token_balance(&mut context, &reserve.liquidity.supply_pubkey).await,
         reserve_balance_before + 50 * EXP,
-    );
-}
-
-#[tokio::test]
-async fn fail_invalid_amount() {
-    let (
-        mut context,
-        money_market,
-        pyth_oracle,
-        general_pool_market,
-        general_pool,
-        _general_pool_borrow_authority,
-        mm_pool_market,
-        mm_pool,
-        _liquidity_provider,
-        test_depositor,
-    ) = setup().await;
-
-    // Rates should be refreshed
-    context.warp_to_slot(3).unwrap();
-    pyth_oracle.update(&mut context, 3).await;
-
-    assert_eq!(
-        test_depositor
-            .deposit(
-                &mut context,
-                &general_pool_market,
-                &general_pool,
-                &mm_pool_market,
-                &mm_pool,
-                &money_market,
-                51 * EXP,
-            )
-            .await
-            .unwrap_err()
-            .unwrap(),
-        TransactionError::InstructionError(
-            0,
-            InstructionError::Custom(EverlendError::InvalidRebalancingAmount as u32),
-        )
     );
 }

@@ -78,10 +78,7 @@ pub enum DepositorInstruction {
     /// [R] Everlend ULP program id
     /// [R] Token program id
     /// [R] Money market program id
-    Deposit {
-        /// Amount to deposit
-        amount: u64,
-    },
+    Deposit,
 
     /// Withdraw funds from MM Pool to Money market.
     /// Collect liquidity token to General Pool.
@@ -109,10 +106,7 @@ pub enum DepositorInstruction {
     /// [R] Everlend ULP program id
     /// [R] Token program id
     /// [R] Money market program id
-    Withdraw {
-        /// Amount to deposit
-        amount: u64,
-    },
+    Withdraw,
 }
 
 /// Creates 'Init' instruction.
@@ -214,7 +208,6 @@ pub fn deposit(
     collateral_mint: &Pubkey,
     money_market_program_id: &Pubkey,
     money_market_accounts: Vec<AccountMeta>,
-    amount: u64,
 ) -> Instruction {
     let (depositor_authority, _) = find_program_address(program_id, depositor);
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
@@ -270,11 +263,7 @@ pub fn deposit(
 
     accounts.extend(money_market_accounts);
 
-    Instruction::new_with_borsh(
-        *program_id,
-        &DepositorInstruction::Deposit { amount },
-        accounts,
-    )
+    Instruction::new_with_borsh(*program_id, &DepositorInstruction::Deposit, accounts)
 }
 
 /// Creates 'Withdraw' instruction.
@@ -291,7 +280,6 @@ pub fn withdraw(
     liquidity_mint: &Pubkey,
     money_market_program_id: &Pubkey,
     money_market_accounts: Vec<AccountMeta>,
-    amount: u64,
 ) -> Instruction {
     let (depositor_authority, _) = find_program_address(program_id, depositor);
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
@@ -347,9 +335,5 @@ pub fn withdraw(
 
     accounts.extend(money_market_accounts);
 
-    Instruction::new_with_borsh(
-        *program_id,
-        &DepositorInstruction::Withdraw { amount },
-        accounts,
-    )
+    Instruction::new_with_borsh(*program_id, &DepositorInstruction::Withdraw, accounts)
 }

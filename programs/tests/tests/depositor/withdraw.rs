@@ -177,7 +177,7 @@ async fn setup() -> (
             &mm_pool_market,
             &mm_pool,
             &money_market,
-            50 * EXP,
+            // 50 * EXP,
         )
         .await
         .unwrap();
@@ -250,7 +250,7 @@ async fn success() {
             &mm_pool_market,
             &mm_pool,
             &money_market,
-            20 * EXP,
+            // 20 * EXP,
         )
         .await
         .unwrap();

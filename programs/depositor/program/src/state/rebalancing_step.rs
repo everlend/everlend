@@ -69,7 +69,6 @@ impl RebalancingStep {
         &mut self,
         money_market_program_id: Pubkey,
         operation: RebalancingOperation,
-        amount: u64,
         slot: Slot,
     ) -> Result<(), ProgramError> {
         if self.money_market_program_id != money_market_program_id {
@@ -78,10 +77,6 @@ impl RebalancingStep {
 
         if self.operation != operation {
             return Err(EverlendError::InvalidRebalancingOperation.into());
-        }
-
-        if self.amount != amount {
-            return Err(EverlendError::InvalidRebalancingAmount.into());
         }
 
         self.executed_at = Some(slot);
