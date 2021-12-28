@@ -17,9 +17,10 @@ use utils::*;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // TODO: Make tests async + process result.
-    let _result = port_finance_e2e().await;
-    let _result = larix_e2e().await;
+    // TODO: Make tests async.
+    port_finance_e2e().await?;
+    larix_e2e().await?;
+
     Ok(())
 }
 
@@ -363,7 +364,7 @@ async fn larix_e2e() -> anyhow::Result<()> {
         &mm_pool_mint,
         &larix_program_id,
         deposit_accounts,
-        500,
+        // 500,
     )?;
 
     println!("8. Update token distribution");
@@ -400,7 +401,7 @@ async fn larix_e2e() -> anyhow::Result<()> {
         &mm_pool_mint,
         &larix_program_id,
         withdraw_accounts,
-        200,
+        // 200,
     )?;
 
     println!("Finished!");
