@@ -674,7 +674,7 @@ fn main() {
         }
         _ => unreachable!(),
     }
-    .and_then(|tx| {    
+    .and_then(|tx| {
         if let Some(tx) = tx {
             let signature = config
                 .rpc_client
