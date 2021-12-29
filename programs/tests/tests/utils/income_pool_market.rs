@@ -46,10 +46,10 @@ impl TestIncomePoolMarket {
                     &self.keypair.pubkey(),
                     rent.minimum_balance(IncomePoolMarket::LEN),
                     IncomePoolMarket::LEN as u64,
-                    &everlend_ulp::id(),
+                    &everlend_income_pools::id(),
                 ),
                 instruction::init_pool_market(
-                    &everlend_ulp::id(),
+                    &everlend_income_pools::id(),
                     &self.keypair.pubkey(),
                     &self.manager.pubkey(),
                     &general_pool_market.pool_market.pubkey(),

@@ -40,6 +40,11 @@ pub fn program_test() -> ProgramTest {
         processor!(everlend_ulp::processor::Processor::process_instruction),
     );
     program.add_program(
+        "everlend_income_pools",
+        everlend_income_pools::id(),
+        processor!(everlend_income_pools::processor::Processor::process_instruction),
+    );
+    program.add_program(
         "everlend_liquidity_oracle",
         everlend_liquidity_oracle::id(),
         processor!(everlend_liquidity_oracle::processor::Processor::process_instruction),

@@ -11,7 +11,7 @@ test-bpf = []
 num-derive = "0.3"
 num-traits = "0.2"
 thiserror = "1.0"
-solana-program = "1.8.6"
+solana-program = "1.9.2"
 spl-token = { version = "3.1", features = [ "no-entrypoint" ] }
 spl-token-lending = { git = "https://github.com/everlend/solana-program-library", features = [ "no-entrypoint" ] }
 everlend-ulp = { path = "../../ulp/program", features = [ "no-entrypoint" ] }
@@ -20,7 +20,7 @@ everlend-utils = { path = "../../utils" }
 borsh = "0.9.0"
 
 [dev-dependencies]
-solana-sdk = "1.8.6"
+solana-sdk = "1.9.2"
 
 [lib]
 crate-type = ["cdylib", "lib"]

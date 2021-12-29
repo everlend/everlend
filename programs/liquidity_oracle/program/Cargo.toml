@@ -8,7 +8,7 @@ no-entrypoint = []
 test-bpf = []
 
 [dependencies]
-solana-program = "1.8.6"
+solana-program = "1.9.2"
 borsh = "0.9.1"
 thiserror = "1.0"
 num-derive = "0.3"
@@ -16,7 +16,7 @@ num-traits = "0.2"
 everlend-utils = { path = "../../utils" }
 
 [dev-dependencies]
-solana-sdk = "1.8.6"
+solana-sdk = "1.9.2"
 
 [lib]
 crate-type = ["cdylib", "lib"]

@@ -1,4 +1,4 @@
-use super::{get_account, get_liquidity_mint, LiquidityProvider, TestIncomePoolMarket, User};
+use super::{get_account, get_liquidity_mint, TestIncomePoolMarket, TokenHolder, User};
 use everlend_income_pools::{find_pool_program_address, instruction, state::IncomePool};
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::ProgramTestContext;
@@ -23,7 +23,7 @@ impl TestIncomePool {
         let token_mint_pubkey = token_mint_pubkey.unwrap_or(get_liquidity_mint().1);
 
         let (pool_pubkey, _) = find_pool_program_address(
-            &everlend_ulp::id(),
+            &everlend_income_pools::id(),
             &test_income_pool_market.keypair.pubkey(),
             &token_mint_pubkey,
         );
@@ -56,7 +56,7 @@ impl TestIncomePool {
                     &spl_token::id(),
                 ),
                 instruction::create_pool(
-                    &everlend_ulp::id(),
+                    &everlend_income_pools::id(),
                     &test_income_pool_market.keypair.pubkey(),
                     &self.token_mint_pubkey,
                     &self.token_account.pubkey(),
@@ -79,12 +79,12 @@ impl TestIncomePool {
         &self,
         context: &mut ProgramTestContext,
         test_income_pool_market: &TestIncomePoolMarket,
-        user: &LiquidityProvider,
+        user: &TokenHolder,
         amount: u64,
     ) -> transport::Result<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::deposit(
-                &everlend_ulp::id(),
+                &everlend_income_pools::id(),
                 &test_income_pool_market.keypair.pubkey(),
                 &self.pool_pubkey,
                 &user.token_account,
