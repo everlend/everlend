@@ -26,3 +26,8 @@ mod liquidity_oracle {
     mod update_liquidity_oracle;
     mod update_token_distribution;
 }
+
+mod income_pools {
+    mod create_pool;
+    mod init_pool_market;
+}

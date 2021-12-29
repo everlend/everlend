@@ -12,6 +12,8 @@ use solana_sdk::{
 };
 
 pub mod depositor;
+pub mod income_pool;
+pub mod income_pool_market;
 pub mod liquidity_oracle;
 pub mod money_market;
 pub mod pool;
@@ -20,6 +22,8 @@ pub mod pool_market;
 pub mod users;
 
 pub use depositor::*;
+pub use income_pool::*;
+pub use income_pool_market::*;
 pub use liquidity_oracle::*;
 pub use money_market::*;
 pub use pool::*;

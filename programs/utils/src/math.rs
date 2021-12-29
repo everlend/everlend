@@ -33,3 +33,8 @@ pub fn amount_share(total_amount: u64, percent: u64) -> Result<u64, ProgramError
 
     Ok(amount as u64)
 }
+
+/// Convert the UI representation of a bp (like 0.5) to the raw bp
+pub fn ui_bp_to_bp(ui_ratio: f64) -> u16 {
+    (ui_ratio * 10_000f64).round() as u16
+}

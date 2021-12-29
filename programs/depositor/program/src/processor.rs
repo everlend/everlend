@@ -409,11 +409,12 @@ impl Processor {
 
         let liquidity_amount =
             Account::unpack_unchecked(&liquidity_transit_info.data.borrow())?.amount;
-        msg!("Diff: {}", liquidity_amount - step.amount);
 
         // TODO: Received liquidity amount may be less
         // https://blog.neodyme.io/posts/lending_disclosure
         let repay_amount = cmp::min(liquidity_amount, step.amount);
+        let income_amount = liquidity_amount - step.amount;
+        msg!("Income amount: {}", income_amount);
 
         msg!("Repay to General Pool");
         everlend_ulp::cpi::repay(
@@ -435,6 +436,9 @@ impl Processor {
             None,
             clock.slot,
         )?;
+
+        // Deposit to income pool if > 0
+        // ...
 
         Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
 
