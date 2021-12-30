@@ -1,4 +1,7 @@
-use super::{get_account, TestLiquidityOracle, TestPool, TestPoolMarket, TestSPLTokenLending};
+use super::{
+    get_account, TestIncomePool, TestIncomePoolMarket, TestLiquidityOracle, TestPool,
+    TestPoolMarket, TestSPLTokenLending,
+};
 use everlend_depositor::{
     find_rebalancing_program_address,
     state::{Depositor, Rebalancing},
@@ -46,6 +49,7 @@ impl TestDepositor {
         &self,
         context: &mut ProgramTestContext,
         general_pool_market: &TestPoolMarket,
+        income_pool_market: &TestIncomePoolMarket,
         liquidity_oracle: &TestLiquidityOracle,
     ) -> transport::Result<()> {
         let rent = context.banks_client.get_rent().await.unwrap();
@@ -61,7 +65,8 @@ impl TestDepositor {
                 everlend_depositor::instruction::init(
                     &everlend_depositor::id(),
                     &self.depositor.pubkey(),
-                    &general_pool_market.pool_market.pubkey(),
+                    &general_pool_market.keypair.pubkey(),
+                    &income_pool_market.keypair.pubkey(),
                     &liquidity_oracle.keypair.pubkey(),
                 ),
             ],
@@ -105,7 +110,7 @@ impl TestDepositor {
                 &everlend_depositor::id(),
                 &self.depositor.pubkey(),
                 &general_pool.token_mint_pubkey,
-                &general_pool_market.pool_market.pubkey(),
+                &general_pool_market.keypair.pubkey(),
                 &general_pool.token_account.pubkey(),
                 &liquidity_oracle.keypair.pubkey(),
                 &context.payer.pubkey(),
@@ -150,9 +155,9 @@ impl TestDepositor {
             &[everlend_depositor::instruction::deposit(
                 &everlend_depositor::id(),
                 &self.depositor.pubkey(),
-                &general_pool_market.pool_market.pubkey(),
+                &general_pool_market.keypair.pubkey(),
                 &general_pool.token_account.pubkey(),
-                &mm_pool_market.pool_market.pubkey(),
+                &mm_pool_market.keypair.pubkey(),
                 &mm_pool.token_account.pubkey(),
                 &mm_pool_collateral_mint,
                 &liquidity_mint,
@@ -174,6 +179,8 @@ impl TestDepositor {
         context: &mut ProgramTestContext,
         general_pool_market: &TestPoolMarket,
         general_pool: &TestPool,
+        income_pool_market: &TestIncomePoolMarket,
+        income_pool: &TestIncomePool,
         mm_pool_market: &TestPoolMarket,
         mm_pool: &TestPool,
         test_spl_token_lending: &TestSPLTokenLending,
@@ -200,9 +207,11 @@ impl TestDepositor {
             &[everlend_depositor::instruction::withdraw(
                 &everlend_depositor::id(),
                 &self.depositor.pubkey(),
-                &general_pool_market.pool_market.pubkey(),
+                &general_pool_market.keypair.pubkey(),
                 &general_pool.token_account.pubkey(),
-                &mm_pool_market.pool_market.pubkey(),
+                &income_pool_market.keypair.pubkey(),
+                &income_pool.token_account.pubkey(),
+                &mm_pool_market.keypair.pubkey(),
                 &mm_pool.token_account.pubkey(),
                 &mm_pool_collateral_mint,
                 &collateral_mint,

@@ -57,7 +57,7 @@ impl TestPoolBorrowAuthority {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::create_pool_borrow_authority(
                 &everlend_ulp::id(),
-                &test_pool_market.pool_market.pubkey(),
+                &test_pool_market.keypair.pubkey(),
                 &test_pool.pool_pubkey,
                 &self.borrow_authority,
                 &test_pool_market.manager.pubkey(),

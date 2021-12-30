@@ -147,7 +147,7 @@ async fn fail_invalid_token_account() {
     let tx = Transaction::new_signed_with_payer(
         &[instruction::borrow(
             &everlend_ulp::id(),
-            &test_pool_market.pool_market.pubkey(),
+            &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &test_pool_borrow_authority.pool_borrow_authority_pubkey,
             &user.token_account,
@@ -218,7 +218,7 @@ async fn fail_invalid_pool() {
     let tx = Transaction::new_signed_with_payer(
         &[instruction::borrow(
             &everlend_ulp::id(),
-            &test_pool_market.pool_market.pubkey(),
+            &test_pool_market.keypair.pubkey(),
             &Pubkey::new_unique(),
             &test_pool_borrow_authority.pool_borrow_authority_pubkey,
             &user.token_account,
@@ -255,7 +255,7 @@ async fn fail_invalid_pool_borrow_authority() {
     let tx = Transaction::new_signed_with_payer(
         &[instruction::borrow(
             &everlend_ulp::id(),
-            &test_pool_market.pool_market.pubkey(),
+            &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &Pubkey::new_unique(),
             &user.token_account,

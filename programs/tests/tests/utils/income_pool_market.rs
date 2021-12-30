@@ -52,7 +52,7 @@ impl TestIncomePoolMarket {
                     &everlend_income_pools::id(),
                     &self.keypair.pubkey(),
                     &self.manager.pubkey(),
-                    &general_pool_market.pool_market.pubkey(),
+                    &general_pool_market.keypair.pubkey(),
                 ),
             ],
             Some(&context.payer.pubkey()),

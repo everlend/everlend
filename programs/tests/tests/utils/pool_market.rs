@@ -10,20 +10,20 @@ use solana_sdk::{
 
 #[derive(Debug)]
 pub struct TestPoolMarket {
-    pub pool_market: Keypair,
+    pub keypair: Keypair,
     pub manager: Keypair,
 }
 
 impl TestPoolMarket {
     pub fn new() -> Self {
         Self {
-            pool_market: Keypair::new(),
+            keypair: Keypair::new(),
             manager: Keypair::new(),
         }
     }
 
     pub async fn get_data(&self, context: &mut ProgramTestContext) -> PoolMarket {
-        let account = get_account(context, &self.pool_market.pubkey()).await;
+        let account = get_account(context, &self.keypair.pubkey()).await;
         PoolMarket::unpack_unchecked(&account.data).unwrap()
     }
 
@@ -39,19 +39,19 @@ impl TestPoolMarket {
                 ),
                 system_instruction::create_account(
                     &context.payer.pubkey(),
-                    &self.pool_market.pubkey(),
+                    &self.keypair.pubkey(),
                     rent.minimum_balance(PoolMarket::LEN),
                     PoolMarket::LEN as u64,
                     &everlend_ulp::id(),
                 ),
                 instruction::init_pool_market(
                     &everlend_ulp::id(),
-                    &self.pool_market.pubkey(),
+                    &self.keypair.pubkey(),
                     &self.manager.pubkey(),
                 ),
             ],
             Some(&context.payer.pubkey()),
-            &[&context.payer, &self.pool_market],
+            &[&context.payer, &self.keypair],
             context.last_blockhash,
         );
 

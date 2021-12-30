@@ -17,7 +17,10 @@ pub struct Depositor {
     pub account_type: AccountType,
 
     /// General pool market
-    pub pool_market: Pubkey,
+    pub general_pool_market: Pubkey,
+
+    /// Income pool market
+    pub income_pool_market: Pubkey,
 
     /// Liquidity oracle
     pub liquidity_oracle: Pubkey,
@@ -27,7 +30,8 @@ impl Depositor {
     /// Initialize a voting pool
     pub fn init(&mut self, params: InitDepositorParams) {
         self.account_type = AccountType::Depositor;
-        self.pool_market = params.pool_market;
+        self.general_pool_market = params.general_pool_market;
+        self.income_pool_market = params.income_pool_market;
         self.liquidity_oracle = params.liquidity_oracle;
     }
 }
@@ -35,15 +39,17 @@ impl Depositor {
 /// Initialize a depositor params
 pub struct InitDepositorParams {
     /// General pool market
-    pub pool_market: Pubkey,
+    pub general_pool_market: Pubkey,
+    /// Income pool market
+    pub income_pool_market: Pubkey,
     /// Liquidity oracle
     pub liquidity_oracle: Pubkey,
 }
 
 impl Sealed for Depositor {}
 impl Pack for Depositor {
-    // 1 + 32 + 32
-    const LEN: usize = 65;
+    // 1 + 32 + 32 + 32
+    const LEN: usize = 97;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;

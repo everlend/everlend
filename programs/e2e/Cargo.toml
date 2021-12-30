@@ -17,6 +17,7 @@ spl-associated-token-account = { version = "1.0.3", features = [ "no-entrypoint"
 spl-token = { version = "3.1", features = [ "no-entrypoint" ] }
 spl-token-lending = { git = "https://github.com/everlend/solana-program-library", features = [ "no-entrypoint" ] }
 everlend-ulp = { path = "../ulp/program", features = [ "no-entrypoint" ] }
+everlend-income-pools = { path = "../income_pools/program", features = [ "no-entrypoint" ] }
 everlend-depositor = { path = "../depositor/program", features = [ "no-entrypoint" ] }
 everlend-liquidity-oracle = { path = "../liquidity_oracle/program", features = [ "no-entrypoint" ] }
 everlend-utils = { path = "../utils" }

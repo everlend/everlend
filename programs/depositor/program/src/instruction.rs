@@ -3,7 +3,7 @@
 use crate::{find_rebalancing_program_address, find_transit_program_address};
 use borsh::{BorshDeserialize, BorshSerialize};
 use everlend_liquidity_oracle::find_liquidity_oracle_token_distribution_program_address;
-use everlend_ulp::{find_pool_borrow_authority_program_address, find_pool_program_address};
+use everlend_ulp::find_pool_borrow_authority_program_address;
 use everlend_utils::find_program_address;
 use solana_program::{
     instruction::{AccountMeta, Instruction},
@@ -18,6 +18,9 @@ pub enum DepositorInstruction {
     ///
     /// Accounts:
     /// [W] Depositor account - uninitialized
+    /// [R] General pool market
+    /// [R] Income pool market
+    /// [R] Liquidity oracle
     /// [R] Rent sysvar
     Init,
 
@@ -40,9 +43,9 @@ pub enum DepositorInstruction {
     /// [R] Depositor
     /// [W] Rebalancing account
     /// [R] Token mint
-    /// [R] Pool market
-    /// [R] Pool
-    /// [R] Pool token account
+    /// [R] General pool market
+    /// [R] General pool
+    /// [R] General pool token account
     /// [R] Liquidity oracle
     /// [R] Token distribution
     /// [WS] From account
@@ -59,11 +62,11 @@ pub enum DepositorInstruction {
     /// [R] Depositor
     /// [R] Depositor authority
     /// [W] Rebalancing account
-    /// [R] Pool market
-    /// [R] Pool market authority
-    /// [R] Pool
-    /// [R] Pool borrow authority
-    /// [W] Pool token account (for liquidity mint)
+    /// [R] General pool market
+    /// [R] General pool market authority
+    /// [R] General pool
+    /// [R] General pool borrow authority
+    /// [W] General pool token account (for liquidity mint)
     /// [R] MM Pool market
     /// [R] MM Pool market authority
     /// [R] MM Pool
@@ -87,11 +90,11 @@ pub enum DepositorInstruction {
     /// [R] Depositor
     /// [R] Depositor authority
     /// [W] Rebalancing account
-    /// [R] Pool market
-    /// [R] Pool market authority
-    /// [R] Pool
-    /// [R] Pool borrow authority
-    /// [W] Pool token account (for liquidity mint)
+    /// [R] General pool market
+    /// [R] General pool market authority
+    /// [R] General pool
+    /// [R] General pool borrow authority
+    /// [W] General pool token account (for liquidity mint)
     /// [R] MM Pool market
     /// [R] MM Pool market authority
     /// [R] MM Pool
@@ -114,12 +117,14 @@ pub enum DepositorInstruction {
 pub fn init(
     program_id: &Pubkey,
     depositor: &Pubkey,
-    pool_market: &Pubkey,
+    general_pool_market: &Pubkey,
+    income_pool_market: &Pubkey,
     liquidity_oracle: &Pubkey,
 ) -> Instruction {
     let accounts = vec![
         AccountMeta::new(*depositor, false),
-        AccountMeta::new_readonly(*pool_market, false),
+        AccountMeta::new_readonly(*general_pool_market, false),
+        AccountMeta::new_readonly(*income_pool_market, false),
         AccountMeta::new_readonly(*liquidity_oracle, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
@@ -158,8 +163,8 @@ pub fn start_rebalancing(
     program_id: &Pubkey,
     depositor: &Pubkey,
     mint: &Pubkey,
-    pool_market: &Pubkey,
-    pool_token_account: &Pubkey,
+    general_pool_market: &Pubkey,
+    general_pool_token_account: &Pubkey,
     liquidity_oracle: &Pubkey,
     from: &Pubkey,
 ) -> Instruction {
@@ -169,15 +174,16 @@ pub fn start_rebalancing(
         liquidity_oracle,
         mint,
     );
-    let (pool, _) = find_pool_program_address(&everlend_ulp::id(), pool_market, mint);
+    let (general_pool, _) =
+        everlend_ulp::find_pool_program_address(&everlend_ulp::id(), general_pool_market, mint);
 
     let accounts = vec![
         AccountMeta::new_readonly(*depositor, false),
         AccountMeta::new(rebalancing, false),
         AccountMeta::new_readonly(*mint, false),
-        AccountMeta::new_readonly(*pool_market, false),
-        AccountMeta::new_readonly(pool, false),
-        AccountMeta::new_readonly(*pool_token_account, false),
+        AccountMeta::new_readonly(*general_pool_market, false),
+        AccountMeta::new_readonly(general_pool, false),
+        AccountMeta::new_readonly(*general_pool_token_account, false),
         AccountMeta::new_readonly(*liquidity_oracle, false),
         AccountMeta::new_readonly(token_distribution, false),
         AccountMeta::new(*from, true),
@@ -199,8 +205,8 @@ pub fn start_rebalancing(
 pub fn deposit(
     program_id: &Pubkey,
     depositor: &Pubkey,
-    pool_market: &Pubkey,
-    pool_token_account: &Pubkey,
+    general_pool_market: &Pubkey,
+    general_pool_token_account: &Pubkey,
     mm_pool_market: &Pubkey,
     mm_pool_token_account: &Pubkey,
     mm_pool_collateral_mint: &Pubkey,
@@ -212,17 +218,27 @@ pub fn deposit(
     let (depositor_authority, _) = find_program_address(program_id, depositor);
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
 
-    let (pool_market_authority, _) = find_program_address(&everlend_ulp::id(), pool_market);
-    let (pool, _) = find_pool_program_address(&everlend_ulp::id(), pool_market, liquidity_mint);
-    let (pool_borrow_authority, _) = find_pool_borrow_authority_program_address(
+    // General pool
+    let (general_pool_market_authority, _) =
+        find_program_address(&everlend_ulp::id(), general_pool_market);
+    let (general_pool, _) = everlend_ulp::find_pool_program_address(
         &everlend_ulp::id(),
-        &pool,
+        general_pool_market,
+        liquidity_mint,
+    );
+    let (general_pool_borrow_authority, _) = find_pool_borrow_authority_program_address(
+        &everlend_ulp::id(),
+        &general_pool,
         &depositor_authority,
     );
 
+    // MM pool
     let (mm_pool_market_authority, _) = find_program_address(&everlend_ulp::id(), mm_pool_market);
-    let (mm_pool, _) =
-        find_pool_program_address(&everlend_ulp::id(), mm_pool_market, collateral_mint);
+    let (mm_pool, _) = everlend_ulp::find_pool_program_address(
+        &everlend_ulp::id(),
+        mm_pool_market,
+        collateral_mint,
+    );
 
     let (liquidity_transit, _) =
         find_transit_program_address(program_id, depositor, liquidity_mint);
@@ -235,12 +251,12 @@ pub fn deposit(
         AccountMeta::new_readonly(*depositor, false),
         AccountMeta::new_readonly(depositor_authority, false),
         AccountMeta::new(rebalancing, false),
-        // Pool
-        AccountMeta::new_readonly(*pool_market, false),
-        AccountMeta::new_readonly(pool_market_authority, false),
-        AccountMeta::new(pool, false),
-        AccountMeta::new(pool_borrow_authority, false),
-        AccountMeta::new(*pool_token_account, false),
+        // General pool
+        AccountMeta::new_readonly(*general_pool_market, false),
+        AccountMeta::new_readonly(general_pool_market_authority, false),
+        AccountMeta::new(general_pool, false),
+        AccountMeta::new(general_pool_borrow_authority, false),
+        AccountMeta::new(*general_pool_token_account, false),
         // Money market pool
         AccountMeta::new_readonly(*mm_pool_market, false),
         AccountMeta::new_readonly(mm_pool_market_authority, false),
@@ -271,8 +287,10 @@ pub fn deposit(
 pub fn withdraw(
     program_id: &Pubkey,
     depositor: &Pubkey,
-    pool_market: &Pubkey,
-    pool_token_account: &Pubkey,
+    general_pool_market: &Pubkey,
+    general_pool_token_account: &Pubkey,
+    income_pool_market: &Pubkey,
+    income_pool_token_account: &Pubkey,
     mm_pool_market: &Pubkey,
     mm_pool_token_account: &Pubkey,
     mm_pool_collateral_mint: &Pubkey,
@@ -284,17 +302,36 @@ pub fn withdraw(
     let (depositor_authority, _) = find_program_address(program_id, depositor);
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
 
-    let (pool_market_authority, _) = find_program_address(&everlend_ulp::id(), pool_market);
-    let (pool, _) = find_pool_program_address(&everlend_ulp::id(), pool_market, liquidity_mint);
-    let (pool_borrow_authority, _) = find_pool_borrow_authority_program_address(
+    // General pool
+    let (general_pool_market_authority, _) =
+        find_program_address(&everlend_ulp::id(), general_pool_market);
+    let (general_pool, _) = everlend_ulp::find_pool_program_address(
         &everlend_ulp::id(),
-        &pool,
+        general_pool_market,
+        liquidity_mint,
+    );
+    let (general_pool_borrow_authority, _) = find_pool_borrow_authority_program_address(
+        &everlend_ulp::id(),
+        &general_pool,
         &depositor_authority,
     );
 
+    // Income pool
+    let (income_pool_market_authority, _) =
+        find_program_address(&everlend_income_pools::id(), income_pool_market);
+    let (income_pool, _) = everlend_income_pools::find_pool_program_address(
+        &everlend_income_pools::id(),
+        income_pool_market,
+        liquidity_mint,
+    );
+
+    // MM pool
     let (mm_pool_market_authority, _) = find_program_address(&everlend_ulp::id(), mm_pool_market);
-    let (mm_pool, _) =
-        find_pool_program_address(&everlend_ulp::id(), mm_pool_market, collateral_mint);
+    let (mm_pool, _) = everlend_ulp::find_pool_program_address(
+        &everlend_ulp::id(),
+        mm_pool_market,
+        collateral_mint,
+    );
 
     let (collateral_transit, _) =
         find_transit_program_address(program_id, depositor, collateral_mint);
@@ -307,12 +344,17 @@ pub fn withdraw(
         AccountMeta::new_readonly(*depositor, false),
         AccountMeta::new_readonly(depositor_authority, false),
         AccountMeta::new(rebalancing, false),
-        // Pool
-        AccountMeta::new_readonly(*pool_market, false),
-        AccountMeta::new_readonly(pool_market_authority, false),
-        AccountMeta::new(pool, false),
-        AccountMeta::new(pool_borrow_authority, false),
-        AccountMeta::new(*pool_token_account, false),
+        // General pool
+        AccountMeta::new_readonly(*general_pool_market, false),
+        AccountMeta::new_readonly(general_pool_market_authority, false),
+        AccountMeta::new(general_pool, false),
+        AccountMeta::new(general_pool_borrow_authority, false),
+        AccountMeta::new(*general_pool_token_account, false),
+        // Income pool
+        AccountMeta::new_readonly(*income_pool_market, false),
+        AccountMeta::new_readonly(income_pool_market_authority, false),
+        AccountMeta::new_readonly(income_pool, false),
+        AccountMeta::new(*income_pool_token_account, false),
         // Money market pool
         AccountMeta::new_readonly(*mm_pool_market, false),
         AccountMeta::new_readonly(mm_pool_market_authority, false),
@@ -327,6 +369,7 @@ pub fn withdraw(
         AccountMeta::new_readonly(*liquidity_mint, false),
         // Programs
         AccountMeta::new_readonly(sysvar::clock::id(), false),
+        AccountMeta::new_readonly(everlend_income_pools::id(), false),
         AccountMeta::new_readonly(everlend_ulp::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
         // Money market

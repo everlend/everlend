@@ -14,6 +14,8 @@ async fn setup() -> (
     TestPoolMarket,
     TestPool,
     TestPoolBorrowAuthority,
+    TestIncomePoolMarket,
+    TestIncomePool,
     TestPoolMarket,
     TestPool,
     LiquidityProvider,
@@ -71,7 +73,20 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    // 2. Prepare money market pool
+    // 2. Prepare income pool
+    let income_pool_market = TestIncomePoolMarket::new();
+    income_pool_market
+        .init(&mut context, &general_pool_market)
+        .await
+        .unwrap();
+
+    let income_pool = TestIncomePool::new(&income_pool_market, None);
+    income_pool
+        .create(&mut context, &income_pool_market)
+        .await
+        .unwrap();
+
+    // 3. Prepare money market pool
 
     let mm_pool_market = TestPoolMarket::new();
     mm_pool_market.init(&mut context).await.unwrap();
@@ -79,9 +94,9 @@ async fn setup() -> (
     let mm_pool = TestPool::new(&mm_pool_market, Some(reserve.collateral.mint_pubkey));
     mm_pool.create(&mut context, &mm_pool_market).await.unwrap();
 
-    // 3. Prepare depositor
+    // 4. Prepare depositor
 
-    // 3.1. Prepare liquidity oracle
+    // 4.1. Prepare liquidity oracle
 
     let test_liquidity_oracle = TestLiquidityOracle::new();
     test_liquidity_oracle.init(&mut context).await.unwrap();
@@ -112,29 +127,34 @@ async fn setup() -> (
 
     let test_depositor = TestDepositor::new();
     test_depositor
-        .init(&mut context, &general_pool_market, &test_liquidity_oracle)
+        .init(
+            &mut context,
+            &general_pool_market,
+            &income_pool_market,
+            &test_liquidity_oracle,
+        )
         .await
         .unwrap();
 
-    // 3.2 Create transit account for liquidity token
+    // 4.2 Create transit account for liquidity token
     test_depositor
         .create_transit(&mut context, &general_pool.token_mint_pubkey)
         .await
         .unwrap();
 
-    // 3.3 Create transit account for collateral token
+    // 4.3 Create transit account for collateral token
     test_depositor
         .create_transit(&mut context, &mm_pool.token_mint_pubkey)
         .await
         .unwrap();
 
-    // 3.4 Create transit account for mm pool collateral token
+    // 4.4 Create transit account for mm pool collateral token
     test_depositor
         .create_transit(&mut context, &mm_pool.pool_mint.pubkey())
         .await
         .unwrap();
 
-    // 4. Prepare borrow authority
+    // 5. Prepare borrow authority
     let (depositor_authority, _) = find_program_address(
         &everlend_depositor::id(),
         &test_depositor.depositor.pubkey(),
@@ -151,7 +171,7 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    // 5. Start rebalancing
+    // 6. Start rebalancing
     test_depositor
         .start_rebalancing(
             &mut context,
@@ -162,7 +182,7 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    // 6. Deposit
+    // 7. Deposit
 
     // Rates should be refreshed
     context.warp_to_slot(3).unwrap();
@@ -182,7 +202,7 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    // 6.1 Decrease distribution & restart rebalancing
+    // 7.1 Decrease distribution & restart rebalancing
 
     distribution[0].percent = 300_000_000u64; // Decrease to 30%
     test_token_distribution
@@ -212,6 +232,8 @@ async fn setup() -> (
         general_pool_market,
         general_pool,
         general_pool_borrow_authority,
+        income_pool_market,
+        income_pool,
         mm_pool_market,
         mm_pool,
         liquidity_provider,
@@ -228,25 +250,42 @@ async fn success() {
         general_pool_market,
         general_pool,
         _general_pool_borrow_authority,
+        income_pool_market,
+        income_pool,
         mm_pool_market,
         mm_pool,
-        _liquidity_provider,
+        liquidity_provider,
         test_depositor,
     ) = setup().await;
 
-    let reserve = money_market.get_reserve_data(&mut context).await;
+    let mut reserve = money_market.get_reserve_data(&mut context).await;
+
+    // Transfer some tokens to liquidity account to get incomes
+    token_transfer(
+        &mut context,
+        &liquidity_provider.token_account,
+        &reserve.liquidity.supply_pubkey,
+        &liquidity_provider.owner,
+        10 * EXP,
+    )
+    .await
+    .unwrap();
+    reserve.liquidity.deposit(10 * EXP).unwrap();
+    money_market.update_reserve(&mut context, &reserve).await;
+
     let reserve_balance_before =
         get_token_balance(&mut context, &reserve.liquidity.supply_pubkey).await;
 
     context.warp_to_slot(5).unwrap();
     pyth_oracle.update(&mut context, 5).await;
-    // money_market.refresh_reserve(&mut context, 5).await;
 
     test_depositor
         .withdraw(
             &mut context,
             &general_pool_market,
             &general_pool,
+            &income_pool_market,
+            &income_pool,
             &mm_pool_market,
             &mm_pool,
             &money_market,
@@ -254,6 +293,10 @@ async fn success() {
         )
         .await
         .unwrap();
+
+    let income_balance = get_token_balance(&mut context, &income_pool.token_account.pubkey()).await;
+    println!("Income balance: {}", income_balance);
+    assert!(income_balance > 0);
 
     let rebalancing = test_depositor
         .get_rebalancing_data(&mut context, &general_pool.token_mint_pubkey)
@@ -266,6 +309,6 @@ async fn success() {
     );
     assert_eq!(
         get_token_balance(&mut context, &reserve.liquidity.supply_pubkey).await,
-        reserve_balance_before - 20 * EXP,
+        reserve_balance_before - 20 * EXP - income_balance,
     );
 }

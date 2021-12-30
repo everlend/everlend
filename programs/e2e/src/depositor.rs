@@ -12,6 +12,7 @@ pub fn init(
     config: &Config,
     depositor_keypair: Option<Keypair>,
     general_pool_market_pubkey: &Pubkey,
+    income_pool_market_pubkey: &Pubkey,
     liquidity_oracle_pubkey: &Pubkey,
 ) -> Result<Pubkey, ClientError> {
     let depositor_keypair = depositor_keypair.unwrap_or_else(Keypair::new);
@@ -35,6 +36,7 @@ pub fn init(
                 &everlend_depositor::id(),
                 &depositor_keypair.pubkey(),
                 general_pool_market_pubkey,
+                income_pool_market_pubkey,
                 liquidity_oracle_pubkey,
             ),
         ],
@@ -140,6 +142,8 @@ pub fn withdraw(
     depositor_pubkey: &Pubkey,
     general_pool_market_pubkey: &Pubkey,
     general_pool_token_account: &Pubkey,
+    income_pool_market_pubkey: &Pubkey,
+    income_pool_token_account: &Pubkey,
     mm_pool_market_pubkey: &Pubkey,
     mm_pool_token_account: &Pubkey,
     collateral_mint: &Pubkey,
@@ -154,6 +158,8 @@ pub fn withdraw(
             depositor_pubkey,
             general_pool_market_pubkey,
             general_pool_token_account,
+            income_pool_market_pubkey,
+            income_pool_token_account,
             mm_pool_market_pubkey,
             mm_pool_token_account,
             mm_pool_collateral_mint,

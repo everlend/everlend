@@ -1,4 +1,5 @@
 mod depositor;
+mod income_pools;
 mod liquidity_oracle;
 mod ulp;
 mod utils;
@@ -13,7 +14,6 @@ use solana_sdk::{
 use spl_associated_token_account::get_associated_token_address;
 use std::str::FromStr;
 use utils::*;
-
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -47,7 +47,8 @@ async fn main() -> anyhow::Result<()> {
     let sol_mint = Pubkey::from_str(SOL_MINT).unwrap();
     let sol_oracle = Pubkey::from_str(SOL_ORACLE).unwrap();
     let sol_larix_oracle = Pubkey::from_str(SOL_LARIX_ORACLE).unwrap();
-    let port_finance_sol_collateral_mint = Pubkey::from_str(PORT_FINANCE_RESERVE_SOL_COLLATERAL_MINT).unwrap();
+    let port_finance_sol_collateral_mint =
+        Pubkey::from_str(PORT_FINANCE_RESERVE_SOL_COLLATERAL_MINT).unwrap();
     let larix_sol_collateral_mint = Pubkey::from_str(LARIX_RESERVE_SOL_COLLATERAL_MINT).unwrap();
     let port_finance_program_id = Pubkey::from_str(integrations::PORT_FINANCE_PROGRAM_ID).unwrap();
     let larix_program_id = Pubkey::from_str(integrations::LARIX_PROGRAM_ID).unwrap();
@@ -75,6 +76,12 @@ async fn main() -> anyhow::Result<()> {
     let token_account = get_associated_token_address(&payer_pubkey, &sol_mint);
     let pool_account = spl_create_associated_token_account(&config, &payer_pubkey, &pool_mint)?;
 
+    println!("1.1. Income pool");
+    let income_pool_market_pubkey =
+        income_pools::create_market(&config, None, &pool_market_pubkey)?;
+    let (income_pool_pubkey, income_pool_token_account) =
+        income_pools::create_pool(&config, &income_pool_market_pubkey, &sol_mint)?;
+
     println!("2. Deposit liquidity");
     ulp::deposit(
         &config,
@@ -90,12 +97,19 @@ async fn main() -> anyhow::Result<()> {
     println!("3. MM Pool: Port Finance");
     let port_finance_mm_pool_market_pubkey = ulp::create_market(&config, None)?;
     let (_mm_pool_pubkey, port_finance_mm_pool_token_account, port_finance_mm_pool_mint) =
-        ulp::create_pool(&config, &port_finance_mm_pool_market_pubkey, &port_finance_sol_collateral_mint)?;
+        ulp::create_pool(
+            &config,
+            &port_finance_mm_pool_market_pubkey,
+            &port_finance_sol_collateral_mint,
+        )?;
 
     println!("3.1 MM Pool: Larix");
     let larix_mm_pool_market_pubkey = ulp::create_market(&config, None)?;
-    let (_mm_pool_pubkey, larix_mm_pool_token_account, larix_mm_pool_mint) =
-        ulp::create_pool(&config, &larix_mm_pool_market_pubkey, &larix_sol_collateral_mint)?;
+    let (_mm_pool_pubkey, larix_mm_pool_token_account, larix_mm_pool_mint) = ulp::create_pool(
+        &config,
+        &larix_mm_pool_market_pubkey,
+        &larix_sol_collateral_mint,
+    )?;
 
     println!("4. Liquidity oracle");
     let liquidity_oracle_pubkey = liquidity_oracle::init(&config, None)?;
@@ -116,11 +130,20 @@ async fn main() -> anyhow::Result<()> {
     )?;
 
     println!("5. Depositor");
-    let depositor_pubkey =
-        depositor::init(&config, None, &pool_market_pubkey, &liquidity_oracle_pubkey)?;
+    let depositor_pubkey = depositor::init(
+        &config,
+        None,
+        &pool_market_pubkey,
+        &income_pool_market_pubkey,
+        &liquidity_oracle_pubkey,
+    )?;
 
     depositor::create_transit(&config, &depositor_pubkey, &sol_mint)?;
-    depositor::create_transit(&config, &depositor_pubkey, &port_finance_sol_collateral_mint)?;
+    depositor::create_transit(
+        &config,
+        &depositor_pubkey,
+        &port_finance_sol_collateral_mint,
+    )?;
     depositor::create_transit(&config, &depositor_pubkey, &larix_sol_collateral_mint)?;
     depositor::create_transit(&config, &depositor_pubkey, &port_finance_mm_pool_mint)?;
     depositor::create_transit(&config, &depositor_pubkey, &larix_mm_pool_mint)?;
@@ -217,6 +240,8 @@ async fn main() -> anyhow::Result<()> {
         &depositor_pubkey,
         &pool_market_pubkey,
         &pool_token_account,
+        &income_pool_market_pubkey,
+        &income_pool_token_account,
         &port_finance_mm_pool_market_pubkey,
         &port_finance_mm_pool_token_account,
         &port_finance_sol_collateral_mint,
@@ -236,6 +261,8 @@ async fn main() -> anyhow::Result<()> {
         &depositor_pubkey,
         &pool_market_pubkey,
         &pool_token_account,
+        &income_pool_market_pubkey,
+        &income_pool_token_account,
         &larix_mm_pool_market_pubkey,
         &larix_mm_pool_token_account,
         &larix_sol_collateral_mint,
@@ -274,6 +301,8 @@ async fn main() -> anyhow::Result<()> {
         &depositor_pubkey,
         &pool_market_pubkey,
         &pool_token_account,
+        &income_pool_market_pubkey,
+        &income_pool_token_account,
         &port_finance_mm_pool_market_pubkey,
         &port_finance_mm_pool_token_account,
         &port_finance_sol_collateral_mint,
@@ -358,6 +387,12 @@ async fn port_finance_e2e() -> anyhow::Result<()> {
     let token_account = get_associated_token_address(&payer_pubkey, &sol_mint);
     let pool_account = spl_create_associated_token_account(&config, &payer_pubkey, &pool_mint)?;
 
+    println!("1.1. Income pool");
+    let income_pool_market_pubkey =
+        income_pools::create_market(&config, None, &pool_market_pubkey)?;
+    let (income_pool_pubkey, income_pool_token_account) =
+        income_pools::create_pool(&config, &income_pool_market_pubkey, &sol_mint)?;
+
     println!("2. Deposit liquidity");
     ulp::deposit(
         &config,
@@ -390,8 +425,13 @@ async fn port_finance_e2e() -> anyhow::Result<()> {
     )?;
 
     println!("5. Depositor");
-    let depositor_pubkey =
-        depositor::init(&config, None, &pool_market_pubkey, &liquidity_oracle_pubkey)?;
+    let depositor_pubkey = depositor::init(
+        &config,
+        None,
+        &pool_market_pubkey,
+        &income_pool_market_pubkey,
+        &liquidity_oracle_pubkey,
+    )?;
 
     depositor::create_transit(&config, &depositor_pubkey, &sol_mint)?;
     depositor::create_transit(&config, &depositor_pubkey, &sol_collateral_mint)?;
@@ -466,6 +506,8 @@ async fn port_finance_e2e() -> anyhow::Result<()> {
         &depositor_pubkey,
         &pool_market_pubkey,
         &pool_token_account,
+        &income_pool_market_pubkey,
+        &income_pool_token_account,
         &mm_pool_market_pubkey,
         &mm_pool_token_account,
         &sol_collateral_mint,
@@ -503,6 +545,8 @@ async fn port_finance_e2e() -> anyhow::Result<()> {
         &depositor_pubkey,
         &pool_market_pubkey,
         &pool_token_account,
+        &income_pool_market_pubkey,
+        &income_pool_token_account,
         &mm_pool_market_pubkey,
         &mm_pool_token_account,
         &sol_collateral_mint,
@@ -570,6 +614,12 @@ async fn larix_e2e() -> anyhow::Result<()> {
     let token_account = get_associated_token_address(&payer_pubkey, &sol_mint);
     let pool_account = spl_create_associated_token_account(&config, &payer_pubkey, &pool_mint)?;
 
+    println!("1.1. Income pool");
+    let income_pool_market_pubkey =
+        income_pools::create_market(&config, None, &pool_market_pubkey)?;
+    let (income_pool_pubkey, income_pool_token_account) =
+        income_pools::create_pool(&config, &income_pool_market_pubkey, &sol_mint)?;
+
     println!("2. Deposit liquidity");
     ulp::deposit(
         &config,
@@ -605,8 +655,13 @@ async fn larix_e2e() -> anyhow::Result<()> {
     )?;
 
     println!("5. Depositor");
-    let depositor_pubkey =
-        depositor::init(&config, None, &pool_market_pubkey, &liquidity_oracle_pubkey)?;
+    let depositor_pubkey = depositor::init(
+        &config,
+        None,
+        &pool_market_pubkey,
+        &income_pool_market_pubkey,
+        &liquidity_oracle_pubkey,
+    )?;
 
     depositor::create_transit(&config, &depositor_pubkey, &sol_mint)?;
     depositor::create_transit(&config, &depositor_pubkey, &sol_collateral_mint)?;
@@ -680,6 +735,8 @@ async fn larix_e2e() -> anyhow::Result<()> {
         &depositor_pubkey,
         &pool_market_pubkey,
         &pool_token_account,
+        &income_pool_market_pubkey,
+        &income_pool_token_account,
         &mm_pool_market_pubkey,
         &mm_pool_token_account,
         &sol_collateral_mint,

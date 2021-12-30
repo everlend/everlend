@@ -37,14 +37,17 @@ impl Processor {
     pub fn init(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let depositor_info = next_account_info(account_info_iter)?;
-        let pool_market_info = next_account_info(account_info_iter)?;
+        let general_pool_market_info = next_account_info(account_info_iter)?;
+        let income_pool_market_info = next_account_info(account_info_iter)?;
         let liquidity_oracle_info = next_account_info(account_info_iter)?;
         let rent_info = next_account_info(account_info_iter)?;
         let rent = &Rent::from_account_info(rent_info)?;
 
         assert_rent_exempt(rent, depositor_info)?;
         assert_owned_by(depositor_info, program_id)?;
-        assert_owned_by(pool_market_info, &everlend_ulp::id())?;
+        // TODO: replace to getting id from config program
+        assert_owned_by(general_pool_market_info, &everlend_ulp::id())?;
+        assert_owned_by(income_pool_market_info, &everlend_income_pools::id())?;
         assert_owned_by(liquidity_oracle_info, &everlend_liquidity_oracle::id())?;
 
         // Get depositor state
@@ -52,7 +55,8 @@ impl Processor {
         assert_uninitialized(&depositor)?;
 
         depositor.init(InitDepositorParams {
-            pool_market: *pool_market_info.key,
+            general_pool_market: *general_pool_market_info.key,
+            income_pool_market: *income_pool_market_info.key,
             liquidity_oracle: *liquidity_oracle_info.key,
         });
 
@@ -116,9 +120,9 @@ impl Processor {
         let depositor_info = next_account_info(account_info_iter)?;
         let rebalancing_info = next_account_info(account_info_iter)?;
         let mint_info = next_account_info(account_info_iter)?;
-        let pool_market_info = next_account_info(account_info_iter)?;
-        let pool_info = next_account_info(account_info_iter)?;
-        let pool_token_account_info = next_account_info(account_info_iter)?;
+        let general_pool_market_info = next_account_info(account_info_iter)?;
+        let general_pool_info = next_account_info(account_info_iter)?;
+        let general_pool_token_account_info = next_account_info(account_info_iter)?;
         let liquidity_oracle_info = next_account_info(account_info_iter)?;
         let token_distribution_info = next_account_info(account_info_iter)?;
         let from_info = next_account_info(account_info_iter)?;
@@ -130,12 +134,12 @@ impl Processor {
 
         assert_owned_by(depositor_info, program_id)?;
         assert_owned_by(token_distribution_info, &everlend_liquidity_oracle::id())?;
-        assert_owned_by(pool_info, &everlend_ulp::id())?;
+        assert_owned_by(general_pool_info, &everlend_ulp::id())?;
 
         // Get depositor state
         let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
 
-        assert_account_key(pool_market_info, &depositor.pool_market)?;
+        assert_account_key(general_pool_market_info, &depositor.general_pool_market)?;
         assert_account_key(liquidity_oracle_info, &depositor.liquidity_oracle)?;
 
         let (rebalancing_pubkey, bump_seed) =
@@ -198,12 +202,12 @@ impl Processor {
         let token_distribution = TokenDistribution::unpack(&token_distribution_info.data.borrow())?;
 
         // Get pool state to calculate total amount
-        let pool = Pool::unpack(&pool_info.data.borrow())?;
-        assert_account_key(pool_market_info, &pool.pool_market)?;
-        assert_account_key(pool_token_account_info, &pool.token_account)?;
+        let pool = Pool::unpack(&general_pool_info.data.borrow())?;
+        assert_account_key(general_pool_market_info, &pool.pool_market)?;
+        assert_account_key(general_pool_token_account_info, &pool.token_account)?;
 
         let pool_token_account_amount =
-            Account::unpack_unchecked(&pool_token_account_info.data.borrow())?.amount;
+            Account::unpack_unchecked(&general_pool_token_account_info.data.borrow())?.amount;
         let total_amount = pool_token_account_amount
             .checked_add(pool.total_amount_borrowed)
             .ok_or(EverlendError::MathOverflow)?;
@@ -225,11 +229,11 @@ impl Processor {
         let depositor_authority_info = next_account_info(account_info_iter)?;
         let rebalancing_info = next_account_info(account_info_iter)?;
 
-        let pool_market_info = next_account_info(account_info_iter)?;
-        let pool_market_authority_info = next_account_info(account_info_iter)?;
-        let pool_info = next_account_info(account_info_iter)?;
-        let pool_borrow_authority_info = next_account_info(account_info_iter)?;
-        let pool_token_account_info = next_account_info(account_info_iter)?;
+        let general_pool_market_info = next_account_info(account_info_iter)?;
+        let general_pool_market_authority_info = next_account_info(account_info_iter)?;
+        let general_pool_info = next_account_info(account_info_iter)?;
+        let general_pool_borrow_authority_info = next_account_info(account_info_iter)?;
+        let general_pool_token_account_info = next_account_info(account_info_iter)?;
 
         let mm_pool_market_info = next_account_info(account_info_iter)?;
         let mm_pool_market_authority_info = next_account_info(account_info_iter)?;
@@ -272,12 +276,12 @@ impl Processor {
 
         msg!("Borrow from General Pool");
         everlend_ulp::cpi::borrow(
-            pool_market_info.clone(),
-            pool_market_authority_info.clone(),
-            pool_info.clone(),
-            pool_borrow_authority_info.clone(),
+            general_pool_market_info.clone(),
+            general_pool_market_authority_info.clone(),
+            general_pool_info.clone(),
+            general_pool_borrow_authority_info.clone(),
             liquidity_transit_info.clone(),
-            pool_token_account_info.clone(),
+            general_pool_token_account_info.clone(),
             depositor_authority_info.clone(),
             step.amount,
             &[signers_seeds],
@@ -334,11 +338,16 @@ impl Processor {
         let depositor_authority_info = next_account_info(account_info_iter)?;
         let rebalancing_info = next_account_info(account_info_iter)?;
 
-        let pool_market_info = next_account_info(account_info_iter)?;
-        let pool_market_authority_info = next_account_info(account_info_iter)?;
-        let pool_info = next_account_info(account_info_iter)?;
-        let pool_borrow_authority_info = next_account_info(account_info_iter)?;
-        let pool_token_account_info = next_account_info(account_info_iter)?;
+        let general_pool_market_info = next_account_info(account_info_iter)?;
+        let general_pool_market_authority_info = next_account_info(account_info_iter)?;
+        let general_pool_info = next_account_info(account_info_iter)?;
+        let general_pool_borrow_authority_info = next_account_info(account_info_iter)?;
+        let general_pool_token_account_info = next_account_info(account_info_iter)?;
+
+        let income_pool_market_info = next_account_info(account_info_iter)?;
+        let income_pool_market_authority_info = next_account_info(account_info_iter)?;
+        let income_pool_info = next_account_info(account_info_iter)?;
+        let income_pool_token_account_info = next_account_info(account_info_iter)?;
 
         let mm_pool_market_info = next_account_info(account_info_iter)?;
         let mm_pool_market_authority_info = next_account_info(account_info_iter)?;
@@ -355,6 +364,7 @@ impl Processor {
         let clock_info = next_account_info(account_info_iter)?;
         let clock = Clock::from_account_info(clock_info)?;
         let _everlend_ulp_info = next_account_info(account_info_iter)?;
+        let _everlend_income_pools_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
         let money_market_program_info = next_account_info(account_info_iter)?;
@@ -418,17 +428,31 @@ impl Processor {
 
         msg!("Repay to General Pool");
         everlend_ulp::cpi::repay(
-            pool_market_info.clone(),
-            pool_market_authority_info.clone(),
-            pool_info.clone(),
-            pool_borrow_authority_info.clone(),
+            general_pool_market_info.clone(),
+            general_pool_market_authority_info.clone(),
+            general_pool_info.clone(),
+            general_pool_borrow_authority_info.clone(),
             liquidity_transit_info.clone(),
-            pool_token_account_info.clone(),
+            general_pool_token_account_info.clone(),
             depositor_authority_info.clone(),
             repay_amount,
             0,
             &[signers_seeds],
         )?;
+
+        // Deposit to income pool if income amount > 0
+        if income_amount > 0 {
+            everlend_income_pools::cpi::deposit(
+                income_pool_market_info.clone(),
+                income_pool_market_authority_info.clone(),
+                income_pool_info.clone(),
+                liquidity_transit_info.clone(),
+                income_pool_token_account_info.clone(),
+                depositor_authority_info.clone(),
+                income_amount,
+                &[signers_seeds],
+            )?;
+        }
 
         rebalancing.execute_step(
             *money_market_program_info.key,
@@ -436,9 +460,6 @@ impl Processor {
             None,
             clock.slot,
         )?;
-
-        // Deposit to income pool if > 0
-        // ...
 
         Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
 

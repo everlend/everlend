@@ -44,7 +44,14 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    // 2. Prepare liquidity oracle
+    // 2. Prepare income pool
+    let income_pool_market = TestIncomePoolMarket::new();
+    income_pool_market
+        .init(&mut context, &general_pool_market)
+        .await
+        .unwrap();
+
+    // 3. Prepare liquidity oracle
 
     let test_liquidity_oracle = TestLiquidityOracle::new();
     test_liquidity_oracle.init(&mut context).await.unwrap();
@@ -73,11 +80,16 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    // 3. Prepare depositor
+    // 4. Prepare depositor
 
     let test_depositor = TestDepositor::new();
     test_depositor
-        .init(&mut context, &general_pool_market, &test_liquidity_oracle)
+        .init(
+            &mut context,
+            &general_pool_market,
+            &income_pool_market,
+            &test_liquidity_oracle,
+        )
         .await
         .unwrap();
 

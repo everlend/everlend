@@ -146,7 +146,7 @@ async fn fail_with_invalid_pool_pubkey_argument() {
         &[instruction::repay(
             &everlend_ulp::id(),
             // Wrong pool market pubkey
-            &test_pool_market.pool_market.pubkey(),
+            &test_pool_market.keypair.pubkey(),
             &Pubkey::new_unique(),
             // &test_pool.pool_pubkey,
             &test_pool_borrow_authority.pool_borrow_authority_pubkey,
@@ -187,7 +187,7 @@ async fn fail_with_invalid_pool_borrow_authority_argument() {
         &[instruction::repay(
             &everlend_ulp::id(),
             // Wrong pool market pubkey
-            &test_pool_market.pool_market.pubkey(),
+            &test_pool_market.keypair.pubkey(),
             // &Pubkey::new_unique(),
             &test_pool.pool_pubkey,
             &Pubkey::new_unique(),
@@ -231,7 +231,7 @@ async fn fail_with_invalid_pool_market() {
     let tx = Transaction::new_signed_with_payer(
         &[instruction::repay(
             &everlend_ulp::id(),
-            &test_pool_market.pool_market.pubkey(),
+            &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &test_pool_borrow_authority.pool_borrow_authority_pubkey,
             &user.token_account,
@@ -267,7 +267,7 @@ async fn fail_with_invalid_pool_token_account() {
     let tx = Transaction::new_signed_with_payer(
         &[instruction::repay(
             &everlend_ulp::id(),
-            &test_pool_market.pool_market.pubkey(),
+            &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &test_pool_borrow_authority.pool_borrow_authority_pubkey,
             &user.token_account,

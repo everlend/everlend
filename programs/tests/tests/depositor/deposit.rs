@@ -71,7 +71,14 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    // 2. Prepare money market pool
+    // 2. Prepare income pool
+    let income_pool_market = TestIncomePoolMarket::new();
+    income_pool_market
+        .init(&mut context, &general_pool_market)
+        .await
+        .unwrap();
+
+    // 3. Prepare money market pool
 
     let mm_pool_market = TestPoolMarket::new();
     mm_pool_market.init(&mut context).await.unwrap();
@@ -79,9 +86,9 @@ async fn setup() -> (
     let mm_pool = TestPool::new(&mm_pool_market, Some(reserve.collateral.mint_pubkey));
     mm_pool.create(&mut context, &mm_pool_market).await.unwrap();
 
-    // 3. Prepare depositor
+    // 4. Prepare depositor
 
-    // 3.1. Prepare liquidity oracle
+    // 4.1. Prepare liquidity oracle
 
     let test_liquidity_oracle = TestLiquidityOracle::new();
     test_liquidity_oracle.init(&mut context).await.unwrap();
@@ -112,29 +119,34 @@ async fn setup() -> (
 
     let test_depositor = TestDepositor::new();
     test_depositor
-        .init(&mut context, &general_pool_market, &test_liquidity_oracle)
+        .init(
+            &mut context,
+            &general_pool_market,
+            &income_pool_market,
+            &test_liquidity_oracle,
+        )
         .await
         .unwrap();
 
-    // 3.2 Create transit account for liquidity token
+    // 4.2 Create transit account for liquidity token
     test_depositor
         .create_transit(&mut context, &general_pool.token_mint_pubkey)
         .await
         .unwrap();
 
-    // 3.3 Create transit account for collateral token
+    // 4.3 Create transit account for collateral token
     test_depositor
         .create_transit(&mut context, &mm_pool.token_mint_pubkey)
         .await
         .unwrap();
 
-    // 3.4 Create transit account for mm pool collateral token
+    // 34.4 Create transit account for mm pool collateral token
     test_depositor
         .create_transit(&mut context, &mm_pool.pool_mint.pubkey())
         .await
         .unwrap();
 
-    // 4. Prepare borrow authority
+    // 5. Prepare borrow authority
     let (depositor_authority, _) = find_program_address(
         &everlend_depositor::id(),
         &test_depositor.depositor.pubkey(),
@@ -151,7 +163,7 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    // 5. Start rebalancing
+    // 6. Start rebalancing
     test_depositor
         .start_rebalancing(
             &mut context,

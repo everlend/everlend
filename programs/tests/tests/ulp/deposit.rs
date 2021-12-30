@@ -98,7 +98,7 @@ async fn fail_with_invalid_pool_mint_pubkey_argument() {
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
             &everlend_ulp::id(),
-            &test_pool_market.pool_market.pubkey(),
+            &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &user.token_account,
             &user.pool_account,
@@ -131,7 +131,7 @@ async fn fail_with_invalid_token_account_pubkey_argument() {
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
             &everlend_ulp::id(),
-            &test_pool_market.pool_market.pubkey(),
+            &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &user.token_account,
             &user.pool_account,
@@ -166,7 +166,7 @@ async fn fail_with_invalid_destination_argument() {
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
             &everlend_ulp::id(),
-            &test_pool_market.pool_market.pubkey(),
+            &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &user.token_account,
             // Wrong destination
@@ -202,7 +202,7 @@ async fn fail_with_invalid_source_argument() {
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
             &everlend_ulp::id(),
-            &test_pool_market.pool_market.pubkey(),
+            &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             //Wrong source
             &user.pool_account,
@@ -274,7 +274,7 @@ async fn fail_with_invalid_pool_argument() {
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
             &everlend_ulp::id(),
-            &test_pool_market.pool_market.pubkey(),
+            &test_pool_market.keypair.pubkey(),
             //Wrong pool
             &Pubkey::new_unique(),
             &user.token_account,

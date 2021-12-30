@@ -25,7 +25,7 @@ impl TestPool {
 
         let (pool_pubkey, _) = find_pool_program_address(
             &everlend_ulp::id(),
-            &test_pool_market.pool_market.pubkey(),
+            &test_pool_market.keypair.pubkey(),
             &token_mint_pubkey,
         );
 
@@ -66,7 +66,7 @@ impl TestPool {
                 ),
                 instruction::create_pool(
                     &everlend_ulp::id(),
-                    &test_pool_market.pool_market.pubkey(),
+                    &test_pool_market.keypair.pubkey(),
                     &self.token_mint_pubkey,
                     &self.token_account.pubkey(),
                     &self.pool_mint.pubkey(),
@@ -96,7 +96,7 @@ impl TestPool {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::deposit(
                 &everlend_ulp::id(),
-                &test_pool_market.pool_market.pubkey(),
+                &test_pool_market.keypair.pubkey(),
                 &self.pool_pubkey,
                 &user.token_account,
                 &user.pool_account,
@@ -123,7 +123,7 @@ impl TestPool {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::withdraw(
                 &everlend_ulp::id(),
-                &test_pool_market.pool_market.pubkey(),
+                &test_pool_market.keypair.pubkey(),
                 &self.pool_pubkey,
                 &user.pool_account,
                 &user.token_account,
@@ -154,7 +154,7 @@ impl TestPool {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::borrow(
                 &everlend_ulp::id(),
-                &test_pool_market.pool_market.pubkey(),
+                &test_pool_market.keypair.pubkey(),
                 &self.pool_pubkey,
                 &test_pool_borrow_authority.pool_borrow_authority_pubkey,
                 destination,
@@ -182,7 +182,7 @@ impl TestPool {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::repay(
                 &everlend_ulp::id(),
-                &test_pool_market.pool_market.pubkey(),
+                &test_pool_market.keypair.pubkey(),
                 &self.pool_pubkey,
                 &test_pool_borrow_authority.pool_borrow_authority_pubkey,
                 &user.token_account,

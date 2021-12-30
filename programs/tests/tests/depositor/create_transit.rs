@@ -15,9 +15,20 @@ async fn setup() -> (ProgramTestContext, TestDepositor) {
     let general_pool_market = TestPoolMarket::new();
     general_pool_market.init(&mut context).await.unwrap();
 
+    let income_pool_market = TestIncomePoolMarket::new();
+    income_pool_market
+        .init(&mut context, &general_pool_market)
+        .await
+        .unwrap();
+
     let test_depositor = TestDepositor::new();
     test_depositor
-        .init(&mut context, &general_pool_market, &test_liquidity_oracle)
+        .init(
+            &mut context,
+            &general_pool_market,
+            &income_pool_market,
+            &test_liquidity_oracle,
+        )
         .await
         .unwrap();
 

@@ -105,6 +105,17 @@ impl TestSPLTokenLending {
         let account = get_account(context, &self.reserve_pubkey).await;
         spl_token_lending::state::Reserve::unpack_from_slice(account.data.as_slice()).unwrap()
     }
+
+    pub async fn update_reserve(
+        &self,
+        context: &mut ProgramTestContext,
+        reserve: &spl_token_lending::state::Reserve,
+    ) {
+        let mut account = get_account(context, &self.reserve_pubkey).await;
+        spl_token_lending::state::Reserve::pack(reserve.clone(), &mut account.data).unwrap();
+
+        context.set_account(&self.reserve_pubkey, &AccountSharedData::from(account));
+    }
 }
 
 pub fn add_spl_token_lending(test: &mut ProgramTest) -> TestSPLTokenLending {
