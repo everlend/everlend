@@ -118,16 +118,16 @@ pub fn create_pool(
 #[allow(clippy::too_many_arguments)]
 pub fn deposit(
     program_id: &Pubkey,
-    pool_market: &Pubkey,
-    pool: &Pubkey,
+    income_pool_market: &Pubkey,
+    income_pool: &Pubkey,
     source: &Pubkey,
     token_account: &Pubkey,
     user_transfer_authority: &Pubkey,
     amount: u64,
 ) -> Instruction {
     let accounts = vec![
-        AccountMeta::new_readonly(*pool_market, false),
-        AccountMeta::new_readonly(*pool, false),
+        AccountMeta::new_readonly(*income_pool_market, false),
+        AccountMeta::new_readonly(*income_pool, false),
         AccountMeta::new(*source, false),
         AccountMeta::new(*token_account, false),
         AccountMeta::new_readonly(*user_transfer_authority, true),
@@ -145,21 +145,21 @@ pub fn deposit(
 #[allow(clippy::too_many_arguments)]
 pub fn withdraw(
     program_id: &Pubkey,
-    pool_market: &Pubkey,
-    pool: &Pubkey,
-    token_account: &Pubkey,
+    income_pool_market: &Pubkey,
+    income_pool: &Pubkey,
+    income_token_account: &Pubkey,
     general_pool: &Pubkey,
     general_pool_token_account: &Pubkey,
 ) -> Instruction {
-    let (pool_market_authority, _) = find_program_address(program_id, pool_market);
+    let (pool_market_authority, _) = find_program_address(program_id, income_pool_market);
 
     let accounts = vec![
-        AccountMeta::new_readonly(*pool_market, false),
-        AccountMeta::new_readonly(*pool, false),
-        AccountMeta::new(*token_account, false),
+        AccountMeta::new_readonly(*income_pool_market, false),
+        AccountMeta::new_readonly(*income_pool, false),
+        AccountMeta::new(*income_token_account, false),
         AccountMeta::new_readonly(pool_market_authority, false),
         AccountMeta::new_readonly(*general_pool, false),
-        AccountMeta::new_readonly(*general_pool_token_account, false),
+        AccountMeta::new(*general_pool_token_account, false),
         AccountMeta::new_readonly(everlend_ulp::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
     ];

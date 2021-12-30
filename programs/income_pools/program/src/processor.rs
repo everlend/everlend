@@ -8,9 +8,10 @@ use crate::{
 use borsh::BorshDeserialize;
 use everlend_ulp::state::Pool;
 use everlend_utils::{
-    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
+    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized, find_program_address,
     cpi,
 };
+
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
@@ -123,28 +124,28 @@ impl Processor {
     /// Process Deposit instruction
     pub fn deposit(program_id: &Pubkey, amount: u64, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
-        let pool_market_info = next_account_info(account_info_iter)?;
-        let pool_info = next_account_info(account_info_iter)?;
+        let income_pool_market_info = next_account_info(account_info_iter)?;
+        let income_pool_info = next_account_info(account_info_iter)?;
         let source_info = next_account_info(account_info_iter)?;
-        let token_account_info = next_account_info(account_info_iter)?;
+        let income_pool_token_account_info = next_account_info(account_info_iter)?;
         let user_transfer_authority_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
         assert_signer(user_transfer_authority_info)?;
 
-        assert_owned_by(pool_market_info, program_id)?;
-        assert_owned_by(pool_info, program_id)?;
+        assert_owned_by(income_pool_market_info, program_id)?;
+        assert_owned_by(income_pool_info, program_id)?;
 
         // Get pool state
-        let pool = IncomePool::unpack(&pool_info.data.borrow())?;
+        let income_pool = IncomePool::unpack(&income_pool_info.data.borrow())?;
 
-        assert_account_key(pool_market_info, &pool.income_pool_market)?;
-        assert_account_key(token_account_info, &pool.token_account)?;
+        assert_account_key(income_pool_market_info, &income_pool.income_pool_market)?;
+        assert_account_key(income_pool_token_account_info, &income_pool.token_account)?;
 
         // Transfer token from source to token account
         cpi::spl_token::transfer(
             source_info.clone(),
-            token_account_info.clone(),
+            income_pool_token_account_info.clone(),
             user_transfer_authority_info.clone(),
             amount,
             &[],
@@ -156,24 +157,24 @@ impl Processor {
     /// Process Withdraw instruction
     pub fn withdraw(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
-        let pool_market_info = next_account_info(account_info_iter)?;
-        let pool_info = next_account_info(account_info_iter)?;
-        let token_account_info = next_account_info(account_info_iter)?;
-        let pool_market_authority_info = next_account_info(account_info_iter)?;
+        let income_pool_market_info = next_account_info(account_info_iter)?;
+        let income_pool_info = next_account_info(account_info_iter)?;
+        let income_pool_token_account_info = next_account_info(account_info_iter)?;
+        let income_pool_market_authority_info = next_account_info(account_info_iter)?;
         let general_pool_info = next_account_info(account_info_iter)?;
         let general_pool_token_account_info = next_account_info(account_info_iter)?;
         let _everlend_ulp_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
-        assert_owned_by(pool_market_info, program_id)?;
-        assert_owned_by(pool_info, program_id)?;
+        assert_owned_by(income_pool_market_info, program_id)?;
+        assert_owned_by(income_pool_info, program_id)?;
         assert_owned_by(general_pool_info, &everlend_ulp::id())?;
 
-        let pool_market = IncomePoolMarket::unpack(&pool_market_info.data.borrow())?;
+        let pool_market = IncomePoolMarket::unpack(&income_pool_market_info.data.borrow())?;
 
-        let pool = IncomePool::unpack(&pool_info.data.borrow())?;
-        assert_account_key(pool_market_info, &pool.income_pool_market)?;
-        assert_account_key(token_account_info, &pool.token_account)?;
+        let pool = IncomePool::unpack(&income_pool_info.data.borrow())?;
+        assert_account_key(income_pool_market_info, &pool.income_pool_market)?;
+        assert_account_key(income_pool_token_account_info, &pool.token_account)?;
 
         let general_pool = Pool::unpack(&general_pool_info.data.borrow())?;
         if general_pool.pool_market != pool_market.general_pool_market {
@@ -181,9 +182,21 @@ impl Processor {
         }
         assert_account_key(general_pool_token_account_info, &general_pool.token_account)?;
 
-        let token_amount = Account::unpack_unchecked(&token_account_info.data.borrow())?.amount;
+        let token_amount = Account::unpack_unchecked(&income_pool_token_account_info.data.borrow())?.amount;
 
-        // ...
+        let (income_pool_market_authority, bump_seed) = find_program_address(program_id, income_pool_market_info.key);
+        assert_account_key(income_pool_market_authority_info, &income_pool_market_authority)?;
+
+        let signers_seeds = &[&income_pool_market_info.key.to_bytes()[..32], &[bump_seed]];
+
+        // Transfer from token account to destination
+        cpi::spl_token::transfer(
+            income_pool_token_account_info.clone(),
+            general_pool_token_account_info.clone(),
+            income_pool_market_authority_info.clone(),
+            token_amount,
+            &[signers_seeds],
+        )?;
 
         Ok(())
     }

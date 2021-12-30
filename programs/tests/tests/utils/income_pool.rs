@@ -7,6 +7,7 @@ use solana_sdk::{
     transaction::Transaction,
     transport,
 };
+use crate::utils::TestPool;
 
 #[derive(Debug)]
 pub struct TestIncomePool {
@@ -94,6 +95,29 @@ impl TestIncomePool {
             )],
             Some(&context.payer.pubkey()),
             &[&context.payer, &user.owner],
+            context.last_blockhash,
+        );
+
+        context.banks_client.process_transaction(tx).await
+    }
+
+    pub async fn withdraw(
+        &self,
+        context: &mut ProgramTestContext,
+        test_income_pool_market: &TestIncomePoolMarket,
+        general_pool: &TestPool,
+    ) -> transport::Result<()> {
+        let tx = Transaction::new_signed_with_payer(
+            &[instruction::withdraw(
+                &everlend_income_pools::id(),
+                &test_income_pool_market.keypair.pubkey(),
+                &self.pool_pubkey,
+                  &self.token_account.pubkey(),
+                &general_pool.pool_pubkey,
+                &general_pool.token_account.pubkey(),
+            )],
+            Some(&context.payer.pubkey()),
+            &[&context.payer],
             context.last_blockhash,
         );
 

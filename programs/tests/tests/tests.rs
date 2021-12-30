@@ -31,4 +31,5 @@ mod income_pools {
     mod create_pool;
     mod deposit;
     mod init_pool_market;
+    mod withdraw;
 }
