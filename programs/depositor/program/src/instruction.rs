@@ -317,8 +317,6 @@ pub fn withdraw(
     );
 
     // Income pool
-    let (income_pool_market_authority, _) =
-        find_program_address(&everlend_income_pools::id(), income_pool_market);
     let (income_pool, _) = everlend_income_pools::find_pool_program_address(
         &everlend_income_pools::id(),
         income_pool_market,
@@ -352,7 +350,6 @@ pub fn withdraw(
         AccountMeta::new(*general_pool_token_account, false),
         // Income pool
         AccountMeta::new_readonly(*income_pool_market, false),
-        AccountMeta::new_readonly(income_pool_market_authority, false),
         AccountMeta::new_readonly(income_pool, false),
         AccountMeta::new(*income_pool_token_account, false),
         // Money market pool

@@ -8,7 +8,6 @@ use solana_program::{
 #[allow(clippy::too_many_arguments)]
 pub fn deposit<'a>(
     pool_market: AccountInfo<'a>,
-    pool_market_authority: AccountInfo<'a>,
     pool: AccountInfo<'a>,
     source: AccountInfo<'a>,
     token_account: AccountInfo<'a>,
@@ -33,7 +32,6 @@ pub fn deposit<'a>(
             pool,
             source,
             token_account,
-            pool_market_authority,
             user_transfer_authority,
         ],
         signers_seeds,

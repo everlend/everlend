@@ -345,7 +345,6 @@ impl Processor {
         let general_pool_token_account_info = next_account_info(account_info_iter)?;
 
         let income_pool_market_info = next_account_info(account_info_iter)?;
-        let income_pool_market_authority_info = next_account_info(account_info_iter)?;
         let income_pool_info = next_account_info(account_info_iter)?;
         let income_pool_token_account_info = next_account_info(account_info_iter)?;
 
@@ -423,7 +422,11 @@ impl Processor {
         // TODO: Received liquidity amount may be less
         // https://blog.neodyme.io/posts/lending_disclosure
         let repay_amount = cmp::min(liquidity_amount, step.amount);
-        let income_amount = liquidity_amount - step.amount;
+        let income_amount: i64 = (liquidity_amount as i64)
+            .checked_sub(step.amount as i64)
+            .ok_or(EverlendError::MathOverflow)?;
+
+        msg!("Step amount: {}", step.amount);
         msg!("Income amount: {}", income_amount);
 
         msg!("Repay to General Pool");
@@ -444,12 +447,11 @@ impl Processor {
         if income_amount > 0 {
             everlend_income_pools::cpi::deposit(
                 income_pool_market_info.clone(),
-                income_pool_market_authority_info.clone(),
                 income_pool_info.clone(),
                 liquidity_transit_info.clone(),
                 income_pool_token_account_info.clone(),
                 depositor_authority_info.clone(),
-                income_amount,
+                income_amount as u64,
                 &[signers_seeds],
             )?;
         }
