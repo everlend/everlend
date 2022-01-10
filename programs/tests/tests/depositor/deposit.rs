@@ -18,6 +18,9 @@ async fn setup() -> (
     TestPool,
     LiquidityProvider,
     TestDepositor,
+    TestLiquidityOracle,
+    TestTokenDistribution,
+    DistributionArray,
 ) {
     let (mut context, money_market, pyth_oracle) = presetup().await;
 
@@ -185,6 +188,9 @@ async fn setup() -> (
         mm_pool,
         liquidity_provider,
         test_depositor,
+        test_liquidity_oracle,
+        test_token_distribution,
+        distribution,
     )
 }
 
@@ -201,6 +207,9 @@ async fn success() {
         mm_pool,
         _liquidity_provider,
         test_depositor,
+        _,
+        _,
+        _,
     ) = setup().await;
 
     let reserve = money_market.get_reserve_data(&mut context).await;
@@ -232,4 +241,84 @@ async fn success() {
         get_token_balance(&mut context, &reserve.liquidity.supply_pubkey).await,
         reserve_balance_before + 50 * EXP,
     );
+}
+
+#[tokio::test]
+async fn success_increased_liquidity() {
+    let (
+        mut context,
+        money_market,
+        pyth_oracle,
+        general_pool_market,
+        general_pool,
+        _general_pool_borrow_authority,
+        mm_pool_market,
+        mm_pool,
+        liquidity_provider,
+        test_depositor,
+        test_liquidity_oracle,
+        test_token_distribution,
+        distribution,
+    ) = setup().await;
+    let payer_pubkey = context.payer.pubkey();
+
+    // Rates should be refreshed
+    context.warp_to_slot(3).unwrap();
+    pyth_oracle.update(&mut context, 3).await;
+
+    // 1. Complete first rebalancing
+
+    test_depositor
+        .deposit(
+            &mut context,
+            &general_pool_market,
+            &general_pool,
+            &mm_pool_market,
+            &mm_pool,
+            &money_market,
+            // 50 * EXP,
+        )
+        .await
+        .unwrap();
+
+    // 2. Update token distribution
+
+    test_token_distribution
+        .update(
+            &mut context,
+            &test_liquidity_oracle,
+            payer_pubkey,
+            distribution,
+        )
+        .await
+        .unwrap();
+
+    // 3. Add liquidity
+    general_pool
+        .deposit(
+            &mut context,
+            &general_pool_market,
+            &liquidity_provider,
+            50 * EXP,
+        )
+        .await
+        .unwrap();
+
+    // 4. Start new rebalancing with new liquidity
+
+    test_depositor
+        .start_rebalancing(
+            &mut context,
+            &general_pool_market,
+            &general_pool,
+            &test_liquidity_oracle,
+        )
+        .await
+        .unwrap();
+
+    let rebalancing = test_depositor
+        .get_rebalancing_data(&mut context, &general_pool.token_mint_pubkey)
+        .await;
+
+    println!("Rebalancing: {:#?}", rebalancing);
 }

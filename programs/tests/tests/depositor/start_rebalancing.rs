@@ -11,7 +11,6 @@ async fn setup() -> (
     TestPoolMarket,
     TestPool,
     TestLiquidityOracle,
-    TestTokenDistribution,
 ) {
     let mut context = presetup().await.0;
 
@@ -99,20 +98,13 @@ async fn setup() -> (
         general_pool_market,
         general_pool,
         test_liquidity_oracle,
-        test_token_distribution,
     )
 }
 
 #[tokio::test]
 async fn success() {
-    let (
-        mut context,
-        test_depositor,
-        general_pool_market,
-        general_pool,
-        test_liquidity_oracle,
-        test_token_distribution,
-    ) = setup().await;
+    let (mut context, test_depositor, general_pool_market, general_pool, test_liquidity_oracle) =
+        setup().await;
 
     test_depositor
         .start_rebalancing(

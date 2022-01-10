@@ -27,11 +27,14 @@ pub struct Rebalancing {
     /// Mint
     pub mint: Pubkey,
 
-    /// Money market collateral supply
+    /// Total liquidity supply
+    pub liquidity_supply: u64,
+
+    /// Collateral supply in each market
     pub money_market_collateral_supply: [u64; LENDINGS_SIZE],
 
     /// Latest token distribution from liquidity oracle
-    pub latest_token_distribution: TokenDistribution,
+    pub token_distribution: TokenDistribution,
 
     /// Rebalancing steps
     pub steps: Vec<RebalancingStep>,
@@ -48,10 +51,10 @@ impl Rebalancing {
     /// Generate new steps from new and latest distribuition arrays
     pub fn compute(
         &mut self,
-        token_distribution: TokenDistribution,
-        total_amount: u64,
+        new_token_distribution: TokenDistribution,
+        new_liquidity_supply: u64,
     ) -> Result<(), ProgramError> {
-        if token_distribution.updated_at <= self.latest_token_distribution.updated_at {
+        if new_token_distribution.updated_at <= self.token_distribution.updated_at {
             return Err(ProgramError::InvalidArgument);
         }
 
@@ -60,37 +63,46 @@ impl Rebalancing {
 
         // Compute steps
         for i in 0..LENDINGS_SIZE {
-            let money_market = token_distribution.distribution[i].money_market;
+            let money_market = new_token_distribution.distribution[i].money_market;
 
             // If distribution is over
             if money_market == Default::default() {
                 break;
             }
 
-            let percent = token_distribution.distribution[i].percent;
-            let latest_percent = self.latest_token_distribution.distribution[i].percent;
-            let percent_diff = abs_diff(percent, latest_percent)?;
+            let money_market_liquidity_supply = amount_share(
+                self.liquidity_supply,
+                self.token_distribution.distribution[i].percent,
+            )?;
+            let new_money_market_liquidity_supply = amount_share(
+                new_liquidity_supply,
+                new_token_distribution.distribution[i].percent,
+            )?;
 
-            match percent.cmp(&latest_percent) {
+            match new_money_market_liquidity_supply.cmp(&money_market_liquidity_supply) {
                 Ordering::Greater => {
                     self.add_rebalancing_step(RebalancingStep::new(
                         money_market,
                         RebalancingOperation::Deposit,
-                        amount_share(total_amount, percent_diff)?,
+                        new_money_market_liquidity_supply - money_market_liquidity_supply,
                         0, // this will be calculated at the deposit stage
                     ));
                 }
                 Ordering::Less => {
                     let money_market_index = self.get_money_market_index(&money_market);
+                    // Compute collateral amount depending on amount percent
                     let collateral_amount = amount_share(
                         self.money_market_collateral_supply[money_market_index],
-                        percent_div(percent_diff, latest_percent)?,
+                        percent_div(
+                            new_money_market_liquidity_supply,
+                            money_market_liquidity_supply,
+                        )?,
                     )?;
 
                     self.add_rebalancing_step(RebalancingStep::new(
                         money_market,
                         RebalancingOperation::Withdraw,
-                        amount_share(total_amount, percent_diff)?,
+                        money_market_liquidity_supply - new_money_market_liquidity_supply,
                         collateral_amount,
                     ));
                 }
@@ -102,7 +114,8 @@ impl Rebalancing {
         self.steps
             .sort_by(|a, b| a.operation.partial_cmp(&b.operation).unwrap());
 
-        self.latest_token_distribution = token_distribution;
+        self.token_distribution = new_token_distribution;
+        self.liquidity_supply = new_liquidity_supply;
 
         Ok(())
     }
@@ -155,7 +168,7 @@ impl Rebalancing {
 
     /// Get money market index by program id and token distribution
     pub fn get_money_market_index(&self, money_market_program_id: &Pubkey) -> usize {
-        self.latest_token_distribution
+        self.token_distribution
             .distribution
             .iter()
             .position(|&d| d.money_market == *money_market_program_id)
@@ -187,9 +200,9 @@ pub struct InitRebalancingParams {
 
 impl Sealed for Rebalancing {}
 impl Pack for Rebalancing {
-    // 1 + 32 + 32 + 409 + (4 + 5 * 50) = 728
+    // 1 + 32 + 32 + 8 + 409 + (4 + 5 * 50) = 736
     const LEN: usize =
-        65 + TokenDistribution::LEN + (4 + TOTAL_REBALANCING_STEP * RebalancingStep::LEN);
+        73 + TokenDistribution::LEN + (4 + TOTAL_REBALANCING_STEP * RebalancingStep::LEN);
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;
