@@ -12,9 +12,9 @@
 ---
 | Asset | Token Mint | Transit |
 |---|---|---|
-| SOL | `So11111111111111111111111111111111111111112` | [x] |
-| USDC | `G6YKv19AeGZ6pUYUwY9D7n4Ry9ESNFa376YqwEkUkhbi` | [x] |
-| USDT | `9NGDi2tZtNmCCp8SVLKNuGjuWAVwNF3Vap5tT8km5er9` | [x] |
+| SOL | `So11111111111111111111111111111111111111112` | ✔️ |
+| USDC | `G6YKv19AeGZ6pUYUwY9D7n4Ry9ESNFa376YqwEkUkhbi` | ✔️ |
+| USDT | `9NGDi2tZtNmCCp8SVLKNuGjuWAVwNF3Vap5tT8km5er9` | ✔️ |
 
 ---
 General pool market: `FBcePJ7K7QqpDqHJfTURUeGAihzQzmS1EpFKMmLxdz12`
@@ -48,9 +48,9 @@ Income pool market: `75dUVeCHST3U1YQpLNVdtMKo3N6wMWqgKJWSNzw3zVhR`
 Port Finance Pools
 | Asset | Collateral Mint | Pool | Token Account | Transit |
 |---|---|---|---|---|
-| SOL | `Hk4Rp3kaPssB6hnjah3Mrqpt5CAXWGoqFT5dVsWA3TaM` | `FJigZFrkzknG2J9unAtKd5ev2USXd8K9XuqjrYp9jacS` | `G5zyHgnJsVqsCJEE3nL87TDFBxYD52p3S1yPFvoH3tdr` | [x] |
-| USDC | `HyxraiKfdajDbYTC6MVRToEUBdevBN5M5gfyR4LC3WSF` | `7nz9X54wsWbzfhBcKYLo9H7SGQmY2a6ujTXztWp18Hsb` | `4sfjzXUCXocw3vmTpupXf5JYXa9PuDNXzJ8959Gv1wB1` | [x] |
-| USDT | `4xEXmSfLFPkZaxdL98XkoxKpXEvchPVs21GYqa8DvbAm` | `GwLq9MpGKqq9TGbJJpDgzoMsWV4tbxrCs8WjPEkhq3ZZ` | `9dwAoimLCp4ysnuosfqSpbp8NMjSt6zN1hkWk4KkmEjY` | [x] |
+| SOL | `Hk4Rp3kaPssB6hnjah3Mrqpt5CAXWGoqFT5dVsWA3TaM` | `FJigZFrkzknG2J9unAtKd5ev2USXd8K9XuqjrYp9jacS` | `G5zyHgnJsVqsCJEE3nL87TDFBxYD52p3S1yPFvoH3tdr` | ✔️ |
+| USDC | `HyxraiKfdajDbYTC6MVRToEUBdevBN5M5gfyR4LC3WSF` | `7nz9X54wsWbzfhBcKYLo9H7SGQmY2a6ujTXztWp18Hsb` | `4sfjzXUCXocw3vmTpupXf5JYXa9PuDNXzJ8959Gv1wB1` | ✔️ |
+| USDT | `4xEXmSfLFPkZaxdL98XkoxKpXEvchPVs21GYqa8DvbAm` | `GwLq9MpGKqq9TGbJJpDgzoMsWV4tbxrCs8WjPEkhq3ZZ` | `9dwAoimLCp4ysnuosfqSpbp8NMjSt6zN1hkWk4KkmEjY` | ✔️ |
 
 ---
 
