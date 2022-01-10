@@ -1,0 +1,17 @@
+[package]
+name = "everlend-income-pools-cli"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+bs58 = "0.2.5"
+clap = "2.33.3"
+solana-clap-utils = "1.9.2"
+solana-cli-config = "1.9.2"
+solana-account-decoder = "1.9.2"
+solana-client = "1.9.2"
+solana-logger = "1.9.2"
+solana-sdk = "1.9.2"
+solana-program = "1.9.2"
+everlend-income-pools = { path="../program", features = [ "no-entrypoint" ] }
+spl-token = { version = "3.1", features = [ "no-entrypoint" ] }

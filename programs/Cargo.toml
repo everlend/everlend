@@ -6,6 +6,7 @@ members = [
   "ulp/cli",
   "liquidity_oracle/program",
   "income_pools/program",
+  "income_pools/cli",
   "tests",
   "e2e",
 ]

@@ -14,7 +14,6 @@ cargo run delete-pool-borrow-authority --borrower FjvDD58C8Su9Uq92dztpUpAkoY9dzA
 ```
 
 ```
-solana program deploy /Users/vecheslav/Workspace/work/everlend/everlend/programs/target/deploy/everlend_ulp.so && \
 cargo run create-market --keypair locnet_keypair.json && \
 spl-token create-token t1_keypair.json && \
 spl-token create-token t2_keypair.json && \
