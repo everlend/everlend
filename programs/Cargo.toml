@@ -2,6 +2,7 @@
 members = [
   "utils",
   "depositor/program",
+  "depositor/cli",
   "ulp/program",
   "ulp/cli",
   "liquidity_oracle/program",
