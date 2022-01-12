@@ -21,7 +21,7 @@ General pool market: `FBcePJ7K7QqpDqHJfTURUeGAihzQzmS1EpFKMmLxdz12`
 
 Liquidity oracle: `7TJU8xVkERZJvTQvuPMYs9tX9hHGrtgsWBJgUKYzHeQD`
 
-Depositor: `DJYhr7AnZqF16D2hss5KE5Jo5HG5KPvDE4Ej9sjWjjU8`
+Depositor: `DZkLSoRZTMoL4CjM9mjgMQsGPr7NDATWypbn2orszPgU`
 
 | Asset | Pool | Token Account |
 |---|---|---|
@@ -60,5 +60,11 @@ Larix Pools
 | USDT | `843acSMyPhnvM3PMBx7LZXj1AXWdWV4e2GUE7yNeYoLP` | `DvkyouVY7SWnga66yib3jdFToeNAvNvAmDTRt2A6NCnZ` | `8egfa2MPPxapPREXLBdikn1LKAYKDbrSAF5FiYrmadwh` | ✔️ |
 
 ---
+Collateral Tokens
+| Asset | Port Finance | Larix Pools | Transit |
+|---|---|---|---|
+| SOL | `Hk4Rp3kaPssB6hnjah3Mrqpt5CAXWGoqFT5dVsWA3TaM` | `23rfWYGvfCjVxJNW5Ce8E4xXXgjKgZTyJFwuQg6BMB4G` | ✔️ |
+| USDC | `HyxraiKfdajDbYTC6MVRToEUBdevBN5M5gfyR4LC3WSF` | `6uhdPo2Q1LnMXvcScALwG5HzP89s8wJc5XSaXbpG3FmT` | ✔️ |
+| USDT | `4xEXmSfLFPkZaxdL98XkoxKpXEvchPVs21GYqa8DvbAm` | `CkBWWEUwVdJybN1CPP8VsV4JJpbJ8w9Hd86d7xu6BRHG` | ✔️ |
 
 
