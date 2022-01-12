@@ -4,7 +4,7 @@ use super::{AccountType, RebalancingStep, TOTAL_REBALANCING_STEP};
 use crate::state::RebalancingOperation;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use everlend_liquidity_oracle::state::{TokenDistribution, LENDINGS_SIZE};
-use everlend_utils::{abs_diff, amount_share, percent_div, EverlendError};
+use everlend_utils::{abs_diff, amount_share, percent_div, EverlendError, PRECISION_MUL};
 use solana_program::{
     clock::Slot,
     msg,
@@ -70,13 +70,15 @@ impl Rebalancing {
                 break;
             }
 
-            let money_market_liquidity_supply = amount_share(
-                self.liquidity_supply,
-                self.token_distribution.distribution[i].percent,
-            )?;
-            let new_money_market_liquidity_supply = amount_share(
-                new_liquidity_supply,
-                new_token_distribution.distribution[i].percent,
+            let percent = self.token_distribution.distribution[i].percent;
+            let new_percent = new_token_distribution.distribution[i].percent;
+
+            let money_market_liquidity_supply = amount_share(self.liquidity_supply, percent)?;
+            let new_money_market_liquidity_supply =
+                amount_share(new_liquidity_supply, new_percent)?;
+            let amount = abs_diff(
+                new_money_market_liquidity_supply,
+                money_market_liquidity_supply,
             )?;
 
             match new_money_market_liquidity_supply.cmp(&money_market_liquidity_supply) {
@@ -84,25 +86,29 @@ impl Rebalancing {
                     self.add_rebalancing_step(RebalancingStep::new(
                         money_market,
                         RebalancingOperation::Deposit,
-                        new_money_market_liquidity_supply - money_market_liquidity_supply,
+                        amount,
                         0, // this will be calculated at the deposit stage
                     ));
                 }
                 Ordering::Less => {
                     let money_market_index = self.get_money_market_index(&money_market);
+                    let collateral_percent = PRECISION_MUL
+                        .checked_sub(percent_div(
+                            new_money_market_liquidity_supply,
+                            money_market_liquidity_supply,
+                        )? as u128)
+                        .ok_or(EverlendError::MathOverflow)?;
+
                     // Compute collateral amount depending on amount percent
                     let collateral_amount = amount_share(
                         self.money_market_collateral_supply[money_market_index],
-                        percent_div(
-                            new_money_market_liquidity_supply,
-                            money_market_liquidity_supply,
-                        )?,
+                        collateral_percent as u64,
                     )?;
 
                     self.add_rebalancing_step(RebalancingStep::new(
                         money_market,
                         RebalancingOperation::Withdraw,
-                        money_market_liquidity_supply - new_money_market_liquidity_supply,
+                        amount,
                         collateral_amount,
                     ));
                 }
@@ -200,9 +206,11 @@ pub struct InitRebalancingParams {
 
 impl Sealed for Rebalancing {}
 impl Pack for Rebalancing {
-    // 1 + 32 + 32 + 8 + 409 + (4 + 5 * 50) = 736
-    const LEN: usize =
-        73 + TokenDistribution::LEN + (4 + TOTAL_REBALANCING_STEP * RebalancingStep::LEN);
+    // 1 + 32 + 32 + 8 + (8 * 10) + 409 + (4 + 5 * 58) = 856
+    const LEN: usize = 73
+        + (8 * 10)
+        + TokenDistribution::LEN
+        + (4 + TOTAL_REBALANCING_STEP * RebalancingStep::LEN);
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;

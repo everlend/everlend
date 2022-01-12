@@ -86,8 +86,8 @@ impl RebalancingStep {
 
 impl Sealed for RebalancingStep {}
 impl Pack for RebalancingStep {
-    // 32 + 1 + 8 + (1 + 8)
-    const LEN: usize = 50;
+    // 32 + 1 + 8 + 8 + (1 + 8)
+    const LEN: usize = 58;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;

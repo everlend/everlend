@@ -4,10 +4,11 @@ mod liquidity_oracle;
 mod ulp;
 mod utils;
 
+use everlend_depositor::{find_rebalancing_program_address, state::Rebalancing};
 use everlend_liquidity_oracle::state::{DistributionArray, LiquidityDistribution};
 use everlend_utils::integrations::{self, MoneyMarketPubkeys};
 use solana_client::rpc_client::RpcClient;
-use solana_program::pubkey::Pubkey;
+use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_sdk::{
     commitment_config::CommitmentConfig, signature::read_keypair_file, signer::Signer,
 };
@@ -290,6 +291,13 @@ async fn main() -> anyhow::Result<()> {
         &pool_token_account,
         &liquidity_oracle_pubkey,
     )?;
+
+    let (rebalancing_pubkey, _) =
+        find_rebalancing_program_address(&everlend_depositor::id(), &depositor_pubkey, &sol_mint);
+    let rebalancing_account = config.rpc_client.get_account(&rebalancing_pubkey)?;
+    let rebalancing = Rebalancing::unpack(&rebalancing_account.data)?;
+
+    println!("{:#?}", rebalancing);
 
     println!("9.2. Rebalancing: Withdraw: Port Finance");
     let withdraw_accounts = integrations::withdraw_accounts(

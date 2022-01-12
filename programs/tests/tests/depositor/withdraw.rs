@@ -305,7 +305,7 @@ async fn success() {
     assert!(rebalancing.is_completed());
     assert_eq!(
         get_token_balance(&mut context, &mm_pool.token_account.pubkey()).await,
-        20 * EXP,
+        30 * EXP,
     );
     assert_eq!(
         get_token_balance(&mut context, &reserve.liquidity.supply_pubkey).await,
