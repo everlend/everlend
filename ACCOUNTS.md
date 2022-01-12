@@ -55,9 +55,9 @@ Port Finance Pools
 Larix Pools
 | Asset | Pool | Token Account | Pool Mint | Transit |
 |---|---|---|---|---|
-| SOL | `B6jGoJAErfhiM8iN9KAykbMKAhDf61nnHQXr7VHngSA3` | `5SSsDkx62oF5esYezZ7bEhyUzeSJiFug4sy5oXeefdxB` | `HfmUm5dQN6xNn1iJoXJy1C4DWyHLehTFavbU9UWKHrYB` | ✔️ |
-| USDC | `EjX1dXziHtgNPRbatUnV46r3CcsTUMMR341yrtzicBya` | `4sFE2xm6RLBAkEkuVQdsQTEeo2wiz72BdXSizj7Wk8zU` | `7uGV3U8V1AqtFbQdoeKZMxzcSGJLXsqpPPQLvjVWdzCQ` | ✔️ |
-| USDT | `843acSMyPhnvM3PMBx7LZXj1AXWdWV4e2GUE7yNeYoLP` | `DvkyouVY7SWnga66yib3jdFToeNAvNvAmDTRt2A6NCnZ` | `8egfa2MPPxapPREXLBdikn1LKAYKDbrSAF5FiYrmadwh` | ✔️ |
+| SOL | `4Dvi5vu5VHTuh8hdAkXKr8jp1drH4s8PmbiqY7mqwTon` | `9hdMLVM6o6fkyzqpNUU2xjygL7MeBAXk7occSq62ts7o` | `EjGWSCzfPK5VsXRn5ezy5yJbugNmngDj5Hwh7fE372mn` | ✔️ |
+| USDC | `C8VwTM6NjfsburuZhG8vKRBTxwx6xH52E8QsowKxaJhK` | `HyjkAeq3aVy9areeKgxDjesyYK158q9kc3D7TfeFKhmQ` | `7UtBjSHBEGMzNZ82SwxA4Bpm78GexnYEv9w7P9j1EfuB` | ✔️ |
+| USDT | `AfSdwLiYxZhADxv9uLxQQWq1W46U2VZYH2HjbpZk6kmT` | `HK92uwv1fx9MGSmSmDQsCZ9A8twG3pH9XZuVaePkuTyE` | `B3txN4uLy6ohxvMzNqQAkcrZ9Rj3J5BevLPcQYBVpqiY` | ✔️ |
 
 ---
 Collateral Tokens
