@@ -14,4 +14,5 @@ solana-logger = "1.9.2"
 solana-sdk = "1.9.2"
 solana-program = "1.9.2"
 everlend-depositor = { path="../program", features = [ "no-entrypoint" ] }
+everlend-utils = { path = "../../utils" }
 spl-token = { version = "3.1", features = [ "no-entrypoint" ] }

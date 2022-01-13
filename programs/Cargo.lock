@@ -795,6 +795,7 @@ dependencies = [
  "bs58 0.2.5",
  "clap",
  "everlend-depositor",
+ "everlend-utils",
  "solana-account-decoder",
  "solana-clap-utils",
  "solana-cli-config",

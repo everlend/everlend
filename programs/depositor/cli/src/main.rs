@@ -116,7 +116,11 @@ fn command_depositor_info(config: &Config, depositor_pubkey: &Pubkey) -> Command
     let depositor_account = config.rpc_client.get_account(depositor_pubkey)?;
     let depositor = Depositor::unpack(&depositor_account.data)?;
 
+    let (depositor_authority, _) =
+        &everlend_utils::find_program_address(&everlend_depositor::id(), depositor_pubkey);
+
     println!("{:#?}", depositor);
+    println!("Depositor authority: {:?}", depositor_authority);
 
     Ok(None)
 }
@@ -349,6 +353,7 @@ fn main() {
         }
         ("depositor-info", Some(arg_matches)) => {
             let depositor_pubkey = pubkey_of(arg_matches, "depositor_pubkey").unwrap();
+
             command_depositor_info(&config, &depositor_pubkey)
         }
         ("create-transit", Some(arg_matches)) => {
