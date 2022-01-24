@@ -1,7 +1,7 @@
 #![cfg(feature = "test-bpf")]
 
 use crate::utils::*;
-use everlend_liquidity_oracle::state::{DistributionArray, LiquidityDistribution};
+use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_utils::find_program_address;
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::*;
@@ -11,6 +11,7 @@ async fn setup() -> (
     ProgramTestContext,
     TestSPLTokenLending,
     TestPythOracle,
+    TestRegistry,
     TestPoolMarket,
     TestPool,
     TestPoolBorrowAuthority,
@@ -22,7 +23,7 @@ async fn setup() -> (
     TestTokenDistribution,
     DistributionArray,
 ) {
-    let (mut context, money_market, pyth_oracle) = presetup().await;
+    let (mut context, money_market, pyth_oracle, registry) = presetup().await;
 
     let payer_pubkey = context.payer.pubkey();
 
@@ -97,10 +98,7 @@ async fn setup() -> (
     test_liquidity_oracle.init(&mut context).await.unwrap();
 
     let mut distribution = DistributionArray::default();
-    distribution[0] = LiquidityDistribution {
-        money_market: spl_token_lending::id(),
-        percent: 500_000_000u64, // 50%
-    };
+    distribution[0] = 500_000_000u64; // 50%
 
     let test_token_distribution =
         TestTokenDistribution::new(general_pool.token_mint_pubkey, distribution);
@@ -170,6 +168,7 @@ async fn setup() -> (
     test_depositor
         .start_rebalancing(
             &mut context,
+            &registry,
             &general_pool_market,
             &general_pool,
             &test_liquidity_oracle,
@@ -181,6 +180,7 @@ async fn setup() -> (
         context,
         money_market,
         pyth_oracle,
+        registry,
         general_pool_market,
         general_pool,
         general_pool_borrow_authority,
@@ -200,6 +200,7 @@ async fn success() {
         mut context,
         money_market,
         pyth_oracle,
+        registry,
         general_pool_market,
         general_pool,
         _general_pool_borrow_authority,
@@ -223,6 +224,7 @@ async fn success() {
     test_depositor
         .deposit(
             &mut context,
+            &registry,
             &general_pool_market,
             &general_pool,
             &mm_pool_market,
@@ -249,6 +251,7 @@ async fn success_increased_liquidity() {
         mut context,
         money_market,
         pyth_oracle,
+        registry,
         general_pool_market,
         general_pool,
         _general_pool_borrow_authority,
@@ -271,6 +274,7 @@ async fn success_increased_liquidity() {
     test_depositor
         .deposit(
             &mut context,
+            &registry,
             &general_pool_market,
             &general_pool,
             &mm_pool_market,
@@ -309,6 +313,7 @@ async fn success_increased_liquidity() {
     test_depositor
         .start_rebalancing(
             &mut context,
+            &registry,
             &general_pool_market,
             &general_pool,
             &test_liquidity_oracle,

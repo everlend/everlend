@@ -1,8 +1,8 @@
 use crate::EverlendError;
 use solana_program::program_error::ProgramError;
 
-/// Multiply precision
-pub const PRECISION_MUL: u128 = 1_000_000_000;
+/// Scale for precision
+pub const PRECISION_SCALER: u128 = 1_000_000_000;
 
 pub fn abs_diff(a: u64, b: u64) -> Result<u64, ProgramError> {
     let diff = (a as i128)
@@ -16,7 +16,7 @@ pub fn abs_diff(a: u64, b: u64) -> Result<u64, ProgramError> {
 
 pub fn percent_div(a: u64, b: u64) -> Result<u64, ProgramError> {
     let res = (a as u128)
-        .checked_mul(PRECISION_MUL)
+        .checked_mul(PRECISION_SCALER)
         .ok_or(EverlendError::MathOverflow)?
         .checked_div(b as u128)
         .ok_or(EverlendError::MathOverflow)?;
@@ -28,7 +28,7 @@ pub fn amount_share(total_amount: u64, percent: u64) -> Result<u64, ProgramError
     let amount = (percent as u128)
         .checked_mul(total_amount as u128)
         .ok_or(EverlendError::MathOverflow)?
-        .checked_div(PRECISION_MUL)
+        .checked_div(PRECISION_SCALER)
         .ok_or(EverlendError::MathOverflow)?;
 
     Ok(amount as u64)

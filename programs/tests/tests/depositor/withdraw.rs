@@ -1,7 +1,7 @@
 #![cfg(feature = "test-bpf")]
 
 use crate::utils::*;
-use everlend_liquidity_oracle::state::{DistributionArray, LiquidityDistribution};
+use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_utils::find_program_address;
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::*;
@@ -11,6 +11,7 @@ async fn setup() -> (
     ProgramTestContext,
     TestSPLTokenLending,
     TestPythOracle,
+    TestRegistry,
     TestPoolMarket,
     TestPool,
     TestPoolBorrowAuthority,
@@ -21,7 +22,7 @@ async fn setup() -> (
     LiquidityProvider,
     TestDepositor,
 ) {
-    let (mut context, money_market, pyth_oracle) = presetup().await;
+    let (mut context, money_market, pyth_oracle, registry) = presetup().await;
 
     let payer_pubkey = context.payer.pubkey();
 
@@ -102,10 +103,7 @@ async fn setup() -> (
     test_liquidity_oracle.init(&mut context).await.unwrap();
 
     let mut distribution = DistributionArray::default();
-    distribution[0] = LiquidityDistribution {
-        money_market: spl_token_lending::id(),
-        percent: 500_000_000u64, // 50%
-    };
+    distribution[0] = 500_000_000u64; // 50%
 
     let test_token_distribution =
         TestTokenDistribution::new(general_pool.token_mint_pubkey, distribution);
@@ -175,6 +173,7 @@ async fn setup() -> (
     test_depositor
         .start_rebalancing(
             &mut context,
+            &registry,
             &general_pool_market,
             &general_pool,
             &test_liquidity_oracle,
@@ -192,6 +191,7 @@ async fn setup() -> (
     test_depositor
         .deposit(
             &mut context,
+            &registry,
             &general_pool_market,
             &general_pool,
             &mm_pool_market,
@@ -204,7 +204,7 @@ async fn setup() -> (
 
     // 7.1 Decrease distribution & restart rebalancing
 
-    distribution[0].percent = 300_000_000u64; // Decrease to 30%
+    distribution[0] = 300_000_000u64; // Decrease to 30%
     test_token_distribution
         .update(
             &mut context,
@@ -218,6 +218,7 @@ async fn setup() -> (
     test_depositor
         .start_rebalancing(
             &mut context,
+            &registry,
             &general_pool_market,
             &general_pool,
             &test_liquidity_oracle,
@@ -229,6 +230,7 @@ async fn setup() -> (
         context,
         money_market,
         pyth_oracle,
+        registry,
         general_pool_market,
         general_pool,
         general_pool_borrow_authority,
@@ -247,6 +249,7 @@ async fn success() {
         mut context,
         money_market,
         pyth_oracle,
+        registry,
         general_pool_market,
         general_pool,
         _general_pool_borrow_authority,
@@ -282,6 +285,7 @@ async fn success() {
     test_depositor
         .withdraw(
             &mut context,
+            &registry,
             &general_pool_market,
             &general_pool,
             &income_pool_market,

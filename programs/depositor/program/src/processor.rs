@@ -12,6 +12,7 @@ use borsh::BorshDeserialize;
 use everlend_liquidity_oracle::{
     find_liquidity_oracle_token_distribution_program_address, state::TokenDistribution,
 };
+use everlend_registry::state::RegistryConfig;
 use everlend_ulp::state::Pool;
 use everlend_utils::{
     assert_account_key, assert_owned_by, assert_rent_exempt, assert_uninitialized, cpi,
@@ -117,6 +118,9 @@ impl Processor {
     /// Process StartRebalancing instruction
     pub fn start_rebalancing(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
+
+        let registry_config_info = next_account_info(account_info_iter)?;
+
         let depositor_info = next_account_info(account_info_iter)?;
         let rebalancing_info = next_account_info(account_info_iter)?;
         let mint_info = next_account_info(account_info_iter)?;
@@ -132,9 +136,13 @@ impl Processor {
         let _liquidity_oracle_program_info = next_account_info(account_info_iter)?;
         let _ulp_program_info = next_account_info(account_info_iter)?;
 
+        assert_owned_by(registry_config_info, &everlend_registry::id())?;
         assert_owned_by(depositor_info, program_id)?;
         assert_owned_by(token_distribution_info, &everlend_liquidity_oracle::id())?;
         assert_owned_by(general_pool_info, &everlend_ulp::id())?;
+
+        let registry_config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
+        msg!("{:#?}", registry_config);
 
         // Get depositor state
         let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
@@ -213,7 +221,7 @@ impl Processor {
             .ok_or(EverlendError::MathOverflow)?;
 
         // Compute rebalancing steps
-        rebalancing.compute(token_distribution, total_amount)?;
+        rebalancing.compute(&registry_config, token_distribution, total_amount)?;
         msg!("Steps: {:#?}", rebalancing.steps);
 
         Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
@@ -224,6 +232,8 @@ impl Processor {
     /// Process Deposit instruction
     pub fn deposit(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
+
+        let registry_config_info = next_account_info(account_info_iter)?;
 
         let depositor_info = next_account_info(account_info_iter)?;
         let depositor_authority_info = next_account_info(account_info_iter)?;
@@ -254,8 +264,11 @@ impl Processor {
 
         let money_market_program_info = next_account_info(account_info_iter)?;
 
+        assert_owned_by(registry_config_info, &everlend_registry::id())?;
         assert_owned_by(depositor_info, program_id)?;
         assert_owned_by(rebalancing_info, program_id)?;
+
+        let registry_config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
 
         let mut rebalancing = Rebalancing::unpack(&rebalancing_info.data.borrow())?;
         assert_account_key(depositor_info, &rebalancing.depositor)?;
@@ -273,6 +286,12 @@ impl Processor {
         let signers_seeds = &[&depositor_info.key.to_bytes()[..32], &[bump_seed]];
 
         let step = rebalancing.next_step();
+
+        if registry_config.money_market_program_ids[usize::from(step.money_market_index)]
+            != *money_market_program_info.key
+        {
+            return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
+        }
 
         msg!("Borrow from General Pool");
         everlend_ulp::cpi::borrow(
@@ -319,7 +338,6 @@ impl Processor {
         )?;
 
         rebalancing.execute_step(
-            *money_market_program_info.key,
             RebalancingOperation::Deposit,
             Some(collateral_amount),
             clock.slot,
@@ -333,6 +351,8 @@ impl Processor {
     /// Process Withdraw instruction
     pub fn withdraw(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
+
+        let registry_config_info = next_account_info(account_info_iter)?;
 
         let depositor_info = next_account_info(account_info_iter)?;
         let depositor_authority_info = next_account_info(account_info_iter)?;
@@ -368,8 +388,11 @@ impl Processor {
 
         let money_market_program_info = next_account_info(account_info_iter)?;
 
+        assert_owned_by(registry_config_info, &everlend_registry::id())?;
         assert_owned_by(depositor_info, program_id)?;
         assert_owned_by(rebalancing_info, program_id)?;
+
+        let registry_config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
 
         let mut rebalancing = Rebalancing::unpack(&rebalancing_info.data.borrow())?;
         assert_account_key(depositor_info, &rebalancing.depositor)?;
@@ -388,6 +411,12 @@ impl Processor {
 
         let step = rebalancing.next_step();
 
+        if registry_config.money_market_program_ids[usize::from(step.money_market_index)]
+            != *money_market_program_info.key
+        {
+            return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
+        }
+
         msg!("Withdraw collateral tokens from MM Pool");
         everlend_ulp::cpi::withdraw(
             mm_pool_market_info.clone(),
@@ -398,7 +427,7 @@ impl Processor {
             mm_pool_token_account_info.clone(),
             mm_pool_collateral_mint_info.clone(),
             depositor_authority_info.clone(),
-            step.collateral_amount,
+            step.collateral_amount.unwrap(),
             &[signers_seeds],
         )?;
 
@@ -412,7 +441,7 @@ impl Processor {
             depositor_authority_info.clone(),
             account_info_iter,
             clock_info.clone(),
-            step.collateral_amount,
+            step.collateral_amount.unwrap(),
             &[signers_seeds],
         )?;
 
@@ -456,12 +485,7 @@ impl Processor {
             )?;
         }
 
-        rebalancing.execute_step(
-            *money_market_program_info.key,
-            RebalancingOperation::Withdraw,
-            None,
-            clock.slot,
-        )?;
+        rebalancing.execute_step(RebalancingOperation::Withdraw, None, clock.slot)?;
 
         Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
 

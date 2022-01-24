@@ -40,6 +40,7 @@ pub enum DepositorInstruction {
     /// Start rebalancing
     ///
     /// Accounts:
+    /// [R] Registry config
     /// [R] Depositor
     /// [W] Rebalancing account
     /// [R] Token mint
@@ -59,6 +60,7 @@ pub enum DepositorInstruction {
     /// Collect collateral token to MM Pool.
     ///
     /// Accounts:
+    /// [R] Registry config
     /// [R] Depositor
     /// [R] Depositor authority
     /// [W] Rebalancing account
@@ -87,6 +89,7 @@ pub enum DepositorInstruction {
     /// Collect liquidity token to General Pool.
     ///
     /// Accounts:
+    /// [R] Registry config
     /// [R] Depositor
     /// [R] Depositor authority
     /// [W] Rebalancing account
@@ -161,6 +164,7 @@ pub fn create_transit(
 #[allow(clippy::too_many_arguments)]
 pub fn start_rebalancing(
     program_id: &Pubkey,
+    registry: &Pubkey,
     depositor: &Pubkey,
     mint: &Pubkey,
     general_pool_market: &Pubkey,
@@ -168,6 +172,8 @@ pub fn start_rebalancing(
     liquidity_oracle: &Pubkey,
     from: &Pubkey,
 ) -> Instruction {
+    let (registry_config, _) =
+        everlend_registry::find_config_program_address(&everlend_registry::id(), registry);
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, mint);
     let (token_distribution, _) = find_liquidity_oracle_token_distribution_program_address(
         &everlend_liquidity_oracle::id(),
@@ -178,6 +184,7 @@ pub fn start_rebalancing(
         everlend_ulp::find_pool_program_address(&everlend_ulp::id(), general_pool_market, mint);
 
     let accounts = vec![
+        AccountMeta::new_readonly(registry_config, false),
         AccountMeta::new_readonly(*depositor, false),
         AccountMeta::new(rebalancing, false),
         AccountMeta::new_readonly(*mint, false),
@@ -204,6 +211,7 @@ pub fn start_rebalancing(
 #[allow(clippy::too_many_arguments)]
 pub fn deposit(
     program_id: &Pubkey,
+    registry: &Pubkey,
     depositor: &Pubkey,
     general_pool_market: &Pubkey,
     general_pool_token_account: &Pubkey,
@@ -215,6 +223,8 @@ pub fn deposit(
     money_market_program_id: &Pubkey,
     money_market_accounts: Vec<AccountMeta>,
 ) -> Instruction {
+    let (registry_config, _) =
+        everlend_registry::find_config_program_address(&everlend_registry::id(), registry);
     let (depositor_authority, _) = find_program_address(program_id, depositor);
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
 
@@ -248,6 +258,7 @@ pub fn deposit(
         find_transit_program_address(program_id, depositor, mm_pool_collateral_mint);
 
     let mut accounts = vec![
+        AccountMeta::new_readonly(registry_config, false),
         AccountMeta::new_readonly(*depositor, false),
         AccountMeta::new_readonly(depositor_authority, false),
         AccountMeta::new(rebalancing, false),
@@ -286,6 +297,7 @@ pub fn deposit(
 #[allow(clippy::too_many_arguments)]
 pub fn withdraw(
     program_id: &Pubkey,
+    registry: &Pubkey,
     depositor: &Pubkey,
     general_pool_market: &Pubkey,
     general_pool_token_account: &Pubkey,
@@ -299,6 +311,8 @@ pub fn withdraw(
     money_market_program_id: &Pubkey,
     money_market_accounts: Vec<AccountMeta>,
 ) -> Instruction {
+    let (registry_config, _) =
+        everlend_registry::find_config_program_address(&everlend_registry::id(), registry);
     let (depositor_authority, _) = find_program_address(program_id, depositor);
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
 
@@ -339,6 +353,7 @@ pub fn withdraw(
         find_transit_program_address(program_id, depositor, mm_pool_collateral_mint);
 
     let mut accounts = vec![
+        AccountMeta::new_readonly(registry_config, false),
         AccountMeta::new_readonly(*depositor, false),
         AccountMeta::new_readonly(depositor_authority, false),
         AccountMeta::new(rebalancing, false),

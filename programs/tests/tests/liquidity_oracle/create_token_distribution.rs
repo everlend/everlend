@@ -1,5 +1,5 @@
 use crate::utils::*;
-use everlend_liquidity_oracle::{state::DistributionArray, state::LiquidityDistribution};
+use everlend_liquidity_oracle::state::DistributionArray;
 use solana_program::{clock::Slot, instruction::InstructionError, pubkey::Pubkey};
 use solana_program_test::*;
 use solana_sdk::{signer::Signer, transaction::TransactionError};
@@ -17,10 +17,7 @@ async fn success() {
     context.warp_to_slot(WARP_SLOT).unwrap();
 
     let mut distribution = DistributionArray::default();
-    distribution[0] = LiquidityDistribution {
-        money_market: Pubkey::new_unique(),
-        percent: 100u64,
-    };
+    distribution[0] = 100u64;
 
     let test_token_distribution = TestTokenDistribution::new(token_mint, distribution);
     let authority = context.payer.pubkey();
@@ -53,10 +50,7 @@ async fn fail_second_time_init() {
     context.warp_to_slot(WARP_SLOT).unwrap();
 
     let mut distribution = DistributionArray::default();
-    distribution[0] = LiquidityDistribution {
-        money_market: Pubkey::new_unique(),
-        percent: 100u64,
-    };
+    distribution[0] = 100u64;
 
     let test_token_distribution = TestTokenDistribution::new(token_mint, distribution);
     let authority = context.payer.pubkey();

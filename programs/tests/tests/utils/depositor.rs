@@ -1,6 +1,6 @@
 use super::{
     get_account, TestIncomePool, TestIncomePoolMarket, TestLiquidityOracle, TestPool,
-    TestPoolMarket, TestSPLTokenLending,
+    TestPoolMarket, TestRegistry, TestSPLTokenLending,
 };
 use everlend_depositor::{
     find_rebalancing_program_address,
@@ -101,6 +101,7 @@ impl TestDepositor {
     pub async fn start_rebalancing(
         &self,
         context: &mut ProgramTestContext,
+        registry: &TestRegistry,
         general_pool_market: &TestPoolMarket,
         general_pool: &TestPool,
         liquidity_oracle: &TestLiquidityOracle,
@@ -108,6 +109,7 @@ impl TestDepositor {
         let tx = Transaction::new_signed_with_payer(
             &[everlend_depositor::instruction::start_rebalancing(
                 &everlend_depositor::id(),
+                &registry.keypair.pubkey(),
                 &self.depositor.pubkey(),
                 &general_pool.token_mint_pubkey,
                 &general_pool_market.keypair.pubkey(),
@@ -127,6 +129,7 @@ impl TestDepositor {
     pub async fn deposit(
         &self,
         context: &mut ProgramTestContext,
+        registry: &TestRegistry,
         general_pool_market: &TestPoolMarket,
         general_pool: &TestPool,
         mm_pool_market: &TestPoolMarket,
@@ -154,6 +157,7 @@ impl TestDepositor {
         let tx = Transaction::new_signed_with_payer(
             &[everlend_depositor::instruction::deposit(
                 &everlend_depositor::id(),
+                &registry.keypair.pubkey(),
                 &self.depositor.pubkey(),
                 &general_pool_market.keypair.pubkey(),
                 &general_pool.token_account.pubkey(),
@@ -177,6 +181,7 @@ impl TestDepositor {
     pub async fn withdraw(
         &self,
         context: &mut ProgramTestContext,
+        registry: &TestRegistry,
         general_pool_market: &TestPoolMarket,
         general_pool: &TestPool,
         income_pool_market: &TestIncomePoolMarket,
@@ -206,6 +211,7 @@ impl TestDepositor {
         let tx = Transaction::new_signed_with_payer(
             &[everlend_depositor::instruction::withdraw(
                 &everlend_depositor::id(),
+                &registry.keypair.pubkey(),
                 &self.depositor.pubkey(),
                 &general_pool_market.keypair.pubkey(),
                 &general_pool.token_account.pubkey(),
