@@ -35,8 +35,8 @@ pub struct RebalancingStep {
     /// Deposit or withdraw
     pub operation: RebalancingOperation,
 
-    /// Amount
-    pub amount: u64,
+    /// Liquidity amount
+    pub liquidity_amount: u64,
 
     /// Collateral amount (Undefined for deposit)
     pub collateral_amount: Option<u64>,
@@ -50,13 +50,13 @@ impl RebalancingStep {
     pub fn new(
         money_market_index: u8,
         operation: RebalancingOperation,
-        amount: u64,
+        liquidity_amount: u64,
         collateral_amount: Option<u64>,
     ) -> Self {
         RebalancingStep {
             money_market_index,
             operation,
-            amount,
+            liquidity_amount,
             collateral_amount,
             executed_at: None,
         }

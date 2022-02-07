@@ -29,7 +29,6 @@ use solana_program::{
     sysvar::Sysvar,
 };
 use spl_token::state::Account;
-use std::cmp;
 
 /// Program state handler.
 pub struct Processor {}
@@ -122,17 +121,26 @@ impl Processor {
         let registry_config_info = next_account_info(account_info_iter)?;
 
         let depositor_info = next_account_info(account_info_iter)?;
+        let depositor_authority_info = next_account_info(account_info_iter)?;
         let rebalancing_info = next_account_info(account_info_iter)?;
         let mint_info = next_account_info(account_info_iter)?;
+
         let general_pool_market_info = next_account_info(account_info_iter)?;
+        let general_pool_market_authority_info = next_account_info(account_info_iter)?;
         let general_pool_info = next_account_info(account_info_iter)?;
         let general_pool_token_account_info = next_account_info(account_info_iter)?;
+        let general_pool_borrow_authority_info = next_account_info(account_info_iter)?;
+
+        let liquidity_transit_info = next_account_info(account_info_iter)?;
+
         let liquidity_oracle_info = next_account_info(account_info_iter)?;
         let token_distribution_info = next_account_info(account_info_iter)?;
         let from_info = next_account_info(account_info_iter)?;
+
         let rent_info = next_account_info(account_info_iter)?;
         let rent = &Rent::from_account_info(rent_info)?;
         let _system_program_info = next_account_info(account_info_iter)?;
+        let _token_program_info = next_account_info(account_info_iter)?;
         let _liquidity_oracle_program_info = next_account_info(account_info_iter)?;
         let _ulp_program_info = next_account_info(account_info_iter)?;
 
@@ -214,14 +222,36 @@ impl Processor {
         assert_account_key(general_pool_market_info, &pool.pool_market)?;
         assert_account_key(general_pool_token_account_info, &pool.token_account)?;
 
-        let pool_token_account_amount =
-            Account::unpack_unchecked(&general_pool_token_account_info.data.borrow())?.amount;
-        let total_amount = pool_token_account_amount
+        // Calculate total liquidity supply
+        let general_pool_token_account =
+            Account::unpack_unchecked(&general_pool_token_account_info.data.borrow())?;
+
+        let liquidity_supply = general_pool_token_account
+            .amount
             .checked_add(pool.total_amount_borrowed)
             .ok_or(EverlendError::MathOverflow)?;
 
+        let (depositor_authority_pubkey, bump_seed) =
+            find_program_address(program_id, depositor_info.key);
+        assert_account_key(depositor_authority_info, &depositor_authority_pubkey)?;
+
+        let signers_seeds = &[&depositor_info.key.to_bytes()[..32], &[bump_seed]];
+
+        msg!("Borrow from General Pool");
+        everlend_ulp::cpi::borrow(
+            general_pool_market_info.clone(),
+            general_pool_market_authority_info.clone(),
+            general_pool_info.clone(),
+            general_pool_borrow_authority_info.clone(),
+            liquidity_transit_info.clone(),
+            general_pool_token_account_info.clone(),
+            depositor_authority_info.clone(),
+            general_pool_token_account.amount,
+            &[signers_seeds],
+        )?;
+
         // Compute rebalancing steps
-        rebalancing.compute(&registry_config, token_distribution, total_amount)?;
+        rebalancing.compute(&registry_config, token_distribution, liquidity_supply)?;
         msg!("Steps: {:#?}", rebalancing.steps);
 
         Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
@@ -239,12 +269,6 @@ impl Processor {
         let depositor_authority_info = next_account_info(account_info_iter)?;
         let rebalancing_info = next_account_info(account_info_iter)?;
 
-        let general_pool_market_info = next_account_info(account_info_iter)?;
-        let general_pool_market_authority_info = next_account_info(account_info_iter)?;
-        let general_pool_info = next_account_info(account_info_iter)?;
-        let general_pool_borrow_authority_info = next_account_info(account_info_iter)?;
-        let general_pool_token_account_info = next_account_info(account_info_iter)?;
-
         let mm_pool_market_info = next_account_info(account_info_iter)?;
         let mm_pool_market_authority_info = next_account_info(account_info_iter)?;
         let mm_pool_info = next_account_info(account_info_iter)?;
@@ -259,8 +283,8 @@ impl Processor {
 
         let clock_info = next_account_info(account_info_iter)?;
         let clock = Clock::from_account_info(clock_info)?;
-        let _everlend_ulp_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
+        let _everlend_ulp_info = next_account_info(account_info_iter)?;
 
         let money_market_program_info = next_account_info(account_info_iter)?;
 
@@ -293,21 +317,9 @@ impl Processor {
             return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
         }
 
-        msg!("Borrow from General Pool");
-        everlend_ulp::cpi::borrow(
-            general_pool_market_info.clone(),
-            general_pool_market_authority_info.clone(),
-            general_pool_info.clone(),
-            general_pool_borrow_authority_info.clone(),
-            liquidity_transit_info.clone(),
-            general_pool_token_account_info.clone(),
-            depositor_authority_info.clone(),
-            step.amount,
-            &[signers_seeds],
-        )?;
-
         msg!("Deposit to Money market");
         money_market_deposit(
+            &registry_config,
             money_market_program_info.clone(),
             liquidity_transit_info.clone(),
             liquidity_mint_info.clone(),
@@ -316,7 +328,7 @@ impl Processor {
             depositor_authority_info.clone(),
             account_info_iter,
             clock_info.clone(),
-            step.amount,
+            step.liquidity_amount,
             &[signers_seeds],
         )?;
 
@@ -358,12 +370,6 @@ impl Processor {
         let depositor_authority_info = next_account_info(account_info_iter)?;
         let rebalancing_info = next_account_info(account_info_iter)?;
 
-        let general_pool_market_info = next_account_info(account_info_iter)?;
-        let general_pool_market_authority_info = next_account_info(account_info_iter)?;
-        let general_pool_info = next_account_info(account_info_iter)?;
-        let general_pool_borrow_authority_info = next_account_info(account_info_iter)?;
-        let general_pool_token_account_info = next_account_info(account_info_iter)?;
-
         let income_pool_market_info = next_account_info(account_info_iter)?;
         let income_pool_info = next_account_info(account_info_iter)?;
         let income_pool_token_account_info = next_account_info(account_info_iter)?;
@@ -382,9 +388,9 @@ impl Processor {
 
         let clock_info = next_account_info(account_info_iter)?;
         let clock = Clock::from_account_info(clock_info)?;
+        let _token_program_info = next_account_info(account_info_iter)?;
         let _everlend_ulp_info = next_account_info(account_info_iter)?;
         let _everlend_income_pools_info = next_account_info(account_info_iter)?;
-        let _token_program_info = next_account_info(account_info_iter)?;
 
         let money_market_program_info = next_account_info(account_info_iter)?;
 
@@ -417,6 +423,9 @@ impl Processor {
             return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
         }
 
+        let liquidity_transit_amount_before =
+            Account::unpack(&liquidity_transit_info.data.borrow())?.amount;
+
         msg!("Withdraw collateral tokens from MM Pool");
         everlend_ulp::cpi::withdraw(
             mm_pool_market_info.clone(),
@@ -433,6 +442,7 @@ impl Processor {
 
         msg!("Redeem from Money market");
         money_market_redeem(
+            &registry_config,
             money_market_program_info.clone(),
             collateral_transit_info.clone(),
             collateral_mint_info.clone(),
@@ -445,32 +455,20 @@ impl Processor {
             &[signers_seeds],
         )?;
 
-        let liquidity_amount =
-            Account::unpack_unchecked(&liquidity_transit_info.data.borrow())?.amount;
+        let received_amount = Account::unpack(&liquidity_transit_info.data.borrow())?
+            .amount
+            .checked_sub(liquidity_transit_amount_before)
+            .ok_or(EverlendError::MathOverflow)?;
+        msg!("Received amount: {}", received_amount);
 
         // TODO: Received liquidity amount may be less
         // https://blog.neodyme.io/posts/lending_disclosure
-        let repay_amount = cmp::min(liquidity_amount, step.amount);
-        let income_amount: i64 = (liquidity_amount as i64)
-            .checked_sub(step.amount as i64)
+        let income_amount: i64 = (received_amount as i64)
+            .checked_sub(step.liquidity_amount as i64)
             .ok_or(EverlendError::MathOverflow)?;
 
-        msg!("Step amount: {}", step.amount);
+        msg!("Step amount: {}", step.liquidity_amount);
         msg!("Income amount: {}", income_amount);
-
-        msg!("Repay to General Pool");
-        everlend_ulp::cpi::repay(
-            general_pool_market_info.clone(),
-            general_pool_market_authority_info.clone(),
-            general_pool_info.clone(),
-            general_pool_borrow_authority_info.clone(),
-            liquidity_transit_info.clone(),
-            general_pool_token_account_info.clone(),
-            depositor_authority_info.clone(),
-            repay_amount,
-            0,
-            &[signers_seeds],
-        )?;
 
         // Deposit to income pool if income amount > 0
         if income_amount > 0 {

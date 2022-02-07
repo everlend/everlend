@@ -2,6 +2,7 @@
 
 use crate::utils::*;
 use everlend_liquidity_oracle::state::DistributionArray;
+use everlend_utils::find_program_address;
 use solana_program_test::*;
 use solana_sdk::signer::Signer;
 
@@ -86,6 +87,29 @@ async fn setup() -> (
             &general_pool_market,
             &income_pool_market,
             &test_liquidity_oracle,
+        )
+        .await
+        .unwrap();
+
+    // 4.1 Create transit account for liquidity token
+    test_depositor
+        .create_transit(&mut context, &general_pool.token_mint_pubkey)
+        .await
+        .unwrap();
+
+    // 5. Prepare borrow authority
+    let (depositor_authority, _) = find_program_address(
+        &everlend_depositor::id(),
+        &test_depositor.depositor.pubkey(),
+    );
+    let general_pool_borrow_authority =
+        TestPoolBorrowAuthority::new(&general_pool, depositor_authority);
+    general_pool_borrow_authority
+        .create(
+            &mut context,
+            &general_pool_market,
+            &general_pool,
+            SHARE_ALLOWED,
         )
         .await
         .unwrap();

@@ -4,7 +4,7 @@ mod asserts;
 pub mod cpi;
 mod error;
 pub mod integrations;
-mod math;
+pub mod math;
 
 pub use asserts::*;
 pub use error::*;

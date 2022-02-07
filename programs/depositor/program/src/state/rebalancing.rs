@@ -5,7 +5,7 @@ use crate::state::RebalancingOperation;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use everlend_liquidity_oracle::state::TokenDistribution;
 use everlend_registry::state::{RegistryConfig, TOTAL_DISTRIBUTIONS};
-use everlend_utils::{abs_diff, amount_share, percent_div, EverlendError, PRECISION_SCALER};
+use everlend_utils::{math, EverlendError, PRECISION_SCALER};
 use solana_program::{
     clock::Slot,
     msg,
@@ -28,13 +28,13 @@ pub struct Rebalancing {
     /// Mint
     pub mint: Pubkey,
 
-    /// Total liquidity supply
+    /// Current liquidity supply
     pub liquidity_supply: u64,
 
     /// Collateral supply in each market
-    pub money_market_collateral_supply: [u64; TOTAL_DISTRIBUTIONS],
+    pub received_collateral_supply: [u64; TOTAL_DISTRIBUTIONS],
 
-    /// Latest token distribution from liquidity oracle
+    /// Current token distribution from liquidity oracle
     pub token_distribution: TokenDistribution,
 
     /// Rebalancing steps
@@ -62,59 +62,77 @@ impl Rebalancing {
 
         // Reset steps
         self.steps = Vec::new();
+        // let mut distributed_liquidity_supply = 0u64;
 
         // Compute steps
         for i in 0..TOTAL_DISTRIBUTIONS {
-            let money_market_program_id = registry_config.money_market_program_ids[i];
-
             // If distribution is over
-            if money_market_program_id == Default::default() {
+            if registry_config.money_market_program_ids[i] == Default::default() {
                 break;
             }
 
             let percent = self.token_distribution.distribution[i];
             let new_percent = new_token_distribution.distribution[i];
 
-            let money_market_liquidity_supply = amount_share(self.liquidity_supply, percent)?;
-            let new_money_market_liquidity_supply =
-                amount_share(new_liquidity_supply, new_percent)?;
-            let amount = abs_diff(
-                new_money_market_liquidity_supply,
-                money_market_liquidity_supply,
-            )?;
+            let distribution_liquidity = math::share(self.liquidity_supply, percent)?;
+            let new_distribution_liquidity = math::share(new_liquidity_supply, new_percent)?;
 
-            match new_money_market_liquidity_supply.cmp(&money_market_liquidity_supply) {
+            // msg!(
+            //     "COMP {:#?}",
+            //     (
+            //         percent,
+            //         new_percent,
+            //         self.liquidity_supply,
+            //         distribution_liquidity,
+            //         new_distribution_liquidity
+            //     )
+            // );
+
+            // Count real distributed liquidity supply
+            // distributed_liquidity_supply = distributed_liquidity_supply
+            //     .checked_add(new_distribution_liquidity)
+            //     .ok_or(EverlendError::MathOverflow)?;
+
+            let liquidity_amount =
+                math::absdiff(new_distribution_liquidity, distribution_liquidity)?;
+
+            match new_distribution_liquidity.cmp(&distribution_liquidity) {
                 Ordering::Greater => {
-                    self.add_rebalancing_step(RebalancingStep::new(
+                    self.add_step(RebalancingStep::new(
                         i as u8,
                         RebalancingOperation::Deposit,
-                        amount,
-                        None, // this will be calculated at the deposit stage
+                        liquidity_amount,
+                        None, // Will be calculated at the deposit stage
                     ));
                 }
                 Ordering::Less => {
                     let collateral_percent = PRECISION_SCALER
-                        .checked_sub(percent_div(
-                            new_money_market_liquidity_supply,
-                            money_market_liquidity_supply,
+                        .checked_sub(math::rate_div(
+                            new_distribution_liquidity,
+                            distribution_liquidity,
                         )? as u128)
                         .ok_or(EverlendError::MathOverflow)?;
 
                     // Compute collateral amount depending on amount percent
-                    let collateral_amount = amount_share(
-                        self.money_market_collateral_supply[i],
+                    let collateral_amount = math::share(
+                        self.received_collateral_supply[i],
                         collateral_percent as u64,
                     )?;
 
-                    self.add_rebalancing_step(RebalancingStep::new(
+                    self.add_step(RebalancingStep::new(
                         i as u8,
                         RebalancingOperation::Withdraw,
-                        amount,
+                        liquidity_amount,
                         Some(collateral_amount),
                     ));
                 }
                 Ordering::Equal => {}
             }
+        }
+
+        // If no changes to rebalance we shouldn't update liquidity supply & token distribution
+        if self.steps.is_empty() {
+            return Ok(());
         }
 
         // Sort steps
@@ -162,13 +180,11 @@ impl Rebalancing {
             received_collateral_amount.unwrap_or_else(|| step.collateral_amount.unwrap());
 
         // Update collateral ammount
-        self.money_market_collateral_supply[money_market_index] = match operation {
-            RebalancingOperation::Deposit => self.money_market_collateral_supply
-                [money_market_index]
+        self.received_collateral_supply[money_market_index] = match operation {
+            RebalancingOperation::Deposit => self.received_collateral_supply[money_market_index]
                 .checked_add(collateral_amount)
                 .ok_or(EverlendError::MathOverflow)?,
-            RebalancingOperation::Withdraw => self.money_market_collateral_supply
-                [money_market_index]
+            RebalancingOperation::Withdraw => self.received_collateral_supply[money_market_index]
                 .checked_sub(collateral_amount)
                 .ok_or(EverlendError::MathOverflow)?,
         };
@@ -177,7 +193,7 @@ impl Rebalancing {
     }
 
     /// Add rebalancing step
-    pub fn add_rebalancing_step(&mut self, rebalancing_step: RebalancingStep) {
+    pub fn add_step(&mut self, rebalancing_step: RebalancingStep) {
         self.steps.push(rebalancing_step);
     }
 
@@ -233,6 +249,7 @@ impl IsInitialized for Rebalancing {
 pub mod tests {
     use super::*;
     use crate::state::RebalancingOperation;
+    use everlend_liquidity_oracle::state::DistributionArray;
 
     #[test]
     fn packing() {
@@ -243,8 +260,8 @@ pub mod tests {
             mint: pk,
         });
         let rebalancing_step = RebalancingStep::new(0, RebalancingOperation::Deposit, 100, None);
-        rebalancing.add_rebalancing_step(rebalancing_step);
-        rebalancing.add_rebalancing_step(rebalancing_step);
+        rebalancing.add_step(rebalancing_step);
+        rebalancing.add_step(rebalancing_step);
 
         let rebalancing_clone = rebalancing.clone();
 
@@ -256,5 +273,54 @@ pub mod tests {
             Rebalancing::unpack_unchecked(&expected).unwrap(),
             rebalancing_clone
         );
+    }
+
+    #[test]
+    fn computing() {
+        let pk = Pubkey::new_unique();
+        let mut rebalancing: Rebalancing = Default::default();
+        rebalancing.init(InitRebalancingParams {
+            depositor: pk,
+            mint: pk,
+        });
+
+        let mut registry_config = RegistryConfig::default();
+        registry_config.money_market_program_ids[0] = pk;
+        registry_config.money_market_program_ids[1] = pk;
+
+        let mut token_distribution: TokenDistribution = Default::default();
+        let mut distribution = DistributionArray::default();
+        distribution[0] = 900_000_000u64;
+        distribution[1] = 100_000_000u64;
+
+        token_distribution.update(2, distribution);
+
+        rebalancing
+            .compute(&registry_config, token_distribution.clone(), 100_000_000)
+            .unwrap();
+
+        assert_eq!(rebalancing.steps.len(), 2);
+        assert_eq!(rebalancing.steps[0].liquidity_amount, 90_000_000);
+        assert_eq!(rebalancing.steps[1].liquidity_amount, 10_000_000);
+
+        // Drecrese liquidity supply
+        token_distribution.update(3, distribution);
+        rebalancing
+            .compute(&registry_config, token_distribution.clone(), 85_000_000)
+            .unwrap();
+
+        assert_eq!(rebalancing.steps[0].liquidity_amount, 13_500_000);
+        assert_eq!(rebalancing.steps[1].liquidity_amount, 1_500_000);
+
+        // Drecrese to 1 liquidity supply
+        token_distribution.update(4, distribution);
+        rebalancing
+            .compute(&registry_config, token_distribution.clone(), 1)
+            .unwrap();
+        assert_eq!(rebalancing.liquidity_supply, 1);
+        assert_eq!(rebalancing.steps[0].liquidity_amount, 76_500_000);
+        assert_eq!(rebalancing.steps[1].liquidity_amount, 8_500_000);
+
+        // println!("rebalancing = {:#?}", rebalancing);
     }
 }
