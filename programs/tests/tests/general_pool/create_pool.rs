@@ -27,7 +27,7 @@ async fn success() {
 
     assert_eq!(pool.account_type, AccountType::Pool);
 
-    let requests =  test_pool.get_withdraw_requests(& mut context, &everlend_general_pool::id()).await;
+    let requests =  test_pool.get_withdraw_requests(& mut context, &test_pool_market, &everlend_general_pool::id()).await;
     assert_eq!(
         requests.account_type,
         AccountType::WithdrawRequests

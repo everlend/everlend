@@ -46,11 +46,13 @@ impl TestGeneralPool {
     pub async fn get_withdraw_requests(
         &self,
         context: &mut ProgramTestContext,
+        test_pool_market: &TestGeneralPoolMarket,
         program_id: &Pubkey,
     ) -> WithdrawalRequests {
         let (withdrawal_requests, _) = find_withdrawal_requests_program_address(
             program_id,
-            &self.pool_pubkey,
+            &test_pool_market.keypair.pubkey(),
+            &self.token_mint_pubkey,
         );
 
         let account = get_account(context, &withdrawal_requests).await;
@@ -143,6 +145,7 @@ impl TestGeneralPool {
                 &self.pool_pubkey,
                 &user.token_account,
                 &self.token_account.pubkey(),
+                &self.token_mint_pubkey,
                 &self.pool_mint.pubkey(),
                 index,
             )],
@@ -170,6 +173,7 @@ impl TestGeneralPool {
                 &user.pool_account,
                 &user.token_account,
                 &self.token_account.pubkey(),
+                &self.token_mint_pubkey,
                 &self.pool_mint.pubkey(),
                 &user.pubkey(),
                 amount,

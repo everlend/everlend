@@ -136,6 +136,7 @@ pub fn withdraw<'a>(
     collateral_transit: AccountInfo<'a>,
     destination: AccountInfo<'a>,
     token_account: AccountInfo<'a>,
+    token_mint: AccountInfo<'a>,
     pool_mint: AccountInfo<'a>,
     index: u64,
     signers_seeds: &[&[&[u8]]],
@@ -146,6 +147,7 @@ pub fn withdraw<'a>(
         pool.key,
         destination.key,
         token_account.key,
+        token_mint.key,
         pool_mint.key,
         index
     );

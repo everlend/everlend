@@ -152,13 +152,15 @@ impl Processor {
         let (withdrawal_requests_pubkey, withdrawal_bump_seed) =
             find_withdrawal_requests_program_address(
                 program_id,
-                pool_info.key,
+                pool_market_info.key,
+                token_mint_info.key,
             );
         assert_account_key(withdrawal_requests_info, &withdrawal_requests_pubkey)?;
 
         let withdraw_signers_seeds = &[
             "withdrawals".as_bytes(),
-            &pool_info.key.to_bytes()[..32],
+            &pool_market_info.key.to_bytes()[..32],
+            &token_mint_info.key.to_bytes()[..32],
             &[withdrawal_bump_seed],
         ];
 
@@ -416,7 +418,8 @@ impl Processor {
         let (withdrawal_requests_pubkey, _) =
             find_withdrawal_requests_program_address(
                 program_id,
-                pool_info.key,
+                pool_market_info.key,
+                &pool.token_mint,
             );
         assert_account_key(withdrawal_requests_info, &withdrawal_requests_pubkey)?;
 
@@ -505,14 +508,14 @@ impl Processor {
         let (collateral_transit_pubkey, _) = find_transit_program_address(program_id, pool_market_info.key,pool_mint_info.key);
         assert_account_key(transit_collateral_info, &collateral_transit_pubkey)?;
 
-
         // Check withdraw requests account
         assert_owned_by(withdrawal_requests_info, program_id)?;
 
         let (withdrawal_requests_pubkey, _) =
             find_withdrawal_requests_program_address(
                 program_id,
-                pool_info.key,
+                pool_market_info.key,
+                &pool.token_mint,
             );
         assert_account_key(withdrawal_requests_info, &withdrawal_requests_pubkey)?;
 

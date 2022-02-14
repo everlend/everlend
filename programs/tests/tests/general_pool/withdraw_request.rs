@@ -64,7 +64,7 @@ async fn success() {
         .await
         .unwrap();
 
-    let withdraw_requests = test_pool.get_withdraw_requests(&mut context,&everlend_general_pool::id()).await;
+    let withdraw_requests = test_pool.get_withdraw_requests(&mut context, &test_pool_market, &everlend_general_pool::id()).await;
     let (transit_account, _) = find_transit_program_address(&everlend_general_pool::id(),&test_pool_market.keypair.pubkey(), &test_pool.pool_mint.pubkey());
 
     assert_eq!(
@@ -116,7 +116,7 @@ async fn success_few_requests() {
 
     context.warp_to_slot(WARP_SLOT + 9).unwrap();
 
-    let withdraw_requests = test_pool.get_withdraw_requests(&mut context,&everlend_general_pool::id()).await;
+    let withdraw_requests = test_pool.get_withdraw_requests(&mut context,&test_pool_market, &everlend_general_pool::id()).await;
     let (transit_account, _) = find_transit_program_address(&everlend_general_pool::id(),&test_pool_market.keypair.pubkey(), &test_pool.pool_mint.pubkey());
 
     assert_eq!(

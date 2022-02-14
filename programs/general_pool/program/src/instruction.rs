@@ -138,7 +138,7 @@ pub enum LiquidityPoolsInstruction {
         interest_amount: u64,
     },
 
-    /// Burn pool tokens and create withdraw request
+    /// Move pool tokens to transit account and create withdraw request
     ///
     /// Accounts:
     /// [R] Pool market
@@ -190,7 +190,7 @@ pub fn create_pool(
     let (pool_market_authority, _) = find_program_address(program_id, pool_market);
     let (pool, _) = find_pool_program_address(program_id, pool_market, token_mint);
     let (transit_collateral, _) = find_transit_program_address(program_id, pool_market, pool_mint);
-    let (withdrawal_requests, _) = find_withdrawal_requests_program_address(program_id, &pool);
+    let (withdrawal_requests, _) = find_withdrawal_requests_program_address(program_id, pool_market, token_mint);
 
     let accounts = vec![
         AccountMeta::new_readonly(*pool_market, false),
@@ -335,11 +335,13 @@ pub fn withdraw(
     pool: &Pubkey,
     destination: &Pubkey,
     token_account: &Pubkey,
+    token_mint: &Pubkey,
     pool_mint: &Pubkey,
     index: u64,
 ) -> Instruction {
     let (pool_market_authority, _) = find_program_address(program_id, pool_market);
-    let (withdrawal_requests, _) = find_withdrawal_requests_program_address(program_id, pool);
+
+    let (withdrawal_requests, _) = find_withdrawal_requests_program_address(program_id, pool_market, token_mint);
     let (collateral_transit, _) = find_transit_program_address(program_id, pool_market, pool_mint);
 
     let accounts = vec![
@@ -370,12 +372,13 @@ pub fn withdraw_request(
     source: &Pubkey,
     destination: &Pubkey,
     token_account: &Pubkey,
+    token_mint: &Pubkey,
     pool_mint: &Pubkey,
     user_transfer_authority: &Pubkey,
     amount: u64,
 )-> Instruction {
 
-    let (withdrawal_requests, _) = find_withdrawal_requests_program_address(program_id, pool);
+    let (withdrawal_requests, _) = find_withdrawal_requests_program_address(program_id, pool_market, token_mint);
     let (collateral_transit, _) = find_transit_program_address(program_id, pool_market, pool_mint);
 
     let accounts = vec![
@@ -387,7 +390,7 @@ pub fn withdraw_request(
         AccountMeta::new(*token_account, false),
         AccountMeta::new(collateral_transit, false),
         AccountMeta::new(*pool_mint, false),
-        AccountMeta::new(*user_transfer_authority, true),
+        AccountMeta::new_readonly(*user_transfer_authority, true),
         AccountMeta::new_readonly(spl_token::id(), false),
     ];
 

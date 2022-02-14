@@ -47,12 +47,14 @@ pub fn find_pool_borrow_authority_program_address(
 /// Generates withdrawal requests address
 pub fn find_withdrawal_requests_program_address(
     program_id: &Pubkey,
-    pool_pubkey: &Pubkey,
+    pool_market_pubkey: &Pubkey,
+    token_mint: &Pubkey,
 ) -> (Pubkey, u8) {
     Pubkey::find_program_address(
         &[
             "withdrawals".as_bytes(),
-            &pool_pubkey.to_bytes(),
+            &pool_market_pubkey.to_bytes(),
+            &token_mint.to_bytes(),
         ],
         program_id,
     )
