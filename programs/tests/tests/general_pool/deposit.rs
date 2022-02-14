@@ -1,7 +1,7 @@
 #![cfg(feature = "test-bpf")]
 
 use crate::utils::*;
-use everlend_ulp::instruction;
+use everlend_general_pool::instruction;
 use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program_test::*;
@@ -12,22 +12,22 @@ use spl_token::error::TokenError;
 
 async fn setup() -> (
     ProgramTestContext,
-    TestPoolMarket,
-    TestPool,
+    TestGeneralPoolMarket,
+    TestGeneralPool,
     LiquidityProvider,
 ) {
     let mut context = presetup().await.0;
 
-    let test_pool_market = TestPoolMarket::new();
+    let test_pool_market = TestGeneralPoolMarket::new();
     test_pool_market.init(&mut context).await.unwrap();
 
-    let test_pool = TestPool::new(&test_pool_market, None);
+    let test_pool = TestGeneralPool::new(&test_pool_market, None);
     test_pool
         .create(&mut context, &test_pool_market)
         .await
         .unwrap();
 
-    let user = add_liquidity_provider(&mut context,  &test_pool.token_mint_pubkey, &test_pool.pool_mint.pubkey(), 9999 * EXP)
+    let user = add_liquidity_provider(&mut context, &test_pool.token_mint_pubkey, &test_pool.pool_mint.pubkey(), 9999 * EXP)
         .await
         .unwrap();
 
@@ -97,7 +97,7 @@ async fn fail_with_invalid_pool_mint_pubkey_argument() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
-            &everlend_ulp::id(),
+            &everlend_general_pool::id(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &user.token_account,
@@ -130,7 +130,7 @@ async fn fail_with_invalid_token_account_pubkey_argument() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
-            &everlend_ulp::id(),
+            &everlend_general_pool::id(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &user.token_account,
@@ -165,7 +165,7 @@ async fn fail_with_invalid_destination_argument() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
-            &everlend_ulp::id(),
+            &everlend_general_pool::id(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &user.token_account,
@@ -201,7 +201,7 @@ async fn fail_with_invalid_source_argument() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
-            &everlend_ulp::id(),
+            &everlend_general_pool::id(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             //Wrong source
@@ -237,7 +237,7 @@ async fn fail_with_invalid_pool_market_argument() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
-            &everlend_ulp::id(),
+            &everlend_general_pool::id(),
             // Wrong pool market
             &Pubkey::new_unique(),
             &test_pool.pool_pubkey,
@@ -273,7 +273,7 @@ async fn fail_with_invalid_pool_argument() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
-            &everlend_ulp::id(),
+            &everlend_general_pool::id(),
             &test_pool_market.keypair.pubkey(),
             //Wrong pool
             &Pubkey::new_unique(),

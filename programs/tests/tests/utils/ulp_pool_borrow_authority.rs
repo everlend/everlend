@@ -7,7 +7,7 @@ use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{signature::Signer, transaction::Transaction, transport};
 
-pub const SHARE_ALLOWED: u16 = 10_000; // 100% of the total pool
+pub const ULP_SHARE_ALLOWED: u16 = 10_000; // 100% of the total pool
 
 #[derive(Debug)]
 pub struct TestPoolBorrowAuthority {

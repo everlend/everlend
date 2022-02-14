@@ -1,7 +1,7 @@
 #![cfg(feature = "test-bpf")]
 
 use crate::utils::*;
-use everlend_ulp::instruction;
+use everlend_general_pool::instruction;
 use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program_test::*;
@@ -13,30 +13,30 @@ use spl_token::error::TokenError;
 
 async fn setup() -> (
     ProgramTestContext,
-    TestPoolMarket,
-    TestPool,
-    TestPoolBorrowAuthority,
+    TestGeneralPoolMarket,
+    TestGeneralPool,
+    TestGeneralPoolBorrowAuthority,
     LiquidityProvider,
 ) {
     let mut context = presetup().await.0;
 
-    let test_pool_market = TestPoolMarket::new();
+    let test_pool_market = TestGeneralPoolMarket::new();
     test_pool_market.init(&mut context).await.unwrap();
 
-    let test_pool = TestPool::new(&test_pool_market, None);
+    let test_pool = TestGeneralPool::new(&test_pool_market, None);
     test_pool
         .create(&mut context, &test_pool_market)
         .await
         .unwrap();
 
     let test_pool_borrow_authority =
-        TestPoolBorrowAuthority::new(&test_pool, context.payer.pubkey());
+        TestGeneralPoolBorrowAuthority::new(&test_pool, context.payer.pubkey());
     test_pool_borrow_authority
-        .create(&mut context, &test_pool_market, &test_pool, ULP_SHARE_ALLOWED)
+        .create(&mut context, &test_pool_market, &test_pool, GENERAL_POOL_SHARE_ALLOWED)
         .await
         .unwrap();
 
-    let user = add_liquidity_provider(&mut context,  &test_pool.token_mint_pubkey, &test_pool.pool_mint.pubkey(), 100)
+    let user = add_liquidity_provider(&mut context, &test_pool.token_mint_pubkey, &test_pool.pool_mint.pubkey(), 100)
         .await
         .unwrap();
 
@@ -142,11 +142,11 @@ async fn fail_invalid_token_account() {
     let (mut context, test_pool_market, test_pool, test_pool_borrow_authority, user) =
         setup().await;
     let amount_allowed =
-        get_amount_allowed(&mut context, &test_pool, &test_pool_borrow_authority).await;
+        get_amount_allowed_general(&mut context, &test_pool, &test_pool_borrow_authority).await;
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::borrow(
-            &everlend_ulp::id(),
+            &everlend_general_pool::id(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &test_pool_borrow_authority.pool_borrow_authority_pubkey,
@@ -176,11 +176,11 @@ async fn fail_invalid_pool_market() {
     let (mut context, _test_pool_market, test_pool, test_pool_borrow_authority, user) =
         setup().await;
     let amount_allowed =
-        get_amount_allowed(&mut context, &test_pool, &test_pool_borrow_authority).await;
+        get_amount_allowed_general(&mut context, &test_pool, &test_pool_borrow_authority).await;
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::borrow(
-            &everlend_ulp::id(),
+            &everlend_general_pool::id(),
             &Pubkey::new_unique(),
             &test_pool.pool_pubkey,
             &test_pool_borrow_authority.pool_borrow_authority_pubkey,
@@ -213,11 +213,11 @@ async fn fail_invalid_pool() {
     let (mut context, test_pool_market, test_pool, test_pool_borrow_authority, user) =
         setup().await;
     let amount_allowed =
-        get_amount_allowed(&mut context, &test_pool, &test_pool_borrow_authority).await;
+        get_amount_allowed_general(&mut context, &test_pool, &test_pool_borrow_authority).await;
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::borrow(
-            &everlend_ulp::id(),
+            &everlend_general_pool::id(),
             &test_pool_market.keypair.pubkey(),
             &Pubkey::new_unique(),
             &test_pool_borrow_authority.pool_borrow_authority_pubkey,
@@ -250,11 +250,11 @@ async fn fail_invalid_pool_borrow_authority() {
     let (mut context, test_pool_market, test_pool, test_pool_borrow_authority, user) =
         setup().await;
     let amount_allowed =
-        get_amount_allowed(&mut context, &test_pool, &test_pool_borrow_authority).await;
+        get_amount_allowed_general(&mut context, &test_pool, &test_pool_borrow_authority).await;
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::borrow(
-            &everlend_ulp::id(),
+            &everlend_general_pool::id(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &Pubkey::new_unique(),
