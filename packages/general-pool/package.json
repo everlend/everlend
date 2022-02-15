@@ -1,5 +1,5 @@
 {
-  "name": "@everlend/general_pool",
+  "name": "@everlend/general-pool",
   "version": "0.0.1",
   "license": "MIT",
   "main": "dist/index.js",
