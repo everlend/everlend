@@ -83,6 +83,11 @@ async fn success() {
     );
 
     assert_eq!(
+        withdraw_requests.liquidity_supply,
+        50
+    );
+
+    assert_eq!(
         withdraw_requests.request[0],
         WithdrawalRequest {
             destination: user.token_account,

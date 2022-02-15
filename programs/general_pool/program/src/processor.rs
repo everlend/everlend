@@ -472,6 +472,7 @@ impl Processor {
         )?;
 
         withdrawal_requests.request.remove(index as usize);
+        withdrawal_requests.liquidity_supply -= request.liquidity_amount;
 
         WithdrawalRequests::pack(withdrawal_requests, *withdrawal_requests_info.data.borrow_mut())?;
 
@@ -562,6 +563,8 @@ impl Processor {
             liquidity_amount: withdraw_amount,
             collateral_amount: amount,
         });
+
+        withdrawal_requests.liquidity_supply += withdraw_amount;
 
         WithdrawalRequests::pack(withdrawal_requests, *withdrawal_requests_info.data.borrow_mut())?;
 
