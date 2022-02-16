@@ -1,5 +1,4 @@
-
-use super::{AccountType};
+use super::AccountType;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use solana_program::{
     msg,
@@ -35,8 +34,7 @@ pub struct WithdrawalRequests {
 #[repr(C)]
 #[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize, BorshSchema, PartialEq, Default)]
 pub struct WithdrawalRequest {
-
-    ///Withdraw source
+    /// Withdraw source
     pub source: Pubkey,
 
     /// Withdraw destination
@@ -69,8 +67,7 @@ impl WithdrawalRequests {
 impl Sealed for WithdrawalRequests {}
 impl Pack for WithdrawalRequests {
     // 1 + 32 + 32 + 8 +
-    const LEN: usize = 73
-        + (4 + TOTAL_WITHDRAW_REQUEST * WithdrawalRequest::LEN);
+    const LEN: usize = 73 + (4 + TOTAL_WITHDRAW_REQUEST * WithdrawalRequest::LEN);
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;

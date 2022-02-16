@@ -1,8 +1,11 @@
 use super::{
-    get_account, get_liquidity_mint, general_pool_borrow_authority::TestGeneralPoolBorrowAuthority,
+    general_pool_borrow_authority::TestGeneralPoolBorrowAuthority, get_account, get_liquidity_mint,
     LiquidityProvider, TestGeneralPoolMarket, User,
 };
-use everlend_general_pool::{find_pool_program_address, find_withdrawal_requests_program_address, instruction, state::Pool};
+use everlend_general_pool::state::WithdrawalRequests;
+use everlend_general_pool::{
+    find_pool_program_address, find_withdrawal_requests_program_address, instruction, state::Pool,
+};
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{
@@ -10,7 +13,6 @@ use solana_sdk::{
     transaction::Transaction,
     transport,
 };
-use everlend_general_pool::state::WithdrawalRequests;
 
 #[derive(Debug)]
 pub struct TestGeneralPool {
@@ -21,7 +23,10 @@ pub struct TestGeneralPool {
 }
 
 impl TestGeneralPool {
-    pub fn new(test_pool_market: &TestGeneralPoolMarket, token_mint_pubkey: Option<Pubkey>) -> Self {
+    pub fn new(
+        test_pool_market: &TestGeneralPoolMarket,
+        token_mint_pubkey: Option<Pubkey>,
+    ) -> Self {
         let token_mint_pubkey = token_mint_pubkey.unwrap_or(get_liquidity_mint().1);
 
         let (pool_pubkey, _) = find_pool_program_address(
@@ -137,7 +142,6 @@ impl TestGeneralPool {
         user: &LiquidityProvider,
         index: u64,
     ) -> transport::Result<()> {
-
         let tx = Transaction::new_signed_with_payer(
             &[instruction::withdraw(
                 &everlend_general_pool::id(),
@@ -164,7 +168,6 @@ impl TestGeneralPool {
         user: &LiquidityProvider,
         amount: u64,
     ) -> transport::Result<()> {
-
         let tx = Transaction::new_signed_with_payer(
             &[instruction::withdraw_request(
                 &everlend_general_pool::id(),
@@ -193,7 +196,6 @@ impl TestGeneralPool {
         user: &LiquidityProvider,
         index: u64,
     ) -> transport::Result<()> {
-
         let tx = Transaction::new_signed_with_payer(
             &[instruction::cancel_withdraw_request(
                 &everlend_general_pool::id(),

@@ -1,6 +1,9 @@
 //! Instruction types
 
-use crate::{find_pool_borrow_authority_program_address, find_pool_program_address, find_transit_program_address, find_withdrawal_requests_program_address};
+use crate::{
+    find_pool_borrow_authority_program_address, find_pool_program_address,
+    find_transit_program_address, find_withdrawal_requests_program_address,
+};
 use borsh::{BorshDeserialize, BorshSerialize};
 use everlend_utils::find_program_address;
 use solana_program::{
@@ -101,7 +104,7 @@ pub enum LiquidityPoolsInstruction {
     /// [W] Pool mint account
     /// [R] Pool market authority
     /// [R] Token program id
-    Withdraw{
+    Withdraw {
         /// Index of withdraw request
         index: u64,
     },
@@ -153,7 +156,7 @@ pub enum LiquidityPoolsInstruction {
     /// [W] Pool mint account
     /// [RS] User transfer authority
     /// [R] Token program id
-    WithdrawRequest{
+    WithdrawRequest {
         /// Amount to withdraw
         amount: u64,
     },
@@ -170,10 +173,10 @@ pub enum LiquidityPoolsInstruction {
     /// [R] Pool market authority
     /// [RS] Market manager
     /// [R] Token program id
-    CancelWithdrawRequest{
+    CancelWithdrawRequest {
         /// Index of withdraw request
         index: u64,
-    }
+    },
 }
 
 /// Creates 'InitPoolMarket' instruction.
@@ -209,7 +212,8 @@ pub fn create_pool(
     let (pool_market_authority, _) = find_program_address(program_id, pool_market);
     let (pool, _) = find_pool_program_address(program_id, pool_market, token_mint);
     let (transit_collateral, _) = find_transit_program_address(program_id, pool_market, pool_mint);
-    let (withdrawal_requests, _) = find_withdrawal_requests_program_address(program_id, pool_market, token_mint);
+    let (withdrawal_requests, _) =
+        find_withdrawal_requests_program_address(program_id, pool_market, token_mint);
 
     let accounts = vec![
         AccountMeta::new_readonly(*pool_market, false),
@@ -364,7 +368,8 @@ pub fn withdraw(
 ) -> Instruction {
     let (pool_market_authority, _) = find_program_address(program_id, pool_market);
 
-    let (withdrawal_requests, _) = find_withdrawal_requests_program_address(program_id, pool_market, token_mint);
+    let (withdrawal_requests, _) =
+        find_withdrawal_requests_program_address(program_id, pool_market, token_mint);
     let (collateral_transit, _) = find_transit_program_address(program_id, pool_market, pool_mint);
 
     let accounts = vec![
@@ -399,9 +404,9 @@ pub fn withdraw_request(
     pool_mint: &Pubkey,
     user_transfer_authority: &Pubkey,
     amount: u64,
-)-> Instruction {
-
-    let (withdrawal_requests, _) = find_withdrawal_requests_program_address(program_id, pool_market, token_mint);
+) -> Instruction {
+    let (withdrawal_requests, _) =
+        find_withdrawal_requests_program_address(program_id, pool_market, token_mint);
     let (collateral_transit, _) = find_transit_program_address(program_id, pool_market, pool_mint);
 
     let accounts = vec![
@@ -419,7 +424,7 @@ pub fn withdraw_request(
 
     Instruction::new_with_borsh(
         *program_id,
-        &LiquidityPoolsInstruction::WithdrawRequest {amount},
+        &LiquidityPoolsInstruction::WithdrawRequest { amount },
         accounts,
     )
 }
@@ -438,7 +443,8 @@ pub fn cancel_withdraw_request(
 ) -> Instruction {
     let (pool_market_authority, _) = find_program_address(program_id, pool_market);
 
-    let (withdrawal_requests, _) = find_withdrawal_requests_program_address(program_id, pool_market, token_mint);
+    let (withdrawal_requests, _) =
+        find_withdrawal_requests_program_address(program_id, pool_market, token_mint);
     let (collateral_transit, _) = find_transit_program_address(program_id, pool_market, pool_mint);
 
     let accounts = vec![
@@ -459,7 +465,6 @@ pub fn cancel_withdraw_request(
         accounts,
     )
 }
-
 
 /// Creates 'Borrow' instruction.
 #[allow(clippy::too_many_arguments)]

@@ -66,5 +66,12 @@ pub fn find_transit_program_address(
     pool_market: &Pubkey,
     mint: &Pubkey,
 ) -> (Pubkey, u8) {
-    Pubkey::find_program_address(&["transit".as_bytes(), &pool_market.to_bytes(), &mint.to_bytes()], program_id)
+    Pubkey::find_program_address(
+        &[
+            "transit".as_bytes(),
+            &pool_market.to_bytes(),
+            &mint.to_bytes(),
+        ],
+        program_id,
+    )
 }

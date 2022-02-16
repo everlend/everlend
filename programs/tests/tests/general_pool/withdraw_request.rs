@@ -27,13 +27,23 @@ async fn setup() -> (
     let test_pool_borrow_authority =
         TestGeneralPoolBorrowAuthority::new(&test_pool, context.payer.pubkey());
     test_pool_borrow_authority
-        .create(&mut context, &test_pool_market, &test_pool, ULP_SHARE_ALLOWED)
+        .create(
+            &mut context,
+            &test_pool_market,
+            &test_pool,
+            ULP_SHARE_ALLOWED,
+        )
         .await
         .unwrap();
 
-    let user = add_liquidity_provider(&mut context, &test_pool.token_mint_pubkey, &test_pool.pool_mint.pubkey(), 101)
-        .await
-        .unwrap();
+    let user = add_liquidity_provider(
+        &mut context,
+        &test_pool.token_mint_pubkey,
+        &test_pool.pool_mint.pubkey(),
+        101,
+    )
+    .await
+    .unwrap();
 
     test_pool
         .deposit(&mut context, &test_pool_market, &user, 100)
@@ -51,7 +61,6 @@ async fn setup() -> (
 
 #[tokio::test]
 async fn success() {
-
     let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
 
     test_pool
@@ -64,28 +73,29 @@ async fn success() {
         .await
         .unwrap();
 
-    let withdraw_requests = test_pool.get_withdraw_requests(&mut context, &test_pool_market, &everlend_general_pool::id()).await;
-    let (transit_account, _) = find_transit_program_address(&everlend_general_pool::id(),&test_pool_market.keypair.pubkey(), &test_pool.pool_mint.pubkey());
+    let withdraw_requests = test_pool
+        .get_withdraw_requests(
+            &mut context,
+            &test_pool_market,
+            &everlend_general_pool::id(),
+        )
+        .await;
+    let (transit_account, _) = find_transit_program_address(
+        &everlend_general_pool::id(),
+        &test_pool_market.keypair.pubkey(),
+        &test_pool.pool_mint.pubkey(),
+    );
 
     assert_eq!(
         get_token_balance(&mut context, &user.pool_account).await,
         50
     );
 
-    assert_eq!(
-        get_token_balance(&mut context, &transit_account).await,
-        50
-    );
+    assert_eq!(get_token_balance(&mut context, &transit_account).await, 50);
 
-    assert_eq!(
-        withdraw_requests.request.len(),
-        1
-    );
+    assert_eq!(withdraw_requests.request.len(), 1);
 
-    assert_eq!(
-        withdraw_requests.liquidity_supply,
-        50
-    );
+    assert_eq!(withdraw_requests.liquidity_supply, 50);
 
     assert_eq!(
         withdraw_requests.request[0],
@@ -122,39 +132,43 @@ async fn success_few_requests() {
 
     context.warp_to_slot(WARP_SLOT + 9).unwrap();
 
-    let withdraw_requests = test_pool.get_withdraw_requests(&mut context,&test_pool_market, &everlend_general_pool::id()).await;
-    let (transit_account, _) = find_transit_program_address(&everlend_general_pool::id(),&test_pool_market.keypair.pubkey(), &test_pool.pool_mint.pubkey());
+    let withdraw_requests = test_pool
+        .get_withdraw_requests(
+            &mut context,
+            &test_pool_market,
+            &everlend_general_pool::id(),
+        )
+        .await;
+    let (transit_account, _) = find_transit_program_address(
+        &everlend_general_pool::id(),
+        &test_pool_market.keypair.pubkey(),
+        &test_pool.pool_mint.pubkey(),
+    );
 
     assert_eq!(
         get_token_balance(&mut context, &user.pool_account).await,
         40
     );
 
-    assert_eq!(
-        get_token_balance(&mut context, &transit_account).await,
-        60
-    );
+    assert_eq!(get_token_balance(&mut context, &transit_account).await, 60);
 
-    assert_eq!(
-        withdraw_requests.request.len(),
-        2
-    );
+    assert_eq!(withdraw_requests.request.len(), 2);
 
     assert_eq!(
         withdraw_requests.request,
-        vec![   WithdrawalRequest {
-            source: user.pool_account,
-            destination: user.token_account,
-            liquidity_amount: 50,
-            collateral_amount: 50,
-        },
-                WithdrawalRequest {
-                    source: user.pool_account,
-                    destination: user.token_account,
-                    liquidity_amount: 10,
-                    collateral_amount: 10,
-                },
+        vec![
+            WithdrawalRequest {
+                source: user.pool_account,
+                destination: user.token_account,
+                liquidity_amount: 50,
+                collateral_amount: 50,
+            },
+            WithdrawalRequest {
+                source: user.pool_account,
+                destination: user.token_account,
+                liquidity_amount: 10,
+                collateral_amount: 10,
+            },
         ]
-
     );
 }

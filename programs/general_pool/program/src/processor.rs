@@ -1,9 +1,17 @@
 //! Program state processor
 
-use crate::{find_pool_borrow_authority_program_address, find_pool_program_address, find_transit_program_address, find_withdrawal_requests_program_address, instruction::LiquidityPoolsInstruction, state::{
-    InitPoolBorrowAuthorityParams, InitPoolMarketParams, InitPoolParams, Pool,
-    PoolBorrowAuthority, PoolMarket, WithdrawalRequests, WithdrawalRequest, TOTAL_WITHDRAW_REQUEST
-}, utils::*};
+use crate::state::InitWithdrawalRequestsParams;
+use crate::{
+    find_pool_borrow_authority_program_address, find_pool_program_address,
+    find_transit_program_address, find_withdrawal_requests_program_address,
+    instruction::LiquidityPoolsInstruction,
+    state::{
+        InitPoolBorrowAuthorityParams, InitPoolMarketParams, InitPoolParams, Pool,
+        PoolBorrowAuthority, PoolMarket, WithdrawalRequest, WithdrawalRequests,
+        TOTAL_WITHDRAW_REQUEST,
+    },
+    utils::*,
+};
 use borsh::BorshDeserialize;
 use everlend_utils::{
     assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
@@ -20,7 +28,6 @@ use solana_program::{
     sysvar::Sysvar,
 };
 use spl_token::state::Mint;
-use crate::state::InitWithdrawalRequestsParams;
 
 /// Program state handler.
 pub struct Processor {}
@@ -118,11 +125,8 @@ impl Processor {
         )?;
 
         // Create transit account for SPL program
-        let (transit_pubkey, transit_bump_seed) = find_transit_program_address(
-            program_id,
-            &pool_market_info.key,
-            &pool_mint_info.key,
-        );
+        let (transit_pubkey, transit_bump_seed) =
+            find_transit_program_address(program_id, pool_market_info.key, pool_mint_info.key);
         assert_account_key(transit_info, &transit_pubkey)?;
 
         let transit_signers_seeds = &[
@@ -176,12 +180,15 @@ impl Processor {
             WithdrawalRequests::unpack_unchecked(&withdrawal_requests_info.data.borrow())?;
         assert_uninitialized(&withdrawal_requests)?;
 
-        withdrawal_requests.init(InitWithdrawalRequestsParams{
+        withdrawal_requests.init(InitWithdrawalRequestsParams {
             pool: *pool_info.key,
             mint: *token_mint_info.key,
         });
 
-        WithdrawalRequests::pack(withdrawal_requests, *withdrawal_requests_info.data.borrow_mut())?;
+        WithdrawalRequests::pack(
+            withdrawal_requests,
+            *withdrawal_requests_info.data.borrow_mut(),
+        )?;
 
         pool.init(InitPoolParams {
             pool_market: *pool_market_info.key,
@@ -416,7 +423,8 @@ impl Processor {
         assert_owned_by(pool_info, program_id)?;
 
         // Check collateral token transit account
-        let (collateral_transit_pubkey, _) = find_transit_program_address(program_id, pool_market_info.key,pool_mint_info.key);
+        let (collateral_transit_pubkey, _) =
+            find_transit_program_address(program_id, pool_market_info.key, pool_mint_info.key);
         assert_account_key(transit_collateral_info, &collateral_transit_pubkey)?;
 
         // Get pool state
@@ -425,16 +433,15 @@ impl Processor {
         assert_account_key(pool_market_info, &pool.pool_market)?;
         assert_account_key(token_account_info, &pool.token_account)?;
 
-        let (withdrawal_requests_pubkey, _) =
-            find_withdrawal_requests_program_address(
-                program_id,
-                pool_market_info.key,
-                &pool.token_mint,
-            );
+        let (withdrawal_requests_pubkey, _) = find_withdrawal_requests_program_address(
+            program_id,
+            pool_market_info.key,
+            &pool.token_mint,
+        );
         assert_account_key(withdrawal_requests_info, &withdrawal_requests_pubkey)?;
 
         if withdrawal_requests_info.lamports() == 0 {
-            return Err(ProgramError::UninitializedAccount)
+            return Err(ProgramError::UninitializedAccount);
         }
 
         let mut withdrawal_requests =
@@ -443,22 +450,22 @@ impl Processor {
         assert_owned_by(withdrawal_requests_info, program_id)?;
         assert_account_key(pool_info, &withdrawal_requests.pool)?;
 
-        if withdrawal_requests.mint != pool.token_mint{
-          return Err(ProgramError::InvalidArgument)
+        if withdrawal_requests.mint != pool.token_mint {
+            return Err(ProgramError::InvalidArgument);
         }
 
         // Requests que is empty
-        if withdrawal_requests.request.len() == 0 {
-            return Err(EverlendError::WithdrawRequestsListIsEmpty.into())
+        if withdrawal_requests.request.is_empty() {
+            return Err(EverlendError::WithdrawRequestsListIsEmpty.into());
         }
 
-        if index > (withdrawal_requests.request.len() - 1) as u64{
-            return Err(ProgramError::InvalidArgument)
+        if index > (withdrawal_requests.request.len() - 1) as u64 {
+            return Err(ProgramError::InvalidArgument);
         }
 
         let request = withdrawal_requests.request[index as usize];
 
-        assert_account_key(destination_info,&request.destination)?;
+        assert_account_key(destination_info, &request.destination)?;
 
         let (_, bump_seed) = find_program_address(program_id, pool_market_info.key);
         let signers_seeds = &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]];
@@ -483,13 +490,20 @@ impl Processor {
         withdrawal_requests.request.remove(index as usize);
         withdrawal_requests.liquidity_supply -= request.liquidity_amount;
 
-        WithdrawalRequests::pack(withdrawal_requests, *withdrawal_requests_info.data.borrow_mut())?;
+        WithdrawalRequests::pack(
+            withdrawal_requests,
+            *withdrawal_requests_info.data.borrow_mut(),
+        )?;
 
         Ok(())
     }
 
     /// Process Withdraw request instruction
-    pub fn withdraw_request(program_id: &Pubkey, amount: u64, accounts: &[AccountInfo]) -> ProgramResult {
+    pub fn withdraw_request(
+        program_id: &Pubkey,
+        amount: u64,
+        accounts: &[AccountInfo],
+    ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_info = next_account_info(account_info_iter)?;
@@ -515,22 +529,22 @@ impl Processor {
         assert_account_key(pool_mint_info, &pool.pool_mint)?;
 
         // Check collateral token transit account
-        let (collateral_transit_pubkey, _) = find_transit_program_address(program_id, pool_market_info.key,pool_mint_info.key);
+        let (collateral_transit_pubkey, _) =
+            find_transit_program_address(program_id, pool_market_info.key, pool_mint_info.key);
         assert_account_key(transit_collateral_info, &collateral_transit_pubkey)?;
 
         // Check withdraw requests account
         assert_owned_by(withdrawal_requests_info, program_id)?;
 
-        let (withdrawal_requests_pubkey, _) =
-            find_withdrawal_requests_program_address(
-                program_id,
-                pool_market_info.key,
-                &pool.token_mint,
-            );
+        let (withdrawal_requests_pubkey, _) = find_withdrawal_requests_program_address(
+            program_id,
+            pool_market_info.key,
+            &pool.token_mint,
+        );
         assert_account_key(withdrawal_requests_info, &withdrawal_requests_pubkey)?;
 
         if withdrawal_requests_info.lamports() == 0 {
-            return Err(ProgramError::UninitializedAccount)
+            return Err(ProgramError::UninitializedAccount);
         }
 
         // Get withdrawals account
@@ -539,8 +553,8 @@ impl Processor {
 
         assert_owned_by(withdrawal_requests_info, program_id)?;
         assert_account_key(pool_info, &withdrawal_requests.pool)?;
-        if withdrawal_requests.mint != pool.token_mint{
-            return Err(ProgramError::InvalidArgument)
+        if withdrawal_requests.mint != pool.token_mint {
+            return Err(ProgramError::InvalidArgument);
         }
 
         // // TODO change error
@@ -567,7 +581,7 @@ impl Processor {
             &[],
         )?;
 
-        withdrawal_requests.request.push(WithdrawalRequest{
+        withdrawal_requests.request.push(WithdrawalRequest {
             source: *source_info.key,
             destination: *destination_info.key,
             liquidity_amount: withdraw_amount,
@@ -576,13 +590,20 @@ impl Processor {
 
         withdrawal_requests.liquidity_supply += withdraw_amount;
 
-        WithdrawalRequests::pack(withdrawal_requests, *withdrawal_requests_info.data.borrow_mut())?;
+        WithdrawalRequests::pack(
+            withdrawal_requests,
+            *withdrawal_requests_info.data.borrow_mut(),
+        )?;
 
         Ok(())
     }
 
     /// Process Cancel withdraw request instruction
-    pub fn cancel_withdraw_request(program_id: &Pubkey, index: u64, accounts: &[AccountInfo]) -> ProgramResult {
+    pub fn cancel_withdraw_request(
+        program_id: &Pubkey,
+        index: u64,
+        accounts: &[AccountInfo],
+    ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_info = next_account_info(account_info_iter)?;
@@ -594,7 +615,6 @@ impl Processor {
         let manager_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
-
         assert_signer(manager_info)?;
 
         assert_owned_by(pool_market_info, program_id)?;
@@ -605,23 +625,23 @@ impl Processor {
         assert_account_key(manager_info, &pool_market.manager)?;
 
         // Check collateral token transit account
-        let (collateral_transit_pubkey, _) = find_transit_program_address(program_id, pool_market_info.key,pool_mint_info.key);
+        let (collateral_transit_pubkey, _) =
+            find_transit_program_address(program_id, pool_market_info.key, pool_mint_info.key);
         assert_account_key(transit_collateral_info, &collateral_transit_pubkey)?;
 
         // Get pool state
         let pool = Pool::unpack(&pool_info.data.borrow())?;
         assert_account_key(pool_market_info, &pool.pool_market)?;
 
-        let (withdrawal_requests_pubkey, _) =
-            find_withdrawal_requests_program_address(
-                program_id,
-                pool_market_info.key,
-                &pool.token_mint,
-            );
+        let (withdrawal_requests_pubkey, _) = find_withdrawal_requests_program_address(
+            program_id,
+            pool_market_info.key,
+            &pool.token_mint,
+        );
         assert_account_key(withdrawal_requests_info, &withdrawal_requests_pubkey)?;
 
         if withdrawal_requests_info.lamports() == 0 {
-            return Err(ProgramError::UninitializedAccount)
+            return Err(ProgramError::UninitializedAccount);
         }
 
         let mut withdrawal_requests =
@@ -630,29 +650,29 @@ impl Processor {
         assert_owned_by(withdrawal_requests_info, program_id)?;
         assert_account_key(pool_info, &withdrawal_requests.pool)?;
 
-        if withdrawal_requests.mint != pool.token_mint{
-            return Err(ProgramError::InvalidArgument)
+        if withdrawal_requests.mint != pool.token_mint {
+            return Err(ProgramError::InvalidArgument);
         }
 
         // Requests que is empty
-        if withdrawal_requests.request.len() == 0 {
-            return Err(EverlendError::WithdrawRequestsListIsEmpty.into())
+        if withdrawal_requests.request.is_empty() {
+            return Err(EverlendError::WithdrawRequestsListIsEmpty.into());
         }
 
-        if index > (withdrawal_requests.request.len() - 1) as u64{
-            return Err(ProgramError::InvalidArgument)
+        if index > (withdrawal_requests.request.len() - 1) as u64 {
+            return Err(ProgramError::InvalidArgument);
         }
 
         let request = withdrawal_requests.request[index as usize];
 
-        assert_account_key(source_info,&request.source)?;
+        assert_account_key(source_info, &request.source)?;
 
         let (_, bump_seed) = find_program_address(program_id, pool_market_info.key);
         let signers_seeds = &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]];
         cpi::spl_token::transfer(
             transit_collateral_info.clone(),
             source_info.clone(),
-                pool_market_authority_info.clone(),
+            pool_market_authority_info.clone(),
             request.collateral_amount,
             &[signers_seeds],
         )?;
@@ -660,7 +680,10 @@ impl Processor {
         withdrawal_requests.request.remove(index as usize);
         withdrawal_requests.liquidity_supply -= request.liquidity_amount;
 
-        WithdrawalRequests::pack(withdrawal_requests, *withdrawal_requests_info.data.borrow_mut())?;
+        WithdrawalRequests::pack(
+            withdrawal_requests,
+            *withdrawal_requests_info.data.borrow_mut(),
+        )?;
 
         Ok(())
     }
