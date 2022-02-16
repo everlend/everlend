@@ -496,9 +496,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@everlend/general_pool@workspace:packages/general_pool":
+"@everlend/general-pool@workspace:packages/general-pool":
   version: 0.0.0-use.local
-  resolution: "@everlend/general_pool@workspace:packages/general_pool"
+  resolution: "@everlend/general-pool@workspace:packages/general-pool"
   dependencies:
     "@everlend/common": "workspace:^0.0.1"
     "@solana/spl-token": ^0.1.5
