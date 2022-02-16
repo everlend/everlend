@@ -223,6 +223,7 @@ pub fn create_pool_borrow_authority(
 #[allow(clippy::too_many_arguments)]
 pub fn update_pool_borrow_authority(
     program_id: &Pubkey,
+    pool_market: &Pubkey,
     pool: &Pubkey,
     borrow_authority: &Pubkey,
     manager: &Pubkey,
@@ -232,6 +233,7 @@ pub fn update_pool_borrow_authority(
         find_pool_borrow_authority_program_address(program_id, pool, borrow_authority);
 
     let accounts = vec![
+        AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new(pool_borrow_authority, false),
         AccountMeta::new_readonly(*manager, true),
     ];
@@ -247,6 +249,7 @@ pub fn update_pool_borrow_authority(
 #[allow(clippy::too_many_arguments)]
 pub fn delete_pool_borrow_authority(
     program_id: &Pubkey,
+    pool_market: &Pubkey,
     pool: &Pubkey,
     borrow_authority: &Pubkey,
     receiver: &Pubkey,
@@ -256,6 +259,7 @@ pub fn delete_pool_borrow_authority(
         find_pool_borrow_authority_program_address(program_id, pool, borrow_authority);
 
     let accounts = vec![
+        AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new(pool_borrow_authority, false),
         AccountMeta::new(*receiver, false),
         AccountMeta::new_readonly(*manager, true),

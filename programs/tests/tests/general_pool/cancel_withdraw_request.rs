@@ -96,65 +96,31 @@ async fn success() {
             collateral_amount: 50,
         }
     );
-}
-
-const WARP_SLOT: Slot = 3;
-#[tokio::test]
-async fn success_few_requests() {
-    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
 
     test_pool
-        .deposit(&mut context, &test_pool_market, &user, 100)
+        .cancel_withdraw_request(&mut context, &test_pool_market, &user, 0)
         .await
         .unwrap();
 
-    test_pool
-        .withdraw_request(&mut context, &test_pool_market, &user, 50)
-        .await
-        .unwrap();
 
-    context.warp_to_slot(WARP_SLOT + 5).unwrap();
-
-    test_pool
-        .withdraw_request(&mut context, &test_pool_market, &user, 10)
-        .await
-        .unwrap();
-
-    context.warp_to_slot(WARP_SLOT + 9).unwrap();
-
-    let withdraw_requests = test_pool.get_withdraw_requests(&mut context,&test_pool_market, &everlend_general_pool::id()).await;
-    let (transit_account, _) = find_transit_program_address(&everlend_general_pool::id(),&test_pool_market.keypair.pubkey(), &test_pool.pool_mint.pubkey());
+    let withdraw_requests = test_pool.get_withdraw_requests(&mut context, &test_pool_market, &everlend_general_pool::id()).await;
+    assert_eq!(
+        withdraw_requests.request.len(),
+        0
+    );
 
     assert_eq!(
-        get_token_balance(&mut context, &user.pool_account).await,
-        40
+        withdraw_requests.liquidity_supply,
+        0
     );
 
     assert_eq!(
         get_token_balance(&mut context, &transit_account).await,
-        60
+        0
     );
 
     assert_eq!(
-        withdraw_requests.request.len(),
-        2
-    );
-
-    assert_eq!(
-        withdraw_requests.request,
-        vec![   WithdrawalRequest {
-            source: user.pool_account,
-            destination: user.token_account,
-            liquidity_amount: 50,
-            collateral_amount: 50,
-        },
-                WithdrawalRequest {
-                    source: user.pool_account,
-                    destination: user.token_account,
-                    liquidity_amount: 10,
-                    collateral_amount: 10,
-                },
-        ]
-
+        get_token_balance(&mut context, &user.pool_account).await,
+        100
     );
 }

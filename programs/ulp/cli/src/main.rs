@@ -321,12 +321,14 @@ fn command_update_pool_borrow_authority(
     );
 
     println!("Pool borrow authority: {}", &pool_borrow_authority_pubkey);
-
+    let pool_account = config.rpc_client.get_account(pool_pubkey)?;
+    let pool = Pool::unpack(&pool_account.data)?;
     let share_allowed = ui_bp_to_bp(ui_share_allowed);
 
     let mut tx = Transaction::new_with_payer(
         &[instruction::update_pool_borrow_authority(
             &everlend_ulp::id(),
+            &pool.pool_market,
             pool_pubkey,
             borrow_authority,
             &config.owner.pubkey(),
@@ -358,10 +360,13 @@ fn command_delete_pool_borrow_authority(
     );
 
     println!("Pool borrow authority: {}", &pool_borrow_authority_pubkey);
+    let pool_account = config.rpc_client.get_account(pool_pubkey)?;
+    let pool = Pool::unpack(&pool_account.data)?;
 
     let mut tx = Transaction::new_with_payer(
         &[instruction::delete_pool_borrow_authority(
             &everlend_ulp::id(),
+            &pool.pool_market,
             pool_pubkey,
             borrow_authority,
             &config.fee_payer.pubkey(),

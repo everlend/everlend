@@ -31,6 +31,7 @@ mod general_pool {
     mod update_pool_borrow_authority;
     mod general_pool_withdraw;
     mod withdraw_request;
+    mod cancel_withdraw_request;
 }
 
 mod liquidity_oracle {

@@ -186,6 +186,33 @@ impl TestGeneralPool {
         context.banks_client.process_transaction(tx).await
     }
 
+    pub async fn cancel_withdraw_request(
+        &self,
+        context: &mut ProgramTestContext,
+        test_pool_market: &TestGeneralPoolMarket,
+        user: &LiquidityProvider,
+        index: u64,
+    ) -> transport::Result<()> {
+
+        let tx = Transaction::new_signed_with_payer(
+            &[instruction::cancel_withdraw_request(
+                &everlend_general_pool::id(),
+                &test_pool_market.keypair.pubkey(),
+                &self.pool_pubkey,
+                &user.pool_account,
+                &self.token_mint_pubkey,
+                &self.pool_mint.pubkey(),
+                &test_pool_market.manager.pubkey(),
+                index,
+            )],
+            Some(&context.payer.pubkey()),
+            &[&context.payer, &test_pool_market.manager],
+            context.last_blockhash,
+        );
+
+        context.banks_client.process_transaction(tx).await
+    }
+
     pub async fn borrow(
         &self,
         context: &mut ProgramTestContext,

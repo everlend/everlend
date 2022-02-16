@@ -35,6 +35,10 @@ pub struct WithdrawalRequests {
 #[repr(C)]
 #[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize, BorshSchema, PartialEq, Default)]
 pub struct WithdrawalRequest {
+
+    ///Withdraw source
+    pub source: Pubkey,
+
     /// Withdraw destination
     pub destination: Pubkey,
 
@@ -92,8 +96,8 @@ impl IsInitialized for WithdrawalRequests {
 
 impl Sealed for WithdrawalRequest {}
 impl Pack for WithdrawalRequest {
-    // 32 + 8 + 8
-    const LEN: usize = 48;
+    // 32 + 32 + 8 + 8
+    const LEN: usize = 80;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;

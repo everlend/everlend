@@ -46,7 +46,7 @@ pub enum LiquidityPoolsInstruction {
     /// [R] Borrow authority
     /// [WS] Market manager
     /// [R] Rent sysvar
-    /// [R] Sytem program
+    /// [R] System program
     CreatePoolBorrowAuthority {
         /// Share allowed
         share_allowed: u16,
@@ -55,6 +55,7 @@ pub enum LiquidityPoolsInstruction {
     /// Update a pool borrow authority
     ///
     /// Accounts:
+    /// [R] Pool market
     /// [W] Pool borrow authority
     /// [RS] Market manager
     UpdatePoolBorrowAuthority {
@@ -65,6 +66,7 @@ pub enum LiquidityPoolsInstruction {
     /// Delete a pool borrow authority
     ///
     /// Accounts:
+    /// [R] Pool market
     /// [W] Pool borrow authority
     /// [W] Receiver lamports
     /// [RS] Market manager
@@ -154,6 +156,23 @@ pub enum LiquidityPoolsInstruction {
     WithdrawRequest{
         /// Amount to withdraw
         amount: u64,
+    },
+
+    /// Cancel withdraw request and return collateral tokens to user
+    ///
+    /// Accounts:
+    /// [R] Pool market
+    /// [R] Pool
+    /// [W] Withdrawals requests account
+    /// [W] Withdrawal source collateral account
+    /// [W] Transit collateral account
+    /// [W] Pool mint account
+    /// [R] Pool market authority
+    /// [RS] Market manager
+    /// [R] Token program id
+    CancelWithdrawRequest{
+        /// Index of withdraw request
+        index: u64,
     }
 }
 
@@ -248,6 +267,7 @@ pub fn create_pool_borrow_authority(
 #[allow(clippy::too_many_arguments)]
 pub fn update_pool_borrow_authority(
     program_id: &Pubkey,
+    pool_market: &Pubkey,
     pool: &Pubkey,
     borrow_authority: &Pubkey,
     manager: &Pubkey,
@@ -257,6 +277,7 @@ pub fn update_pool_borrow_authority(
         find_pool_borrow_authority_program_address(program_id, pool, borrow_authority);
 
     let accounts = vec![
+        AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new(pool_borrow_authority, false),
         AccountMeta::new_readonly(*manager, true),
     ];
@@ -272,6 +293,7 @@ pub fn update_pool_borrow_authority(
 #[allow(clippy::too_many_arguments)]
 pub fn delete_pool_borrow_authority(
     program_id: &Pubkey,
+    pool_market: &Pubkey,
     pool: &Pubkey,
     borrow_authority: &Pubkey,
     receiver: &Pubkey,
@@ -281,6 +303,7 @@ pub fn delete_pool_borrow_authority(
         find_pool_borrow_authority_program_address(program_id, pool, borrow_authority);
 
     let accounts = vec![
+        AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new(pool_borrow_authority, false),
         AccountMeta::new(*receiver, false),
         AccountMeta::new_readonly(*manager, true),
@@ -363,7 +386,7 @@ pub fn withdraw(
     )
 }
 
-/// Creates 'Withdraw' instruction.
+/// Creates 'WithdrawRequest' instruction.
 #[allow(clippy::too_many_arguments)]
 pub fn withdraw_request(
     program_id: &Pubkey,
@@ -400,6 +423,43 @@ pub fn withdraw_request(
         accounts,
     )
 }
+
+/// Creates 'CancelWithdrawRequest' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn cancel_withdraw_request(
+    program_id: &Pubkey,
+    pool_market: &Pubkey,
+    pool: &Pubkey,
+    source: &Pubkey,
+    token_mint: &Pubkey,
+    pool_mint: &Pubkey,
+    manager_authority: &Pubkey,
+    index: u64,
+) -> Instruction {
+    let (pool_market_authority, _) = find_program_address(program_id, pool_market);
+
+    let (withdrawal_requests, _) = find_withdrawal_requests_program_address(program_id, pool_market, token_mint);
+    let (collateral_transit, _) = find_transit_program_address(program_id, pool_market, pool_mint);
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*pool_market, false),
+        AccountMeta::new_readonly(*pool, false),
+        AccountMeta::new(withdrawal_requests, false),
+        AccountMeta::new(*source, false),
+        AccountMeta::new(collateral_transit, false),
+        AccountMeta::new(*pool_mint, false),
+        AccountMeta::new_readonly(pool_market_authority, false),
+        AccountMeta::new_readonly(*manager_authority, true),
+        AccountMeta::new_readonly(spl_token::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &LiquidityPoolsInstruction::CancelWithdrawRequest { index },
+        accounts,
+    )
+}
+
 
 /// Creates 'Borrow' instruction.
 #[allow(clippy::too_many_arguments)]

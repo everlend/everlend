@@ -81,6 +81,7 @@ impl TestGeneralPoolBorrowAuthority {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::update_pool_borrow_authority(
                 &everlend_general_pool::id(),
+                &test_pool_market.keypair.pubkey(),
                 &test_pool.pool_pubkey,
                 &self.borrow_authority,
                 &test_pool_market.manager.pubkey(),
@@ -103,6 +104,7 @@ impl TestGeneralPoolBorrowAuthority {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::delete_pool_borrow_authority(
                 &everlend_general_pool::id(),
+                &test_pool_market.keypair.pubkey(),
                 &test_pool.pool_pubkey,
                 &self.borrow_authority,
                 &context.payer.pubkey(),
