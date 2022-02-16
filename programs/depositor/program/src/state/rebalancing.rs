@@ -15,6 +15,9 @@ use solana_program::{
 };
 use std::cmp::Ordering;
 
+/// How many lamptors we reserve for the next rebalancing, to avoid leakage
+pub const RESERVED_LEAKED: u64 = TOTAL_DISTRIBUTIONS as u64;
+
 /// Rebalancing
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
@@ -28,11 +31,11 @@ pub struct Rebalancing {
     /// Mint
     pub mint: Pubkey,
 
-    /// Current liquidity supply
-    pub liquidity_supply: u64,
+    /// Distributed liquidity
+    pub distributed_liquidity: u64,
 
-    /// Collateral supply in each market
-    pub received_collateral_supply: [u64; TOTAL_DISTRIBUTIONS],
+    /// Received collateral in each market
+    pub received_collateral: [u64; TOTAL_DISTRIBUTIONS],
 
     /// Current token distribution from liquidity oracle
     pub token_distribution: TokenDistribution,
@@ -53,16 +56,15 @@ impl Rebalancing {
     pub fn compute(
         &mut self,
         registry_config: &RegistryConfig,
-        new_token_distribution: TokenDistribution,
-        new_liquidity_supply: u64,
+        token_distribution: TokenDistribution,
+        distributed_liquidity: u64,
     ) -> Result<(), ProgramError> {
-        if new_token_distribution.updated_at <= self.token_distribution.updated_at {
+        if token_distribution.updated_at <= self.token_distribution.updated_at {
             return Err(ProgramError::InvalidArgument);
         }
 
         // Reset steps
         self.steps = Vec::new();
-        // let mut distributed_liquidity_supply = 0u64;
 
         // Compute steps
         for i in 0..TOTAL_DISTRIBUTIONS {
@@ -71,32 +73,19 @@ impl Rebalancing {
                 break;
             }
 
-            let percent = self.token_distribution.distribution[i];
-            let new_percent = new_token_distribution.distribution[i];
+            // Spread percents
+            let prev_percent = self.token_distribution.distribution[i];
+            let percent = token_distribution.distribution[i];
 
-            let distribution_liquidity = math::share(self.liquidity_supply, percent)?;
-            let new_distribution_liquidity = math::share(new_liquidity_supply, new_percent)?;
-
-            // msg!(
-            //     "COMP {:#?}",
-            //     (
-            //         percent,
-            //         new_percent,
-            //         self.liquidity_supply,
-            //         distribution_liquidity,
-            //         new_distribution_liquidity
-            //     )
-            // );
-
-            // Count real distributed liquidity supply
-            // distributed_liquidity_supply = distributed_liquidity_supply
-            //     .checked_add(new_distribution_liquidity)
-            //     .ok_or(EverlendError::MathOverflow)?;
+            let prev_distribution_liquidity =
+                math::share(self.distributed_liquidity, prev_percent)?;
+            let distribution_liquidity = math::share(distributed_liquidity, percent)?;
 
             let liquidity_amount =
-                math::absdiff(new_distribution_liquidity, distribution_liquidity)?;
+                math::absdiff(distribution_liquidity, prev_distribution_liquidity)?;
 
-            match new_distribution_liquidity.cmp(&distribution_liquidity) {
+            match distribution_liquidity.cmp(&prev_distribution_liquidity) {
+                // Deposit
                 Ordering::Greater => {
                     self.add_step(RebalancingStep::new(
                         i as u8,
@@ -105,19 +94,18 @@ impl Rebalancing {
                         None, // Will be calculated at the deposit stage
                     ));
                 }
+                // Withdraw
                 Ordering::Less => {
                     let collateral_percent = PRECISION_SCALER
-                        .checked_sub(math::rate_div(
-                            new_distribution_liquidity,
+                        .checked_sub(math::percent_ratio(
                             distribution_liquidity,
+                            prev_distribution_liquidity,
                         )? as u128)
                         .ok_or(EverlendError::MathOverflow)?;
 
                     // Compute collateral amount depending on amount percent
-                    let collateral_amount = math::share(
-                        self.received_collateral_supply[i],
-                        collateral_percent as u64,
-                    )?;
+                    let collateral_amount =
+                        math::share(self.received_collateral[i], collateral_percent as u64)?;
 
                     self.add_step(RebalancingStep::new(
                         i as u8,
@@ -139,8 +127,8 @@ impl Rebalancing {
         self.steps
             .sort_by(|a, b| a.operation.partial_cmp(&b.operation).unwrap());
 
-        self.token_distribution = new_token_distribution;
-        self.liquidity_supply = new_liquidity_supply;
+        self.token_distribution = token_distribution;
+        self.distributed_liquidity = distributed_liquidity;
 
         Ok(())
     }
@@ -180,11 +168,11 @@ impl Rebalancing {
             received_collateral_amount.unwrap_or_else(|| step.collateral_amount.unwrap());
 
         // Update collateral ammount
-        self.received_collateral_supply[money_market_index] = match operation {
-            RebalancingOperation::Deposit => self.received_collateral_supply[money_market_index]
+        self.received_collateral[money_market_index] = match operation {
+            RebalancingOperation::Deposit => self.received_collateral[money_market_index]
                 .checked_add(collateral_amount)
                 .ok_or(EverlendError::MathOverflow)?,
-            RebalancingOperation::Withdraw => self.received_collateral_supply[money_market_index]
+            RebalancingOperation::Withdraw => self.received_collateral[money_market_index]
                 .checked_sub(collateral_amount)
                 .ok_or(EverlendError::MathOverflow)?,
         };
@@ -204,6 +192,18 @@ impl Rebalancing {
         }
 
         self.steps.iter().all(|&step| step.executed_at.is_some())
+    }
+
+    /// Compute unused liquidity
+    pub fn compute_unused_liquidity(&self) -> Result<u64, ProgramError> {
+        let total_percent: u64 = self.token_distribution.distribution.iter().sum();
+
+        math::share(
+            self.distributed_liquidity,
+            PRECISION_SCALER
+                .checked_sub(total_percent as u128)
+                .ok_or(EverlendError::MathOverflow)? as u64,
+        )
     }
 }
 
@@ -303,7 +303,7 @@ pub mod tests {
         assert_eq!(rebalancing.steps[0].liquidity_amount, 90_000_000);
         assert_eq!(rebalancing.steps[1].liquidity_amount, 10_000_000);
 
-        // Drecrese liquidity supply
+        // Decrease liquidity supply
         token_distribution.update(3, distribution);
         rebalancing
             .compute(&registry_config, token_distribution.clone(), 85_000_000)
@@ -312,12 +312,12 @@ pub mod tests {
         assert_eq!(rebalancing.steps[0].liquidity_amount, 13_500_000);
         assert_eq!(rebalancing.steps[1].liquidity_amount, 1_500_000);
 
-        // Drecrese to 1 liquidity supply
+        // Decrease to 1 liquidity supply
         token_distribution.update(4, distribution);
         rebalancing
             .compute(&registry_config, token_distribution.clone(), 1)
             .unwrap();
-        assert_eq!(rebalancing.liquidity_supply, 1);
+        assert_eq!(rebalancing.distributed_liquidity, 1);
         assert_eq!(rebalancing.steps[0].liquidity_amount, 76_500_000);
         assert_eq!(rebalancing.steps[1].liquidity_amount, 8_500_000);
 

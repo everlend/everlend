@@ -224,6 +224,12 @@ async fn success() {
     context.warp_to_slot(3).unwrap();
     pyth_oracle.update(&mut context, 3).await;
 
+    let rebalancing = test_depositor
+        .get_rebalancing_data(&mut context, &general_pool.token_mint_pubkey)
+        .await;
+
+    println!("rebalancing = {:#?}", rebalancing);
+
     let money_market_pubkeys =
         MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
             reserve: money_market.reserve_pubkey,
@@ -246,11 +252,11 @@ async fn success() {
 
     assert_eq!(
         get_token_balance(&mut context, &mm_pool.token_account.pubkey()).await,
-        50 * EXP,
+        rebalancing.steps[0].liquidity_amount,
     );
     assert_eq!(
         get_token_balance(&mut context, &reserve.liquidity.supply_pubkey).await,
-        reserve_balance_before + 50 * EXP,
+        reserve_balance_before + rebalancing.steps[0].liquidity_amount,
     );
 
     let (liquidity_transit, _) = everlend_depositor::find_transit_program_address(
@@ -260,7 +266,7 @@ async fn success() {
     );
     assert_eq!(
         get_token_balance(&mut context, &liquidity_transit).await,
-        50 * EXP
+        100 * EXP - rebalancing.steps[0].liquidity_amount,
     );
 }
 

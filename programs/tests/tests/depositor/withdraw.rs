@@ -213,7 +213,7 @@ async fn setup() -> (
 
     // 7.1 Decrease distribution & restart rebalancing
 
-    distribution[0] = 300_000_000u64; // Decrease to 30%
+    distribution[0] = 0u64; // Decrease to 0%
     test_token_distribution
         .update(
             &mut context,
@@ -254,6 +254,71 @@ async fn setup() -> (
 
 #[tokio::test]
 async fn success() {
+    let (
+        mut context,
+        money_market,
+        pyth_oracle,
+        registry,
+        _general_pool_market,
+        general_pool,
+        _general_pool_borrow_authority,
+        income_pool_market,
+        income_pool,
+        mm_pool_market,
+        mm_pool,
+        liquidity_provider,
+        test_depositor,
+    ) = setup().await;
+
+    let reserve = money_market.get_reserve_data(&mut context).await;
+
+    let reserve_balance_before =
+        get_token_balance(&mut context, &reserve.liquidity.supply_pubkey).await;
+
+    context.warp_to_slot(5).unwrap();
+    pyth_oracle.update(&mut context, 5).await;
+
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
+
+    test_depositor
+        .withdraw(
+            &mut context,
+            &registry,
+            &income_pool_market,
+            &income_pool,
+            &mm_pool_market,
+            &mm_pool,
+            &spl_token_lending::id(),
+            &money_market_pubkeys,
+        )
+        .await
+        .unwrap();
+
+    let rebalancing = test_depositor
+        .get_rebalancing_data(&mut context, &general_pool.token_mint_pubkey)
+        .await;
+
+    println!("rebalancing = {:#?}", rebalancing);
+
+    assert!(rebalancing.is_completed());
+    assert_eq!(
+        get_token_balance(&mut context, &mm_pool.token_account.pubkey()).await,
+        rebalancing.received_collateral[0],
+    );
+    assert_eq!(
+        get_token_balance(&mut context, &reserve.liquidity.supply_pubkey).await,
+        reserve_balance_before - rebalancing.steps[0].liquidity_amount,
+    );
+}
+
+#[tokio::test]
+async fn success_with_incomes() {
     let (
         mut context,
         money_market,
@@ -334,6 +399,6 @@ async fn success() {
     );
     assert_eq!(
         get_token_balance(&mut context, &reserve.liquidity.supply_pubkey).await,
-        reserve_balance_before - 20 * EXP - income_balance,
+        reserve_balance_before - rebalancing.steps[0].liquidity_amount - income_balance,
     );
 }

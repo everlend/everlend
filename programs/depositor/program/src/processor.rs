@@ -5,6 +5,7 @@ use crate::{
     instruction::DepositorInstruction,
     state::{
         Depositor, InitDepositorParams, InitRebalancingParams, Rebalancing, RebalancingOperation,
+        RESERVED_LEAKED,
     },
     utils::{money_market_deposit, money_market_redeem},
 };
@@ -16,7 +17,7 @@ use everlend_registry::state::RegistryConfig;
 use everlend_ulp::state::Pool;
 use everlend_utils::{
     assert_account_key, assert_owned_by, assert_rent_exempt, assert_uninitialized, cpi,
-    find_program_address, EverlendError,
+    find_program_address, math, EverlendError,
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -215,7 +216,8 @@ impl Processor {
             );
         assert_account_key(token_distribution_info, &token_distribution_pubkey)?;
 
-        let token_distribution = TokenDistribution::unpack(&token_distribution_info.data.borrow())?;
+        let new_token_distribution =
+            TokenDistribution::unpack(&token_distribution_info.data.borrow())?;
 
         // Get pool state to calculate total amount
         let pool = Pool::unpack(&general_pool_info.data.borrow())?;
@@ -226,32 +228,77 @@ impl Processor {
         let general_pool_token_account =
             Account::unpack_unchecked(&general_pool_token_account_info.data.borrow())?;
 
-        let liquidity_supply = general_pool_token_account
+        let liquidity_transit_supply = Account::unpack(&liquidity_transit_info.data.borrow())?
             .amount
-            .checked_add(pool.total_amount_borrowed)
+            .saturating_sub(rebalancing.compute_unused_liquidity()?);
+
+        let available_transit_liquidity = liquidity_transit_supply.saturating_sub(RESERVED_LEAKED);
+
+        // How many lamports do we need to borrow to transit account for leaked
+        // N from 0 to 10
+        let leaked_amount = RESERVED_LEAKED.saturating_sub(available_transit_liquidity);
+
+        // TODO: Move this math to state
+
+        let new_distributed_liquidity = general_pool_token_account
+            .amount
+            .checked_add(rebalancing.distributed_liquidity)
+            .ok_or(EverlendError::MathOverflow)?
+            .checked_sub(leaked_amount)
+            .ok_or(EverlendError::MathOverflow)?;
+
+        let amount = (new_distributed_liquidity.saturating_sub(rebalancing.distributed_liquidity)
+            as i64)
+            .checked_add(leaked_amount as i64)
+            .ok_or(EverlendError::MathOverflow)?
+            .checked_sub(liquidity_transit_supply as i64)
             .ok_or(EverlendError::MathOverflow)?;
 
         let (depositor_authority_pubkey, bump_seed) =
             find_program_address(program_id, depositor_info.key);
         assert_account_key(depositor_authority_info, &depositor_authority_pubkey)?;
-
         let signers_seeds = &[&depositor_info.key.to_bytes()[..32], &[bump_seed]];
 
-        msg!("Borrow from General Pool");
-        everlend_ulp::cpi::borrow(
-            general_pool_market_info.clone(),
-            general_pool_market_authority_info.clone(),
-            general_pool_info.clone(),
-            general_pool_borrow_authority_info.clone(),
-            liquidity_transit_info.clone(),
-            general_pool_token_account_info.clone(),
-            depositor_authority_info.clone(),
-            general_pool_token_account.amount,
-            &[signers_seeds],
-        )?;
+        match amount {
+            a if a > 0 => {
+                msg!("Borrow from General Pool");
+                everlend_ulp::cpi::borrow(
+                    general_pool_market_info.clone(),
+                    general_pool_market_authority_info.clone(),
+                    general_pool_info.clone(),
+                    general_pool_borrow_authority_info.clone(),
+                    liquidity_transit_info.clone(),
+                    general_pool_token_account_info.clone(),
+                    depositor_authority_info.clone(),
+                    amount.checked_abs().ok_or(EverlendError::MathOverflow)? as u64,
+                    &[signers_seeds],
+                )?;
+            }
+            a if a < 0 => {
+                msg!("Repay to General Pool");
+                everlend_ulp::cpi::repay(
+                    general_pool_market_info.clone(),
+                    general_pool_market_authority_info.clone(),
+                    general_pool_info.clone(),
+                    general_pool_borrow_authority_info.clone(),
+                    liquidity_transit_info.clone(),
+                    general_pool_token_account_info.clone(),
+                    depositor_authority_info.clone(),
+                    amount.checked_abs().ok_or(EverlendError::MathOverflow)? as u64,
+                    0,
+                    &[signers_seeds],
+                )?;
+            }
+            _ => {}
+        }
 
         // Compute rebalancing steps
-        rebalancing.compute(&registry_config, token_distribution, liquidity_supply)?;
+        msg!("Computing");
+        rebalancing.compute(
+            &registry_config,
+            new_token_distribution,
+            new_distributed_liquidity,
+        )?;
         msg!("Steps: {:#?}", rebalancing.steps);
 
         Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
@@ -423,7 +470,7 @@ impl Processor {
             return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
         }
 
-        let liquidity_transit_amount_before =
+        let liquidity_transit_supply =
             Account::unpack(&liquidity_transit_info.data.borrow())?.amount;
 
         msg!("Withdraw collateral tokens from MM Pool");
@@ -457,7 +504,7 @@ impl Processor {
 
         let received_amount = Account::unpack(&liquidity_transit_info.data.borrow())?
             .amount
-            .checked_sub(liquidity_transit_amount_before)
+            .checked_sub(liquidity_transit_supply)
             .ok_or(EverlendError::MathOverflow)?;
         msg!("Received amount: {}", received_amount);
 
@@ -481,6 +528,8 @@ impl Processor {
                 income_amount as u64,
                 &[signers_seeds],
             )?;
+        } else {
+            msg!("Leaked!");
         }
 
         rebalancing.execute_step(RebalancingOperation::Withdraw, None, clock.slot)?;

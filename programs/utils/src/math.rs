@@ -14,7 +14,11 @@ pub fn absdiff(a: u64, b: u64) -> Result<u64, ProgramError> {
     Ok(res as u64)
 }
 
-pub fn rate_div(a: u64, b: u64) -> Result<u64, ProgramError> {
+pub fn percent_ratio(a: u64, b: u64) -> Result<u64, ProgramError> {
+    if b == 0 {
+        return Ok(0);
+    }
+
     let res = (a as u128)
         .checked_mul(PRECISION_SCALER)
         .ok_or(EverlendError::MathOverflow)?

@@ -816,6 +816,7 @@ dependencies = [
  "everlend-depositor",
  "everlend-income-pools",
  "everlend-liquidity-oracle",
+ "everlend-registry",
  "everlend-ulp",
  "everlend-utils",
  "port-variable-rate-lending-instructions",
