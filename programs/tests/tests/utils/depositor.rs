@@ -1,6 +1,6 @@
 use super::{
-    get_account, TestIncomePool, TestIncomePoolMarket, TestLiquidityOracle, TestPool,
-    TestPoolMarket, TestSPLTokenLending,
+    get_account, get_liquidity_mint, TestIncomePool, TestIncomePoolMarket, TestLiquidityOracle,
+    TestPool, TestPoolMarket, TestRegistry,
 };
 use everlend_depositor::{
     find_rebalancing_program_address,
@@ -101,6 +101,7 @@ impl TestDepositor {
     pub async fn start_rebalancing(
         &self,
         context: &mut ProgramTestContext,
+        registry: &TestRegistry,
         general_pool_market: &TestPoolMarket,
         general_pool: &TestPool,
         liquidity_oracle: &TestLiquidityOracle,
@@ -108,6 +109,7 @@ impl TestDepositor {
         let tx = Transaction::new_signed_with_payer(
             &[everlend_depositor::instruction::start_rebalancing(
                 &everlend_depositor::id(),
+                &registry.keypair.pubkey(),
                 &self.depositor.pubkey(),
                 &general_pool.token_mint_pubkey,
                 &general_pool_market.keypair.pubkey(),
@@ -127,42 +129,30 @@ impl TestDepositor {
     pub async fn deposit(
         &self,
         context: &mut ProgramTestContext,
-        general_pool_market: &TestPoolMarket,
-        general_pool: &TestPool,
+        registry: &TestRegistry,
         mm_pool_market: &TestPoolMarket,
         mm_pool: &TestPool,
-        test_spl_token_lending: &TestSPLTokenLending,
+        money_market_program_id: &Pubkey,
+        money_market_pubkeys: &MoneyMarketPubkeys,
     ) -> transport::Result<()> {
-        let reserve = test_spl_token_lending.get_reserve_data(context).await;
-
-        let liquidity_mint = general_pool.token_mint_pubkey;
+        let liquidity_mint = get_liquidity_mint().1;
         let collateral_mint = mm_pool.token_mint_pubkey;
         let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
 
-        let money_market_pubkeys = integrations::spl_token_lending::AccountPubkeys {
-            reserve: test_spl_token_lending.reserve_pubkey,
-            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
-            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
-            lending_market: test_spl_token_lending.market_pubkey,
-        };
-
-        let deposit_accounts = integrations::deposit_accounts(
-            &spl_token_lending::id(),
-            &MoneyMarketPubkeys::SPL(money_market_pubkeys),
-        );
+        let deposit_accounts =
+            integrations::deposit_accounts(money_market_program_id, money_market_pubkeys);
 
         let tx = Transaction::new_signed_with_payer(
             &[everlend_depositor::instruction::deposit(
                 &everlend_depositor::id(),
+                &registry.keypair.pubkey(),
                 &self.depositor.pubkey(),
-                &general_pool_market.keypair.pubkey(),
-                &general_pool.token_account.pubkey(),
                 &mm_pool_market.keypair.pubkey(),
                 &mm_pool.token_account.pubkey(),
                 &mm_pool_collateral_mint,
                 &liquidity_mint,
                 &collateral_mint,
-                &spl_token_lending::id(),
+                money_market_program_id,
                 deposit_accounts,
             )],
             Some(&context.payer.pubkey()),
@@ -177,38 +167,26 @@ impl TestDepositor {
     pub async fn withdraw(
         &self,
         context: &mut ProgramTestContext,
-        general_pool_market: &TestPoolMarket,
-        general_pool: &TestPool,
+        registry: &TestRegistry,
         income_pool_market: &TestIncomePoolMarket,
         income_pool: &TestIncomePool,
         mm_pool_market: &TestPoolMarket,
         mm_pool: &TestPool,
-        test_spl_token_lending: &TestSPLTokenLending,
+        money_market_program_id: &Pubkey,
+        money_market_pubkeys: &MoneyMarketPubkeys,
     ) -> transport::Result<()> {
-        let reserve = test_spl_token_lending.get_reserve_data(context).await;
-
         let collateral_mint = mm_pool.token_mint_pubkey;
-        let liquidity_mint = general_pool.token_mint_pubkey;
+        let liquidity_mint = get_liquidity_mint().1;
         let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
 
-        let money_market_pubkeys = integrations::spl_token_lending::AccountPubkeys {
-            reserve: test_spl_token_lending.reserve_pubkey,
-            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
-            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
-            lending_market: test_spl_token_lending.market_pubkey,
-        };
-
-        let withdraw_accounts = integrations::withdraw_accounts(
-            &spl_token_lending::id(),
-            &MoneyMarketPubkeys::SPL(money_market_pubkeys),
-        );
+        let withdraw_accounts =
+            integrations::withdraw_accounts(money_market_program_id, money_market_pubkeys);
 
         let tx = Transaction::new_signed_with_payer(
             &[everlend_depositor::instruction::withdraw(
                 &everlend_depositor::id(),
+                &registry.keypair.pubkey(),
                 &self.depositor.pubkey(),
-                &general_pool_market.keypair.pubkey(),
-                &general_pool.token_account.pubkey(),
                 &income_pool_market.keypair.pubkey(),
                 &income_pool.token_account.pubkey(),
                 &mm_pool_market.keypair.pubkey(),
@@ -216,7 +194,7 @@ impl TestDepositor {
                 &mm_pool_collateral_mint,
                 &collateral_mint,
                 &liquidity_mint,
-                &spl_token_lending::id(),
+                money_market_program_id,
                 withdraw_accounts,
             )],
             Some(&context.payer.pubkey()),

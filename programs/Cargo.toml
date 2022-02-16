@@ -8,6 +8,7 @@ members = [
   "liquidity_oracle/program",
   "income_pools/program",
   "income_pools/cli",
+  "registry/program",
   "tests",
   "e2e",
 ]

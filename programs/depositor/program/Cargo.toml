@@ -17,6 +17,7 @@ spl-token-lending = { git = "https://github.com/everlend/solana-program-library"
 everlend-ulp = { path = "../../ulp/program", features = [ "no-entrypoint" ] }
 everlend-income-pools = { path = "../../income_pools/program", features = [ "no-entrypoint" ] }
 everlend-liquidity-oracle = { path = "../../liquidity_oracle/program", features = [ "no-entrypoint" ] }
+everlend-registry = { path = "../../registry/program", features = [ "no-entrypoint" ] }
 everlend-utils = { path = "../../utils" }
 borsh = "0.9.0"
 

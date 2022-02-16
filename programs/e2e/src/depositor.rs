@@ -73,6 +73,7 @@ pub fn create_transit(
 
 pub fn start_rebalancing(
     config: &Config,
+    registry_pubkey: &Pubkey,
     depositor_pubkey: &Pubkey,
     token_mint: &Pubkey,
     general_pool_market_pubkey: &Pubkey,
@@ -82,6 +83,7 @@ pub fn start_rebalancing(
     let tx = Transaction::new_with_payer(
         &[everlend_depositor::instruction::start_rebalancing(
             &everlend_depositor::id(),
+            registry_pubkey,
             depositor_pubkey,
             token_mint,
             general_pool_market_pubkey,
@@ -103,9 +105,8 @@ pub fn start_rebalancing(
 #[allow(clippy::too_many_arguments)]
 pub fn deposit(
     config: &Config,
+    registry_pubkey: &Pubkey,
     depositor_pubkey: &Pubkey,
-    general_pool_market_pubkey: &Pubkey,
-    general_pool_token_account: &Pubkey,
     mm_pool_market_pubkey: &Pubkey,
     mm_pool_token_account: &Pubkey,
     liquidity_mint: &Pubkey,
@@ -117,9 +118,8 @@ pub fn deposit(
     let tx = Transaction::new_with_payer(
         &[everlend_depositor::instruction::deposit(
             &everlend_depositor::id(),
+            registry_pubkey,
             depositor_pubkey,
-            general_pool_market_pubkey,
-            general_pool_token_account,
             mm_pool_market_pubkey,
             mm_pool_token_account,
             mm_pool_collateral_mint,
@@ -139,9 +139,8 @@ pub fn deposit(
 #[allow(clippy::too_many_arguments)]
 pub fn withdraw(
     config: &Config,
+    registry_pubkey: &Pubkey,
     depositor_pubkey: &Pubkey,
-    general_pool_market_pubkey: &Pubkey,
-    general_pool_token_account: &Pubkey,
     income_pool_market_pubkey: &Pubkey,
     income_pool_token_account: &Pubkey,
     mm_pool_market_pubkey: &Pubkey,
@@ -155,9 +154,8 @@ pub fn withdraw(
     let tx = Transaction::new_with_payer(
         &[everlend_depositor::instruction::withdraw(
             &everlend_depositor::id(),
+            registry_pubkey,
             depositor_pubkey,
-            general_pool_market_pubkey,
-            general_pool_token_account,
             income_pool_market_pubkey,
             income_pool_token_account,
             mm_pool_market_pubkey,
