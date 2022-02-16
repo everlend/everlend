@@ -2,23 +2,15 @@
 
 use super::AccountType;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+use everlend_registry::state::TOTAL_DISTRIBUTIONS;
 use solana_program::{
     clock::Slot,
     msg,
     program_error::ProgramError,
     program_pack::{IsInitialized, Pack, Sealed},
-    pubkey::Pubkey,
 };
 
-pub const LENDINGS_SIZE: usize = 10;
-
-#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize, BorshSchema, PartialEq, Default)]
-pub struct LiquidityDistribution {
-    pub money_market: Pubkey,
-    pub percent: u64,
-}
-
-pub type DistributionArray = [LiquidityDistribution; LENDINGS_SIZE];
+pub type DistributionArray = [u64; TOTAL_DISTRIBUTIONS];
 
 #[repr(C)]
 #[derive(Debug, Clone, BorshDeserialize, BorshSerialize, BorshSchema, PartialEq, Default)]
@@ -48,8 +40,8 @@ impl TokenDistribution {
 
 impl Sealed for TokenDistribution {}
 impl Pack for TokenDistribution {
-    // 1 + (40 * LENDING_SIZE) + 8 = 409
-    const LEN: usize = 1 + (40 * LENDINGS_SIZE) + 8;
+    // 1 + (8 * 10) + 8 = 89
+    const LEN: usize = 1 + (8 * TOTAL_DISTRIBUTIONS) + 8;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;

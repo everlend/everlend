@@ -19,7 +19,7 @@ pub fn deposit_accounts(program_id: &Pubkey, pubkeys: &MoneyMarketPubkeys) -> Ve
     match pubkeys {
         MoneyMarketPubkeys::SPL(pubkeys) => {
             spl_token_lending::accounts::deposit(program_id, pubkeys)
-        },
+        }
         MoneyMarketPubkeys::Larix(pubkeys) => larix::accounts::deposit(program_id, pubkeys),
         _ => vec![],
     }
@@ -29,7 +29,7 @@ pub fn withdraw_accounts(program_id: &Pubkey, pubkeys: &MoneyMarketPubkeys) -> V
     match pubkeys {
         MoneyMarketPubkeys::SPL(pubkeys) => {
             spl_token_lending::accounts::withdraw(program_id, pubkeys)
-        },
+        }
         MoneyMarketPubkeys::Larix(pubkeys) => larix::accounts::withdraw(program_id, pubkeys),
         _ => vec![],
     }

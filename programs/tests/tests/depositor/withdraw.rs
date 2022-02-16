@@ -1,8 +1,11 @@
 #![cfg(feature = "test-bpf")]
 
 use crate::utils::*;
-use everlend_liquidity_oracle::state::{DistributionArray, LiquidityDistribution};
-use everlend_utils::find_program_address;
+use everlend_liquidity_oracle::state::DistributionArray;
+use everlend_utils::{
+    find_program_address,
+    integrations::{self, MoneyMarketPubkeys},
+};
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::*;
 use solana_sdk::signer::Signer;
@@ -11,6 +14,7 @@ async fn setup() -> (
     ProgramTestContext,
     TestSPLTokenLending,
     TestPythOracle,
+    TestRegistry,
     TestPoolMarket,
     TestPool,
     TestPoolBorrowAuthority,
@@ -21,7 +25,7 @@ async fn setup() -> (
     LiquidityProvider,
     TestDepositor,
 ) {
-    let (mut context, money_market, pyth_oracle) = presetup().await;
+    let (mut context, money_market, pyth_oracle, registry) = presetup().await;
 
     let payer_pubkey = context.payer.pubkey();
 
@@ -102,10 +106,7 @@ async fn setup() -> (
     test_liquidity_oracle.init(&mut context).await.unwrap();
 
     let mut distribution = DistributionArray::default();
-    distribution[0] = LiquidityDistribution {
-        money_market: spl_token_lending::id(),
-        percent: 500_000_000u64, // 50%
-    };
+    distribution[0] = 500_000_000u64; // 50%
 
     let test_token_distribution =
         TestTokenDistribution::new(general_pool.token_mint_pubkey, distribution);
@@ -175,6 +176,7 @@ async fn setup() -> (
     test_depositor
         .start_rebalancing(
             &mut context,
+            &registry,
             &general_pool_market,
             &general_pool,
             &test_liquidity_oracle,
@@ -189,22 +191,29 @@ async fn setup() -> (
     pyth_oracle.update(&mut context, 3).await;
     // money_market.refresh_reserve(&mut context, 3).await;
 
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
+
     test_depositor
         .deposit(
             &mut context,
-            &general_pool_market,
-            &general_pool,
+            &registry,
             &mm_pool_market,
             &mm_pool,
-            &money_market,
-            // 50 * EXP,
+            &spl_token_lending::id(),
+            &money_market_pubkeys,
         )
         .await
         .unwrap();
 
     // 7.1 Decrease distribution & restart rebalancing
 
-    distribution[0].percent = 300_000_000u64; // Decrease to 30%
+    distribution[0] = 0u64; // Decrease to 0%
     test_token_distribution
         .update(
             &mut context,
@@ -218,6 +227,7 @@ async fn setup() -> (
     test_depositor
         .start_rebalancing(
             &mut context,
+            &registry,
             &general_pool_market,
             &general_pool,
             &test_liquidity_oracle,
@@ -229,6 +239,7 @@ async fn setup() -> (
         context,
         money_market,
         pyth_oracle,
+        registry,
         general_pool_market,
         general_pool,
         general_pool_borrow_authority,
@@ -247,7 +258,73 @@ async fn success() {
         mut context,
         money_market,
         pyth_oracle,
-        general_pool_market,
+        registry,
+        _general_pool_market,
+        general_pool,
+        _general_pool_borrow_authority,
+        income_pool_market,
+        income_pool,
+        mm_pool_market,
+        mm_pool,
+        liquidity_provider,
+        test_depositor,
+    ) = setup().await;
+
+    let reserve = money_market.get_reserve_data(&mut context).await;
+
+    let reserve_balance_before =
+        get_token_balance(&mut context, &reserve.liquidity.supply_pubkey).await;
+
+    context.warp_to_slot(5).unwrap();
+    pyth_oracle.update(&mut context, 5).await;
+
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
+
+    test_depositor
+        .withdraw(
+            &mut context,
+            &registry,
+            &income_pool_market,
+            &income_pool,
+            &mm_pool_market,
+            &mm_pool,
+            &spl_token_lending::id(),
+            &money_market_pubkeys,
+        )
+        .await
+        .unwrap();
+
+    let rebalancing = test_depositor
+        .get_rebalancing_data(&mut context, &general_pool.token_mint_pubkey)
+        .await;
+
+    println!("rebalancing = {:#?}", rebalancing);
+
+    assert!(rebalancing.is_completed());
+    assert_eq!(
+        get_token_balance(&mut context, &mm_pool.token_account.pubkey()).await,
+        rebalancing.received_collateral[0],
+    );
+    assert_eq!(
+        get_token_balance(&mut context, &reserve.liquidity.supply_pubkey).await,
+        reserve_balance_before - rebalancing.steps[0].liquidity_amount,
+    );
+}
+
+#[tokio::test]
+async fn success_with_incomes() {
+    let (
+        mut context,
+        money_market,
+        pyth_oracle,
+        registry,
+        _general_pool_market,
         general_pool,
         _general_pool_borrow_authority,
         income_pool_market,
@@ -279,17 +356,30 @@ async fn success() {
     context.warp_to_slot(5).unwrap();
     pyth_oracle.update(&mut context, 5).await;
 
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
+
+    // let rebalancing = test_depositor
+    //     .get_rebalancing_data(&mut context, &general_pool.token_mint_pubkey)
+    //     .await;
+
+    // println!("Rebalancing: {:#?}", rebalancing);
+
     test_depositor
         .withdraw(
             &mut context,
-            &general_pool_market,
-            &general_pool,
+            &registry,
             &income_pool_market,
             &income_pool,
             &mm_pool_market,
             &mm_pool,
-            &money_market,
-            // 20 * EXP,
+            &spl_token_lending::id(),
+            &money_market_pubkeys,
         )
         .await
         .unwrap();
@@ -309,6 +399,6 @@ async fn success() {
     );
     assert_eq!(
         get_token_balance(&mut context, &reserve.liquidity.supply_pubkey).await,
-        reserve_balance_before - 20 * EXP - income_balance,
+        reserve_balance_before - rebalancing.steps[0].liquidity_amount - income_balance,
     );
 }

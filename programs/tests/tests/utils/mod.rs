@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use everlend_registry::state::{SetRegistryConfigParams, TOTAL_DISTRIBUTIONS};
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::*;
 use solana_program_test::{ProgramTest, ProgramTestContext};
@@ -12,29 +13,31 @@ use solana_sdk::{
 };
 
 pub mod depositor;
+pub mod general_pool;
+pub mod general_pool_borrow_authority;
+pub mod general_pool_market;
 pub mod income_pool;
 pub mod income_pool_market;
 pub mod liquidity_oracle;
 pub mod money_market;
-pub mod general_pool;
-pub mod general_pool_market;
-pub mod general_pool_borrow_authority;
+pub mod registry;
 pub mod ulp_pool;
 pub mod ulp_pool_borrow_authority;
 pub mod ulp_pool_market;
 pub mod users;
 
 pub use depositor::*;
+pub use general_pool::*;
+pub use general_pool_borrow_authority::*;
+pub use general_pool_market::*;
 pub use income_pool::*;
 pub use income_pool_market::*;
 pub use liquidity_oracle::*;
 pub use money_market::*;
-pub use general_pool::*;
-pub use general_pool_borrow_authority::*;
-pub use general_pool_market::*;
+pub use registry::*;
+pub use ulp_pool::*;
 pub use ulp_pool_borrow_authority::*;
 pub use ulp_pool_market::*;
-pub use ulp_pool::*;
 pub use users::*;
 
 pub const EXP: u64 = 1_000_000_000;
@@ -64,6 +67,11 @@ pub fn program_test() -> ProgramTest {
         "everlend_depositor",
         everlend_depositor::id(),
         processor!(everlend_depositor::processor::Processor::process_instruction),
+    );
+    program.add_program(
+        "everlend_registry",
+        everlend_registry::id(),
+        processor!(everlend_registry::processor::Processor::process_instruction),
     );
     program.add_program(
         "spl_token_lending",
@@ -110,7 +118,12 @@ pub fn get_liquidity_mint() -> (Keypair, Pubkey) {
     (keypair, pubkey)
 }
 
-pub async fn presetup() -> (ProgramTestContext, TestSPLTokenLending, TestPythOracle) {
+pub async fn presetup() -> (
+    ProgramTestContext,
+    TestSPLTokenLending,
+    TestPythOracle,
+    TestRegistry,
+) {
     let mut test = program_test();
     let sol_oracle = add_sol_oracle(&mut test);
     let spl_token_lending = add_spl_token_lending(&mut test);
@@ -122,7 +135,24 @@ pub async fn presetup() -> (ProgramTestContext, TestSPLTokenLending, TestPythOra
         .await
         .unwrap();
 
-    (context, spl_token_lending, sol_oracle)
+    let registry = TestRegistry::new();
+    registry.init(&mut context).await.unwrap();
+
+    let mut config = SetRegistryConfigParams {
+        ulp_program_id: everlend_ulp::id(),
+        liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
+        depositor_program_id: everlend_depositor::id(),
+        income_pools_program_id: everlend_income_pools::id(),
+        money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
+    };
+    config.money_market_program_ids[0] = spl_token_lending::id();
+
+    registry
+        .set_registry_config(&mut context, config)
+        .await
+        .unwrap();
+
+    (context, spl_token_lending, sol_oracle, registry)
 }
 
 pub async fn transfer(

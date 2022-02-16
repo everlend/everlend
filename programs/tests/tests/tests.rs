@@ -47,3 +47,7 @@ mod income_pools {
     mod init_pool_market;
     mod withdraw;
 }
+
+mod registry {
+    mod set_registry_config;
+}

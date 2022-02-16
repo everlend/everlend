@@ -1,18 +1,20 @@
 #![cfg(feature = "test-bpf")]
 
 use crate::utils::*;
-use everlend_liquidity_oracle::state::{DistributionArray, LiquidityDistribution};
+use everlend_liquidity_oracle::state::DistributionArray;
+use everlend_utils::find_program_address;
 use solana_program_test::*;
 use solana_sdk::signer::Signer;
 
 async fn setup() -> (
     ProgramTestContext,
+    TestRegistry,
     TestDepositor,
     TestPoolMarket,
     TestPool,
     TestLiquidityOracle,
 ) {
-    let mut context = presetup().await.0;
+    let (mut context, _, _, registry) = presetup().await;
 
     let payer_pubkey = context.payer.pubkey();
 
@@ -56,10 +58,7 @@ async fn setup() -> (
     test_liquidity_oracle.init(&mut context).await.unwrap();
 
     let mut distribution = DistributionArray::default();
-    distribution[0] = LiquidityDistribution {
-        money_market: spl_token_lending::id(),
-        percent: 500_000_000u64, // 50%
-    };
+    distribution[0] = 500_000_000u64; // 50%
 
     let test_token_distribution =
         TestTokenDistribution::new(general_pool.token_mint_pubkey, distribution);
@@ -92,8 +91,32 @@ async fn setup() -> (
         .await
         .unwrap();
 
+    // 4.1 Create transit account for liquidity token
+    test_depositor
+        .create_transit(&mut context, &general_pool.token_mint_pubkey)
+        .await
+        .unwrap();
+
+    // 5. Prepare borrow authority
+    let (depositor_authority, _) = find_program_address(
+        &everlend_depositor::id(),
+        &test_depositor.depositor.pubkey(),
+    );
+    let general_pool_borrow_authority =
+        TestPoolBorrowAuthority::new(&general_pool, depositor_authority);
+    general_pool_borrow_authority
+        .create(
+            &mut context,
+            &general_pool_market,
+            &general_pool,
+            SHARE_ALLOWED,
+        )
+        .await
+        .unwrap();
+
     (
         context,
+        registry,
         test_depositor,
         general_pool_market,
         general_pool,
@@ -103,12 +126,19 @@ async fn setup() -> (
 
 #[tokio::test]
 async fn success() {
-    let (mut context, test_depositor, general_pool_market, general_pool, test_liquidity_oracle) =
-        setup().await;
+    let (
+        mut context,
+        registry,
+        test_depositor,
+        general_pool_market,
+        general_pool,
+        test_liquidity_oracle,
+    ) = setup().await;
 
     test_depositor
         .start_rebalancing(
             &mut context,
+            &registry,
             &general_pool_market,
             &general_pool,
             &test_liquidity_oracle,

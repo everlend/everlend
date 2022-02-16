@@ -17,4 +17,5 @@ everlend-income-pools = { path = "../income_pools/program", features = [ "no-ent
 everlend-depositor = { path = "../depositor/program", features = [ "no-entrypoint" ] }
 everlend-general-pool = { path = "../general_pool/program", features = [ "no-entrypoint" ] }
 everlend-liquidity-oracle = { path = "../liquidity_oracle/program", features = [ "no-entrypoint" ] }
+everlend-registry = { path = "../registry/program", features = [ "no-entrypoint" ] }
 everlend-utils = { path = "../utils" }

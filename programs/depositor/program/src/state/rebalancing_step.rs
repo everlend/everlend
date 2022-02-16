@@ -1,13 +1,11 @@
 //! Rebalancing step state definitions
 
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-use everlend_utils::EverlendError;
 use solana_program::{
     clock::Slot,
     msg,
     program_error::ProgramError,
     program_pack::{Pack, Sealed},
-    pubkey::Pubkey,
 };
 
 /// Enum representing rebalancing step type operation
@@ -31,17 +29,17 @@ impl Default for RebalancingOperation {
 #[repr(C)]
 #[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize, BorshSchema, PartialEq, Default)]
 pub struct RebalancingStep {
-    /// Money market program id
-    pub money_market_program_id: Pubkey,
+    /// Money market index
+    pub money_market_index: u8,
 
     /// Deposit or withdraw
     pub operation: RebalancingOperation,
 
-    /// Amount
-    pub amount: u64,
+    /// Liquidity amount
+    pub liquidity_amount: u64,
 
-    /// Collateral amount (0 for deposit)
-    pub collateral_amount: u64,
+    /// Collateral amount (Undefined for deposit)
+    pub collateral_amount: Option<u64>,
 
     /// Slot when executed deposit or withdraw
     pub executed_at: Option<Slot>,
@@ -50,35 +48,22 @@ pub struct RebalancingStep {
 impl RebalancingStep {
     /// Constructor
     pub fn new(
-        money_market_program_id: Pubkey,
+        money_market_index: u8,
         operation: RebalancingOperation,
-        amount: u64,
-        collateral_amount: u64,
+        liquidity_amount: u64,
+        collateral_amount: Option<u64>,
     ) -> Self {
         RebalancingStep {
-            money_market_program_id,
+            money_market_index,
             operation,
-            amount,
+            liquidity_amount,
             collateral_amount,
             executed_at: None,
         }
     }
 
     /// Execute operation
-    pub fn execute(
-        &mut self,
-        money_market_program_id: Pubkey,
-        operation: RebalancingOperation,
-        slot: Slot,
-    ) -> Result<(), ProgramError> {
-        if self.money_market_program_id != money_market_program_id {
-            return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
-        }
-
-        if self.operation != operation {
-            return Err(EverlendError::InvalidRebalancingOperation.into());
-        }
-
+    pub fn execute(&mut self, slot: Slot) -> Result<(), ProgramError> {
         self.executed_at = Some(slot);
         Ok(())
     }
@@ -86,8 +71,8 @@ impl RebalancingStep {
 
 impl Sealed for RebalancingStep {}
 impl Pack for RebalancingStep {
-    // 32 + 1 + 8 + 8 + (1 + 8)
-    const LEN: usize = 58;
+    // 1 + 1 + 8 + (1 + 8) + (1 + 8)
+    const LEN: usize = 28;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;
