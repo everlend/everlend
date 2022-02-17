@@ -45,6 +45,8 @@ async fn setup() -> (
     .await
     .unwrap();
 
+    transfer(&mut context,&user.owner.pubkey(),5000000).await.unwrap();
+
     test_pool
         .deposit(&mut context, &test_pool_market, &user, 100)
         .await
@@ -69,7 +71,7 @@ async fn success() {
         .unwrap();
 
     test_pool
-        .withdraw_request(&mut context, &test_pool_market, &user, 50)
+        .withdraw_request(&mut context, &test_pool_market, &user, 50, 1)
         .await
         .unwrap();
 
@@ -85,21 +87,29 @@ async fn success() {
         &test_pool_market.keypair.pubkey(),
         &test_pool.pool_mint.pubkey(),
     );
+    let withdraw_request = test_pool.get_user_withdraw_requests(&mut context, &test_pool_market, 1,&everlend_general_pool::id()).await;
 
     assert_eq!(
         get_token_balance(&mut context, &user.pool_account).await,
         50
     );
 
-    assert_eq!(get_token_balance(&mut context, &transit_account).await, 50);
+    assert_eq!(
+        get_token_balance(&mut context, &transit_account).await,
+        50
+    );
 
-    assert_eq!(withdraw_requests.request.len(), 1);
+    assert_eq!(
+        withdraw_requests.last_request_id,
+        1,
+    );
 
     assert_eq!(withdraw_requests.liquidity_supply, 50);
 
     assert_eq!(
-        withdraw_requests.request[0],
+        withdraw_request,
         WithdrawalRequest {
+            rent_payer: user.owner.pubkey(),
             source: user.pool_account,
             destination: user.token_account,
             liquidity_amount: 50,
@@ -119,14 +129,14 @@ async fn success_few_requests() {
         .unwrap();
 
     test_pool
-        .withdraw_request(&mut context, &test_pool_market, &user, 50)
+        .withdraw_request(&mut context, &test_pool_market, &user, 50, 1)
         .await
         .unwrap();
 
     context.warp_to_slot(WARP_SLOT + 5).unwrap();
 
     test_pool
-        .withdraw_request(&mut context, &test_pool_market, &user, 10)
+        .withdraw_request(&mut context, &test_pool_market, &user, 10,2)
         .await
         .unwrap();
 
@@ -144,31 +154,48 @@ async fn success_few_requests() {
         &test_pool_market.keypair.pubkey(),
         &test_pool.pool_mint.pubkey(),
     );
+    let withdraw_request_1 = test_pool.get_user_withdraw_requests(&mut context, &test_pool_market, 1,&everlend_general_pool::id()).await;
+    let withdraw_request_2 = test_pool.get_user_withdraw_requests(&mut context, &test_pool_market, 2,&everlend_general_pool::id()).await;
 
     assert_eq!(
         get_token_balance(&mut context, &user.pool_account).await,
         40
     );
 
-    assert_eq!(get_token_balance(&mut context, &transit_account).await, 60);
-
-    assert_eq!(withdraw_requests.request.len(), 2);
+    assert_eq!(
+        get_token_balance(&mut context, &transit_account).await,
+        60
+    );
 
     assert_eq!(
-        withdraw_requests.request,
-        vec![
-            WithdrawalRequest {
-                source: user.pool_account,
-                destination: user.token_account,
-                liquidity_amount: 50,
-                collateral_amount: 50,
-            },
-            WithdrawalRequest {
-                source: user.pool_account,
-                destination: user.token_account,
-                liquidity_amount: 10,
-                collateral_amount: 10,
-            },
-        ]
+        withdraw_requests.last_request_id,
+        2
+    );
+
+    assert_eq!(
+        withdraw_requests.liquidity_supply,
+        60
+    );
+
+    assert_eq!(
+        withdraw_request_1,
+        WithdrawalRequest {
+            rent_payer: user.owner.pubkey(),
+            source: user.pool_account,
+            destination: user.token_account,
+            liquidity_amount: 50,
+            collateral_amount: 50,
+        },
+    );
+
+    assert_eq!(
+        withdraw_request_2,
+                WithdrawalRequest {
+                    rent_payer: user.owner.pubkey(),
+                    source: user.pool_account,
+                    destination: user.token_account,
+                    liquidity_amount: 10,
+                    collateral_amount: 10,
+                },
     );
 }

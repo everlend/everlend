@@ -138,6 +138,7 @@ pub fn withdraw<'a>(
     token_account: AccountInfo<'a>,
     token_mint: AccountInfo<'a>,
     pool_mint: AccountInfo<'a>,
+    rent_payer:  AccountInfo<'a>,
     index: u64,
     signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
@@ -149,6 +150,7 @@ pub fn withdraw<'a>(
         token_account.key,
         token_mint.key,
         pool_mint.key,
+        rent_payer.key,
         index
     );
 

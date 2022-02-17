@@ -2,9 +2,9 @@ use super::{
     general_pool_borrow_authority::TestGeneralPoolBorrowAuthority, get_account, get_liquidity_mint,
     LiquidityProvider, TestGeneralPoolMarket, User,
 };
-use everlend_general_pool::state::WithdrawalRequests;
+use everlend_general_pool::state::{WithdrawalRequest, WithdrawalRequests};
 use everlend_general_pool::{
-    find_pool_program_address, find_withdrawal_requests_program_address, instruction, state::Pool,
+    find_pool_program_address, find_user_withdrawal_request_program_address, find_withdrawal_requests_program_address, instruction, state::Pool,
 };
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::ProgramTestContext;
@@ -62,6 +62,24 @@ impl TestGeneralPool {
 
         let account = get_account(context, &withdrawal_requests).await;
         WithdrawalRequests::unpack_unchecked(&account.data).unwrap()
+    }
+
+    pub async fn get_user_withdraw_requests(
+        &self,
+        context: &mut ProgramTestContext,
+        test_pool_market: &TestGeneralPoolMarket,
+        index: u64,
+        program_id: &Pubkey,
+    ) -> WithdrawalRequest {
+        let (user_withdraw_request, _) = find_user_withdrawal_request_program_address(
+            program_id,
+            &test_pool_market.keypair.pubkey(),
+            &self.token_mint_pubkey,
+            index,
+        );
+
+        let account = get_account(context, &user_withdraw_request).await;
+        WithdrawalRequest::unpack_unchecked(&account.data).unwrap()
     }
 
     pub async fn create(
@@ -151,6 +169,7 @@ impl TestGeneralPool {
                 &self.token_account.pubkey(),
                 &self.token_mint_pubkey,
                 &self.pool_mint.pubkey(),
+                &user.owner.pubkey(),
                 index,
             )],
             Some(&context.payer.pubkey()),
@@ -167,6 +186,7 @@ impl TestGeneralPool {
         test_pool_market: &TestGeneralPoolMarket,
         user: &LiquidityProvider,
         amount: u64,
+        index: u64,
     ) -> transport::Result<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::withdraw_request(
@@ -180,6 +200,7 @@ impl TestGeneralPool {
                 &self.pool_mint.pubkey(),
                 &user.pubkey(),
                 amount,
+                index
             )],
             Some(&context.payer.pubkey()),
             &[&context.payer, &user.owner],
@@ -205,6 +226,7 @@ impl TestGeneralPool {
                 &self.token_mint_pubkey,
                 &self.pool_mint.pubkey(),
                 &test_pool_market.manager.pubkey(),
+                &user.owner.pubkey(),
                 index,
             )],
             Some(&context.payer.pubkey()),

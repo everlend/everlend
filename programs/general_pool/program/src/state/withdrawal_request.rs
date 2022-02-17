@@ -23,17 +23,23 @@ pub struct WithdrawalRequests {
     /// Mint
     pub mint: Pubkey,
 
+    /// Withdraw request id
+    pub last_request_id: u64,
+
+    /// Last processed request id
+    pub last_processed_request_id: u64,
+
     /// Total requests amount
     pub liquidity_supply: u64,
-
-    /// Withdrawal requests
-    pub request: Vec<WithdrawalRequest>,
 }
 
 /// RebalancingStep
 #[repr(C)]
 #[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize, BorshSchema, PartialEq, Default)]
 pub struct WithdrawalRequest {
+    /// Rent payer
+    pub rent_payer: Pubkey,
+
     /// Withdraw source
     pub source: Pubkey,
 
@@ -66,8 +72,8 @@ impl WithdrawalRequests {
 
 impl Sealed for WithdrawalRequests {}
 impl Pack for WithdrawalRequests {
-    // 1 + 32 + 32 + 8 +
-    const LEN: usize = 73 + (4 + TOTAL_WITHDRAW_REQUEST * WithdrawalRequest::LEN);
+    // 1 + 32 + 32 + 8 + 8 +8
+    const LEN: usize = 89;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;
@@ -92,9 +98,14 @@ impl IsInitialized for WithdrawalRequests {
 }
 
 impl Sealed for WithdrawalRequest {}
+impl IsInitialized for WithdrawalRequest {
+    fn is_initialized(&self) -> bool {
+        self.collateral_amount != 0
+    }
+}
 impl Pack for WithdrawalRequest {
     // 32 + 32 + 8 + 8
-    const LEN: usize = 80;
+    const LEN: usize = 112;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;

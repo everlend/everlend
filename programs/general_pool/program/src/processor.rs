@@ -4,11 +4,11 @@ use crate::state::InitWithdrawalRequestsParams;
 use crate::{
     find_pool_borrow_authority_program_address, find_pool_program_address,
     find_transit_program_address, find_withdrawal_requests_program_address,
+    find_user_withdrawal_request_program_address,
     instruction::LiquidityPoolsInstruction,
     state::{
         InitPoolBorrowAuthorityParams, InitPoolMarketParams, InitPoolParams, Pool,
-        PoolBorrowAuthority, PoolMarket, WithdrawalRequest, WithdrawalRequests,
-        TOTAL_WITHDRAW_REQUEST,
+        PoolBorrowAuthority, PoolMarket, WithdrawalRequest, WithdrawalRequests
     },
     utils::*,
 };
@@ -407,16 +407,18 @@ impl Processor {
     }
 
     /// Process Withdraw instruction
-    pub fn withdraw(program_id: &Pubkey, index: u64, accounts: &[AccountInfo]) -> ProgramResult {
+    pub fn withdraw(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_info = next_account_info(account_info_iter)?;
         let withdrawal_requests_info = next_account_info(account_info_iter)?;
+        let withdraw_request_info = next_account_info(account_info_iter)?;
         let destination_info = next_account_info(account_info_iter)?;
         let token_account_info = next_account_info(account_info_iter)?;
         let transit_collateral_info = next_account_info(account_info_iter)?;
         let pool_mint_info = next_account_info(account_info_iter)?;
         let pool_market_authority_info = next_account_info(account_info_iter)?;
+        let rent_payer_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
         assert_owned_by(pool_market_info, program_id)?;
@@ -450,22 +452,35 @@ impl Processor {
         assert_owned_by(withdrawal_requests_info, program_id)?;
         assert_account_key(pool_info, &withdrawal_requests.pool)?;
 
-        if withdrawal_requests.mint != pool.token_mint {
+        if withdrawal_requests.mint != pool.token_mint{
             return Err(ProgramError::InvalidArgument);
         }
 
-        // Requests que is empty
-        if withdrawal_requests.request.is_empty() {
+        if withdrawal_requests.last_processed_request_id == withdrawal_requests.last_request_id {
             return Err(EverlendError::WithdrawRequestsListIsEmpty.into());
         }
 
-        if index > (withdrawal_requests.request.len() - 1) as u64 {
-            return Err(ProgramError::InvalidArgument);
+        let current_processing_index = withdrawal_requests.last_processed_request_id + 1;
+        if current_processing_index == u64::MAX{
+            return Err(EverlendError::MathOverflow.into());
+        };
+
+        let (withdraw_request_pubkey, _)  = find_user_withdrawal_request_program_address(
+            program_id,
+            pool_market_info.key,
+            &pool.token_mint,
+            current_processing_index,
+        );
+        assert_account_key(withdraw_request_info, &withdraw_request_pubkey)?;
+
+        if withdraw_request_info.lamports() == 0 {
+            return Err(ProgramError::UninitializedAccount)
         }
 
-        let request = withdrawal_requests.request[index as usize];
+        let withdraw_request = WithdrawalRequest::unpack(&withdraw_request_info.data.borrow())?;
 
-        assert_account_key(destination_info, &request.destination)?;
+        assert_account_key(destination_info, &withdraw_request.destination)?;
+        assert_account_key(rent_payer_info, &withdraw_request.rent_payer)?;
 
         let (_, bump_seed) = find_program_address(program_id, pool_market_info.key);
         let signers_seeds = &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]];
@@ -474,7 +489,7 @@ impl Processor {
             token_account_info.clone(),
             destination_info.clone(),
             pool_market_authority_info.clone(),
-            request.liquidity_amount,
+            withdraw_request.liquidity_amount,
             &[signers_seeds],
         )?;
 
@@ -483,16 +498,30 @@ impl Processor {
             pool_mint_info.clone(),
             transit_collateral_info.clone(),
             pool_market_authority_info.clone(),
-            request.collateral_amount,
+            withdraw_request.collateral_amount,
             &[signers_seeds],
         )?;
 
-        withdrawal_requests.request.remove(index as usize);
-        withdrawal_requests.liquidity_supply -= request.liquidity_amount;
+        withdrawal_requests.last_processed_request_id = current_processing_index;
+        withdrawal_requests.liquidity_supply -= withdraw_request.liquidity_amount;
+
+        // Close withdraw account and return rent
+        let rent_payer_starting_lamports = rent_payer_info.lamports();
+        let withdraw_request_lamports = withdraw_request_info.lamports();
+
+        **withdraw_request_info.lamports.borrow_mut() = 0;
+
+        **rent_payer_info.lamports.borrow_mut() = rent_payer_starting_lamports
+            .checked_add(withdraw_request_lamports)
+            .ok_or(EverlendError::MathOverflow)?;
 
         WithdrawalRequests::pack(
             withdrawal_requests,
             *withdrawal_requests_info.data.borrow_mut(),
+        )?;
+        WithdrawalRequest::pack(
+            withdraw_request,
+            *withdraw_request_info.data.borrow_mut(),
         )?;
 
         Ok(())
@@ -508,12 +537,16 @@ impl Processor {
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_info = next_account_info(account_info_iter)?;
         let withdrawal_requests_info = next_account_info(account_info_iter)?;
+        let withdraw_request_info = next_account_info(account_info_iter)?;
         let source_info = next_account_info(account_info_iter)?;
         let destination_info = next_account_info(account_info_iter)?;
         let token_account_info = next_account_info(account_info_iter)?;
         let transit_collateral_info = next_account_info(account_info_iter)?;
         let pool_mint_info = next_account_info(account_info_iter)?;
         let user_transfer_authority_info = next_account_info(account_info_iter)?;
+        let rent_info = next_account_info(account_info_iter)?;
+        let rent = &Rent::from_account_info(rent_info)?;
+        let _system_program_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
         assert_signer(user_transfer_authority_info)?;
@@ -557,9 +590,21 @@ impl Processor {
             return Err(ProgramError::InvalidArgument);
         }
 
-        // // TODO change error
-        if withdrawal_requests.request.len() == TOTAL_WITHDRAW_REQUEST {
-            return Err(ProgramError::InvalidAccountData);
+        let current_index = withdrawal_requests.last_request_id + 1;
+        if current_index == u64::MAX{
+            return Err(EverlendError::MathOverflow.into())
+        };
+
+        let (withdraw_request_pubkey, bump_seed)  = find_user_withdrawal_request_program_address(
+            program_id,
+            pool_market_info.key,
+            &pool.token_mint,
+            current_index,
+        );
+        assert_account_key(withdraw_request_info, &withdraw_request_pubkey)?;
+
+        if withdraw_request_info.lamports() != 0 {
+            return Err(ProgramError::AccountAlreadyInitialized)
         }
 
         let total_incoming =
@@ -581,19 +626,33 @@ impl Processor {
             &[],
         )?;
 
-        withdrawal_requests.request.push(WithdrawalRequest {
+        let withdraw_request_signers_seeds = &[
+            &current_index.to_be_bytes()[..],
+            "withdrawals".as_bytes(),
+            &pool_market_info.key.to_bytes()[..32],
+            &pool.token_mint.to_bytes()[..32],
+            &[bump_seed],
+        ];
+
+        cpi::system::create_account::<WithdrawalRequest>(
+            program_id,
+            user_transfer_authority_info.clone(),
+            withdraw_request_info.clone(),
+            &[withdraw_request_signers_seeds],
+            rent,
+        )?;
+
+        withdrawal_requests.last_request_id = current_index;
+        withdrawal_requests.liquidity_supply += withdraw_amount;
+
+        WithdrawalRequests::pack(withdrawal_requests, *withdrawal_requests_info.data.borrow_mut())?;
+        WithdrawalRequest::pack(WithdrawalRequest{
+            rent_payer: *user_transfer_authority_info.key,
             source: *source_info.key,
             destination: *destination_info.key,
             liquidity_amount: withdraw_amount,
             collateral_amount: amount,
-        });
-
-        withdrawal_requests.liquidity_supply += withdraw_amount;
-
-        WithdrawalRequests::pack(
-            withdrawal_requests,
-            *withdrawal_requests_info.data.borrow_mut(),
-        )?;
+        }, *withdraw_request_info.data.borrow_mut())?;
 
         Ok(())
     }
@@ -601,17 +660,18 @@ impl Processor {
     /// Process Cancel withdraw request instruction
     pub fn cancel_withdraw_request(
         program_id: &Pubkey,
-        index: u64,
         accounts: &[AccountInfo],
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_info = next_account_info(account_info_iter)?;
         let withdrawal_requests_info = next_account_info(account_info_iter)?;
+        let withdraw_request_info = next_account_info(account_info_iter)?;
         let source_info = next_account_info(account_info_iter)?;
         let transit_collateral_info = next_account_info(account_info_iter)?;
         let pool_mint_info = next_account_info(account_info_iter)?;
         let pool_market_authority_info = next_account_info(account_info_iter)?;
+        let rent_payer_info = next_account_info(account_info_iter)?;
         let manager_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
@@ -654,36 +714,57 @@ impl Processor {
             return Err(ProgramError::InvalidArgument);
         }
 
-        // Requests que is empty
-        if withdrawal_requests.request.is_empty() {
-            return Err(EverlendError::WithdrawRequestsListIsEmpty.into());
+        if withdrawal_requests.last_processed_request_id == withdrawal_requests.last_request_id {
+            return Err(EverlendError::WithdrawRequestsListIsEmpty.into())
         }
 
-        if index > (withdrawal_requests.request.len() - 1) as u64 {
-            return Err(ProgramError::InvalidArgument);
+        let current_processing_index = withdrawal_requests.last_processed_request_id + 1;
+        if current_processing_index == u64::MAX{
+            return Err(EverlendError::MathOverflow.into())
+        };
+
+        let (withdraw_request_pubkey, _)  = find_user_withdrawal_request_program_address(
+            program_id,
+            pool_market_info.key,
+            &pool.token_mint,
+            current_processing_index,
+        );
+        assert_account_key(withdraw_request_info, &withdraw_request_pubkey)?;
+
+        if withdraw_request_info.lamports() == 0 {
+            return Err(ProgramError::UninitializedAccount)
         }
 
-        let request = withdrawal_requests.request[index as usize];
+        let withdraw_request = WithdrawalRequest::unpack(&withdraw_request_info.data.borrow())?;
 
-        assert_account_key(source_info, &request.source)?;
+        assert_account_key(source_info,&withdraw_request.source)?;
+        assert_account_key(rent_payer_info,&withdraw_request.rent_payer)?;
 
         let (_, bump_seed) = find_program_address(program_id, pool_market_info.key);
         let signers_seeds = &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]];
         cpi::spl_token::transfer(
             transit_collateral_info.clone(),
             source_info.clone(),
-            pool_market_authority_info.clone(),
-            request.collateral_amount,
+                pool_market_authority_info.clone(),
+            withdraw_request.collateral_amount,
             &[signers_seeds],
         )?;
 
-        withdrawal_requests.request.remove(index as usize);
-        withdrawal_requests.liquidity_supply -= request.liquidity_amount;
+        withdrawal_requests.last_processed_request_id = current_processing_index;
+        withdrawal_requests.liquidity_supply -= withdraw_request.liquidity_amount;
 
-        WithdrawalRequests::pack(
-            withdrawal_requests,
-            *withdrawal_requests_info.data.borrow_mut(),
-        )?;
+        // Close withdraw account and return rent
+        let rent_payer_starting_lamports = rent_payer_info.lamports();
+        let withdraw_request_lamports = withdraw_request_info.lamports();
+
+        **withdraw_request_info.lamports.borrow_mut() = 0;
+
+        **rent_payer_info.lamports.borrow_mut() = rent_payer_starting_lamports
+            .checked_add(withdraw_request_lamports)
+            .ok_or(EverlendError::MathOverflow)?;
+
+        WithdrawalRequests::pack(withdrawal_requests, *withdrawal_requests_info.data.borrow_mut())?;
+        WithdrawalRequest::pack(withdraw_request, *withdraw_request_info.data.borrow_mut())?;
 
         Ok(())
     }
@@ -844,9 +925,9 @@ impl Processor {
                 Self::deposit(program_id, amount, accounts)
             }
 
-            LiquidityPoolsInstruction::Withdraw { index } => {
+            LiquidityPoolsInstruction::Withdraw => {
                 msg!("LiquidityPoolsInstruction: Withdraw");
-                Self::withdraw(program_id, index, accounts)
+                Self::withdraw(program_id, accounts)
             }
 
             LiquidityPoolsInstruction::WithdrawRequest { amount } => {
@@ -854,9 +935,9 @@ impl Processor {
                 Self::withdraw_request(program_id, amount, accounts)
             }
 
-            LiquidityPoolsInstruction::CancelWithdrawRequest { index } => {
+            LiquidityPoolsInstruction::CancelWithdrawRequest => {
                 msg!("LiquidityPoolsInstruction: CancelWithdrawRequest");
-                Self::cancel_withdraw_request(program_id, index, accounts)
+                Self::cancel_withdraw_request(program_id, accounts)
             }
 
             LiquidityPoolsInstruction::Borrow { amount } => {

@@ -5,6 +5,9 @@ use everlend_general_pool::find_transit_program_address;
 use solana_program_test::*;
 use solana_sdk::signer::Signer;
 
+const INITIAL_USER_BALANCE :u64 = 5000000;
+const WITHDRAWAL_REQUEST_RENT :u64 = 1670400;
+
 async fn setup() -> (
     ProgramTestContext,
     TestGeneralPoolMarket,
@@ -45,7 +48,7 @@ async fn setup() -> (
     .unwrap();
 
     // Fill user account by native token
-    transfer(&mut context, &user.owner.pubkey(), 10108000)
+    transfer(&mut context, &user.owner.pubkey(), INITIAL_USER_BALANCE)
         .await
         .unwrap();
 
@@ -73,7 +76,7 @@ async fn success() {
         .unwrap();
 
     test_pool
-        .withdraw_request(&mut context, &test_pool_market, &user, 45)
+        .withdraw_request(&mut context, &test_pool_market, &user, 45, 1)
         .await
         .unwrap();
 
@@ -85,7 +88,7 @@ async fn success() {
     assert_eq!(get_token_balance(&mut context, &transit_account).await, 45);
 
     test_pool
-        .withdraw(&mut context, &test_pool_market, &user, 0)
+        .withdraw(&mut context, &test_pool_market, &user, 1)
         .await
         .unwrap();
 
@@ -102,7 +105,16 @@ async fn success() {
         55
     );
 
-    assert_eq!(get_token_balance(&mut context, &transit_account).await, 0);
+    assert_eq!(
+        get_token_balance(&mut context, &transit_account).await,
+        0
+    );
+
+    let user_account = get_account(&mut context, &user.owner.pubkey()).await;
+    assert_eq!(
+        user_account.lamports,
+        INITIAL_USER_BALANCE
+    );
 }
 
 #[tokio::test]
@@ -115,12 +127,12 @@ async fn success_with_index() {
         .unwrap();
 
     test_pool
-        .withdraw_request(&mut context, &test_pool_market, &user, 50)
+        .withdraw_request(&mut context, &test_pool_market, &user, 50,1)
         .await
         .unwrap();
 
     test_pool
-        .withdraw_request(&mut context, &test_pool_market, &user, 30)
+        .withdraw_request(&mut context, &test_pool_market, &user, 30, 2)
         .await
         .unwrap();
 
@@ -141,12 +153,44 @@ async fn success_with_index() {
     );
     assert_eq!(
         get_token_balance(&mut context, &user.token_account).await,
-        31
+        51
     );
     assert_eq!(
         get_token_balance(&mut context, &test_pool.token_account.pubkey()).await,
-        70
+        50
     );
 
-    assert_eq!(get_token_balance(&mut context, &transit_account).await, 50);
+    assert_eq!(
+        get_token_balance(&mut context, &transit_account).await,
+        30
+    );
+
+    test_pool
+        .withdraw(&mut context, &test_pool_market, &user, 2)
+        .await
+        .unwrap();
+
+    assert_eq!(
+        get_token_balance(&mut context, &user.pool_account).await,
+        20
+    );
+    assert_eq!(
+        get_token_balance(&mut context, &user.token_account).await,
+        81
+    );
+    assert_eq!(
+        get_token_balance(&mut context, &test_pool.token_account.pubkey()).await,
+        20
+    );
+
+    assert_eq!(
+        get_token_balance(&mut context, &transit_account).await,
+        0
+    );
+
+    let user_account = get_account(&mut context, &user.owner.pubkey()).await;
+    assert_eq!(
+        user_account.lamports,
+        INITIAL_USER_BALANCE
+    );
 }
