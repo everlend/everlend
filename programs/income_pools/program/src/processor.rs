@@ -6,10 +6,10 @@ use crate::{
     state::{IncomePool, IncomePoolMarket, InitIncomePoolMarketParams, InitIncomePoolParams},
 };
 use borsh::BorshDeserialize;
-use everlend_ulp::state::Pool;
+use everlend_general_pool::state::Pool;
 use everlend_utils::{
-    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized, find_program_address,
-    cpi,
+    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
+    cpi, find_program_address,
 };
 
 use solana_program::{
@@ -40,7 +40,7 @@ impl Processor {
 
         assert_owned_by(pool_market_info, program_id)?;
         // TODO: replace to getting id from config program
-        assert_owned_by(general_pool_market_info, &everlend_ulp::id())?;
+        assert_owned_by(general_pool_market_info, &everlend_general_pool::id())?;
 
         // Get pool market state
         let mut pool_market = IncomePoolMarket::unpack_unchecked(&pool_market_info.data.borrow())?;
@@ -163,12 +163,12 @@ impl Processor {
         let income_pool_market_authority_info = next_account_info(account_info_iter)?;
         let general_pool_info = next_account_info(account_info_iter)?;
         let general_pool_token_account_info = next_account_info(account_info_iter)?;
-        let _everlend_ulp_info = next_account_info(account_info_iter)?;
+        let _everlend_general_pool_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
         assert_owned_by(income_pool_market_info, program_id)?;
         assert_owned_by(income_pool_info, program_id)?;
-        assert_owned_by(general_pool_info, &everlend_ulp::id())?;
+        assert_owned_by(general_pool_info, &everlend_general_pool::id())?;
 
         let pool_market = IncomePoolMarket::unpack(&income_pool_market_info.data.borrow())?;
 
@@ -182,10 +182,15 @@ impl Processor {
         }
         assert_account_key(general_pool_token_account_info, &general_pool.token_account)?;
 
-        let token_amount = Account::unpack_unchecked(&income_pool_token_account_info.data.borrow())?.amount;
+        let token_amount =
+            Account::unpack_unchecked(&income_pool_token_account_info.data.borrow())?.amount;
 
-        let (income_pool_market_authority, bump_seed) = find_program_address(program_id, income_pool_market_info.key);
-        assert_account_key(income_pool_market_authority_info, &income_pool_market_authority)?;
+        let (income_pool_market_authority, bump_seed) =
+            find_program_address(program_id, income_pool_market_info.key);
+        assert_account_key(
+            income_pool_market_authority_info,
+            &income_pool_market_authority,
+        )?;
 
         let signers_seeds = &[&income_pool_market_info.key.to_bytes()[..32], &[bump_seed]];
 

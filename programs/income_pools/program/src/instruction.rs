@@ -17,9 +17,7 @@ pub enum IncomePoolsInstruction {
     /// Accounts:
     /// [W] Income pool market - uninitialized
     /// [R] Market manager
-    /// [R] General pool market
     /// [R] Rent sysvar
-    /// [R] Everlend ULP program id
     InitPoolMarket,
 
     /// Creates and initializes a pool account belonging to a particular market
@@ -77,7 +75,6 @@ pub fn init_pool_market(
         AccountMeta::new_readonly(*manager, false),
         AccountMeta::new_readonly(*general_pool_market, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
-        AccountMeta::new_readonly(everlend_ulp::id(), false),
     ];
 
     Instruction::new_with_borsh(
@@ -160,7 +157,7 @@ pub fn withdraw(
         AccountMeta::new_readonly(pool_market_authority, false),
         AccountMeta::new_readonly(*general_pool, false),
         AccountMeta::new(*general_pool_token_account, false),
-        AccountMeta::new_readonly(everlend_ulp::id(), false),
+        AccountMeta::new_readonly(everlend_general_pool::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
     ];
 

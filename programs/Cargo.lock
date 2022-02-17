@@ -775,6 +775,7 @@ name = "everlend-depositor"
 version = "0.1.0"
 dependencies = [
  "borsh",
+ "everlend-general-pool",
  "everlend-income-pools",
  "everlend-liquidity-oracle",
  "everlend-registry",
@@ -814,6 +815,7 @@ dependencies = [
  "anyhow",
  "bs58 0.2.5",
  "everlend-depositor",
+ "everlend-general-pool",
  "everlend-income-pools",
  "everlend-liquidity-oracle",
  "everlend-registry",
@@ -869,7 +871,7 @@ name = "everlend-income-pools"
 version = "0.1.0"
 dependencies = [
  "borsh",
- "everlend-ulp",
+ "everlend-general-pool",
  "everlend-utils",
  "num-derive",
  "num-traits",

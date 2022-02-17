@@ -1,11 +1,12 @@
 mod depositor;
+mod general_pool;
 mod income_pools;
 mod liquidity_oracle;
 mod registry;
 mod ulp;
 mod utils;
 
-use everlend_depositor::{find_rebalancing_program_address, state::Rebalancing};
+use everlend_depositor::state::Rebalancing;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::state::{SetRegistryConfigParams, TOTAL_DISTRIBUTIONS};
 use everlend_utils::integrations::{self, MoneyMarketPubkeys};
@@ -74,6 +75,7 @@ async fn main() -> anyhow::Result<()> {
     println!("0. Registry");
     let registry_pubkey = registry::init(&config, None)?;
     let mut registry_config = SetRegistryConfigParams {
+        general_pool_program_id: everlend_general_pool::id(),
         ulp_program_id: everlend_ulp::id(),
         liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
         depositor_program_id: everlend_depositor::id(),
@@ -86,9 +88,9 @@ async fn main() -> anyhow::Result<()> {
     registry::set_registry_config(&config, &registry_pubkey, registry_config)?;
 
     println!("1. General pool");
-    let pool_market_pubkey = ulp::create_market(&config, None)?;
+    let pool_market_pubkey = general_pool::create_market(&config, None)?;
     let (pool_pubkey, pool_token_account, pool_mint) =
-        ulp::create_pool(&config, &pool_market_pubkey, &sol_mint)?;
+        general_pool::create_pool(&config, &pool_market_pubkey, &sol_mint)?;
 
     let token_account = get_associated_token_address(&payer_pubkey, &sol_mint);
     let pool_account = spl_create_associated_token_account(&config, &payer_pubkey, &pool_mint)?;
@@ -100,7 +102,7 @@ async fn main() -> anyhow::Result<()> {
         income_pools::create_pool(&config, &income_pool_market_pubkey, &sol_mint)?;
 
     println!("2. Deposit liquidity");
-    ulp::deposit(
+    general_pool::deposit(
         &config,
         &pool_market_pubkey,
         &pool_pubkey,
@@ -164,7 +166,7 @@ async fn main() -> anyhow::Result<()> {
     println!("6. Prepare borrow authority");
     let (depositor_authority, _) =
         &everlend_utils::find_program_address(&everlend_depositor::id(), &depositor_pubkey);
-    ulp::create_pool_borrow_authority(
+    general_pool::create_pool_borrow_authority(
         &config,
         &pool_market_pubkey,
         &pool_pubkey,

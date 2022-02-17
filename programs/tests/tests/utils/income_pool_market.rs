@@ -1,4 +1,4 @@
-use super::{get_account, TestPoolMarket};
+use super::{get_account, TestGeneralPoolMarket};
 use everlend_income_pools::{instruction, state::IncomePoolMarket};
 use solana_program::{program_pack::Pack, system_instruction};
 use solana_program_test::ProgramTestContext;
@@ -30,7 +30,7 @@ impl TestIncomePoolMarket {
     pub async fn init(
         &self,
         context: &mut ProgramTestContext,
-        general_pool_market: &TestPoolMarket,
+        general_pool_market: &TestGeneralPoolMarket,
     ) -> transport::Result<()> {
         let rent = context.banks_client.get_rent().await.unwrap();
         let tx = Transaction::new_signed_with_payer(
