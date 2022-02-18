@@ -98,6 +98,7 @@ pub enum LiquidityPoolsInstruction {
     /// [R] Pool market
     /// [R] Pool
     /// [W] Withdrawals requests account
+    /// [W] User withdraw request account
     /// [W] Destination account
     /// [W] Pool token account
     /// [W] Transit collateral account

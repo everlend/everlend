@@ -1,6 +1,8 @@
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import {
   PublicKey,
+  SystemProgram,
+  SYSVAR_RENT_PUBKEY,
   Transaction,
   TransactionCtorFields,
   TransactionInstruction,
@@ -22,6 +24,7 @@ type WithdrawRequestParams = {
   poolMarket: PublicKey
   pool: PublicKey
   withdrawRequests: PublicKey
+  userWithdrawRequest: PublicKey
   source: PublicKey
   destination: PublicKey
   tokenAccount: PublicKey
@@ -38,6 +41,7 @@ export class WithdrawRequest extends Transaction {
       poolMarket,
       pool,
       withdrawRequests,
+      userWithdrawRequest,
       source,
       destination,
       tokenAccount,
@@ -54,12 +58,15 @@ export class WithdrawRequest extends Transaction {
           { pubkey: poolMarket, isSigner: false, isWritable: false },
           { pubkey: pool, isSigner: false, isWritable: false },
           { pubkey: withdrawRequests, isSigner: false, isWritable: true },
+          { pubkey: userWithdrawRequest, isSigner: false, isWritable: true },
           { pubkey: source, isSigner: false, isWritable: true },
           { pubkey: destination, isSigner: false, isWritable: true },
           { pubkey: tokenAccount, isSigner: false, isWritable: true },
           { pubkey: collateralTransit, isSigner: false, isWritable: true },
           { pubkey: poolMint, isSigner: false, isWritable: true },
           { pubkey: feePayer, isSigner: true, isWritable: false },
+          { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
+          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
           { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
         ],
         programId: GeneralPoolsProgram.PUBKEY,

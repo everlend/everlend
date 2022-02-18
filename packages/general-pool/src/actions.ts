@@ -1,7 +1,7 @@
 import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import { Connection, Keypair, PublicKey, SystemProgram, Transaction } from '@solana/web3.js'
 import BN from 'bn.js'
-import { Pool, PoolBorrowAuthority, PoolMarket } from './accounts'
+import { Pool, PoolBorrowAuthority, PoolMarket, WithdrawalRequests } from './accounts'
 import { GeneralPoolsProgram } from './program'
 import { CreateAssociatedTokenAccount, findAssociatedTokenAccount } from '@everlend/common'
 import { Borrow, CreatePool, Deposit, InitPoolMarket, Repay, WithdrawRequest } from './transactions'
@@ -159,7 +159,14 @@ export const withdrawRequest = async (
     data: { tokenMint, poolMarket, tokenAccount, poolMint },
   } = await Pool.load(connection, pool)
 
-  const withdrawRequests = await GeneralPoolsProgram.findProgramAddress([
+  const withdrawRequests = await WithdrawalRequests.getPDA(poolMarket, tokenMint)
+
+  const {
+    data: { lastRequestId },
+  } = await WithdrawalRequests.load(connection, withdrawRequests)
+
+  const userWithdrawRequest = await GeneralPoolsProgram.findProgramAddress([
+    lastRequestId.add(new BN(1, 10)).toBuffer('be'),
     Buffer.from('withdrawals'),
     poolMarket.toBuffer(),
     tokenMint.toBuffer(),
@@ -193,6 +200,7 @@ export const withdrawRequest = async (
         poolMarket,
         pool,
         withdrawRequests,
+        userWithdrawRequest,
         source,
         destination,
         tokenAccount,
