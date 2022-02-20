@@ -13,25 +13,31 @@ use solana_sdk::{
 };
 
 pub mod depositor;
+pub mod general_pool;
+pub mod general_pool_borrow_authority;
+pub mod general_pool_market;
 pub mod income_pool;
 pub mod income_pool_market;
 pub mod liquidity_oracle;
 pub mod money_market;
-pub mod pool;
-pub mod pool_borrow_authority;
-pub mod pool_market;
 pub mod registry;
+pub mod ulp_pool;
+pub mod ulp_pool_borrow_authority;
+pub mod ulp_pool_market;
 pub mod users;
 
 pub use depositor::*;
+pub use general_pool::*;
+pub use general_pool_borrow_authority::*;
+pub use general_pool_market::*;
 pub use income_pool::*;
 pub use income_pool_market::*;
 pub use liquidity_oracle::*;
 pub use money_market::*;
-pub use pool::*;
-pub use pool_borrow_authority::*;
-pub use pool_market::*;
 pub use registry::*;
+pub use ulp_pool::*;
+pub use ulp_pool_borrow_authority::*;
+pub use ulp_pool_market::*;
 pub use users::*;
 
 pub const EXP: u64 = 1_000_000_000;
@@ -41,6 +47,11 @@ pub fn program_test() -> ProgramTest {
         "everlend_ulp",
         everlend_ulp::id(),
         processor!(everlend_ulp::processor::Processor::process_instruction),
+    );
+    program.add_program(
+        "everlend_general_pool",
+        everlend_general_pool::id(),
+        processor!(everlend_general_pool::processor::Processor::process_instruction),
     );
     program.add_program(
         "everlend_income_pools",
@@ -128,6 +139,7 @@ pub async fn presetup() -> (
     registry.init(&mut context).await.unwrap();
 
     let mut config = SetRegistryConfigParams {
+        general_pool_program_id: everlend_general_pool::id(),
         ulp_program_id: everlend_ulp::id(),
         liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
         depositor_program_id: everlend_depositor::id(),
@@ -282,6 +294,22 @@ pub async fn get_amount_allowed(
     context: &mut ProgramTestContext,
     test_pool: &TestPool,
     test_pool_borrow_authority: &TestPoolBorrowAuthority,
+) -> u64 {
+    let token_amount = get_token_balance(context, &test_pool.token_account.pubkey()).await;
+    let total_amount_borrowed = test_pool.get_data(context).await.total_amount_borrowed;
+    let total_pool_amount = token_amount + total_amount_borrowed;
+
+    test_pool_borrow_authority
+        .get_data(context)
+        .await
+        .get_amount_allowed(total_pool_amount)
+        .unwrap()
+}
+
+pub async fn get_amount_allowed_general(
+    context: &mut ProgramTestContext,
+    test_pool: &TestGeneralPool,
+    test_pool_borrow_authority: &TestGeneralPoolBorrowAuthority,
 ) -> u64 {
     let token_amount = get_token_balance(context, &test_pool.token_account.pubkey()).await;
     let total_amount_borrowed = test_pool.get_data(context).await.total_amount_borrowed;

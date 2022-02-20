@@ -13,6 +13,7 @@ async fn success() {
     test_registry.init(&mut context).await.unwrap();
 
     let mut config = SetRegistryConfigParams {
+        general_pool_program_id: everlend_general_pool::id(),
         ulp_program_id: everlend_ulp::id(),
         liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
         depositor_program_id: everlend_depositor::id(),

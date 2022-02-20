@@ -67,28 +67,29 @@ impl Rebalancing {
         self.steps = Vec::new();
 
         // Compute steps
-        for i in 0..TOTAL_DISTRIBUTIONS {
-            // If distribution is over
-            if registry_config.money_market_program_ids[i] == Default::default() {
-                break;
-            }
-
+        for (index, _) in registry_config
+            .money_market_program_ids
+            .iter()
+            .enumerate()
+            // Keeping index order
+            .filter(|&id| *id.1 != Default::default())
+        {
             // Spread percents
-            let prev_percent = self.token_distribution.distribution[i];
-            let percent = token_distribution.distribution[i];
+            let prev_percent = self.token_distribution.distribution[index];
+            let percent = token_distribution.distribution[index];
 
             let prev_distribution_liquidity =
                 math::share(self.distributed_liquidity, prev_percent)?;
             let distribution_liquidity = math::share(distributed_liquidity, percent)?;
 
             let liquidity_amount =
-                math::absdiff(distribution_liquidity, prev_distribution_liquidity)?;
+                math::abs_diff(distribution_liquidity, prev_distribution_liquidity)?;
 
             match distribution_liquidity.cmp(&prev_distribution_liquidity) {
                 // Deposit
                 Ordering::Greater => {
                     self.add_step(RebalancingStep::new(
-                        i as u8,
+                        index as u8,
                         RebalancingOperation::Deposit,
                         liquidity_amount,
                         None, // Will be calculated at the deposit stage
@@ -105,10 +106,10 @@ impl Rebalancing {
 
                     // Compute collateral amount depending on amount percent
                     let collateral_amount =
-                        math::share(self.received_collateral[i], collateral_percent as u64)?;
+                        math::share(self.received_collateral[index], collateral_percent as u64)?;
 
                     self.add_step(RebalancingStep::new(
-                        i as u8,
+                        index as u8,
                         RebalancingOperation::Withdraw,
                         liquidity_amount,
                         Some(collateral_amount),

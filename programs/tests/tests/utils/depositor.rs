@@ -1,6 +1,6 @@
 use super::{
-    get_account, get_liquidity_mint, TestIncomePool, TestIncomePoolMarket, TestLiquidityOracle,
-    TestPool, TestPoolMarket, TestRegistry,
+    get_account, get_liquidity_mint, TestGeneralPool, TestGeneralPoolMarket, TestIncomePool,
+    TestIncomePoolMarket, TestLiquidityOracle, TestPool, TestPoolMarket, TestRegistry,
 };
 use everlend_depositor::{
     find_rebalancing_program_address,
@@ -48,7 +48,7 @@ impl TestDepositor {
     pub async fn init(
         &self,
         context: &mut ProgramTestContext,
-        general_pool_market: &TestPoolMarket,
+        general_pool_market: &TestGeneralPoolMarket,
         income_pool_market: &TestIncomePoolMarket,
         liquidity_oracle: &TestLiquidityOracle,
     ) -> transport::Result<()> {
@@ -102,8 +102,8 @@ impl TestDepositor {
         &self,
         context: &mut ProgramTestContext,
         registry: &TestRegistry,
-        general_pool_market: &TestPoolMarket,
-        general_pool: &TestPool,
+        general_pool_market: &TestGeneralPoolMarket,
+        general_pool: &TestGeneralPool,
         liquidity_oracle: &TestLiquidityOracle,
     ) -> transport::Result<()> {
         let tx = Transaction::new_signed_with_payer(

@@ -20,6 +20,8 @@ pub struct RegistryConfig {
     pub account_type: AccountType,
     /// Registry
     pub registry: Pubkey,
+    /// General pool program
+    pub general_pool_program_id: Pubkey,
     /// ULP program
     pub ulp_program_id: Pubkey,
     /// Liquidity oracle program
@@ -31,7 +33,7 @@ pub struct RegistryConfig {
     /// Money market programs
     pub money_market_program_ids: [Pubkey; TOTAL_DISTRIBUTIONS],
     // Space for future values
-    // 543
+    // 511
 }
 
 impl RegistryConfig {
@@ -43,6 +45,7 @@ impl RegistryConfig {
 
     /// Set a registry config
     pub fn set(&mut self, params: SetRegistryConfigParams) {
+        self.general_pool_program_id = params.general_pool_program_id;
         self.ulp_program_id = params.ulp_program_id;
         self.liquidity_oracle_program_id = params.liquidity_oracle_program_id;
         self.depositor_program_id = params.depositor_program_id;
@@ -60,6 +63,8 @@ pub struct InitRegistryConfigParams {
 /// Set a registry config params
 #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, PartialEq)]
 pub struct SetRegistryConfigParams {
+    /// General pool program
+    pub general_pool_program_id: Pubkey,
     /// ULP program
     pub ulp_program_id: Pubkey,
     /// Liquidity oracle program
@@ -74,7 +79,7 @@ pub struct SetRegistryConfigParams {
 
 impl Sealed for RegistryConfig {}
 impl Pack for RegistryConfig {
-    // 1 + 32 + 32 + 32 + 32 + 32 + (10 * 32) + 543 = 1024
+    // 1 + 32 + 32 + 32 + 32 + 32 + 32 + (10 * 32) + 511 = 1024
     const LEN: usize = 1024;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {

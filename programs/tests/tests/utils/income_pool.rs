@@ -1,4 +1,6 @@
-use super::{get_account, get_liquidity_mint, TestIncomePoolMarket, TokenHolder, User};
+use super::{
+    get_account, get_liquidity_mint, TestGeneralPool, TestIncomePoolMarket, TokenHolder, User,
+};
 use everlend_income_pools::{find_pool_program_address, instruction, state::IncomePool};
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::ProgramTestContext;
@@ -7,7 +9,6 @@ use solana_sdk::{
     transaction::Transaction,
     transport,
 };
-use crate::utils::TestPool;
 
 #[derive(Debug)]
 pub struct TestIncomePool {
@@ -105,14 +106,14 @@ impl TestIncomePool {
         &self,
         context: &mut ProgramTestContext,
         test_income_pool_market: &TestIncomePoolMarket,
-        general_pool: &TestPool,
+        general_pool: &TestGeneralPool,
     ) -> transport::Result<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::withdraw(
                 &everlend_income_pools::id(),
                 &test_income_pool_market.keypair.pubkey(),
                 &self.pool_pubkey,
-                  &self.token_account.pubkey(),
+                &self.token_account.pubkey(),
                 &general_pool.pool_pubkey,
                 &general_pool.token_account.pubkey(),
             )],

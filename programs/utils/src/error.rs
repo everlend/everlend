@@ -54,6 +54,10 @@ pub enum EverlendError {
     /// Rebalancing is completed
     #[error("Rebalancing is completed")]
     RebalancingIsCompleted,
+
+    /// Withdraw requests list is empty
+    #[error("Withdraw requests list is empty")]
+    WithdrawRequestsListIsEmpty,
 }
 
 impl PrintProgramError for EverlendError {

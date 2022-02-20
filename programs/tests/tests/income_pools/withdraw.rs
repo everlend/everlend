@@ -4,18 +4,17 @@ use crate::utils::*;
 use solana_program_test::*;
 use solana_sdk::signer::Signer;
 
-
-const TOKEN_AMOUNT :u64 = 123 * EXP;
+const TOKEN_AMOUNT: u64 = 123 * EXP;
 
 async fn setup() -> (
     ProgramTestContext,
     TestIncomePoolMarket,
     TestIncomePool,
-    TestPool,
+    TestGeneralPool,
 ) {
     let mut context = presetup().await.0;
 
-    let general_pool_market = TestPoolMarket::new();
+    let general_pool_market = TestGeneralPoolMarket::new();
     general_pool_market.init(&mut context).await.unwrap();
 
     let test_income_pool_market = TestIncomePoolMarket::new();
@@ -24,7 +23,7 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    let test_general_pool = TestPool::new(&general_pool_market,None);
+    let test_general_pool = TestGeneralPool::new(&general_pool_market, None);
     test_general_pool
         .create(&mut context, &general_pool_market)
         .await
@@ -42,15 +41,19 @@ async fn setup() -> (
         &test_income_pool.token_account.pubkey(),
         TOKEN_AMOUNT,
     )
-        .await
-        .unwrap();
+    .await
+    .unwrap();
 
-    (context, test_income_pool_market, test_income_pool, test_general_pool)
+    (
+        context,
+        test_income_pool_market,
+        test_income_pool,
+        test_general_pool,
+    )
 }
 
 #[tokio::test]
 async fn success() {
-
     let (mut context, test_income_pool_market, test_income_pool, test_general_pool) = setup().await;
 
     assert_eq!(

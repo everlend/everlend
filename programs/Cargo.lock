@@ -775,6 +775,7 @@ name = "everlend-depositor"
 version = "0.1.0"
 dependencies = [
  "borsh",
+ "everlend-general-pool",
  "everlend-income-pools",
  "everlend-liquidity-oracle",
  "everlend-registry",
@@ -814,6 +815,7 @@ dependencies = [
  "anyhow",
  "bs58 0.2.5",
  "everlend-depositor",
+ "everlend-general-pool",
  "everlend-income-pools",
  "everlend-liquidity-oracle",
  "everlend-registry",
@@ -833,11 +835,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "everlend-general-pool"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "everlend-utils",
+ "num-derive",
+ "num-traits",
+ "solana-program",
+ "solana-program-test",
+ "solana-sdk",
+ "spl-token 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror",
+]
+
+[[package]]
+name = "everlend-general-pool-cli"
+version = "0.1.0"
+dependencies = [
+ "bs58 0.2.5",
+ "clap",
+ "everlend-general-pool",
+ "solana-account-decoder",
+ "solana-clap-utils",
+ "solana-cli-config",
+ "solana-client",
+ "solana-logger",
+ "solana-program",
+ "solana-sdk",
+ "spl-token 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "everlend-income-pools"
 version = "0.1.0"
 dependencies = [
  "borsh",
- "everlend-ulp",
+ "everlend-general-pool",
  "everlend-utils",
  "num-derive",
  "num-traits",
@@ -899,6 +933,7 @@ name = "everlend-tests"
 version = "0.1.0"
 dependencies = [
  "everlend-depositor",
+ "everlend-general-pool",
  "everlend-income-pools",
  "everlend-liquidity-oracle",
  "everlend-registry",

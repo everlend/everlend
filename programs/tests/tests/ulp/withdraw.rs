@@ -27,7 +27,7 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    let user = add_liquidity_provider(&mut context, &test_pool, 9999 * EXP)
+    let user = add_liquidity_provider(&mut context,  &test_pool.token_mint_pubkey, &test_pool.pool_mint.pubkey(), 9999 * EXP)
         .await
         .unwrap();
 

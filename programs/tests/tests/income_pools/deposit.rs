@@ -12,7 +12,7 @@ async fn setup() -> (
 ) {
     let mut context = presetup().await.0;
 
-    let general_pool_market = TestPoolMarket::new();
+    let general_pool_market = TestGeneralPoolMarket::new();
     general_pool_market.init(&mut context).await.unwrap();
 
     let test_income_pool_market = TestIncomePoolMarket::new();

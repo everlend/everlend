@@ -208,12 +208,17 @@ impl Processor {
         accounts: &[AccountInfo],
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
+        let pool_market_info = next_account_info(account_info_iter)?;
         let pool_borrow_authority_info = next_account_info(account_info_iter)?;
         let manager_info = next_account_info(account_info_iter)?;
 
         assert_signer(manager_info)?;
-
+        assert_owned_by(pool_market_info, program_id)?;
         assert_owned_by(pool_borrow_authority_info, program_id)?;
+
+        // Get pool market state
+        let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+        assert_account_key(manager_info, &pool_market.manager)?;
 
         // Get pool borrow authority state
         let mut pool_borrow_authority =
@@ -235,13 +240,18 @@ impl Processor {
         accounts: &[AccountInfo],
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
+        let pool_market_info = next_account_info(account_info_iter)?;
         let pool_borrow_authority_info = next_account_info(account_info_iter)?;
         let receiver_info = next_account_info(account_info_iter)?;
         let manager_info = next_account_info(account_info_iter)?;
 
         assert_signer(manager_info)?;
-
+        assert_owned_by(pool_market_info, program_id)?;
         assert_owned_by(pool_borrow_authority_info, program_id)?;
+
+        // Get pool market state
+        let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+        assert_account_key(manager_info, &pool_market.manager)?;
 
         // Get pool borrow authority state to check initialized
         PoolBorrowAuthority::unpack(&pool_borrow_authority_info.data.borrow())?;

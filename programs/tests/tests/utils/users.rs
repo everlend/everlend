@@ -1,4 +1,4 @@
-use super::{create_token_account, mint_tokens, TestPool};
+use super::{create_token_account, mint_tokens};
 use solana_program::pubkey::Pubkey;
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{
@@ -25,7 +25,10 @@ impl User for LiquidityProvider {
 
 pub async fn add_liquidity_provider(
     context: &mut ProgramTestContext,
-    test_pool: &TestPool,
+    // test_pool: &TestPool,
+    token_mint_pubkey: &Pubkey,
+    pool_mint: &Pubkey,
+
     mint_amount: u64,
 ) -> transport::Result<LiquidityProvider> {
     let user = Keypair::new();
@@ -35,7 +38,8 @@ pub async fn add_liquidity_provider(
     create_token_account(
         context,
         &token_account,
-        &test_pool.token_mint_pubkey,
+        // &test_pool.token_mint_pubkey,
+        token_mint_pubkey,
         &user.pubkey(),
     )
     .await?;
@@ -43,14 +47,16 @@ pub async fn add_liquidity_provider(
     create_token_account(
         context,
         &pool_account,
-        &test_pool.pool_mint.pubkey(),
+        // &test_pool.pool_mint.pubkey(),
+        pool_mint,
         &user.pubkey(),
     )
     .await?;
 
     mint_tokens(
         context,
-        &test_pool.token_mint_pubkey,
+        // &test_pool.token_mint_pubkey,
+        token_mint_pubkey,
         &token_account.pubkey(),
         mint_amount,
     )

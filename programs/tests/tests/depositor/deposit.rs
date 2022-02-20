@@ -15,9 +15,9 @@ async fn setup() -> (
     TestSPLTokenLending,
     TestPythOracle,
     TestRegistry,
-    TestPoolMarket,
-    TestPool,
-    TestPoolBorrowAuthority,
+    TestGeneralPoolMarket,
+    TestGeneralPool,
+    TestGeneralPoolBorrowAuthority,
     TestPoolMarket,
     TestPool,
     LiquidityProvider,
@@ -53,10 +53,10 @@ async fn setup() -> (
 
     // 1. Prepare general pool
 
-    let general_pool_market = TestPoolMarket::new();
+    let general_pool_market = TestGeneralPoolMarket::new();
     general_pool_market.init(&mut context).await.unwrap();
 
-    let general_pool = TestPool::new(&general_pool_market, None);
+    let general_pool = TestGeneralPool::new(&general_pool_market, None);
     general_pool
         .create(&mut context, &general_pool_market)
         .await
@@ -64,9 +64,14 @@ async fn setup() -> (
 
     // 1.1 Add liquidity to general pool
 
-    let liquidity_provider = add_liquidity_provider(&mut context, &general_pool, 9999 * EXP)
-        .await
-        .unwrap();
+    let liquidity_provider = add_liquidity_provider(
+        &mut context,
+        &general_pool.token_mint_pubkey,
+        &general_pool.pool_mint.pubkey(),
+        9999 * EXP,
+    )
+    .await
+    .unwrap();
 
     general_pool
         .deposit(
@@ -156,13 +161,13 @@ async fn setup() -> (
         &test_depositor.depositor.pubkey(),
     );
     let general_pool_borrow_authority =
-        TestPoolBorrowAuthority::new(&general_pool, depositor_authority);
+        TestGeneralPoolBorrowAuthority::new(&general_pool, depositor_authority);
     general_pool_borrow_authority
         .create(
             &mut context,
             &general_pool_market,
             &general_pool,
-            SHARE_ALLOWED,
+            ULP_SHARE_ALLOWED,
         )
         .await
         .unwrap();

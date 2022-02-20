@@ -4,7 +4,7 @@ use solana_program::program_error::ProgramError;
 /// Scale for precision
 pub const PRECISION_SCALER: u128 = 1_000_000_000;
 
-pub fn absdiff(a: u64, b: u64) -> Result<u64, ProgramError> {
+pub fn abs_diff(a: u64, b: u64) -> Result<u64, ProgramError> {
     let res = (a as i128)
         .checked_sub(b as i128)
         .ok_or(EverlendError::MathOverflow)?

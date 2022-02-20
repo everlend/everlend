@@ -7,7 +7,7 @@ use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{signature::Signer, transaction::Transaction, transport};
 
-pub const SHARE_ALLOWED: u16 = 10_000; // 100% of the total pool
+pub const ULP_SHARE_ALLOWED: u16 = 10_000; // 100% of the total pool
 
 #[derive(Debug)]
 pub struct TestPoolBorrowAuthority {
@@ -81,6 +81,7 @@ impl TestPoolBorrowAuthority {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::update_pool_borrow_authority(
                 &everlend_ulp::id(),
+                &test_pool_market.keypair.pubkey(),
                 &test_pool.pool_pubkey,
                 &self.borrow_authority,
                 &test_pool_market.manager.pubkey(),
@@ -103,6 +104,7 @@ impl TestPoolBorrowAuthority {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::delete_pool_borrow_authority(
                 &everlend_ulp::id(),
+                &test_pool_market.keypair.pubkey(),
                 &test_pool.pool_pubkey,
                 &self.borrow_authority,
                 &context.payer.pubkey(),

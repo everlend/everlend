@@ -2,6 +2,7 @@
 
 use crate::{find_rebalancing_program_address, find_transit_program_address};
 use borsh::{BorshDeserialize, BorshSerialize};
+use everlend_general_pool::find_withdrawal_requests_program_address;
 use everlend_liquidity_oracle::find_liquidity_oracle_token_distribution_program_address;
 use everlend_utils::find_program_address;
 use solana_program::{
@@ -49,6 +50,8 @@ pub enum DepositorInstruction {
     /// [W] General pool
     /// [W] General pool token account
     /// [W] General pool borrow authority
+    /// [R] General pool borrow authority
+    /// [W] Withdrawals requests account
     /// [W] Liquidity transit account
     /// [R] Liquidity oracle
     /// [R] Token distribution
@@ -57,7 +60,7 @@ pub enum DepositorInstruction {
     /// [R] Sytem program
     /// [R] Token program id
     /// [R] Everlend Liquidity Oracle program id
-    /// [R] Everlend ULP program id
+    /// [R] Everlend general pool program id
     StartRebalancing,
 
     /// Deposit funds from liquidity transit account to money market.
@@ -181,15 +184,23 @@ pub fn start_rebalancing(
     );
     // General pool
     let (general_pool_market_authority, _) =
-        find_program_address(&everlend_ulp::id(), general_pool_market);
-    let (general_pool, _) =
-        everlend_ulp::find_pool_program_address(&everlend_ulp::id(), general_pool_market, mint);
+        find_program_address(&everlend_general_pool::id(), general_pool_market);
+    let (general_pool, _) = everlend_general_pool::find_pool_program_address(
+        &everlend_general_pool::id(),
+        general_pool_market,
+        mint,
+    );
     let (general_pool_borrow_authority, _) =
-        everlend_ulp::find_pool_borrow_authority_program_address(
-            &everlend_ulp::id(),
+        everlend_general_pool::find_pool_borrow_authority_program_address(
+            &everlend_general_pool::id(),
             &general_pool,
             &depositor_authority,
         );
+    let (withdrawal_requests, _) = find_withdrawal_requests_program_address(
+        &everlend_general_pool::id(),
+        general_pool_market,
+        mint,
+    );
 
     let (liquidity_transit, _) = find_transit_program_address(program_id, depositor, mint);
 
@@ -204,6 +215,7 @@ pub fn start_rebalancing(
         AccountMeta::new(general_pool, false),
         AccountMeta::new(*general_pool_token_account, false),
         AccountMeta::new(general_pool_borrow_authority, false),
+        AccountMeta::new_readonly(withdrawal_requests, false),
         AccountMeta::new(liquidity_transit, false),
         AccountMeta::new_readonly(*liquidity_oracle, false),
         AccountMeta::new_readonly(token_distribution, false),
@@ -212,7 +224,7 @@ pub fn start_rebalancing(
         AccountMeta::new_readonly(system_program::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
         AccountMeta::new_readonly(everlend_liquidity_oracle::id(), false),
-        AccountMeta::new_readonly(everlend_ulp::id(), false),
+        AccountMeta::new_readonly(everlend_general_pool::id(), false),
     ];
 
     Instruction::new_with_borsh(

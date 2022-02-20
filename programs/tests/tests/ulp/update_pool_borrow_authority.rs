@@ -26,7 +26,7 @@ async fn success() {
     let test_pool_borrow_authority =
         TestPoolBorrowAuthority::new(&test_pool, context.payer.pubkey());
     test_pool_borrow_authority
-        .create(&mut context, &test_pool_market, &test_pool, SHARE_ALLOWED)
+        .create(&mut context, &test_pool_market, &test_pool, ULP_SHARE_ALLOWED)
         .await
         .unwrap();
 
