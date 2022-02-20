@@ -224,6 +224,21 @@ async fn main() -> anyhow::Result<()> {
         .get_token_account_balance(&liquidity_transit_pubkey)?;
     println!("balance 0 = {:?}", balance);
 
+    // Withdraw request
+    println!("Withdraw request");
+    general_pool::withdraw_request(
+        &config,
+        &pool_market_pubkey,
+        &pool_pubkey,
+        &pool_account,
+        &token_account,
+        &pool_token_account,
+        &sol_mint,
+        &pool_mint,
+        100,
+        1,
+    )?;
+
     println!("8. Update token distribution");
     distribution[0] = 300_000_000u64; // 30%
     distribution[1] = 600_000_000u64; // 60%
@@ -319,6 +334,19 @@ async fn main() -> anyhow::Result<()> {
 
     let rebalancing_account = config.rpc_client.get_account(&rebalancing_pubkey)?;
     let rebalancing = Rebalancing::unpack(&rebalancing_account.data)?;
+
+    // Withdraw
+    println!("Withdraw");
+    general_pool::withdraw(
+        &config,
+        &pool_market_pubkey,
+        &pool_pubkey,
+        &token_account,
+        &pool_token_account,
+        &sol_mint,
+        &pool_mint,
+        1,
+    )?;
 
     println!("{:#?}", rebalancing);
 

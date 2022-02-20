@@ -12,7 +12,10 @@ use crate::{
     utils::{money_market_deposit, money_market_redeem},
 };
 use borsh::BorshDeserialize;
-use everlend_general_pool::state::Pool;
+use everlend_general_pool::{
+    find_withdrawal_requests_program_address,
+    state::{Pool, WithdrawalRequests},
+};
 use everlend_liquidity_oracle::{
     find_liquidity_oracle_token_distribution_program_address, state::TokenDistribution,
 };
@@ -136,6 +139,7 @@ impl Processor {
         let general_pool_info = next_account_info(account_info_iter)?;
         let general_pool_token_account_info = next_account_info(account_info_iter)?;
         let general_pool_borrow_authority_info = next_account_info(account_info_iter)?;
+        let withdrawal_requests_info = next_account_info(account_info_iter)?;
 
         let liquidity_transit_info = next_account_info(account_info_iter)?;
 
@@ -154,6 +158,7 @@ impl Processor {
         assert_owned_by(depositor_info, program_id)?;
         assert_owned_by(token_distribution_info, &everlend_liquidity_oracle::id())?;
         assert_owned_by(general_pool_info, &everlend_general_pool::id())?;
+        assert_owned_by(withdrawal_requests_info, &everlend_general_pool::id())?;
 
         // Get depositor state
         let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
@@ -226,6 +231,15 @@ impl Processor {
         assert_account_key(general_pool_market_info, &general_pool.pool_market)?;
         assert_account_key(general_pool_token_account_info, &general_pool.token_account)?;
 
+        let (withdrawal_requests_pubkey, _) = find_withdrawal_requests_program_address(
+            &everlend_general_pool::id(),
+            general_pool_market_info.key,
+            &general_pool.token_mint,
+        );
+        assert_account_key(withdrawal_requests_info, &withdrawal_requests_pubkey)?;
+        let withdrawal_requests =
+            WithdrawalRequests::unpack(&withdrawal_requests_info.data.borrow())?;
+
         // Calculate total liquidity supply
         let general_pool_token_account =
             Account::unpack_unchecked(&general_pool_token_account_info.data.borrow())?;
@@ -245,6 +259,8 @@ impl Processor {
         let new_distributed_liquidity = general_pool_token_account
             .amount
             .checked_add(rebalancing.distributed_liquidity)
+            .ok_or(EverlendError::MathOverflow)?
+            .checked_sub(withdrawal_requests.liquidity_supply)
             .ok_or(EverlendError::MathOverflow)?
             .checked_sub(leaked_amount)
             .ok_or(EverlendError::MathOverflow)?;

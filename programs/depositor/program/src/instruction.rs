@@ -2,6 +2,7 @@
 
 use crate::{find_rebalancing_program_address, find_transit_program_address};
 use borsh::{BorshDeserialize, BorshSerialize};
+use everlend_general_pool::find_withdrawal_requests_program_address;
 use everlend_liquidity_oracle::find_liquidity_oracle_token_distribution_program_address;
 use everlend_utils::find_program_address;
 use solana_program::{
@@ -49,6 +50,8 @@ pub enum DepositorInstruction {
     /// [W] General pool
     /// [W] General pool token account
     /// [W] General pool borrow authority
+    /// [R] General pool borrow authority
+    /// [W] Withdrawals requests account
     /// [W] Liquidity transit account
     /// [R] Liquidity oracle
     /// [R] Token distribution
@@ -193,6 +196,11 @@ pub fn start_rebalancing(
             &general_pool,
             &depositor_authority,
         );
+    let (withdrawal_requests, _) = find_withdrawal_requests_program_address(
+        &everlend_general_pool::id(),
+        general_pool_market,
+        mint,
+    );
 
     let (liquidity_transit, _) = find_transit_program_address(program_id, depositor, mint);
 
@@ -207,6 +215,7 @@ pub fn start_rebalancing(
         AccountMeta::new(general_pool, false),
         AccountMeta::new(*general_pool_token_account, false),
         AccountMeta::new(general_pool_borrow_authority, false),
+        AccountMeta::new_readonly(withdrawal_requests, false),
         AccountMeta::new(liquidity_transit, false),
         AccountMeta::new_readonly(*liquidity_oracle, false),
         AccountMeta::new_readonly(token_distribution, false),

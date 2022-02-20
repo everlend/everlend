@@ -166,3 +166,69 @@ pub fn deposit(
 
     Ok(())
 }
+
+#[allow(clippy::too_many_arguments)]
+pub fn withdraw_request(
+    config: &Config,
+    pool_market_pubkey: &Pubkey,
+    pool_pubkey: &Pubkey,
+    source: &Pubkey,
+    destination: &Pubkey,
+    pool_token_account: &Pubkey,
+    token_mint: &Pubkey,
+    pool_mint: &Pubkey,
+    amount: u64,
+    index: u64,
+) -> Result<(), ClientError> {
+    let tx = Transaction::new_with_payer(
+        &[instruction::withdraw_request(
+            &everlend_general_pool::id(),
+            pool_market_pubkey,
+            pool_pubkey,
+            source,
+            destination,
+            pool_token_account,
+            token_mint,
+            pool_mint,
+            &config.fee_payer.pubkey(),
+            amount,
+            index,
+        )],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    sign_and_send_and_confirm_transaction(config, tx, &[&config.fee_payer])?;
+
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn withdraw(
+    config: &Config,
+    pool_market_pubkey: &Pubkey,
+    pool_pubkey: &Pubkey,
+    destination: &Pubkey,
+    pool_token_account: &Pubkey,
+    token_mint: &Pubkey,
+    pool_mint: &Pubkey,
+    index: u64,
+) -> Result<(), ClientError> {
+    let tx = Transaction::new_with_payer(
+        &[instruction::withdraw(
+            &everlend_general_pool::id(),
+            pool_market_pubkey,
+            pool_pubkey,
+            destination,
+            pool_token_account,
+            token_mint,
+            pool_mint,
+            &config.fee_payer.pubkey(),
+            index,
+        )],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    sign_and_send_and_confirm_transaction(config, tx, &[&config.fee_payer])?;
+
+    Ok(())
+}
