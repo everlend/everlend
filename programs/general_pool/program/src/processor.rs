@@ -640,7 +640,10 @@ impl Processor {
         )?;
 
         withdrawal_requests.last_request_id = current_index;
-        withdrawal_requests.liquidity_supply += withdraw_amount;
+        withdrawal_requests.liquidity_supply = withdrawal_requests
+            .liquidity_supply
+            .checked_add(withdraw_amount)
+            .ok_or(EverlendError::MathOverflow)?;
 
         WithdrawalRequests::pack(
             withdrawal_requests,

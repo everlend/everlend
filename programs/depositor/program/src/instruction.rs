@@ -50,8 +50,7 @@ pub enum DepositorInstruction {
     /// [W] General pool
     /// [W] General pool token account
     /// [W] General pool borrow authority
-    /// [R] General pool borrow authority
-    /// [W] Withdrawals requests account
+    /// [R] Withdrawals requests account
     /// [W] Liquidity transit account
     /// [R] Liquidity oracle
     /// [R] Token distribution
