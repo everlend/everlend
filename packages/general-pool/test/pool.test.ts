@@ -1,7 +1,7 @@
 import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import { Keypair, PublicKey, sendAndConfirmTransaction } from '@solana/web3.js'
 import BN from 'bn.js'
-import { AccountType, createPool, deposit, Pool, withdraw } from '../src'
+import {AccountType, createPool, deposit, Pool, withdrawRequest} from '../src'
 import {
   connection,
   createMint,
@@ -106,10 +106,10 @@ describe('Pool', () => {
     })
   })
 
-  describe('Withdraw', () => {
+  describe('Withdraw request', () => {
     test('success', async () => {
       const amount = new BN(1000)
-      const { tx } = await withdraw(
+      const { tx } = await withdrawRequest(
         { connection, payerPublicKey },
         POOL_PUBKEY,
         amount,
