@@ -78,9 +78,7 @@ export const createPool = async (
   )
 
   const poolPubkey = await Pool.getPDA(poolMarket, tokenMint)
-  const poolMarketAuthority = await GeneralPoolsProgram.findProgramAddress([
-    poolMarket.toBuffer(),
-  ])
+  const poolMarketAuthority = await GeneralPoolsProgram.findProgramAddress([poolMarket.toBuffer()])
 
   tx.add(
     new CreatePool(
@@ -110,9 +108,7 @@ export const deposit = async (
     data: { poolMarket, tokenAccount, poolMint },
   } = await Pool.load(connection, pool)
 
-  const poolMarketAuthority = await GeneralPoolsProgram.findProgramAddress([
-    poolMarket.toBuffer(),
-  ])
+  const poolMarketAuthority = await GeneralPoolsProgram.findProgramAddress([poolMarket.toBuffer()])
 
   const tx = new Transaction()
 
@@ -224,9 +220,7 @@ export const borrow = async (
     data: { poolMarket, tokenAccount, tokenMint },
   } = await Pool.load(connection, pool)
 
-  const poolMarketAuthority = await GeneralPoolsProgram.findProgramAddress([
-    poolMarket.toBuffer(),
-  ])
+  const poolMarketAuthority = await GeneralPoolsProgram.findProgramAddress([poolMarket.toBuffer()])
   const poolBorrowAuthority = await PoolBorrowAuthority.getPDA(pool, payerPublicKey)
 
   const tx = new Transaction()

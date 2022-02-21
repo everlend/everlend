@@ -5,8 +5,7 @@ use everlend_general_pool::find_transit_program_address;
 use solana_program_test::*;
 use solana_sdk::signer::Signer;
 
-const INITIAL_USER_BALANCE :u64 = 5000000;
-const WITHDRAWAL_REQUEST_RENT :u64 = 1670400;
+const INITIAL_USER_BALANCE: u64 = 5000000;
 
 async fn setup() -> (
     ProgramTestContext,
@@ -105,16 +104,10 @@ async fn success() {
         55
     );
 
-    assert_eq!(
-        get_token_balance(&mut context, &transit_account).await,
-        0
-    );
+    assert_eq!(get_token_balance(&mut context, &transit_account).await, 0);
 
     let user_account = get_account(&mut context, &user.owner.pubkey()).await;
-    assert_eq!(
-        user_account.lamports,
-        INITIAL_USER_BALANCE
-    );
+    assert_eq!(user_account.lamports, INITIAL_USER_BALANCE);
 }
 
 #[tokio::test]
@@ -127,7 +120,7 @@ async fn success_with_index() {
         .unwrap();
 
     test_pool
-        .withdraw_request(&mut context, &test_pool_market, &user, 50,1)
+        .withdraw_request(&mut context, &test_pool_market, &user, 50, 1)
         .await
         .unwrap();
 
@@ -160,10 +153,7 @@ async fn success_with_index() {
         50
     );
 
-    assert_eq!(
-        get_token_balance(&mut context, &transit_account).await,
-        30
-    );
+    assert_eq!(get_token_balance(&mut context, &transit_account).await, 30);
 
     test_pool
         .withdraw(&mut context, &test_pool_market, &user, 2)
@@ -183,14 +173,8 @@ async fn success_with_index() {
         20
     );
 
-    assert_eq!(
-        get_token_balance(&mut context, &transit_account).await,
-        0
-    );
+    assert_eq!(get_token_balance(&mut context, &transit_account).await, 0);
 
     let user_account = get_account(&mut context, &user.owner.pubkey()).await;
-    assert_eq!(
-        user_account.lamports,
-        INITIAL_USER_BALANCE
-    );
+    assert_eq!(user_account.lamports, INITIAL_USER_BALANCE);
 }
