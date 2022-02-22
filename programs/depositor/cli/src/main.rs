@@ -54,6 +54,7 @@ fn check_fee_payer_balance(config: &Config, required_balance: u64) -> Result<(),
 
 fn command_create_depositor(
     config: &Config,
+    registry: &Pubkey,
     depositor_keypair: Option<Keypair>,
     general_pool_market_pubkey: &Pubkey,
     income_pool_market_pubkey: &Pubkey,
@@ -61,6 +62,10 @@ fn command_create_depositor(
 ) -> CommandResult {
     let depositor_keypair = depositor_keypair.unwrap_or_else(Keypair::new);
 
+    let (registry_config_pubkey, _) =
+        &everlend_registry::find_config_program_address(&everlend_registry::id(), registry);
+
+    println!("Registry config: {}", registry_config_pubkey);
     println!("Depositor: {}", depositor_keypair.pubkey());
     println!("General pool market: {}", general_pool_market_pubkey);
     println!("Income pool market: {}", income_pool_market_pubkey);
@@ -85,6 +90,7 @@ fn command_create_depositor(
             // Initialize depositor account
             instruction::init(
                 &everlend_depositor::id(),
+                registry_config_pubkey,
                 &depositor_keypair.pubkey(),
                 general_pool_market_pubkey,
                 income_pool_market_pubkey,
@@ -219,6 +225,15 @@ fn main() {
             SubCommand::with_name("create-depositor")
                 .about("Create a new depositor")
                 .arg(
+                    Arg::with_name("registry_pubkey")
+                        .long("registry")
+                        .validator(is_pubkey)
+                        .value_name("ADDRESS")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Registry pubkey"),
+                )
+                .arg(
                     Arg::with_name("depositor_keypair")
                         .long("keypair")
                         .validator(is_keypair_or_ask_keyword)
@@ -338,6 +353,7 @@ fn main() {
 
     let _ = match matches.subcommand() {
         ("create-depositor", Some(arg_matches)) => {
+            let registry_pubkey = pubkey_of(arg_matches, "registry_pubkey").unwrap();
             let depositor_keypair = keypair_of(arg_matches, "depositor_keypair");
             let general_market_pubkey = pubkey_of(arg_matches, "general_market_pubkey").unwrap();
             let income_pool_market_pubkey = pubkey_of(arg_matches, "income_market_pubkey").unwrap();
@@ -345,6 +361,7 @@ fn main() {
                 pubkey_of(arg_matches, "liquidity_oracle_pubkey").unwrap();
             command_create_depositor(
                 &config,
+                &registry_pubkey,
                 depositor_keypair,
                 &general_market_pubkey,
                 &income_pool_market_pubkey,
