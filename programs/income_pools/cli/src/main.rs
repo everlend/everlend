@@ -101,7 +101,7 @@ fn command_create_market(
     let market_keypair = market_keypair.unwrap_or_else(Keypair::new);
 
     println!("Income pool market: {}", market_keypair.pubkey());
-    println!("General pool market: {}", market_keypair.pubkey());
+    println!("General pool market: {}", general_pool_market_pubkey);
 
     let market_balance = config
         .rpc_client

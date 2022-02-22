@@ -54,7 +54,7 @@ fn check_fee_payer_balance(config: &Config, required_balance: u64) -> Result<(),
 
 fn command_create_depositor(
     config: &Config,
-    registry: &Pubkey,
+    registry_pubkey: &Pubkey,
     depositor_keypair: Option<Keypair>,
     general_pool_market_pubkey: &Pubkey,
     income_pool_market_pubkey: &Pubkey,
@@ -62,10 +62,6 @@ fn command_create_depositor(
 ) -> CommandResult {
     let depositor_keypair = depositor_keypair.unwrap_or_else(Keypair::new);
 
-    let (registry_config_pubkey, _) =
-        &everlend_registry::find_config_program_address(&everlend_registry::id(), registry);
-
-    println!("Registry config: {}", registry_config_pubkey);
     println!("Depositor: {}", depositor_keypair.pubkey());
     println!("General pool market: {}", general_pool_market_pubkey);
     println!("Income pool market: {}", income_pool_market_pubkey);
@@ -90,7 +86,7 @@ fn command_create_depositor(
             // Initialize depositor account
             instruction::init(
                 &everlend_depositor::id(),
-                registry_config_pubkey,
+                registry_pubkey,
                 &depositor_keypair.pubkey(),
                 general_pool_market_pubkey,
                 income_pool_market_pubkey,
