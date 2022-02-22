@@ -20,9 +20,8 @@
 
 ---
 Accounts
-|  |  |
-|---|---|
 | Registry | `3ZZpPNQanvtCQA4CC6pbPpxrZppUvbMAVkTFS1eJUt7g` |
+|---|---|
 | General pool market | `75VirX5wupcQVWxR56CFGYDN9uqNDAAPr3nP4rLYPn9g` |
 | Liquidity oracle | `4Te5z2b3yZSgwPAw7YfxPRWxTaZeFxGiTVFFWEfEHBX4` |
 | Income pool market | `Hnxi5Qtfny1ymMJXxpuzUrRfDnN1na9rE7Js6FUuZMt5` |
