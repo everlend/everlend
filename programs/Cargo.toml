@@ -11,6 +11,7 @@ members = [
   "income_pools/program",
   "income_pools/cli",
   "registry/program",
+  "registry/cli",
   "tests",
   "e2e",
 ]

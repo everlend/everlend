@@ -930,6 +930,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "everlend-registry-cli"
+version = "0.1.0"
+dependencies = [
+ "bs58 0.2.5",
+ "clap",
+ "everlend-depositor",
+ "everlend-general-pool",
+ "everlend-income-pools",
+ "everlend-liquidity-oracle",
+ "everlend-registry",
+ "everlend-ulp",
+ "everlend-utils",
+ "solana-account-decoder",
+ "solana-clap-utils",
+ "solana-cli-config",
+ "solana-client",
+ "solana-logger",
+ "solana-program",
+ "solana-sdk",
+ "spl-token 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "everlend-tests"
 version = "0.1.0"
 dependencies = [
