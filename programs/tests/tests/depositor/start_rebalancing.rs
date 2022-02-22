@@ -89,6 +89,7 @@ async fn setup() -> (
     test_depositor
         .init(
             &mut context,
+            &registry,
             &general_pool_market,
             &income_pool_market,
             &test_liquidity_oracle,

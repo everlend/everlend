@@ -7,7 +7,7 @@ use solana_program_test::*;
 use solana_sdk::{signature::Keypair, signer::Signer};
 
 async fn setup() -> (ProgramTestContext, TestDepositor) {
-    let mut context = presetup().await.0;
+    let (mut context, _, _, registry) = presetup().await;
 
     let test_liquidity_oracle = TestLiquidityOracle::new();
     test_liquidity_oracle.init(&mut context).await.unwrap();
@@ -25,6 +25,7 @@ async fn setup() -> (ProgramTestContext, TestDepositor) {
     test_depositor
         .init(
             &mut context,
+            &registry,
             &general_pool_market,
             &income_pool_market,
             &test_liquidity_oracle,

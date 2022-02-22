@@ -10,6 +10,7 @@ use solana_sdk::{signature::Keypair, signer::Signer, transaction::Transaction};
 
 pub fn init(
     config: &Config,
+    registry_pubkey: &Pubkey,
     depositor_keypair: Option<Keypair>,
     general_pool_market_pubkey: &Pubkey,
     income_pool_market_pubkey: &Pubkey,
@@ -34,6 +35,7 @@ pub fn init(
             ),
             everlend_depositor::instruction::init(
                 &everlend_depositor::id(),
+                registry_pubkey,
                 &depositor_keypair.pubkey(),
                 general_pool_market_pubkey,
                 income_pool_market_pubkey,

@@ -146,6 +146,7 @@ async fn main() -> anyhow::Result<()> {
     println!("5. Depositor");
     let depositor_pubkey = depositor::init(
         &config,
+        &registry_pubkey,
         None,
         &pool_market_pubkey,
         &income_pool_market_pubkey,

@@ -6,7 +6,7 @@ use solana_program_test::*;
 
 #[tokio::test]
 async fn success() {
-    let mut context = program_test().start_with_context().await;
+    let (mut context, _, _, registry) = presetup().await;
 
     let test_liquidity_oracle = TestLiquidityOracle::new();
     test_liquidity_oracle.init(&mut context).await.unwrap();
@@ -24,6 +24,7 @@ async fn success() {
     test_depositor
         .init(
             &mut context,
+            &registry,
             &general_pool_market,
             &income_pool_market,
             &test_liquidity_oracle,

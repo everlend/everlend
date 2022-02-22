@@ -43,6 +43,9 @@ impl Processor {
     pub fn init(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
 
+        let registry_config_info = next_account_info(account_info_iter)?;
+        let config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
+
         let depositor_info = next_account_info(account_info_iter)?;
         let general_pool_market_info = next_account_info(account_info_iter)?;
         let income_pool_market_info = next_account_info(account_info_iter)?;
@@ -51,11 +54,12 @@ impl Processor {
         let rent = &Rent::from_account_info(rent_info)?;
 
         assert_rent_exempt(rent, depositor_info)?;
+
+        assert_owned_by(registry_config_info, &everlend_registry::id())?;
         assert_owned_by(depositor_info, program_id)?;
-        // TODO: replace to getting id from config program
-        assert_owned_by(general_pool_market_info, &everlend_general_pool::id())?;
-        assert_owned_by(income_pool_market_info, &everlend_income_pools::id())?;
-        assert_owned_by(liquidity_oracle_info, &everlend_liquidity_oracle::id())?;
+        assert_owned_by(general_pool_market_info, &config.general_pool_program_id)?;
+        assert_owned_by(income_pool_market_info, &config.income_pools_program_id)?;
+        assert_owned_by(liquidity_oracle_info, &config.liquidity_oracle_program_id)?;
 
         // Get depositor state
         let mut depositor = Depositor::unpack_unchecked(&depositor_info.data.borrow())?;
@@ -127,7 +131,7 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
 
         let registry_config_info = next_account_info(account_info_iter)?;
-        let registry_config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
+        let config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
 
         let depositor_info = next_account_info(account_info_iter)?;
         let depositor_authority_info = next_account_info(account_info_iter)?;
@@ -156,9 +160,9 @@ impl Processor {
 
         assert_owned_by(registry_config_info, &everlend_registry::id())?;
         assert_owned_by(depositor_info, program_id)?;
-        assert_owned_by(token_distribution_info, &everlend_liquidity_oracle::id())?;
-        assert_owned_by(general_pool_info, &everlend_general_pool::id())?;
-        assert_owned_by(withdrawal_requests_info, &everlend_general_pool::id())?;
+        assert_owned_by(token_distribution_info, &config.liquidity_oracle_program_id)?;
+        assert_owned_by(general_pool_info, &config.general_pool_program_id)?;
+        assert_owned_by(withdrawal_requests_info, &config.general_pool_program_id)?;
 
         // Get depositor state
         let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
@@ -217,7 +221,7 @@ impl Processor {
         // Check token distribution pubkey
         let (token_distribution_pubkey, _) =
             find_liquidity_oracle_token_distribution_program_address(
-                &everlend_liquidity_oracle::id(),
+                &config.liquidity_oracle_program_id,
                 liquidity_oracle_info.key,
                 mint_info.key,
             );
@@ -232,7 +236,7 @@ impl Processor {
         assert_account_key(general_pool_token_account_info, &general_pool.token_account)?;
 
         let (withdrawal_requests_pubkey, _) = find_withdrawal_requests_program_address(
-            &everlend_general_pool::id(),
+            &config.general_pool_program_id,
             general_pool_market_info.key,
             &general_pool.token_mint,
         );
@@ -312,11 +316,7 @@ impl Processor {
 
         // Compute rebalancing steps
         msg!("Computing");
-        rebalancing.compute(
-            &registry_config,
-            new_token_distribution,
-            new_distributed_liquidity,
-        )?;
+        rebalancing.compute(&config, new_token_distribution, new_distributed_liquidity)?;
 
         Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
 

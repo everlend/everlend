@@ -48,6 +48,7 @@ impl TestDepositor {
     pub async fn init(
         &self,
         context: &mut ProgramTestContext,
+        registry: &TestRegistry,
         general_pool_market: &TestGeneralPoolMarket,
         income_pool_market: &TestIncomePoolMarket,
         liquidity_oracle: &TestLiquidityOracle,
@@ -64,6 +65,7 @@ impl TestDepositor {
                 ),
                 everlend_depositor::instruction::init(
                     &everlend_depositor::id(),
+                    &registry.keypair.pubkey(),
                     &self.depositor.pubkey(),
                     &general_pool_market.keypair.pubkey(),
                     &income_pool_market.keypair.pubkey(),
