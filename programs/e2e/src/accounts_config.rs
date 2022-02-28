@@ -1,0 +1,123 @@
+use serde_derive::{Deserialize, Serialize};
+use serde_with::{serde_as, serde_conv};
+use solana_program::pubkey::Pubkey;
+use std::{
+    collections::HashMap,
+    fs::{create_dir_all, File},
+    io::{self, Write},
+    path::Path,
+    str::FromStr,
+};
+
+serde_conv!(
+    PubkeyAsString,
+    Pubkey,
+    |pubkey: &Pubkey| pubkey.to_string(),
+    |string: String| -> Result<_, std::convert::Infallible> {
+        Ok(Pubkey::from_str(&string).unwrap())
+    }
+);
+
+#[serde_as]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Default)]
+pub struct InitializedAccounts {
+    #[serde_as(as = "PubkeyAsString")]
+    pub payer: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub registry: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub general_pool_market: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub income_pool_market: Pubkey,
+
+    #[serde_as(as = "Vec<PubkeyAsString>")]
+    pub mm_pool_markets: Vec<Pubkey>,
+
+    #[serde(default)]
+    pub token_accounts: HashMap<String, TokenAccounts>,
+
+    #[serde_as(as = "PubkeyAsString")]
+    pub liquidity_oracle: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub depositor: Pubkey,
+}
+
+#[serde_as]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Default)]
+pub struct TokenAccounts {
+    #[serde_as(as = "PubkeyAsString")]
+    pub mint: Pubkey,
+
+    #[serde_as(as = "PubkeyAsString")]
+    pub liquidity_token_account: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub collateral_token_account: Pubkey,
+
+    #[serde_as(as = "PubkeyAsString")]
+    pub general_pool: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub general_pool_token_account: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub general_pool_mint: Pubkey,
+
+    #[serde_as(as = "PubkeyAsString")]
+    pub income_pool: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub income_pool_token_account: Pubkey,
+
+    pub mm_pools: Vec<MoneyMarketAccounts>,
+
+    #[serde_as(as = "PubkeyAsString")]
+    pub liquidity_transit: Pubkey,
+}
+
+#[serde_as]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Default)]
+pub struct MoneyMarketAccounts {
+    #[serde_as(as = "PubkeyAsString")]
+    pub pool: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub pool_token_account: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub token_mint: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub pool_mint: Pubkey,
+}
+
+impl InitializedAccounts {
+    pub fn load(config_file: &str) -> Result<Self, io::Error> {
+        load_config_file(config_file)
+    }
+
+    pub fn save(&self, config_file: &str) -> Result<(), io::Error> {
+        save_config_file(self, config_file)
+    }
+}
+
+pub fn load_config_file<T, P>(config_file: P) -> Result<T, io::Error>
+where
+    T: serde::de::DeserializeOwned,
+    P: AsRef<Path>,
+{
+    let file = File::open(config_file)?;
+    let config = serde_yaml::from_reader(file)
+        .map_err(|err| io::Error::new(io::ErrorKind::Other, format!("{:?}", err)))?;
+    Ok(config)
+}
+
+pub fn save_config_file<T, P>(config: &T, config_file: P) -> Result<(), io::Error>
+where
+    T: serde::ser::Serialize,
+    P: AsRef<Path>,
+{
+    let serialized = serde_yaml::to_string(config)
+        .map_err(|err| io::Error::new(io::ErrorKind::Other, format!("{:?}", err)))?;
+
+    if let Some(outdir) = config_file.as_ref().parent() {
+        create_dir_all(outdir)?;
+    }
+    let mut file = File::create(config_file)?;
+    file.write_all(&serialized.into_bytes())?;
+
+    Ok(())
+}

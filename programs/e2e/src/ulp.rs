@@ -36,7 +36,11 @@ pub fn create_market(
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(config, tx, &[&config.fee_payer, &pool_market_keypair])?;
+    sign_and_send_and_confirm_transaction(
+        config,
+        tx,
+        vec![config.fee_payer.as_ref(), &pool_market_keypair],
+    )?;
 
     Ok(pool_market_keypair.pubkey())
 }
@@ -95,7 +99,7 @@ pub fn create_pool(
     sign_and_send_and_confirm_transaction(
         config,
         tx,
-        &[&config.fee_payer, &token_account, &pool_mint],
+        vec![config.fee_payer.as_ref(), &token_account, &pool_mint],
     )?;
 
     Ok((pool_pubkey, token_account.pubkey(), pool_mint.pubkey()))

@@ -1,11 +1,6 @@
 use solana_client::{client_error::ClientError, rpc_client::RpcClient};
 use solana_program::pubkey::Pubkey;
-use solana_sdk::{
-    signature::{Keypair, Signature},
-    signer::Signer,
-    signers::Signers,
-    transaction::Transaction,
-};
+use solana_sdk::{signature::Signature, signer::Signer, transaction::Transaction};
 
 pub const SOL_MINT: &str = "So11111111111111111111111111111111111111112";
 
@@ -26,22 +21,22 @@ pub const LARIX_RESERVE_SOL_COLLATERAL_MINT: &str = "23rfWYGvfCjVxJNW5Ce8E4xXXgj
 pub struct Config {
     pub rpc_client: RpcClient,
     pub verbose: bool,
-    pub fee_payer: Keypair,
+    pub owner: Box<dyn Signer>,
+    pub fee_payer: Box<dyn Signer>,
 }
 
-pub fn sign_and_send_and_confirm_transaction<T: Signers>(
+pub fn sign_and_send_and_confirm_transaction(
     config: &Config,
     mut tx: Transaction,
-    keypairs: &T,
+    signers: Vec<&dyn Signer>,
 ) -> Result<Signature, ClientError> {
     let recent_blockhash = config.rpc_client.get_latest_blockhash()?;
 
-    tx.try_sign(keypairs, recent_blockhash)?;
+    tx.try_sign(&signers, recent_blockhash)?;
 
     let signature = config
         .rpc_client
         .send_and_confirm_transaction_with_spinner(&tx)?;
-    // println!("Signature: {}", signature);
 
     Ok(signature)
 }
@@ -62,7 +57,7 @@ pub fn spl_create_associated_token_account(
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(config, tx, &[&config.fee_payer])?;
+    sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
 
     let associated_token_address =
         spl_associated_token_account::get_associated_token_address(wallet, mint);

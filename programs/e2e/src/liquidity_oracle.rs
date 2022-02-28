@@ -34,7 +34,11 @@ pub fn init(config: &Config, oracle_keypair: Option<Keypair>) -> Result<Pubkey, 
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(config, tx, &[&config.fee_payer, &oracle_keypair])?;
+    sign_and_send_and_confirm_transaction(
+        config,
+        tx,
+        vec![config.fee_payer.as_ref(), &oracle_keypair],
+    )?;
 
     Ok(oracle_keypair.pubkey())
 }
@@ -56,7 +60,7 @@ pub fn create_token_distribution(
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(config, tx, &[&config.fee_payer])?;
+    sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
 
     let (token_distribution_pubkey, _) = find_liquidity_oracle_token_distribution_program_address(
         &everlend_liquidity_oracle::id(),
@@ -84,7 +88,7 @@ pub fn update_token_distribution(
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(config, tx, &[&config.fee_payer])?;
+    sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
 
     let (token_distribution_pubkey, _) = find_liquidity_oracle_token_distribution_program_address(
         &everlend_liquidity_oracle::id(),

@@ -324,4 +324,41 @@ pub mod tests {
 
         // println!("rebalancing = {:#?}", rebalancing);
     }
+
+    #[test]
+    fn computing_with_one_zero() {
+        let pk = Pubkey::new_unique();
+        let mut rebalancing: Rebalancing = Default::default();
+        rebalancing.init(InitRebalancingParams {
+            depositor: pk,
+            mint: pk,
+        });
+
+        let mut registry_config = RegistryConfig::default();
+        registry_config.money_market_program_ids[0] = pk;
+        registry_config.money_market_program_ids[1] = pk;
+
+        let mut token_distribution: TokenDistribution = Default::default();
+        let mut distribution = DistributionArray::default();
+        distribution[0] = 1_000_000_000u64;
+        distribution[1] = 0;
+
+        token_distribution.update(2, distribution);
+
+        rebalancing
+            .compute(&registry_config, token_distribution.clone(), 1)
+            .unwrap();
+
+        rebalancing
+            .execute_step(RebalancingOperation::Deposit, Some(1), 3)
+            .unwrap();
+
+        distribution[0] = 0;
+        token_distribution.update(4, distribution);
+        rebalancing
+            .compute(&registry_config, token_distribution.clone(), 1)
+            .unwrap();
+
+        println!("rebalancing = {:#?}", rebalancing);
+    }
 }

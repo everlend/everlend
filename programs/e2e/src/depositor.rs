@@ -1,6 +1,7 @@
 use crate::utils::*;
 use everlend_depositor::{
-    find_rebalancing_program_address, find_transit_program_address, state::Depositor,
+    find_rebalancing_program_address, find_transit_program_address,
+    state::{Depositor, Rebalancing},
 };
 use solana_client::client_error::ClientError;
 use solana_program::{
@@ -45,7 +46,11 @@ pub fn init(
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(config, tx, &[&config.fee_payer, &depositor_keypair])?;
+    sign_and_send_and_confirm_transaction(
+        config,
+        tx,
+        vec![config.fee_payer.as_ref(), &depositor_keypair],
+    )?;
 
     Ok(depositor_keypair.pubkey())
 }
@@ -65,7 +70,7 @@ pub fn create_transit(
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(config, tx, &[&config.fee_payer])?;
+    sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
 
     let (transit_pubkey, _) =
         find_transit_program_address(&everlend_depositor::id(), depositor_pubkey, token_mint);
@@ -81,7 +86,7 @@ pub fn start_rebalancing(
     general_pool_market_pubkey: &Pubkey,
     general_pool_token_account: &Pubkey,
     liquidity_oracle_pubkey: &Pubkey,
-) -> Result<Pubkey, ClientError> {
+) -> Result<(Pubkey, Rebalancing), ClientError> {
     let tx = Transaction::new_with_payer(
         &[everlend_depositor::instruction::start_rebalancing(
             &everlend_depositor::id(),
@@ -96,12 +101,15 @@ pub fn start_rebalancing(
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(config, tx, &[&config.fee_payer])?;
+    sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
 
     let (rebalancing_pubkey, _) =
         find_rebalancing_program_address(&everlend_depositor::id(), depositor_pubkey, token_mint);
 
-    Ok(rebalancing_pubkey)
+    let rebalancing_account = config.rpc_client.get_account(&rebalancing_pubkey)?;
+    let rebalancing = Rebalancing::unpack(&rebalancing_account.data).unwrap();
+
+    Ok((rebalancing_pubkey, rebalancing))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -133,7 +141,7 @@ pub fn deposit(
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(config, tx, &[&config.fee_payer])?;
+    sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
 
     Ok(())
 }
@@ -171,7 +179,7 @@ pub fn withdraw(
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(config, tx, &[&config.fee_payer])?;
+    sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
 
     Ok(())
 }
