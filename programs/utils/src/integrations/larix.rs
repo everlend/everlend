@@ -5,7 +5,6 @@ pub struct AccountPubkeys {
     pub reserve: Pubkey,
     pub reserve_liquidity_supply: Pubkey,
     pub reserve_liquidity_oracle: Pubkey,
-    pub reserve_larix_liquidity_oracle: Pubkey,
     pub lending_market: Pubkey,
 }
 
@@ -32,7 +31,6 @@ pub mod accounts {
             AccountMeta::new_readonly(pubkeys.lending_market, false),
             AccountMeta::new_readonly(lending_market_authority, false),
             AccountMeta::new(pubkeys.reserve_liquidity_oracle, false),
-            AccountMeta::new(pubkeys.reserve_larix_liquidity_oracle, false),
         ]
     }
 }

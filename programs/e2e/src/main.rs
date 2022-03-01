@@ -220,6 +220,7 @@ async fn command_run_test(config: &Config, case: Option<String>) -> anyhow::Resu
     let larix_program_id = Pubkey::from_str(integrations::LARIX_PROGRAM_ID).unwrap();
 
     let sol_oracle = Pubkey::from_str(SOL_ORACLE).unwrap();
+    // TODO use for larix pyth or larix oracle?
     let sol_larix_oracle = Pubkey::from_str(SOL_LARIX_ORACLE).unwrap();
     let port_finance_pubkeys = integrations::spl_token_lending::AccountPubkeys {
         reserve: Pubkey::from_str(PORT_FINANCE_RESERVE_SOL).unwrap(),
@@ -231,7 +232,6 @@ async fn command_run_test(config: &Config, case: Option<String>) -> anyhow::Resu
         reserve: Pubkey::from_str(LARIX_RESERVE_SOL).unwrap(),
         reserve_liquidity_supply: Pubkey::from_str(LARIX_RESERVE_SOL_SUPPLY).unwrap(),
         reserve_liquidity_oracle: sol_oracle,
-        reserve_larix_liquidity_oracle: sol_larix_oracle,
         lending_market: Pubkey::from_str(LARIX_LENDING_MARKET).unwrap(),
     };
 

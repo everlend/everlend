@@ -9,17 +9,14 @@ pub fn refresh_reserve<'a>(
     program_id: &Pubkey,
     reserve: AccountInfo<'a>,
     reserve_liquidity_oracle: AccountInfo<'a>,
-    reserve_larix_liquidity_oracle: AccountInfo<'a>,
-    clock: AccountInfo<'a>,
 ) -> Result<(), ProgramError> {
-    let ix = larix_lending::instruction::refresh_reserve(
+    let ix = larix_lending::instruction::refresh_reserves(
         *program_id,
-        *reserve.key,
-        *reserve_liquidity_oracle.key,
-        *reserve_larix_liquidity_oracle.key,
+        vec![*reserve.key],
+        vec![*reserve_liquidity_oracle.key],
     );
 
-    invoke(&ix, &[reserve, reserve_liquidity_oracle, reserve_larix_liquidity_oracle, clock])
+    invoke(&ix, &[reserve, reserve_liquidity_oracle])
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -33,7 +30,6 @@ pub fn deposit<'a>(
     lending_market: AccountInfo<'a>,
     lending_market_authority: AccountInfo<'a>,
     authority: AccountInfo<'a>,
-    clock: AccountInfo<'a>,
     amount: u64,
     signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
@@ -46,6 +42,7 @@ pub fn deposit<'a>(
         *reserve_liquidity_supply.key,
         *reserve_collateral_mint.key,
         *lending_market.key,
+        *lending_market_authority.key,
         *authority.key,
     );
 
@@ -60,7 +57,6 @@ pub fn deposit<'a>(
             lending_market,
             lending_market_authority,
             authority,
-            clock,
         ],
         signers_seeds,
     )
@@ -77,7 +73,6 @@ pub fn redeem<'a>(
     lending_market: AccountInfo<'a>,
     lending_market_authority: AccountInfo<'a>,
     authority: AccountInfo<'a>,
-    clock: AccountInfo<'a>,
     amount: u64,
     signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
@@ -90,6 +85,7 @@ pub fn redeem<'a>(
         *reserve_collateral_mint.key,
         *reserve_liquidity_supply.key,
         *lending_market.key,
+        *lending_market_authority.key,
         *authority.key,
     );
 
@@ -104,7 +100,6 @@ pub fn redeem<'a>(
             lending_market,
             lending_market_authority,
             authority,
-            clock,
         ],
         signers_seeds,
     )

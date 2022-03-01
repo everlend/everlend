@@ -91,15 +91,11 @@ pub fn money_market_deposit<'a>(
         let lending_market_info = next_account_info(money_market_account_info_iter)?;
         let lending_market_authority_info = next_account_info(money_market_account_info_iter)?;
         let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
-        let reserve_larix_liquidity_oracle_info =
-            next_account_info(money_market_account_info_iter)?;
 
         cpi::larix::refresh_reserve(
             money_market_program.key,
             reserve_info.clone(),
             reserve_liquidity_oracle_info.clone(),
-            reserve_larix_liquidity_oracle_info.clone(),
-            clock.clone(),
         )?;
 
         cpi::larix::deposit(
@@ -112,7 +108,6 @@ pub fn money_market_deposit<'a>(
             lending_market_info.clone(),
             lending_market_authority_info.clone(),
             authority.clone(),
-            clock.clone(),
             amount,
             signers_seeds,
         )
@@ -204,15 +199,11 @@ pub fn money_market_redeem<'a>(
         let lending_market_info = next_account_info(money_market_account_info_iter)?;
         let lending_market_authority_info = next_account_info(money_market_account_info_iter)?;
         let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
-        let reserve_larix_liquidity_oracle_info =
-            next_account_info(money_market_account_info_iter)?;
 
         cpi::larix::refresh_reserve(
             money_market_program.key,
             reserve_info.clone(),
             reserve_liquidity_oracle_info.clone(),
-            reserve_larix_liquidity_oracle_info.clone(),
-            clock.clone(),
         )?;
 
         cpi::larix::redeem(
@@ -225,7 +216,6 @@ pub fn money_market_redeem<'a>(
             lending_market_info.clone(),
             lending_market_authority_info.clone(),
             authority.clone(),
-            clock.clone(),
             amount,
             signers_seeds,
         )
