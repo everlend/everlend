@@ -11,7 +11,6 @@ use accounts_config::*;
 use clap::{
     crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
 };
-use everlend_depositor::state::Rebalancing;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::state::{SetRegistryConfigParams, TOTAL_DISTRIBUTIONS};
 use everlend_utils::integrations::{self, MoneyMarketPubkeys};
@@ -22,7 +21,7 @@ use solana_clap_utils::{
     keypair::signer_from_path,
 };
 use solana_client::rpc_client::RpcClient;
-use solana_program::{program_pack::Pack, pubkey::Pubkey};
+use solana_program::pubkey::Pubkey;
 use solana_sdk::commitment_config::CommitmentConfig;
 use spl_associated_token_account::get_associated_token_address;
 use std::{collections::HashMap, process::exit, str::FromStr};
@@ -257,6 +256,7 @@ async fn command_run_test(config: &Config, case: Option<String>) -> anyhow::Resu
                 &sol.general_pool_token_account,
                 &liquidity_oracle,
             )?;
+            println!("{:#?}", rebalancing);
 
             println!("Rebalancing: Deposit: Port Finance");
             depositor::deposit(
@@ -279,9 +279,9 @@ async fn command_run_test(config: &Config, case: Option<String>) -> anyhow::Resu
                 .rpc_client
                 .get_token_account_balance(&sol.liquidity_transit)?
                 .amount;
-            println!("balance 0 = {:?}", balance);
+            println!("liquidity transit balance = {:?}", balance);
 
-            distribution[0] = 999876767;
+            distribution[0] = 959876767;
             distribution[1] = 0;
             liquidity_oracle::update_token_distribution(
                 config,
@@ -299,14 +299,13 @@ async fn command_run_test(config: &Config, case: Option<String>) -> anyhow::Resu
                 &sol.general_pool_token_account,
                 &liquidity_oracle,
             )?;
-
             println!("{:#?}", rebalancing);
 
             balance = config
                 .rpc_client
                 .get_token_account_balance(&sol.liquidity_transit)?
                 .amount;
-            println!("balance 1 = {:?}", balance);
+            println!("liquidity transit balance 1 = {:?}", balance);
 
             println!("Rebalancing: Withdraw: Port Finance");
             depositor::withdraw(
@@ -331,8 +330,58 @@ async fn command_run_test(config: &Config, case: Option<String>) -> anyhow::Resu
                 .rpc_client
                 .get_token_account_balance(&sol.liquidity_transit)?
                 .amount;
+            println!("liquidity transit balance 2 = {:?}", balance);
 
-            println!("balance 2 = {:?}", balance);
+            // distribution[0] = 1000000000;
+            liquidity_oracle::update_token_distribution(
+                config,
+                &liquidity_oracle,
+                &sol.mint,
+                &distribution,
+            )?;
+            println!("Rebalancing: Start");
+            let (_, rebalancing) = depositor::start_rebalancing(
+                config,
+                &registry,
+                &depositor,
+                &sol.mint,
+                &general_pool_market,
+                &sol.general_pool_token_account,
+                &liquidity_oracle,
+            )?;
+            println!("{:#?}", rebalancing);
+
+            balance = config
+                .rpc_client
+                .get_token_account_balance(&sol.liquidity_transit)?
+                .amount;
+            println!("liquidity transit balance 3 = {:?}", balance);
+            println!(
+                "general balance = {:?}",
+                config
+                    .rpc_client
+                    .get_token_account_balance(&sol.general_pool_token_account)?
+                    .amount
+            );
+
+            println!("Rebalancing: Withdraw: Port Finance");
+            depositor::withdraw(
+                config,
+                &registry,
+                &depositor,
+                &income_pool_market,
+                &sol.income_pool_token_account,
+                &mm_pool_markets[0],
+                &sol.mm_pools[0].pool_token_account,
+                &sol.mm_pools[0].token_mint,
+                &sol.mint,
+                &sol.mm_pools[0].pool_mint,
+                &port_finance_program_id,
+                integrations::withdraw_accounts(
+                    &port_finance_program_id,
+                    &MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
+                ),
+            )?;
 
             liquidity_oracle::update_token_distribution(
                 config,
@@ -350,15 +399,112 @@ async fn command_run_test(config: &Config, case: Option<String>) -> anyhow::Resu
                 &sol.general_pool_token_account,
                 &liquidity_oracle,
             )?;
-
             println!("{:#?}", rebalancing);
 
             balance = config
                 .rpc_client
                 .get_token_account_balance(&sol.liquidity_transit)?
                 .amount;
+            println!("liquidity transit balance 3 = {:?}", balance);
+        }
+        Some("second") => {
+            distribution[0] = 500000000;
+            distribution[1] = 500000000;
+            liquidity_oracle::update_token_distribution(
+                config,
+                &liquidity_oracle,
+                &sol.mint,
+                &distribution,
+            )?;
+            println!("Rebalancing: Start");
+            let (_, rebalancing) = depositor::start_rebalancing(
+                config,
+                &registry,
+                &depositor,
+                &sol.mint,
+                &general_pool_market,
+                &sol.general_pool_token_account,
+                &liquidity_oracle,
+            )?;
+            println!("{:#?}", rebalancing);
 
-            println!("balance 3 = {:?}", balance);
+            println!("Rebalancing: Deposit: Port Finance");
+            depositor::deposit(
+                config,
+                &registry,
+                &depositor,
+                &mm_pool_markets[0],
+                &sol.mm_pools[0].pool_token_account,
+                &sol.mint,
+                &sol.mm_pools[0].token_mint,
+                &sol.mm_pools[0].pool_mint,
+                &port_finance_program_id,
+                integrations::deposit_accounts(
+                    &port_finance_program_id,
+                    &MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
+                ),
+            )?;
+
+            println!("Rebalancing: Deposit: Larix");
+            depositor::deposit(
+                config,
+                &registry,
+                &depositor,
+                &mm_pool_markets[1],
+                &sol.mm_pools[1].pool_token_account,
+                &sol.mint,
+                &sol.mm_pools[1].token_mint,
+                &sol.mm_pools[1].pool_mint,
+                &larix_program_id,
+                integrations::deposit_accounts(
+                    &larix_program_id,
+                    &MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
+                ),
+            )?;
+
+            let mut balance = config
+                .rpc_client
+                .get_token_account_balance(&sol.liquidity_transit)?
+                .amount;
+            println!("liquidity transit balance = {:?}", balance);
+
+            println!("Deposit liquidity");
+            general_pool::deposit(
+                config,
+                &general_pool_market,
+                &sol.general_pool,
+                &sol.liquidity_token_account,
+                &sol.collateral_token_account,
+                &sol.general_pool_token_account,
+                &sol.general_pool_mint,
+                10,
+            )?;
+
+            distribution[0] = 900000000;
+            distribution[1] = 100000000;
+            liquidity_oracle::update_token_distribution(
+                config,
+                &liquidity_oracle,
+                &sol.mint,
+                &distribution,
+            )?;
+            println!("Rebalancing: Start");
+            let (_, rebalancing) = depositor::start_rebalancing(
+                config,
+                &registry,
+                &depositor,
+                &sol.mint,
+                &general_pool_market,
+                &sol.general_pool_token_account,
+                &liquidity_oracle,
+            )?;
+            println!("{:#?}", rebalancing);
+
+            balance = config
+                .rpc_client
+                .get_token_account_balance(&sol.liquidity_transit)?
+                .amount;
+            println!("liquidity transit balance 1 = {:?}", balance);
         }
         None => {
             distribution[0] = 500_000_000u64;

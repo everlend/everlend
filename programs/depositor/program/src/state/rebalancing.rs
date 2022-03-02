@@ -119,11 +119,6 @@ impl Rebalancing {
             }
         }
 
-        // If no changes to rebalance we shouldn't update liquidity supply & token distribution
-        if self.steps.is_empty() {
-            return Ok(());
-        }
-
         // Sort steps
         self.steps
             .sort_by(|a, b| a.operation.partial_cmp(&b.operation).unwrap());
@@ -196,7 +191,7 @@ impl Rebalancing {
     }
 
     /// Compute unused liquidity
-    pub fn compute_unused_liquidity(&self) -> Result<u64, ProgramError> {
+    pub fn unused_liquidity(&self) -> Result<u64, ProgramError> {
         let total_percent: u64 = self.token_distribution.distribution.iter().sum();
 
         math::share(
@@ -205,6 +200,17 @@ impl Rebalancing {
                 .checked_sub(total_percent as u128)
                 .ok_or(EverlendError::MathOverflow)? as u64,
         )
+    }
+
+    /// Compute leakage reserve compensation
+    pub fn leakage_reserve_compensation(&self, liquidity_transit_supply: u64) -> (u64, u64) {
+        // How many lamports we will need to release for the next rebalancing
+        let release = RESERVED_LEAKED
+            .saturating_sub(liquidity_transit_supply.saturating_sub(RESERVED_LEAKED));
+        // How many lamports we need borrow from general pool
+        let borrow = release.saturating_sub(liquidity_transit_supply);
+
+        (release, borrow)
     }
 }
 

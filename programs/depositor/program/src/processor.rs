@@ -250,15 +250,20 @@ impl Processor {
 
         let liquidity_transit_supply = Account::unpack(&liquidity_transit_info.data.borrow())?
             .amount
-            .saturating_sub(rebalancing.compute_unused_liquidity()?);
+            .saturating_sub(rebalancing.unused_liquidity()?);
 
-        let available_transit_liquidity = liquidity_transit_supply.saturating_sub(RESERVED_LEAKED);
+        msg!("liquidity_transit_supply = {:?}", liquidity_transit_supply);
 
+        // Reserved lamports for leaking
         // How many lamports do we need to borrow to transit account for leaked
-        // N from 0 to 10
-        let leaked_amount = RESERVED_LEAKED.saturating_sub(available_transit_liquidity);
+        // From 0 to 10
+        let leakage_reserve_compensation =
+            rebalancing.leakage_reserve_compensation(liquidity_transit_supply);
 
-        // TODO: Move this math to state
+        msg!(
+            "leakage_reserve_compensation = {:?}",
+            leakage_reserve_compensation
+        );
 
         let new_distributed_liquidity = general_pool_token_account
             .amount
@@ -266,15 +271,23 @@ impl Processor {
             .ok_or(EverlendError::MathOverflow)?
             .checked_sub(withdrawal_requests.liquidity_supply)
             .ok_or(EverlendError::MathOverflow)?
-            .checked_sub(leaked_amount)
+            .checked_sub(leakage_reserve_compensation.0)
             .ok_or(EverlendError::MathOverflow)?;
 
-        let amount = (new_distributed_liquidity.saturating_sub(rebalancing.distributed_liquidity)
-            as i64)
-            .checked_add(leaked_amount as i64)
-            .ok_or(EverlendError::MathOverflow)?
-            .checked_sub(liquidity_transit_supply as i64)
+        let borrow_amount = new_distributed_liquidity
+            .saturating_sub(rebalancing.distributed_liquidity)
+            .checked_add(leakage_reserve_compensation.1)
             .ok_or(EverlendError::MathOverflow)?;
+
+        // How many lamports are already released to repay to the general pool
+        // Considering the reservation for leakage (10 + 10)
+        let repay_amount = liquidity_transit_supply.saturating_sub(RESERVED_LEAKED * 2);
+
+        let amount = (borrow_amount as i64)
+            .checked_sub(repay_amount as i64)
+            .ok_or(EverlendError::MathOverflow)?;
+
+        msg!("amount = {:?}", amount);
 
         let (depositor_authority_pubkey, bump_seed) =
             find_program_address(program_id, depositor_info.key);
