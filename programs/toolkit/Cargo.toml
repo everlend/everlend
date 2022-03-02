@@ -1,5 +1,5 @@
 [package]
-name = "everlend-e2e-tests"
+name = "everlend-toolkit"
 version = "0.1.0"
 edition = "2018"
 

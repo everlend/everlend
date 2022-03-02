@@ -998,39 +998,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "everlend-e2e-tests"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bs58 0.2.5",
- "clap",
- "everlend-depositor",
- "everlend-general-pool",
- "everlend-income-pools",
- "everlend-liquidity-oracle",
- "everlend-registry",
- "everlend-ulp",
- "everlend-utils",
- "port-variable-rate-lending-instructions",
- "serde",
- "serde_derive",
- "serde_with",
- "serde_yaml",
- "solana-account-decoder",
- "solana-clap-utils",
- "solana-cli-config",
- "solana-client",
- "solana-logger",
- "solana-program",
- "solana-sdk",
- "spl-associated-token-account",
- "spl-token 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "spl-token-lending",
- "tokio",
- "url",
-]
-
-[[package]]
 name = "everlend-general-pool"
 version = "0.1.0"
 dependencies = [
@@ -1163,6 +1130,39 @@ dependencies = [
  "solana-sdk",
  "spl-token 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "spl-token-lending",
+]
+
+[[package]]
+name = "everlend-toolkit"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bs58 0.2.5",
+ "clap",
+ "everlend-depositor",
+ "everlend-general-pool",
+ "everlend-income-pools",
+ "everlend-liquidity-oracle",
+ "everlend-registry",
+ "everlend-ulp",
+ "everlend-utils",
+ "port-variable-rate-lending-instructions",
+ "serde",
+ "serde_derive",
+ "serde_with",
+ "serde_yaml",
+ "solana-account-decoder",
+ "solana-clap-utils",
+ "solana-cli-config",
+ "solana-client",
+ "solana-logger",
+ "solana-program",
+ "solana-sdk",
+ "spl-associated-token-account",
+ "spl-token 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "spl-token-lending",
+ "tokio",
+ "url",
 ]
 
 [[package]]
