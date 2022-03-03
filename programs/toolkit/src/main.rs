@@ -250,7 +250,6 @@ async fn command_run_test(
     let larix_program_id = Pubkey::from_str(integrations::LARIX_PROGRAM_ID).unwrap();
 
     let sol_oracle = Pubkey::from_str(SOL_ORACLE).unwrap();
-    let sol_larix_oracle = Pubkey::from_str(SOL_LARIX_ORACLE).unwrap();
     let port_finance_pubkeys = integrations::spl_token_lending::AccountPubkeys {
         reserve: Pubkey::from_str(PORT_FINANCE_RESERVE_SOL).unwrap(),
         reserve_liquidity_supply: Pubkey::from_str(PORT_FINANCE_RESERVE_SOL_SUPPLY).unwrap(),
@@ -261,7 +260,6 @@ async fn command_run_test(
         reserve: Pubkey::from_str(LARIX_RESERVE_SOL).unwrap(),
         reserve_liquidity_supply: Pubkey::from_str(LARIX_RESERVE_SOL_SUPPLY).unwrap(),
         reserve_liquidity_oracle: sol_oracle,
-        reserve_larix_liquidity_oracle: sol_larix_oracle,
         lending_market: Pubkey::from_str(LARIX_LENDING_MARKET).unwrap(),
     };
 
@@ -548,6 +546,43 @@ async fn command_run_test(
                 .get_token_account_balance(&sol.liquidity_transit)?
                 .amount;
             println!("liquidity transit balance 1 = {:?}", balance);
+        }
+        Some("larix") => {
+            distribution[1] = 1000000000;
+            liquidity_oracle::update_token_distribution(
+                config,
+                &liquidity_oracle,
+                &sol.mint,
+                &distribution,
+            )?;
+            println!("Rebalancing: Start");
+            let (_, rebalancing) = depositor::start_rebalancing(
+                config,
+                &registry,
+                &depositor,
+                &sol.mint,
+                &general_pool_market,
+                &sol.general_pool_token_account,
+                &liquidity_oracle,
+            )?;
+            println!("{:#?}", rebalancing);
+
+            println!("Rebalancing: Deposit: Larix");
+            depositor::deposit(
+                config,
+                &registry,
+                &depositor,
+                &mm_pool_markets[1],
+                &sol.mm_pools[1].pool_token_account,
+                &sol.mint,
+                &sol.mm_pools[1].token_mint,
+                &sol.mm_pools[1].pool_mint,
+                &larix_program_id,
+                integrations::deposit_accounts(
+                    &larix_program_id,
+                    &MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
+                ),
+            )?;
         }
         None => {
             distribution[0] = 500_000_000u64;
