@@ -9,15 +9,14 @@ pub const USDC_MINT: &str = "G6YKv19AeGZ6pUYUwY9D7n4Ry9ESNFa376YqwEkUkhbi";
 pub const USDT_MINT: &str = "9NGDi2tZtNmCCp8SVLKNuGjuWAVwNF3Vap5tT8km5er9";
 
 pub const SOL_ORACLE: &str = "J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix";
-pub const SOL_LARIX_ORACLE: &str = "6bGUz6bdWAvaUf6PuEdvdAxrWbZ9wF5XkAevDsEKsb7y";
 
 pub const PORT_FINANCE_LENDING_MARKET: &str = "H27Quk3DSbu55T4dCr1NddTTSAezXwHU67FPCZVKLhSW";
 pub const PORT_FINANCE_RESERVE_SOL: &str = "6FeVStQAGPWvfWijDHF7cTWRCi7He6vTT3ubfNhe9SPt";
 pub const PORT_FINANCE_RESERVE_SOL_SUPPLY: &str = "AbKeR7nQdHPDddiDQ71YUsz1F138a7cJMfJVtpdYUSvE";
 
-pub const LARIX_LENDING_MARKET: &str = "FRQHVH3U8vdTFHBaFZpsybzFAMofbnvnzgG1wFtrMVTG";
-pub const LARIX_RESERVE_SOL: &str = "DfiaVGeHHtzvTGYqntUde8Pw6E8tgvMnHMnuM7CKXWss";
-pub const LARIX_RESERVE_SOL_SUPPLY: &str = "976jcSPYeasM4ba4VkhGZna6S2o1DGN3WKvCSXYJXbRq";
+pub const LARIX_LENDING_MARKET: &str = "HpshZh3hw9265EBSDAwopDHR5VegdEFyjxpNf9ZKH8m3";
+pub const LARIX_RESERVE_SOL: &str = "j5V5dqeLGgTwackNwtmxDw9YYPZhYUBixtgh66ZKJWe";
+pub const LARIX_RESERVE_SOL_SUPPLY: &str = "Ts7gZc2hhx75WSFCZdz8q1yZGGEvEBZmJRUygJhqtRh";
 
 // Collateral tokens
 pub const PORT_FINANCE_RESERVE_SOL_COLLATERAL_MINT: &str =
@@ -26,9 +25,9 @@ pub const PORT_FINANCE_RESERVE_USDC_COLLATERAL_MINT: &str =
     "HyxraiKfdajDbYTC6MVRToEUBdevBN5M5gfyR4LC3WSF";
 pub const PORT_FINANCE_RESERVE_USDT_COLLATERAL_MINT: &str =
     "4xEXmSfLFPkZaxdL98XkoxKpXEvchPVs21GYqa8DvbAm";
-pub const LARIX_RESERVE_SOL_COLLATERAL_MINT: &str = "23rfWYGvfCjVxJNW5Ce8E4xXXgjKgZTyJFwuQg6BMB4G";
-pub const LARIX_RESERVE_USDC_COLLATERAL_MINT: &str = "CkBWWEUwVdJybN1CPP8VsV4JJpbJ8w9Hd86d7xu6BRHG";
-pub const LARIX_RESERVE_USDT_COLLATERAL_MINT: &str = "6uhdPo2Q1LnMXvcScALwG5HzP89s8wJc5XSaXbpG3FmT";
+pub const LARIX_RESERVE_SOL_COLLATERAL_MINT: &str = "qy9PvM4J3ZdJJ7cyEFymotHrA1hTWspccA9RhDsQa24";
+pub const LARIX_RESERVE_USDC_COLLATERAL_MINT: &str = "CLgRwCmZ49wbKxQjqEs5tHrNvx8ZoXjybN8hsiRwEVPm";
+pub const LARIX_RESERVE_USDT_COLLATERAL_MINT: &str = "BQ4wqguD9D2dyzraCW7R4sV5fxUdXaVteT8bL2w4uPbV";
 
 pub struct Config {
     pub rpc_client: RpcClient,
