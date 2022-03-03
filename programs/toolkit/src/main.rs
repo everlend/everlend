@@ -547,6 +547,43 @@ async fn command_run_test(
                 .amount;
             println!("liquidity transit balance 1 = {:?}", balance);
         }
+        Some("larix") => {
+            distribution[1] = 1000000000;
+            liquidity_oracle::update_token_distribution(
+                config,
+                &liquidity_oracle,
+                &sol.mint,
+                &distribution,
+            )?;
+            println!("Rebalancing: Start");
+            let (_, rebalancing) = depositor::start_rebalancing(
+                config,
+                &registry,
+                &depositor,
+                &sol.mint,
+                &general_pool_market,
+                &sol.general_pool_token_account,
+                &liquidity_oracle,
+            )?;
+            println!("{:#?}", rebalancing);
+
+            println!("Rebalancing: Deposit: Larix");
+            depositor::deposit(
+                config,
+                &registry,
+                &depositor,
+                &mm_pool_markets[1],
+                &sol.mm_pools[1].pool_token_account,
+                &sol.mint,
+                &sol.mm_pools[1].token_mint,
+                &sol.mm_pools[1].pool_mint,
+                &larix_program_id,
+                integrations::deposit_accounts(
+                    &larix_program_id,
+                    &MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
+                ),
+            )?;
+        }
         None => {
             distribution[0] = 500_000_000u64;
             distribution[1] = 500_000_000u64;
