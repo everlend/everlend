@@ -12,7 +12,10 @@ use clap::{
     crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
 };
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::{SetRegistryConfigParams, TOTAL_DISTRIBUTIONS};
+use everlend_registry::{
+    find_config_program_address,
+    state::{RegistryConfig, SetRegistryConfigParams, TOTAL_DISTRIBUTIONS},
+};
 use everlend_utils::integrations::{self, MoneyMarketPubkeys};
 use solana_clap_utils::{
     fee_payer::fee_payer_arg,
@@ -21,11 +24,21 @@ use solana_clap_utils::{
     keypair::signer_from_path,
 };
 use solana_client::rpc_client::RpcClient;
-use solana_program::pubkey::Pubkey;
+use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_sdk::commitment_config::CommitmentConfig;
 use spl_associated_token_account::get_associated_token_address;
 use std::{collections::HashMap, process::exit, str::FromStr};
 use utils::*;
+
+/// Generates fixed distribution from slice
+#[macro_export]
+macro_rules! distribution {
+    ($distribuition:expr) => {{
+        let mut new_distribuition = DistributionArray::default();
+        new_distribuition[..$distribuition.len()].copy_from_slice(&$distribuition);
+        new_distribuition
+    }};
+}
 
 async fn command_create(
     config: &Config,
@@ -244,10 +257,12 @@ async fn command_run_test(
         depositor,
     } = initialiazed_accounts;
 
-    let sol = token_accounts.get("SOL").unwrap();
+    let (registry_config_pubkey, _) =
+        find_config_program_address(&everlend_registry::id(), &registry);
+    let registry_config_account = config.rpc_client.get_account(&registry_config_pubkey)?;
+    let registry_config = RegistryConfig::unpack(&registry_config_account.data).unwrap();
 
-    let port_finance_program_id = Pubkey::from_str(integrations::PORT_FINANCE_PROGRAM_ID).unwrap();
-    let larix_program_id = Pubkey::from_str(integrations::LARIX_PROGRAM_ID).unwrap();
+    let sol = token_accounts.get("SOL").unwrap();
 
     let sol_oracle = Pubkey::from_str(SOL_ORACLE).unwrap();
     let port_finance_pubkeys = integrations::spl_token_lending::AccountPubkeys {
@@ -263,598 +278,199 @@ async fn command_run_test(
         lending_market: Pubkey::from_str(LARIX_LENDING_MARKET).unwrap(),
     };
 
-    let mut distribution = DistributionArray::default();
+    let update_token_distribution = |d: DistributionArray| {
+        liquidity_oracle::update_token_distribution(config, &liquidity_oracle, &sol.mint, &d)
+    };
 
-    println!("Deposit liquidity");
-    general_pool::deposit(
-        config,
-        &general_pool_market,
-        &sol.general_pool,
-        &sol.liquidity_token_account,
-        &sol.collateral_token_account,
-        &sol.general_pool_token_account,
-        &sol.general_pool_mint,
-        1000,
-    )?;
+    let start_rebalancing = || {
+        println!("Rebalancing");
+        depositor::start_rebalancing(
+            config,
+            &registry,
+            &depositor,
+            &sol.mint,
+            &general_pool_market,
+            &sol.general_pool_token_account,
+            &liquidity_oracle,
+        )
+    };
+
+    let deposit = |i: usize| {
+        println!("Rebalancing: Deposit: {}", i);
+        let pubkeys = match i {
+            1 => MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
+            _ => MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
+        };
+
+        depositor::deposit(
+            config,
+            &registry,
+            &depositor,
+            &mm_pool_markets[i],
+            &sol.mm_pools[i].pool_token_account,
+            &sol.mint,
+            &sol.mm_pools[i].token_mint,
+            &sol.mm_pools[i].pool_mint,
+            &registry_config.money_market_program_ids[i],
+            integrations::deposit_accounts(&registry_config.money_market_program_ids[i], &pubkeys),
+        )
+    };
+
+    let withdraw = |i| {
+        println!("Rebalancing: Withdraw: {}", i);
+        let pubkeys = match i {
+            1 => MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
+            _ => MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
+        };
+
+        depositor::withdraw(
+            config,
+            &registry,
+            &depositor,
+            &income_pool_market,
+            &sol.income_pool_token_account,
+            &mm_pool_markets[i],
+            &sol.mm_pools[i].pool_token_account,
+            &sol.mm_pools[i].token_mint,
+            &sol.mint,
+            &sol.mm_pools[i].pool_mint,
+            &registry_config.money_market_program_ids[i],
+            integrations::withdraw_accounts(&registry_config.money_market_program_ids[i], &pubkeys),
+        )
+    };
+
+    let get_balance = |pk: &Pubkey| -> anyhow::Result<String> {
+        Ok(config.rpc_client.get_token_account_balance(pk)?.amount)
+    };
+
+    let general_pool_deposit = |a: u64| {
+        println!("Deposit liquidity");
+        general_pool::deposit(
+            config,
+            &general_pool_market,
+            &sol.general_pool,
+            &sol.liquidity_token_account,
+            &sol.collateral_token_account,
+            &sol.general_pool_token_account,
+            &sol.general_pool_mint,
+            a,
+        )
+    };
+
+    let general_pool_withdraw_request = |a: u64, i: u64| {
+        println!("Withdraw request");
+        general_pool::withdraw_request(
+            config,
+            &general_pool_market,
+            &sol.general_pool,
+            &sol.collateral_token_account,
+            &sol.liquidity_token_account,
+            &sol.general_pool_token_account,
+            &sol.mint,
+            &sol.general_pool_mint,
+            a,
+            i,
+        )
+    };
+
+    let general_pool_withdraw = |i: u64| {
+        println!("Withdraw");
+        general_pool::withdraw(
+            config,
+            &general_pool_market,
+            &sol.general_pool,
+            &sol.liquidity_token_account,
+            &sol.general_pool_token_account,
+            &sol.mint,
+            &sol.general_pool_mint,
+            i,
+        )
+    };
+
+    general_pool_deposit(1000)?;
 
     match case.as_deref() {
         Some("first") => {
-            distribution[0] = 1000000000;
-            distribution[1] = 0;
-            liquidity_oracle::update_token_distribution(
-                config,
-                &liquidity_oracle,
-                &sol.mint,
-                &distribution,
-            )?;
-            println!("Rebalancing: Start");
-            let (_, rebalancing) = depositor::start_rebalancing(
-                config,
-                &registry,
-                &depositor,
-                &sol.mint,
-                &general_pool_market,
-                &sol.general_pool_token_account,
-                &liquidity_oracle,
-            )?;
+            update_token_distribution(distribution!([1000000000, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
             println!("{:#?}", rebalancing);
+            deposit(0)?;
+            println!("b = {:?}", get_balance(&sol.liquidity_transit)?);
 
-            println!("Rebalancing: Deposit: Port Finance");
-            depositor::deposit(
-                config,
-                &registry,
-                &depositor,
-                &mm_pool_markets[0],
-                &sol.mm_pools[0].pool_token_account,
-                &sol.mint,
-                &sol.mm_pools[0].token_mint,
-                &sol.mm_pools[0].pool_mint,
-                &port_finance_program_id,
-                integrations::deposit_accounts(
-                    &port_finance_program_id,
-                    &MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
-                ),
-            )?;
-
-            let mut balance = config
-                .rpc_client
-                .get_token_account_balance(&sol.liquidity_transit)?
-                .amount;
-            println!("liquidity transit balance = {:?}", balance);
-
-            distribution[0] = 959876767;
-            distribution[1] = 0;
-            liquidity_oracle::update_token_distribution(
-                config,
-                &liquidity_oracle,
-                &sol.mint,
-                &distribution,
-            )?;
-            println!("Rebalancing: Start");
-            let (_, rebalancing) = depositor::start_rebalancing(
-                config,
-                &registry,
-                &depositor,
-                &sol.mint,
-                &general_pool_market,
-                &sol.general_pool_token_account,
-                &liquidity_oracle,
-            )?;
+            update_token_distribution(distribution!([959876767, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
             println!("{:#?}", rebalancing);
+            println!("b = {:?}", get_balance(&sol.liquidity_transit)?);
+            withdraw(0)?;
+            println!("b = {:?}", get_balance(&sol.liquidity_transit)?);
 
-            balance = config
-                .rpc_client
-                .get_token_account_balance(&sol.liquidity_transit)?
-                .amount;
-            println!("liquidity transit balance 1 = {:?}", balance);
-
-            println!("Rebalancing: Withdraw: Port Finance");
-            depositor::withdraw(
-                config,
-                &registry,
-                &depositor,
-                &income_pool_market,
-                &sol.income_pool_token_account,
-                &mm_pool_markets[0],
-                &sol.mm_pools[0].pool_token_account,
-                &sol.mm_pools[0].token_mint,
-                &sol.mint,
-                &sol.mm_pools[0].pool_mint,
-                &port_finance_program_id,
-                integrations::withdraw_accounts(
-                    &port_finance_program_id,
-                    &MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
-                ),
-            )?;
-
-            balance = config
-                .rpc_client
-                .get_token_account_balance(&sol.liquidity_transit)?
-                .amount;
-            println!("liquidity transit balance 2 = {:?}", balance);
-
-            // distribution[0] = 1000000000;
-            liquidity_oracle::update_token_distribution(
-                config,
-                &liquidity_oracle,
-                &sol.mint,
-                &distribution,
-            )?;
-            println!("Rebalancing: Start");
-            let (_, rebalancing) = depositor::start_rebalancing(
-                config,
-                &registry,
-                &depositor,
-                &sol.mint,
-                &general_pool_market,
-                &sol.general_pool_token_account,
-                &liquidity_oracle,
-            )?;
+            update_token_distribution(distribution!([959876767, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
             println!("{:#?}", rebalancing);
+            println!("b = {:?}", get_balance(&sol.liquidity_transit)?);
+            println!("b(g) = {:?}", get_balance(&sol.general_pool_token_account)?);
+            withdraw(0)?;
 
-            balance = config
-                .rpc_client
-                .get_token_account_balance(&sol.liquidity_transit)?
-                .amount;
-            println!("liquidity transit balance 3 = {:?}", balance);
-            println!(
-                "general balance = {:?}",
-                config
-                    .rpc_client
-                    .get_token_account_balance(&sol.general_pool_token_account)?
-                    .amount
-            );
-
-            println!("Rebalancing: Withdraw: Port Finance");
-            depositor::withdraw(
-                config,
-                &registry,
-                &depositor,
-                &income_pool_market,
-                &sol.income_pool_token_account,
-                &mm_pool_markets[0],
-                &sol.mm_pools[0].pool_token_account,
-                &sol.mm_pools[0].token_mint,
-                &sol.mint,
-                &sol.mm_pools[0].pool_mint,
-                &port_finance_program_id,
-                integrations::withdraw_accounts(
-                    &port_finance_program_id,
-                    &MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
-                ),
-            )?;
-
-            liquidity_oracle::update_token_distribution(
-                config,
-                &liquidity_oracle,
-                &sol.mint,
-                &distribution,
-            )?;
-            println!("Rebalancing: Start");
-            let (_, rebalancing) = depositor::start_rebalancing(
-                config,
-                &registry,
-                &depositor,
-                &sol.mint,
-                &general_pool_market,
-                &sol.general_pool_token_account,
-                &liquidity_oracle,
-            )?;
+            update_token_distribution(distribution!([959876767, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
             println!("{:#?}", rebalancing);
-
-            balance = config
-                .rpc_client
-                .get_token_account_balance(&sol.liquidity_transit)?
-                .amount;
-            println!("liquidity transit balance 3 = {:?}", balance);
+            println!("b = {:?}", get_balance(&sol.liquidity_transit)?);
         }
         Some("second") => {
-            distribution[0] = 500000000;
-            distribution[1] = 500000000;
-            liquidity_oracle::update_token_distribution(
-                config,
-                &liquidity_oracle,
-                &sol.mint,
-                &distribution,
-            )?;
-            println!("Rebalancing: Start");
-            let (_, rebalancing) = depositor::start_rebalancing(
-                config,
-                &registry,
-                &depositor,
-                &sol.mint,
-                &general_pool_market,
-                &sol.general_pool_token_account,
-                &liquidity_oracle,
-            )?;
+            update_token_distribution(distribution!([500000000, 500000000]))?;
+            let (_, rebalancing) = start_rebalancing()?;
             println!("{:#?}", rebalancing);
+            deposit(0)?;
+            deposit(1)?;
+            println!("b = {:?}", get_balance(&sol.liquidity_transit)?);
 
-            println!("Rebalancing: Deposit: Port Finance");
-            depositor::deposit(
-                config,
-                &registry,
-                &depositor,
-                &mm_pool_markets[0],
-                &sol.mm_pools[0].pool_token_account,
-                &sol.mint,
-                &sol.mm_pools[0].token_mint,
-                &sol.mm_pools[0].pool_mint,
-                &port_finance_program_id,
-                integrations::deposit_accounts(
-                    &port_finance_program_id,
-                    &MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
-                ),
-            )?;
+            general_pool_deposit(10)?;
 
-            println!("Rebalancing: Deposit: Larix");
-            depositor::deposit(
-                config,
-                &registry,
-                &depositor,
-                &mm_pool_markets[1],
-                &sol.mm_pools[1].pool_token_account,
-                &sol.mint,
-                &sol.mm_pools[1].token_mint,
-                &sol.mm_pools[1].pool_mint,
-                &larix_program_id,
-                integrations::deposit_accounts(
-                    &larix_program_id,
-                    &MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
-                ),
-            )?;
-
-            let mut balance = config
-                .rpc_client
-                .get_token_account_balance(&sol.liquidity_transit)?
-                .amount;
-            println!("liquidity transit balance = {:?}", balance);
-
-            println!("Deposit liquidity");
-            general_pool::deposit(
-                config,
-                &general_pool_market,
-                &sol.general_pool,
-                &sol.liquidity_token_account,
-                &sol.collateral_token_account,
-                &sol.general_pool_token_account,
-                &sol.general_pool_mint,
-                10,
-            )?;
-
-            distribution[0] = 900000000;
-            distribution[1] = 100000000;
-            liquidity_oracle::update_token_distribution(
-                config,
-                &liquidity_oracle,
-                &sol.mint,
-                &distribution,
-            )?;
-            println!("Rebalancing: Start");
-            let (_, rebalancing) = depositor::start_rebalancing(
-                config,
-                &registry,
-                &depositor,
-                &sol.mint,
-                &general_pool_market,
-                &sol.general_pool_token_account,
-                &liquidity_oracle,
-            )?;
+            update_token_distribution(distribution!([900000000, 100000000]))?;
+            let (_, rebalancing) = start_rebalancing()?;
             println!("{:#?}", rebalancing);
-
-            balance = config
-                .rpc_client
-                .get_token_account_balance(&sol.liquidity_transit)?
-                .amount;
-            println!("liquidity transit balance 1 = {:?}", balance);
+            println!("b = {:?}", get_balance(&sol.liquidity_transit)?);
         }
         Some("larix") => {
-            distribution[1] = 1000000000;
-            liquidity_oracle::update_token_distribution(
-                config,
-                &liquidity_oracle,
-                &sol.mint,
-                &distribution,
-            )?;
-            println!("Rebalancing: Start");
-            let (_, rebalancing) = depositor::start_rebalancing(
-                config,
-                &registry,
-                &depositor,
-                &sol.mint,
-                &general_pool_market,
-                &sol.general_pool_token_account,
-                &liquidity_oracle,
-            )?;
+            update_token_distribution(distribution!([0, 1000000000]))?;
+            let (_, rebalancing) = start_rebalancing()?;
             println!("{:#?}", rebalancing);
-
-            println!("Rebalancing: Deposit: Larix");
-            depositor::deposit(
-                config,
-                &registry,
-                &depositor,
-                &mm_pool_markets[1],
-                &sol.mm_pools[1].pool_token_account,
-                &sol.mint,
-                &sol.mm_pools[1].token_mint,
-                &sol.mm_pools[1].pool_mint,
-                &larix_program_id,
-                integrations::deposit_accounts(
-                    &larix_program_id,
-                    &MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
-                ),
-            )?;
+            deposit(1)?;
+        }
+        Some("zero-distribution") => {
+            update_token_distribution(distribution!([0, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            println!("{:#?}", rebalancing);
         }
         None => {
-            distribution[0] = 500_000_000u64;
-            distribution[1] = 500_000_000u64;
-            liquidity_oracle::update_token_distribution(
-                config,
-                &liquidity_oracle,
-                &sol.mint,
-                &distribution,
-            )?;
-            println!("Rebalancing: Start");
-            let (_, rebalancing) = depositor::start_rebalancing(
-                config,
-                &registry,
-                &depositor,
-                &sol.mint,
-                &general_pool_market,
-                &sol.general_pool_token_account,
-                &liquidity_oracle,
-            )?;
+            update_token_distribution(distribution!([500000000, 500000000]))?;
+            start_rebalancing()?;
+            deposit(0)?;
+            deposit(1)?;
+            println!("b = {:?}", get_balance(&sol.liquidity_transit)?);
 
-            println!("7.1 Rebalancing: Deposit: Port Finance");
-            depositor::deposit(
-                config,
-                &registry,
-                &depositor,
-                &mm_pool_markets[0],
-                &sol.mm_pools[0].pool_token_account,
-                &sol.mint,
-                &sol.mm_pools[0].token_mint,
-                &sol.mm_pools[0].pool_mint,
-                &port_finance_program_id,
-                integrations::deposit_accounts(
-                    &port_finance_program_id,
-                    &MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
-                ),
-            )?;
+            general_pool_withdraw_request(100, 1)?;
 
-            println!("7.2 Rebalancing: Deposit: Larix");
-            depositor::deposit(
-                config,
-                &registry,
-                &depositor,
-                &mm_pool_markets[1],
-                &sol.mm_pools[1].pool_token_account,
-                &sol.mint,
-                &sol.mm_pools[1].token_mint,
-                &sol.mm_pools[1].pool_mint,
-                &larix_program_id,
-                integrations::deposit_accounts(
-                    &larix_program_id,
-                    &MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
-                ),
-            )?;
-
-            let mut balance = config
-                .rpc_client
-                .get_token_account_balance(&sol.liquidity_transit)?;
-            println!("balance 0 = {:?}", balance);
-
-            // Withdraw request
-            println!("Withdraw request");
-            general_pool::withdraw_request(
-                config,
-                &general_pool_market,
-                &sol.general_pool,
-                &sol.collateral_token_account,
-                &sol.liquidity_token_account,
-                &sol.general_pool_token_account,
-                &sol.mint,
-                &sol.general_pool_mint,
-                100,
-                1,
-            )?;
-
-            println!("8. Update token distribution");
-            distribution[0] = 300_000_000u64; // 30%
-            distribution[1] = 600_000_000u64; // 60%
-            liquidity_oracle::update_token_distribution(
-                config,
-                &liquidity_oracle,
-                &sol.mint,
-                &distribution,
-            )?;
-            println!("Rebalancing: Start");
-            let (_, rebalancing) = depositor::start_rebalancing(
-                config,
-                &registry,
-                &depositor,
-                &sol.mint,
-                &general_pool_market,
-                &sol.general_pool_token_account,
-                &liquidity_oracle,
-            )?;
-
+            update_token_distribution(distribution!([300000000, 600000000]))?;
+            let (_, rebalancing) = start_rebalancing()?;
             println!("{:#?}", rebalancing);
+            println!("b = {:?}", get_balance(&sol.liquidity_transit)?);
+            withdraw(0)?;
+            println!("b = {:?}", get_balance(&sol.liquidity_transit)?);
+            deposit(1)?;
 
-            balance = config
-                .rpc_client
-                .get_token_account_balance(&sol.liquidity_transit)?;
-            println!("balance 1 = {:?}", balance);
-
-            println!("8.2. Rebalancing: Withdraw: Port Finance");
-            depositor::withdraw(
-                config,
-                &registry,
-                &depositor,
-                &income_pool_market,
-                &sol.income_pool_token_account,
-                &mm_pool_markets[0],
-                &sol.mm_pools[0].pool_token_account,
-                &sol.mm_pools[0].token_mint,
-                &sol.mint,
-                &sol.mm_pools[0].pool_mint,
-                &port_finance_program_id,
-                integrations::withdraw_accounts(
-                    &port_finance_program_id,
-                    &MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
-                ),
-            )?;
-
-            balance = config
-                .rpc_client
-                .get_token_account_balance(&sol.liquidity_transit)?;
-
-            println!("balance 2 = {:?}", balance);
-
-            println!("8.3. Rebalancing: Deposit: Larix");
-            depositor::deposit(
-                config,
-                &registry,
-                &depositor,
-                &mm_pool_markets[1],
-                &sol.mm_pools[1].pool_token_account,
-                &sol.mint,
-                &sol.mm_pools[1].token_mint,
-                &sol.mm_pools[1].pool_mint,
-                &larix_program_id,
-                integrations::deposit_accounts(
-                    &larix_program_id,
-                    &MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
-                ),
-            )?;
-
-            println!("9. Update token distribution");
-            distribution[0] = 000_000_000u64; // 0%
-            distribution[1] = 1_000_000_000u64; // 100%
-            liquidity_oracle::update_token_distribution(
-                config,
-                &liquidity_oracle,
-                &sol.mint,
-                &distribution,
-            )?;
-            println!("Rebalancing: Start");
-            let (_, rebalancing) = depositor::start_rebalancing(
-                config,
-                &registry,
-                &depositor,
-                &sol.mint,
-                &general_pool_market,
-                &sol.general_pool_token_account,
-                &liquidity_oracle,
-            )?;
-
-            // Withdraw
-            println!("Withdraw");
-            general_pool::withdraw(
-                config,
-                &general_pool_market,
-                &sol.general_pool,
-                &sol.liquidity_token_account,
-                &sol.general_pool_token_account,
-                &sol.mint,
-                &sol.general_pool_mint,
-                1,
-            )?;
-
+            update_token_distribution(distribution!([0, 1000000000]))?;
+            let (_, rebalancing) = start_rebalancing()?;
             println!("{:#?}", rebalancing);
+            general_pool_withdraw(1)?;
+            withdraw(0)?;
+            deposit(1)?;
 
-            println!("9.2. Rebalancing: Withdraw: Port Finance");
-            depositor::withdraw(
-                config,
-                &registry,
-                &depositor,
-                &income_pool_market,
-                &sol.income_pool_token_account,
-                &mm_pool_markets[0],
-                &sol.mm_pools[0].pool_token_account,
-                &sol.mm_pools[0].token_mint,
-                &sol.mint,
-                &sol.mm_pools[0].pool_mint,
-                &port_finance_program_id,
-                integrations::withdraw_accounts(
-                    &port_finance_program_id,
-                    &MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
-                ),
-            )?;
-
-            println!("9.3. Rebalancing: Deposit Larix");
-            depositor::deposit(
-                config,
-                &registry,
-                &depositor,
-                &mm_pool_markets[1],
-                &sol.mm_pools[1].pool_token_account,
-                &sol.mint,
-                &sol.mm_pools[1].token_mint,
-                &sol.mm_pools[1].pool_mint,
-                &larix_program_id,
-                integrations::deposit_accounts(
-                    &larix_program_id,
-                    &MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
-                ),
-            )?;
-
-            println!("10. Update token distribution");
-            distribution[0] = 100_000_000u64; // 10%
-            distribution[1] = 0u64; // 0%
-            liquidity_oracle::update_token_distribution(
-                config,
-                &liquidity_oracle,
-                &sol.mint,
-                &distribution,
-            )?;
-            println!("Rebalancing: Start");
-            let (_, rebalancing) = depositor::start_rebalancing(
-                config,
-                &registry,
-                &depositor,
-                &sol.mint,
-                &general_pool_market,
-                &sol.general_pool_token_account,
-                &liquidity_oracle,
-            )?;
-
+            update_token_distribution(distribution!([100000000, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
             println!("{:#?}", rebalancing);
-
-            println!("10.2. Rebalancing: Withdraw: Larix");
-            depositor::withdraw(
-                config,
-                &registry,
-                &depositor,
-                &income_pool_market,
-                &sol.income_pool_token_account,
-                &mm_pool_markets[1],
-                &sol.mm_pools[1].pool_token_account,
-                &sol.mm_pools[1].token_mint,
-                &sol.mint,
-                &sol.mm_pools[1].pool_mint,
-                &larix_program_id,
-                integrations::withdraw_accounts(
-                    &larix_program_id,
-                    &MoneyMarketPubkeys::Larix(larix_pubkeys),
-                ),
-            )?;
-
-            println!("10.3. Rebalancing: Deposit Port Finance");
-            depositor::deposit(
-                config,
-                &registry,
-                &depositor,
-                &mm_pool_markets[0],
-                &sol.mm_pools[0].pool_token_account,
-                &sol.mint,
-                &sol.mm_pools[0].token_mint,
-                &sol.mm_pools[0].pool_mint,
-                &port_finance_program_id,
-                integrations::deposit_accounts(
-                    &port_finance_program_id,
-                    &MoneyMarketPubkeys::SPL(port_finance_pubkeys),
-                ),
-            )?;
+            withdraw(1)?;
+            deposit(0)?;
         }
         _ => {}
     }

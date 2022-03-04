@@ -274,6 +274,11 @@ impl Processor {
             .checked_sub(leakage_reserve_compensation.0)
             .ok_or(EverlendError::MathOverflow)?;
 
+        msg!(
+            "new_distributed_liquidity = {:?}",
+            new_distributed_liquidity
+        );
+
         let borrow_amount = new_distributed_liquidity
             .saturating_sub(rebalancing.distributed_liquidity)
             .checked_add(leakage_reserve_compensation.1)
