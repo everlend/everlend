@@ -336,6 +336,8 @@ impl Processor {
         msg!("Computing");
         rebalancing.compute(&config, new_token_distribution, new_distributed_liquidity)?;
 
+        // msg!("Steps = {:?}", rebalancing.steps);
+
         Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
 
         Ok(())

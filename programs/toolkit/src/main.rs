@@ -387,10 +387,9 @@ async fn command_run_test(
         )
     };
 
-    general_pool_deposit(1000)?;
-
     match case.as_deref() {
         Some("first") => {
+            general_pool_deposit(1000)?;
             update_token_distribution(distribution!([1000000000, 0]))?;
             let (_, rebalancing) = start_rebalancing()?;
             println!("{:#?}", rebalancing);
@@ -417,6 +416,7 @@ async fn command_run_test(
             println!("b = {:?}", get_balance(&sol.liquidity_transit)?);
         }
         Some("second") => {
+            general_pool_deposit(1000)?;
             update_token_distribution(distribution!([500000000, 500000000]))?;
             let (_, rebalancing) = start_rebalancing()?;
             println!("{:#?}", rebalancing);
@@ -432,17 +432,33 @@ async fn command_run_test(
             println!("b = {:?}", get_balance(&sol.liquidity_transit)?);
         }
         Some("larix") => {
+            general_pool_deposit(1000)?;
             update_token_distribution(distribution!([0, 1000000000]))?;
             let (_, rebalancing) = start_rebalancing()?;
             println!("{:#?}", rebalancing);
             deposit(1)?;
         }
         Some("zero-distribution") => {
+            general_pool_deposit(1000)?;
             update_token_distribution(distribution!([0, 0]))?;
             let (_, rebalancing) = start_rebalancing()?;
             println!("{:#?}", rebalancing);
         }
+        Some("deposit") => {
+            general_pool_deposit(1000)?;
+            update_token_distribution(distribution!([1000000000, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            println!("{:#?}", rebalancing);
+            deposit(0)?;
+
+            general_pool_deposit(1000)?;
+
+            update_token_distribution(distribution!([1000000000, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            println!("{:#?}", rebalancing);
+        }
         None => {
+            general_pool_deposit(1000)?;
             update_token_distribution(distribution!([500000000, 500000000]))?;
             start_rebalancing()?;
             deposit(0)?;
