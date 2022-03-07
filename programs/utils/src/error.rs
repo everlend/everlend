@@ -35,17 +35,7 @@ pub enum EverlendError {
     #[error("Incorrect instruction program id")]
     IncorrectInstructionProgramId,
 
-    /// Rebalancing money market does not match
-    #[error("Rebalancing money market does not match")]
-    InvalidRebalancingMoneyMarket,
-
-    /// Rebalancing operation does not match
-    #[error("Rebalancing operation does not match")]
-    InvalidRebalancingOperation,
-
-    /// Rebalancing amount does not match
-    #[error("Rebalancing amount does not match")]
-    InvalidRebalancingAmount,
+    /// Rebalancing
 
     /// Incomplete rebalancing
     #[error("Incomplete rebalancing")]
@@ -54,6 +44,20 @@ pub enum EverlendError {
     /// Rebalancing is completed
     #[error("Rebalancing is completed")]
     RebalancingIsCompleted,
+
+    /// Rebalancing money market does not match
+    #[error("Rebalancing: Money market does not match")]
+    InvalidRebalancingMoneyMarket,
+
+    /// Rebalancing operation does not match
+    #[error("Rebalancing: Operation does not match")]
+    InvalidRebalancingOperation,
+
+    /// Rebalancing amount does not match
+    #[error("Rebalancing: Amount does not match")]
+    InvalidRebalancingAmount,
+
+    /// Withdraw requests
 
     /// Withdraw requests list is empty
     #[error("Withdraw requests list is empty")]

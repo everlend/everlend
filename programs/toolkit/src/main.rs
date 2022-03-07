@@ -457,6 +457,56 @@ async fn command_run_test(
             let (_, rebalancing) = start_rebalancing()?;
             println!("{:#?}", rebalancing);
         }
+        Some("full") => {
+            general_pool_deposit(1000)?;
+            update_token_distribution(distribution!([1000000000, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            println!("{:#?}", rebalancing);
+            deposit(0)?;
+
+            general_pool_withdraw_request(100, 1)?;
+
+            update_token_distribution(distribution!([1000000000, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            println!("{:#?}", rebalancing);
+            withdraw(0)?;
+
+            update_token_distribution(distribution!([1000000000, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            println!("{:#?}", rebalancing);
+            general_pool_withdraw(1)?;
+
+            update_token_distribution(distribution!([1000000000, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            println!("{:#?}", rebalancing);
+        }
+        Some("full-two-withdrawal-requests") => {
+            general_pool_deposit(1000)?;
+            update_token_distribution(distribution!([1000000000, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            println!("{:#?}", rebalancing);
+            deposit(0)?;
+
+            general_pool_withdraw_request(100, 1)?;
+
+            update_token_distribution(distribution!([1000000000, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            println!("{:#?}", rebalancing);
+            withdraw(0)?;
+
+            general_pool_withdraw_request(50, 2)?;
+
+            update_token_distribution(distribution!([1000000000, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            println!("{:#?}", rebalancing);
+            general_pool_withdraw(1)?;
+            withdraw(0)?;
+
+            update_token_distribution(distribution!([1000000000, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            println!("{:#?}", rebalancing);
+            general_pool_withdraw(2)?;
+        }
         None => {
             general_pool_deposit(1000)?;
             update_token_distribution(distribution!([500000000, 500000000]))?;

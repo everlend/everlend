@@ -212,6 +212,16 @@ impl Rebalancing {
 
         (release, borrow)
     }
+
+    /// Compute withdrawal requests compensation
+    pub fn withdrawal_requests_compensation(
+        &self,
+        liquidity_transit_supply: u64,
+        withdrawal_requests_liquidity_supply: u64,
+    ) -> u64 {
+        // How many lamports we will need to release for the next rebalancing
+        withdrawal_requests_liquidity_supply.saturating_sub(liquidity_transit_supply)
+    }
 }
 
 /// Initialize a Rebalancing params

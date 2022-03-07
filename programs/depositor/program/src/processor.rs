@@ -251,7 +251,6 @@ impl Processor {
         let liquidity_transit_supply = Account::unpack(&liquidity_transit_info.data.borrow())?
             .amount
             .saturating_sub(rebalancing.unused_liquidity()?);
-
         msg!("liquidity_transit_supply = {:?}", liquidity_transit_supply);
 
         // Reserved lamports for leaking
@@ -259,21 +258,29 @@ impl Processor {
         // From 0 to 10
         let leakage_reserve_compensation =
             rebalancing.leakage_reserve_compensation(liquidity_transit_supply);
-
         msg!(
             "leakage_reserve_compensation = {:?}",
             leakage_reserve_compensation
+        );
+
+        // How many lamports are already released to repay to the general pool
+        // Considering the reservation for leakage (10 + 10)
+        let released_liquidity_transit_supply =
+            liquidity_transit_supply.saturating_sub(RESERVED_LEAKED * 2);
+
+        let withdrawal_requests_compensation = rebalancing.withdrawal_requests_compensation(
+            released_liquidity_transit_supply,
+            withdrawal_requests.liquidity_supply,
         );
 
         let new_distributed_liquidity = general_pool_token_account
             .amount
             .checked_add(rebalancing.distributed_liquidity)
             .ok_or(EverlendError::MathOverflow)?
-            .checked_sub(withdrawal_requests.liquidity_supply)
+            .checked_sub(withdrawal_requests_compensation)
             .ok_or(EverlendError::MathOverflow)?
             .checked_sub(leakage_reserve_compensation.0)
             .ok_or(EverlendError::MathOverflow)?;
-
         msg!(
             "new_distributed_liquidity = {:?}",
             new_distributed_liquidity
@@ -284,12 +291,8 @@ impl Processor {
             .checked_add(leakage_reserve_compensation.1)
             .ok_or(EverlendError::MathOverflow)?;
 
-        // How many lamports are already released to repay to the general pool
-        // Considering the reservation for leakage (10 + 10)
-        let repay_amount = liquidity_transit_supply.saturating_sub(RESERVED_LEAKED * 2);
-
         let amount = (borrow_amount as i64)
-            .checked_sub(repay_amount as i64)
+            .checked_sub(released_liquidity_transit_supply as i64)
             .ok_or(EverlendError::MathOverflow)?;
 
         msg!("amount = {:?}", amount);
