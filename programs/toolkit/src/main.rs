@@ -11,12 +11,17 @@ use accounts_config::*;
 use clap::{
     crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
 };
+use everlend_depositor::{
+    find_rebalancing_program_address,
+    state::{Rebalancing, RebalancingOperation},
+};
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::{
     find_config_program_address,
     state::{RegistryConfig, SetRegistryConfigParams, TOTAL_DISTRIBUTIONS},
 };
 use everlend_utils::integrations::{self, MoneyMarketPubkeys};
+use solana_account_decoder::parse_token::UiTokenAmount;
 use solana_clap_utils::{
     fee_payer::fee_payer_arg,
     input_parsers::value_of,
@@ -29,6 +34,8 @@ use solana_sdk::commitment_config::CommitmentConfig;
 use spl_associated_token_account::get_associated_token_address;
 use std::{collections::HashMap, process::exit, str::FromStr};
 use utils::*;
+
+use crate::general_pool::current_withdrawal_request_index;
 
 /// Generates fixed distribution from slice
 #[macro_export]
@@ -278,6 +285,20 @@ async fn command_run_test(
         lending_market: Pubkey::from_str(LARIX_LENDING_MARKET).unwrap(),
     };
 
+    let get_balance = |pk: &Pubkey| config.rpc_client.get_token_account_balance(pk);
+
+    let print_balance = |v: (UiTokenAmount, UiTokenAmount)| {
+        println!(
+            "Balance:\n\
+             - liquidity_transit: {}\n\
+             - general_pool_token_account: {}",
+            v.0.amount, v.1.amount
+        );
+    };
+
+    let withdrawal_index =
+        || current_withdrawal_request_index(config, &general_pool_market, &sol.mint);
+
     let update_token_distribution = |d: DistributionArray| {
         liquidity_oracle::update_token_distribution(config, &liquidity_oracle, &sol.mint, &d)
     };
@@ -339,8 +360,45 @@ async fn command_run_test(
         )
     };
 
-    let get_balance = |pk: &Pubkey| -> anyhow::Result<String> {
-        Ok(config.rpc_client.get_token_account_balance(pk)?.amount)
+    let complete_rebalancing = |rebalancing: Option<Rebalancing>| -> anyhow::Result<()> {
+        let rebalancing = rebalancing.or_else(|| {
+            let (rebalancing_pubkey, _) =
+                find_rebalancing_program_address(&everlend_depositor::id(), &depositor, &sol.mint);
+            config
+                .rpc_client
+                .get_account(&rebalancing_pubkey)
+                .ok()
+                .and_then(|a| Rebalancing::unpack(&a.data).ok())
+        });
+
+        if rebalancing.is_none() {
+            return Ok(());
+        }
+
+        let rebalancing = rebalancing.unwrap();
+        println!("{:#?}", rebalancing);
+        print_balance((
+            get_balance(&sol.liquidity_transit)?,
+            get_balance(&sol.general_pool_token_account)?,
+        ));
+
+        for step in rebalancing
+            .steps
+            .iter()
+            .filter(|&step| step.executed_at.is_none())
+        {
+            match step.operation {
+                RebalancingOperation::Deposit => deposit(step.money_market_index.into())?,
+                RebalancingOperation::Withdraw => withdraw(step.money_market_index.into())?,
+            }
+        }
+
+        print_balance((
+            get_balance(&sol.liquidity_transit)?,
+            get_balance(&sol.general_pool_token_account)?,
+        ));
+
+        Ok(())
     };
 
     let general_pool_deposit = |a: u64| {
@@ -390,66 +448,57 @@ async fn command_run_test(
     match case.as_deref() {
         Some("first") => {
             general_pool_deposit(1000)?;
+
             update_token_distribution(distribution!([1000000000, 0]))?;
             let (_, rebalancing) = start_rebalancing()?;
-            println!("{:#?}", rebalancing);
-            deposit(0)?;
-            println!("b = {:?}", get_balance(&sol.liquidity_transit)?);
+            complete_rebalancing(Some(rebalancing))?;
+
+            update_token_distribution(distribution!([959876767, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            complete_rebalancing(Some(rebalancing))?;
+
+            update_token_distribution(distribution!([959876767, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            complete_rebalancing(Some(rebalancing))?;
 
             update_token_distribution(distribution!([959876767, 0]))?;
             let (_, rebalancing) = start_rebalancing()?;
             println!("{:#?}", rebalancing);
-            println!("b = {:?}", get_balance(&sol.liquidity_transit)?);
-            withdraw(0)?;
-            println!("b = {:?}", get_balance(&sol.liquidity_transit)?);
-
-            update_token_distribution(distribution!([959876767, 0]))?;
-            let (_, rebalancing) = start_rebalancing()?;
-            println!("{:#?}", rebalancing);
-            println!("b = {:?}", get_balance(&sol.liquidity_transit)?);
-            println!("b(g) = {:?}", get_balance(&sol.general_pool_token_account)?);
-            withdraw(0)?;
-
-            update_token_distribution(distribution!([959876767, 0]))?;
-            let (_, rebalancing) = start_rebalancing()?;
-            println!("{:#?}", rebalancing);
-            println!("b = {:?}", get_balance(&sol.liquidity_transit)?);
         }
         Some("second") => {
             general_pool_deposit(1000)?;
+
             update_token_distribution(distribution!([500000000, 500000000]))?;
             let (_, rebalancing) = start_rebalancing()?;
-            println!("{:#?}", rebalancing);
-            deposit(0)?;
-            deposit(1)?;
-            println!("b = {:?}", get_balance(&sol.liquidity_transit)?);
+            complete_rebalancing(Some(rebalancing))?;
 
             general_pool_deposit(10)?;
 
             update_token_distribution(distribution!([900000000, 100000000]))?;
             let (_, rebalancing) = start_rebalancing()?;
-            println!("{:#?}", rebalancing);
-            println!("b = {:?}", get_balance(&sol.liquidity_transit)?);
+            complete_rebalancing(Some(rebalancing))?;
         }
         Some("larix") => {
             general_pool_deposit(1000)?;
+
             update_token_distribution(distribution!([0, 1000000000]))?;
             let (_, rebalancing) = start_rebalancing()?;
-            println!("{:#?}", rebalancing);
-            deposit(1)?;
+            complete_rebalancing(Some(rebalancing))?;
         }
         Some("zero-distribution") => {
             general_pool_deposit(1000)?;
+
             update_token_distribution(distribution!([0, 0]))?;
             let (_, rebalancing) = start_rebalancing()?;
-            println!("{:#?}", rebalancing);
+            complete_rebalancing(Some(rebalancing))?;
         }
         Some("deposit") => {
+            complete_rebalancing(None)?;
             general_pool_deposit(1000)?;
+
             update_token_distribution(distribution!([1000000000, 0]))?;
             let (_, rebalancing) = start_rebalancing()?;
-            println!("{:#?}", rebalancing);
-            deposit(0)?;
+            complete_rebalancing(Some(rebalancing))?;
 
             general_pool_deposit(1000)?;
 
@@ -458,85 +507,113 @@ async fn command_run_test(
             println!("{:#?}", rebalancing);
         }
         Some("full") => {
+            complete_rebalancing(None)?;
             general_pool_deposit(1000)?;
-            update_token_distribution(distribution!([1000000000, 0]))?;
-            let (_, rebalancing) = start_rebalancing()?;
-            println!("{:#?}", rebalancing);
-            deposit(0)?;
-
-            general_pool_withdraw_request(100, 1)?;
 
             update_token_distribution(distribution!([1000000000, 0]))?;
             let (_, rebalancing) = start_rebalancing()?;
-            println!("{:#?}", rebalancing);
-            withdraw(0)?;
+            complete_rebalancing(Some(rebalancing))?;
+
+            let wi = withdrawal_index()?;
+            general_pool_withdraw_request(100, wi)?;
+
+            update_token_distribution(distribution!([1000000000, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            complete_rebalancing(Some(rebalancing))?;
 
             update_token_distribution(distribution!([1000000000, 0]))?;
             let (_, rebalancing) = start_rebalancing()?;
             println!("{:#?}", rebalancing);
-            general_pool_withdraw(1)?;
+            general_pool_withdraw(wi)?;
 
             update_token_distribution(distribution!([1000000000, 0]))?;
             let (_, rebalancing) = start_rebalancing()?;
             println!("{:#?}", rebalancing);
         }
         Some("full-two-withdrawal-requests") => {
+            complete_rebalancing(None)?;
             general_pool_deposit(1000)?;
-            update_token_distribution(distribution!([1000000000, 0]))?;
-            let (_, rebalancing) = start_rebalancing()?;
-            println!("{:#?}", rebalancing);
-            deposit(0)?;
-
-            general_pool_withdraw_request(100, 1)?;
 
             update_token_distribution(distribution!([1000000000, 0]))?;
             let (_, rebalancing) = start_rebalancing()?;
-            println!("{:#?}", rebalancing);
-            withdraw(0)?;
+            complete_rebalancing(Some(rebalancing))?;
 
-            general_pool_withdraw_request(50, 2)?;
+            let wi = withdrawal_index()?;
+            general_pool_withdraw_request(100, wi)?;
+
+            update_token_distribution(distribution!([1000000000, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            complete_rebalancing(Some(rebalancing))?;
+
+            general_pool_withdraw_request(50, wi + 1)?;
+
+            update_token_distribution(distribution!([1000000000, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            general_pool_withdraw(wi)?;
+            complete_rebalancing(Some(rebalancing))?;
 
             update_token_distribution(distribution!([1000000000, 0]))?;
             let (_, rebalancing) = start_rebalancing()?;
             println!("{:#?}", rebalancing);
-            general_pool_withdraw(1)?;
-            withdraw(0)?;
+            general_pool_withdraw(wi + 1)?;
+        }
+        Some("boundary") => {
+            complete_rebalancing(None)?;
+            general_pool_deposit(2100000)?;
 
             update_token_distribution(distribution!([1000000000, 0]))?;
             let (_, rebalancing) = start_rebalancing()?;
-            println!("{:#?}", rebalancing);
-            general_pool_withdraw(2)?;
+            complete_rebalancing(Some(rebalancing))?;
+
+            let wi = withdrawal_index()?;
+            general_pool_withdraw_request(2000000, wi)?;
+            general_pool_deposit(2000000)?;
+
+            update_token_distribution(distribution!([999999999, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            complete_rebalancing(Some(rebalancing))?;
+
+            general_pool_withdraw_request(1000000, wi + 1)?;
+
+            update_token_distribution(distribution!([999999999, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            complete_rebalancing(Some(rebalancing))?;
+
+            general_pool_withdraw(wi)?;
+
+            update_token_distribution(distribution!([999999998, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            complete_rebalancing(Some(rebalancing))?;
+
+            general_pool_withdraw(wi + 1)?;
+        }
+        Some("empty") => {
+            update_token_distribution(distribution!([1000000000, 0]))?;
+            start_rebalancing()?;
         }
         None => {
+            complete_rebalancing(None)?;
             general_pool_deposit(1000)?;
-            update_token_distribution(distribution!([500000000, 500000000]))?;
-            start_rebalancing()?;
-            deposit(0)?;
-            deposit(1)?;
-            println!("b = {:?}", get_balance(&sol.liquidity_transit)?);
 
-            general_pool_withdraw_request(100, 1)?;
+            update_token_distribution(distribution!([500000000, 500000000]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            complete_rebalancing(Some(rebalancing))?;
+
+            let wi = withdrawal_index()?;
+            general_pool_withdraw_request(100, wi)?;
 
             update_token_distribution(distribution!([300000000, 600000000]))?;
             let (_, rebalancing) = start_rebalancing()?;
-            println!("{:#?}", rebalancing);
-            println!("b = {:?}", get_balance(&sol.liquidity_transit)?);
-            withdraw(0)?;
-            println!("b = {:?}", get_balance(&sol.liquidity_transit)?);
-            deposit(1)?;
+            complete_rebalancing(Some(rebalancing))?;
 
             update_token_distribution(distribution!([0, 1000000000]))?;
             let (_, rebalancing) = start_rebalancing()?;
-            println!("{:#?}", rebalancing);
-            general_pool_withdraw(1)?;
-            withdraw(0)?;
-            deposit(1)?;
+            general_pool_withdraw(wi)?;
+            complete_rebalancing(Some(rebalancing))?;
 
             update_token_distribution(distribution!([100000000, 0]))?;
             let (_, rebalancing) = start_rebalancing()?;
-            println!("{:#?}", rebalancing);
-            withdraw(1)?;
-            deposit(0)?;
+            complete_rebalancing(Some(rebalancing))?;
         }
         _ => {}
     }
