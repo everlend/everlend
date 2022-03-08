@@ -45,17 +45,21 @@ pub enum EverlendError {
     #[error("Rebalancing is completed")]
     RebalancingIsCompleted,
 
-    /// Rebalancing money market does not match
+    /// Money market does not match
     #[error("Rebalancing: Money market does not match")]
     InvalidRebalancingMoneyMarket,
 
-    /// Rebalancing operation does not match
+    /// Operation does not match
     #[error("Rebalancing: Operation does not match")]
     InvalidRebalancingOperation,
 
-    /// Rebalancing amount does not match
+    /// Amount does not match
     #[error("Rebalancing: Amount does not match")]
     InvalidRebalancingAmount,
+
+    /// Token distribution is stale
+    #[error("Rebalancing: Token distribution is stale")]
+    TokenDistributionIsStale,
 
     /// Withdraw requests
 

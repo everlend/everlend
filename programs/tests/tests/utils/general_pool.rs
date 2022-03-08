@@ -4,7 +4,8 @@ use super::{
 };
 use everlend_general_pool::state::{WithdrawalRequest, WithdrawalRequests};
 use everlend_general_pool::{
-    find_pool_program_address, find_user_withdrawal_request_program_address, find_withdrawal_requests_program_address, instruction, state::Pool,
+    find_pool_program_address, find_user_withdrawal_request_program_address,
+    find_withdrawal_requests_program_address, instruction, state::Pool,
 };
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::ProgramTestContext;
@@ -200,7 +201,7 @@ impl TestGeneralPool {
                 &self.pool_mint.pubkey(),
                 &user.pubkey(),
                 amount,
-                index
+                index,
             )],
             Some(&context.payer.pubkey()),
             &[&context.payer, &user.owner],

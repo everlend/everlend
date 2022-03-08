@@ -57,7 +57,7 @@ impl Rebalancing {
         distributed_liquidity: u64,
     ) -> Result<(), ProgramError> {
         if token_distribution.updated_at <= self.token_distribution.updated_at {
-            return Err(ProgramError::InvalidArgument);
+            return Err(EverlendError::TokenDistributionIsStale.into());
         }
 
         // Reset steps

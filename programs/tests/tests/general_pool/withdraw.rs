@@ -103,7 +103,6 @@ async fn success() {
         get_token_balance(&mut context, &test_pool.token_account.pubkey()).await,
         55
     );
-
     assert_eq!(get_token_balance(&mut context, &transit_account).await, 0);
 
     let user_account = get_account(&mut context, &user.owner.pubkey()).await;
@@ -152,7 +151,6 @@ async fn success_with_index() {
         get_token_balance(&mut context, &test_pool.token_account.pubkey()).await,
         50
     );
-
     assert_eq!(get_token_balance(&mut context, &transit_account).await, 30);
 
     test_pool
@@ -172,7 +170,6 @@ async fn success_with_index() {
         get_token_balance(&mut context, &test_pool.token_account.pubkey()).await,
         20
     );
-
     assert_eq!(get_token_balance(&mut context, &transit_account).await, 0);
 
     let user_account = get_account(&mut context, &user.owner.pubkey()).await;

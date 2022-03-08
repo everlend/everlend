@@ -8,9 +8,7 @@ mod ulp;
 mod utils;
 
 use accounts_config::*;
-use clap::{
-    crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
-};
+use clap::{crate_description, crate_name, crate_version, App, AppSettings, Arg, SubCommand};
 use everlend_depositor::{
     find_rebalancing_program_address,
     state::{Rebalancing, RebalancingOperation},
@@ -25,14 +23,14 @@ use solana_account_decoder::parse_token::UiTokenAmount;
 use solana_clap_utils::{
     fee_payer::fee_payer_arg,
     input_parsers::value_of,
-    input_validators::{is_keypair, is_url_or_moniker},
+    input_validators::{is_keypair, normalize_to_url_if_moniker},
     keypair::signer_from_path,
 };
 use solana_client::rpc_client::RpcClient;
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_sdk::commitment_config::CommitmentConfig;
 use spl_associated_token_account::get_associated_token_address;
-use std::{collections::HashMap, process::exit, str::FromStr};
+use std::{collections::HashMap, process::exit};
 use utils::*;
 
 use crate::general_pool::current_withdrawal_request_index;
@@ -55,38 +53,23 @@ async fn command_create(
     let payer_pubkey = config.fee_payer.pubkey();
     println!("Fee payer: {}", payer_pubkey);
 
+    let default_accounts =
+        DefaultAccounts::load(&format!("default.{}.yaml", config.network)).unwrap_or_default();
+
     let mint_map = HashMap::from([
-        ("SOL".to_string(), Pubkey::from_str(SOL_MINT).unwrap()),
-        ("USDC".to_string(), Pubkey::from_str(USDC_MINT).unwrap()),
-        ("USDT".to_string(), Pubkey::from_str(USDT_MINT).unwrap()),
+        ("SOL".to_string(), default_accounts.sol_mint),
+        ("USDC".to_string(), default_accounts.usdc_mint),
+        ("USDT".to_string(), default_accounts.usdt_mint),
     ]);
 
     let collateral_mint_map = HashMap::from([
-        (
-            "SOL".to_string(),
-            [
-                Pubkey::from_str(PORT_FINANCE_RESERVE_SOL_COLLATERAL_MINT).unwrap(),
-                Pubkey::from_str(LARIX_RESERVE_SOL_COLLATERAL_MINT).unwrap(),
-            ],
-        ),
-        (
-            "USDC".to_string(),
-            [
-                Pubkey::from_str(PORT_FINANCE_RESERVE_USDC_COLLATERAL_MINT).unwrap(),
-                Pubkey::from_str(LARIX_RESERVE_USDC_COLLATERAL_MINT).unwrap(),
-            ],
-        ),
-        (
-            "USDT".to_string(),
-            [
-                Pubkey::from_str(PORT_FINANCE_RESERVE_USDT_COLLATERAL_MINT).unwrap(),
-                Pubkey::from_str(LARIX_RESERVE_USDT_COLLATERAL_MINT).unwrap(),
-            ],
-        ),
+        ("SOL".to_string(), default_accounts.sol_collateral),
+        ("USDC".to_string(), default_accounts.usdc_collateral),
+        ("USDT".to_string(), default_accounts.usdt_collateral),
     ]);
 
-    let port_finance_program_id = Pubkey::from_str(integrations::PORT_FINANCE_PROGRAM_ID).unwrap();
-    let larix_program_id = Pubkey::from_str(integrations::LARIX_PROGRAM_ID).unwrap();
+    let port_finance_program_id = default_accounts.port_finance_program_id;
+    let larix_program_id = default_accounts.larix_program_id;
 
     println!("Registry");
     let registry_pubkey = registry::init(config, None)?;
@@ -254,7 +237,11 @@ async fn command_create(
 
 async fn command_info(config: &Config, accounts_path: &str) -> anyhow::Result<()> {
     let initialiazed_accounts = InitializedAccounts::load(accounts_path).unwrap_or_default();
+    let default_accounts =
+        DefaultAccounts::load(&format!("default.{}.yaml", config.network)).unwrap_or_default();
 
+    println!("network: {:?}", config.network);
+    println!("default_accounts = {:#?}", default_accounts);
     println!("{:#?}", initialiazed_accounts);
 
     Ok(())
@@ -267,6 +254,8 @@ async fn command_run_test(
 ) -> anyhow::Result<()> {
     println!("Run {:?}", case);
 
+    let default_accounts =
+        DefaultAccounts::load(&format!("default.{}.yaml", config.network)).unwrap_or_default();
     let initialiazed_accounts = InitializedAccounts::load(accounts_path).unwrap_or_default();
 
     let InitializedAccounts {
@@ -287,18 +276,18 @@ async fn command_run_test(
 
     let sol = token_accounts.get("SOL").unwrap();
 
-    let sol_oracle = Pubkey::from_str(SOL_ORACLE).unwrap();
+    let sol_oracle = default_accounts.sol_oracle;
     let port_finance_pubkeys = integrations::spl_token_lending::AccountPubkeys {
-        reserve: Pubkey::from_str(PORT_FINANCE_RESERVE_SOL).unwrap(),
-        reserve_liquidity_supply: Pubkey::from_str(PORT_FINANCE_RESERVE_SOL_SUPPLY).unwrap(),
+        reserve: default_accounts.port_finance_reserve_sol,
+        reserve_liquidity_supply: default_accounts.port_finance_reserve_sol_supply,
         reserve_liquidity_oracle: sol_oracle,
-        lending_market: Pubkey::from_str(PORT_FINANCE_LENDING_MARKET).unwrap(),
+        lending_market: default_accounts.port_finance_lending_market,
     };
     let larix_pubkeys = integrations::larix::AccountPubkeys {
-        reserve: Pubkey::from_str(LARIX_RESERVE_SOL).unwrap(),
-        reserve_liquidity_supply: Pubkey::from_str(LARIX_RESERVE_SOL_SUPPLY).unwrap(),
+        reserve: default_accounts.larix_reserve_sol,
+        reserve_liquidity_supply: default_accounts.larix_reserve_sol_supply,
         reserve_liquidity_oracle: sol_oracle,
-        lending_market: Pubkey::from_str(LARIX_LENDING_MARKET).unwrap(),
+        lending_market: default_accounts.larix_lending_market,
     };
 
     let get_balance = |pk: &Pubkey| config.rpc_client.get_token_account_balance(pk);
@@ -681,17 +670,16 @@ async fn main() -> anyhow::Result<()> {
                 .help("Show additional information"),
         )
         .arg(
-            Arg::with_name("json_rpc_url")
-                .short("u")
-                .long("url")
-                .value_name("URL_OR_MONIKER")
+            Arg::with_name("network")
+                .short("n")
+                .long("network")
+                .value_name("MONIKER")
                 .takes_value(true)
                 .global(true)
-                .validator(is_url_or_moniker)
+                .default_value("devnet")
                 .help(
-                    "URL for Solana's JSON RPC or moniker (or their first letter): \
-                       [mainnet-beta, testnet, devnet, localhost] \
-                    Default from the configuration file.",
+                    "Solana's network moniker: \
+                       [mainnet-beta, testnet, devnet, localhost]",
                 ),
         )
         .arg(
@@ -770,8 +758,8 @@ async fn main() -> anyhow::Result<()> {
             solana_cli_config::Config::default()
         };
 
-        let json_rpc_url = value_t!(matches, "json_rpc_url", String)
-            .unwrap_or_else(|_| cli_config.json_rpc_url.clone());
+        let network = matches.value_of("network").unwrap();
+        let json_rpc_url = normalize_to_url_if_moniker(network);
 
         let owner = signer_from_path(
             &matches,
@@ -802,6 +790,7 @@ async fn main() -> anyhow::Result<()> {
             verbose,
             owner,
             fee_payer,
+            network: network.to_string(),
         }
     };
 

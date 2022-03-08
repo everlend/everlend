@@ -538,7 +538,7 @@ impl Processor {
         let source_info = next_account_info(account_info_iter)?;
         let destination_info = next_account_info(account_info_iter)?;
         let token_account_info = next_account_info(account_info_iter)?;
-        let transit_collateral_info = next_account_info(account_info_iter)?;
+        let collateral_transit_info = next_account_info(account_info_iter)?;
         let pool_mint_info = next_account_info(account_info_iter)?;
         let user_transfer_authority_info = next_account_info(account_info_iter)?;
         let rent_info = next_account_info(account_info_iter)?;
@@ -550,6 +550,7 @@ impl Processor {
 
         assert_owned_by(pool_market_info, program_id)?;
         assert_owned_by(pool_info, program_id)?;
+        assert_owned_by(withdrawal_requests_info, program_id)?;
 
         // Get pool state
         let pool = Pool::unpack(&pool_info.data.borrow())?;
@@ -561,10 +562,7 @@ impl Processor {
         // Check collateral token transit account
         let (collateral_transit_pubkey, _) =
             find_transit_program_address(program_id, pool_market_info.key, pool_mint_info.key);
-        assert_account_key(transit_collateral_info, &collateral_transit_pubkey)?;
-
-        // Check withdraw requests account
-        assert_owned_by(withdrawal_requests_info, program_id)?;
+        assert_account_key(collateral_transit_info, &collateral_transit_pubkey)?;
 
         let (withdrawal_requests_pubkey, _) = find_withdrawal_requests_program_address(
             program_id,
@@ -580,9 +578,8 @@ impl Processor {
         // Get withdrawals account
         let mut withdrawal_requests =
             WithdrawalRequests::unpack_unchecked(&withdrawal_requests_info.data.borrow())?;
-
-        assert_owned_by(withdrawal_requests_info, program_id)?;
         assert_account_key(pool_info, &withdrawal_requests.pool)?;
+
         if withdrawal_requests.mint != pool.token_mint {
             return Err(ProgramError::InvalidArgument);
         }
@@ -617,7 +614,7 @@ impl Processor {
         // Transfer
         cpi::spl_token::transfer(
             source_info.clone(),
-            transit_collateral_info.clone(),
+            collateral_transit_info.clone(),
             user_transfer_authority_info.clone(),
             amount,
             &[],

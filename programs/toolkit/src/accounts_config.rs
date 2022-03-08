@@ -20,6 +20,50 @@ serde_conv!(
 
 #[serde_as]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Default)]
+pub struct DefaultAccounts {
+    #[serde_as(as = "PubkeyAsString")]
+    pub sol_mint: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub usdc_mint: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub usdt_mint: Pubkey,
+
+    #[serde_as(as = "PubkeyAsString")]
+    pub sol_oracle: Pubkey,
+
+    #[serde_as(as = "PubkeyAsString")]
+    pub port_finance_program_id: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub port_finance_lending_market: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub port_finance_reserve_sol: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub port_finance_reserve_sol_supply: Pubkey,
+
+    #[serde_as(as = "PubkeyAsString")]
+    pub larix_program_id: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub larix_lending_market: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub larix_reserve_sol: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub larix_reserve_sol_supply: Pubkey,
+
+    #[serde(default)]
+    #[serde_as(as = "Vec<PubkeyAsString>")]
+    pub sol_collateral: Vec<Pubkey>,
+
+    #[serde(default)]
+    #[serde_as(as = "Vec<PubkeyAsString>")]
+    pub usdc_collateral: Vec<Pubkey>,
+
+    #[serde(default)]
+    #[serde_as(as = "Vec<PubkeyAsString>")]
+    pub usdt_collateral: Vec<Pubkey>,
+}
+
+#[serde_as]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Default)]
 pub struct InitializedAccounts {
     #[serde_as(as = "PubkeyAsString")]
     pub payer: Pubkey,
@@ -85,6 +129,16 @@ pub struct MoneyMarketAccounts {
 }
 
 impl InitializedAccounts {
+    pub fn load(config_file: &str) -> Result<Self, io::Error> {
+        load_config_file(config_file)
+    }
+
+    pub fn save(&self, config_file: &str) -> Result<(), io::Error> {
+        save_config_file(self, config_file)
+    }
+}
+
+impl DefaultAccounts {
     pub fn load(config_file: &str) -> Result<Self, io::Error> {
         load_config_file(config_file)
     }

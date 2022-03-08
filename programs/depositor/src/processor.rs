@@ -255,7 +255,7 @@ impl Processor {
         let liquidity_transit_supply = Account::unpack(&liquidity_transit_info.data.borrow())?
             .amount
             .saturating_sub(rebalancing.unused_liquidity()?);
-        msg!("liquidity_transit_supply = {:?}", liquidity_transit_supply);
+        msg!("liquidity_transit_supply: {}", liquidity_transit_supply);
 
         let release_withdrawal_requests_amount = withdrawal_requests
             .liquidity_supply
@@ -267,17 +267,14 @@ impl Processor {
             .ok_or(EverlendError::MathOverflow)?
             .checked_sub(release_withdrawal_requests_amount)
             .ok_or(EverlendError::MathOverflow)?;
-        msg!(
-            "new_distributed_liquidity = {:?}",
-            new_distributed_liquidity
-        );
+        msg!("new_distributed_liquidity: {}", new_distributed_liquidity);
 
         let borrow_amount =
             new_distributed_liquidity.saturating_sub(rebalancing.distributed_liquidity);
         let amount = (borrow_amount as i64)
             .checked_sub(liquidity_transit_supply as i64)
             .ok_or(EverlendError::MathOverflow)?;
-        msg!("amount = {:?}", amount);
+        msg!("amount: {}", amount);
 
         let (depositor_authority_pubkey, bump_seed) =
             find_program_address(program_id, depositor_info.key);
@@ -529,16 +526,15 @@ impl Processor {
             .amount
             .checked_sub(liquidity_transit_supply)
             .ok_or(EverlendError::MathOverflow)?;
-        msg!("Received amount: {}", received_amount);
+        msg!("received_amount: {}", received_amount);
+        msg!("step.liquidity_amount: {}", step.liquidity_amount);
 
         // TODO: Received liquidity amount may be less
         // https://blog.neodyme.io/posts/lending_disclosure
         let income_amount: i64 = (received_amount as i64)
             .checked_sub(step.liquidity_amount as i64)
             .ok_or(EverlendError::MathOverflow)?;
-
-        msg!("Step amount: {}", step.liquidity_amount);
-        msg!("Income amount: {}", income_amount);
+        msg!("income_amount: {}", income_amount);
 
         // Deposit to income pool if income amount > 0
         match income_amount.cmp(&0) {

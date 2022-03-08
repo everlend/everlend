@@ -98,11 +98,6 @@ impl IsInitialized for WithdrawalRequests {
 }
 
 impl Sealed for WithdrawalRequest {}
-impl IsInitialized for WithdrawalRequest {
-    fn is_initialized(&self) -> bool {
-        self.collateral_amount != 0
-    }
-}
 impl Pack for WithdrawalRequest {
     // 32 + 32 + 8 + 8
     const LEN: usize = 112;
@@ -118,5 +113,10 @@ impl Pack for WithdrawalRequest {
             msg!("Actual LEN: {}", std::mem::size_of::<WithdrawalRequest>());
             ProgramError::InvalidAccountData
         })
+    }
+}
+impl IsInitialized for WithdrawalRequest {
+    fn is_initialized(&self) -> bool {
+        self.collateral_amount != 0
     }
 }

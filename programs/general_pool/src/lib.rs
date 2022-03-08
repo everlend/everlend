@@ -67,7 +67,6 @@ pub fn find_user_withdrawal_request_program_address(
     token_mint: &Pubkey,
     index: u64,
 ) -> (Pubkey, u8) {
-
     Pubkey::find_program_address(
         &[
             &index.to_be_bytes()[..],

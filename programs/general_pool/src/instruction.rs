@@ -2,7 +2,8 @@
 
 use crate::{
     find_pool_borrow_authority_program_address, find_pool_program_address,
-    find_transit_program_address, find_user_withdrawal_request_program_address, find_withdrawal_requests_program_address,
+    find_transit_program_address, find_user_withdrawal_request_program_address,
+    find_withdrawal_requests_program_address,
 };
 use borsh::{BorshDeserialize, BorshSerialize};
 use everlend_utils::find_program_address;
@@ -177,7 +178,7 @@ pub enum LiquidityPoolsInstruction {
     /// [W] Rent payer
     /// [RS] Market manager
     /// [R] Token program id
-    CancelWithdrawRequest
+    CancelWithdrawRequest,
 }
 
 /// Creates 'InitPoolMarket' instruction.
@@ -373,7 +374,8 @@ pub fn withdraw(
     let (withdrawal_requests, _) =
         find_withdrawal_requests_program_address(program_id, pool_market, token_mint);
     let (collateral_transit, _) = find_transit_program_address(program_id, pool_market, pool_mint);
-    let (user_withdrawal_request, _) =  find_user_withdrawal_request_program_address(program_id, pool_market, token_mint, index);
+    let (user_withdrawal_request, _) =
+        find_user_withdrawal_request_program_address(program_id, pool_market, token_mint, index);
 
     let accounts = vec![
         AccountMeta::new_readonly(*pool_market, false),
@@ -389,11 +391,7 @@ pub fn withdraw(
         AccountMeta::new_readonly(spl_token::id(), false),
     ];
 
-    Instruction::new_with_borsh(
-        *program_id,
-        &LiquidityPoolsInstruction::Withdraw,
-        accounts,
-    )
+    Instruction::new_with_borsh(*program_id, &LiquidityPoolsInstruction::Withdraw, accounts)
 }
 
 /// Creates 'WithdrawRequest' instruction.
@@ -414,7 +412,8 @@ pub fn withdraw_request(
     let (withdrawal_requests, _) =
         find_withdrawal_requests_program_address(program_id, pool_market, token_mint);
     let (collateral_transit, _) = find_transit_program_address(program_id, pool_market, pool_mint);
-    let (user_withdrawal_request, _) =  find_user_withdrawal_request_program_address(program_id, pool_market, token_mint, index);
+    let (user_withdrawal_request, _) =
+        find_user_withdrawal_request_program_address(program_id, pool_market, token_mint, index);
 
     let accounts = vec![
         AccountMeta::new_readonly(*pool_market, false),
@@ -457,8 +456,8 @@ pub fn cancel_withdraw_request(
     let (withdrawal_requests, _) =
         find_withdrawal_requests_program_address(program_id, pool_market, token_mint);
     let (collateral_transit, _) = find_transit_program_address(program_id, pool_market, pool_mint);
-    let (user_withdrawal_request, _) =  find_user_withdrawal_request_program_address(program_id, pool_market, token_mint, index);
-
+    let (user_withdrawal_request, _) =
+        find_user_withdrawal_request_program_address(program_id, pool_market, token_mint, index);
 
     let accounts = vec![
         AccountMeta::new_readonly(*pool_market, false),
