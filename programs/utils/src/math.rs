@@ -39,6 +39,16 @@ pub fn share(amount: u64, percent: u64) -> Result<u64, ProgramError> {
     Ok(res as u64)
 }
 
+pub fn share_floor(amount: u64, percent: u64) -> Result<u64, ProgramError> {
+    let res = (percent as u128)
+        .checked_mul(amount as u128)
+        .ok_or(EverlendError::MathOverflow)?
+        .checked_div(PRECISION_SCALER)
+        .ok_or(EverlendError::MathOverflow)?;
+
+    Ok(res as u64)
+}
+
 fn div_up(a: u128, b: u128) -> Result<u128, ProgramError> {
     let res = a
         .checked_add(b)

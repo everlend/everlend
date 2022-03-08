@@ -170,13 +170,29 @@ async fn command_create(
         )?;
 
         // Transit accounts
-        let liquidity_transit_pubkey = depositor::create_transit(config, &depositor_pubkey, mint)?;
+        let liquidity_transit_pubkey =
+            depositor::create_transit(config, &depositor_pubkey, mint, None)?;
 
-        depositor::create_transit(config, &depositor_pubkey, &collateral_mints[0])?;
-        depositor::create_transit(config, &depositor_pubkey, &collateral_mints[1])?;
+        // Reserve
+        println!("Reserve transit");
+        let liquidity_reserve_transit_pubkey = depositor::create_transit(
+            config,
+            &depositor_pubkey,
+            mint,
+            Some("reserve".to_string()),
+        )?;
+        spl_token_transfer(
+            config,
+            &token_account,
+            &liquidity_reserve_transit_pubkey,
+            10000,
+        )?;
 
-        depositor::create_transit(config, &depositor_pubkey, &port_finance_mm_pool_mint)?;
-        depositor::create_transit(config, &depositor_pubkey, &larix_mm_pool_mint)?;
+        depositor::create_transit(config, &depositor_pubkey, &collateral_mints[0], None)?;
+        depositor::create_transit(config, &depositor_pubkey, &collateral_mints[1], None)?;
+
+        depositor::create_transit(config, &depositor_pubkey, &port_finance_mm_pool_mint, None)?;
+        depositor::create_transit(config, &depositor_pubkey, &larix_mm_pool_mint, None)?;
 
         // Borrow authorities
         general_pool::create_pool_borrow_authority(
@@ -479,6 +495,7 @@ async fn command_run_test(
             complete_rebalancing(Some(rebalancing))?;
         }
         Some("larix") => {
+            complete_rebalancing(None)?;
             general_pool_deposit(1000)?;
 
             update_token_distribution(distribution!([0, 1000000000]))?;
@@ -586,6 +603,18 @@ async fn command_run_test(
             complete_rebalancing(Some(rebalancing))?;
 
             general_pool_withdraw(wi + 1)?;
+        }
+        Some("11") => {
+            complete_rebalancing(None)?;
+            general_pool_deposit(4321)?;
+
+            update_token_distribution(distribution!([10, 10]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            complete_rebalancing(Some(rebalancing))?;
+
+            update_token_distribution(distribution!([10, 20]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            complete_rebalancing(Some(rebalancing))?;
         }
         Some("empty") => {
             update_token_distribution(distribution!([1000000000, 0]))?;

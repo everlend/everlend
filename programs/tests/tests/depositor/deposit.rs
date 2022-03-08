@@ -140,19 +140,19 @@ async fn setup() -> (
 
     // 4.2 Create transit account for liquidity token
     test_depositor
-        .create_transit(&mut context, &general_pool.token_mint_pubkey)
+        .create_transit(&mut context, &general_pool.token_mint_pubkey, None)
         .await
         .unwrap();
 
     // 4.3 Create transit account for collateral token
     test_depositor
-        .create_transit(&mut context, &mm_pool.token_mint_pubkey)
+        .create_transit(&mut context, &mm_pool.token_mint_pubkey, None)
         .await
         .unwrap();
 
     // 34.4 Create transit account for mm pool collateral token
     test_depositor
-        .create_transit(&mut context, &mm_pool.pool_mint.pubkey())
+        .create_transit(&mut context, &mm_pool.pool_mint.pubkey(), None)
         .await
         .unwrap();
 
@@ -269,6 +269,7 @@ async fn success() {
         &everlend_depositor::id(),
         &test_depositor.depositor.pubkey(),
         &general_pool.token_mint_pubkey,
+        "",
     );
     assert_eq!(
         get_token_balance(&mut context, &liquidity_transit).await,

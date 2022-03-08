@@ -1,6 +1,7 @@
 #![cfg(feature = "test-bpf")]
 
 use crate::utils::*;
+use everlend_depositor::find_transit_program_address;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_utils::{
     find_program_address,
@@ -145,19 +146,44 @@ async fn setup() -> (
 
     // 4.2 Create transit account for liquidity token
     test_depositor
-        .create_transit(&mut context, &general_pool.token_mint_pubkey)
+        .create_transit(&mut context, &general_pool.token_mint_pubkey, None)
         .await
         .unwrap();
 
+    // 4.2.1 Create reserve transit account for liquidity token
+    test_depositor
+        .create_transit(
+            &mut context,
+            &general_pool.token_mint_pubkey,
+            Some("reserve".to_string()),
+        )
+        .await
+        .unwrap();
+    let (reserve_transit_pubkey, _) = find_transit_program_address(
+        &everlend_depositor::id(),
+        &test_depositor.depositor.pubkey(),
+        &general_pool.token_mint_pubkey,
+        "reserve",
+    );
+    token_transfer(
+        &mut context,
+        &liquidity_provider.token_account,
+        &reserve_transit_pubkey,
+        &liquidity_provider.owner,
+        10000,
+    )
+    .await
+    .unwrap();
+
     // 4.3 Create transit account for collateral token
     test_depositor
-        .create_transit(&mut context, &mm_pool.token_mint_pubkey)
+        .create_transit(&mut context, &mm_pool.token_mint_pubkey, None)
         .await
         .unwrap();
 
     // 4.4 Create transit account for mm pool collateral token
     test_depositor
-        .create_transit(&mut context, &mm_pool.pool_mint.pubkey())
+        .create_transit(&mut context, &mm_pool.pool_mint.pubkey(), None)
         .await
         .unwrap();
 

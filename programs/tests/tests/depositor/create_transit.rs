@@ -48,7 +48,7 @@ async fn success() {
         .unwrap();
 
     test_depositor
-        .create_transit(&mut context, &token_mint.pubkey())
+        .create_transit(&mut context, &token_mint.pubkey(), None)
         .await
         .unwrap();
 
@@ -56,6 +56,7 @@ async fn success() {
         &everlend_depositor::id(),
         &test_depositor.depositor.pubkey(),
         &token_mint.pubkey(),
+        "",
     );
 
     let (depositor_authority, _) = find_program_address(

@@ -15,9 +15,6 @@ use solana_program::{
 };
 use std::cmp::Ordering;
 
-/// How many lamptors we reserve for the next rebalancing, to avoid leakage
-pub const RESERVED_LEAKED: u64 = TOTAL_DISTRIBUTIONS as u64;
-
 /// Rebalancing
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
@@ -194,33 +191,12 @@ impl Rebalancing {
     pub fn unused_liquidity(&self) -> Result<u64, ProgramError> {
         let total_percent: u64 = self.token_distribution.distribution.iter().sum();
 
-        math::share(
+        math::share_floor(
             self.distributed_liquidity,
             PRECISION_SCALER
                 .checked_sub(total_percent as u128)
                 .ok_or(EverlendError::MathOverflow)? as u64,
         )
-    }
-
-    /// Compute leakage reserve compensation
-    pub fn leakage_reserve_compensation(&self, liquidity_transit_supply: u64) -> (u64, u64) {
-        // How many lamports we will need to release for the next rebalancing
-        let release = RESERVED_LEAKED
-            .saturating_sub(liquidity_transit_supply.saturating_sub(RESERVED_LEAKED));
-        // How many lamports we need borrow from general pool
-        let borrow = release.saturating_sub(liquidity_transit_supply);
-
-        (release, borrow)
-    }
-
-    /// Compute withdrawal requests compensation
-    pub fn withdrawal_requests_compensation(
-        &self,
-        liquidity_transit_supply: u64,
-        withdrawal_requests_liquidity_supply: u64,
-    ) -> u64 {
-        // How many lamports we will need to release for the next rebalancing
-        withdrawal_requests_liquidity_supply.saturating_sub(liquidity_transit_supply)
     }
 }
 
@@ -376,5 +352,58 @@ pub mod tests {
             .unwrap();
 
         println!("rebalancing = {:#?}", rebalancing);
+    }
+
+    #[test]
+    fn unused_liquidity() {
+        let pk = Pubkey::new_unique();
+        let mut rebalancing: Rebalancing = Default::default();
+        rebalancing.init(InitRebalancingParams {
+            depositor: pk,
+            mint: pk,
+        });
+
+        let mut registry_config = RegistryConfig::default();
+        registry_config.money_market_program_ids[0] = pk;
+        registry_config.money_market_program_ids[1] = pk;
+
+        let mut token_distribution: TokenDistribution = Default::default();
+        let mut distribution = DistributionArray::default();
+        distribution[0] = 1000000000;
+        distribution[1] = 0;
+
+        token_distribution.update(2, distribution);
+
+        rebalancing
+            .compute(&registry_config, token_distribution.clone(), 2100000)
+            .unwrap();
+
+        rebalancing
+            .execute_step(RebalancingOperation::Deposit, Some(2100000), 3)
+            .unwrap();
+
+        distribution[0] = 999999999;
+        token_distribution.update(4, distribution);
+        rebalancing
+            .compute(&registry_config, token_distribution.clone(), 2100000)
+            .unwrap();
+
+        println!("rebalancing = {:#?}", rebalancing);
+        println!(
+            "unused_liquidity = {:#?}",
+            rebalancing.unused_liquidity().unwrap()
+        );
+
+        distribution[0] = 999999998;
+        token_distribution.update(7, distribution);
+        rebalancing
+            .compute(&registry_config, token_distribution.clone(), 2100000)
+            .unwrap();
+
+        println!("rebalancing = {:#?}", rebalancing);
+        println!(
+            "unused_liquidity = {:#?}",
+            rebalancing.unused_liquidity().unwrap()
+        );
     }
 }

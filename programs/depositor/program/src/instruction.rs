@@ -35,7 +35,10 @@ pub enum DepositorInstruction {
     /// [R] Rent sysvar
     /// [R] Sytem program
     /// [R] Token program id
-    CreateTransit,
+    CreateTransit {
+        /// Seed
+        seed: String,
+    },
 
     /// Computing rebalancing steps and updating the liquidity on the transit account
     ///
@@ -146,9 +149,11 @@ pub fn create_transit(
     depositor: &Pubkey,
     mint: &Pubkey,
     from: &Pubkey,
+    seed: Option<String>,
 ) -> Instruction {
+    let seed = seed.unwrap_or_default();
     let (depositor_authority, _) = find_program_address(program_id, depositor);
-    let (transit, _) = find_transit_program_address(program_id, depositor, mint);
+    let (transit, _) = find_transit_program_address(program_id, depositor, mint, &seed);
 
     let accounts = vec![
         AccountMeta::new_readonly(*depositor, false),
@@ -161,7 +166,11 @@ pub fn create_transit(
         AccountMeta::new_readonly(spl_token::id(), false),
     ];
 
-    Instruction::new_with_borsh(*program_id, &DepositorInstruction::CreateTransit, accounts)
+    Instruction::new_with_borsh(
+        *program_id,
+        &DepositorInstruction::CreateTransit { seed },
+        accounts,
+    )
 }
 
 /// Creates 'StartRebalancing' instruction.
@@ -206,7 +215,7 @@ pub fn start_rebalancing(
         mint,
     );
 
-    let (liquidity_transit, _) = find_transit_program_address(program_id, depositor, mint);
+    let (liquidity_transit, _) = find_transit_program_address(program_id, depositor, mint, "");
 
     let accounts = vec![
         AccountMeta::new_readonly(registry_config, false),
@@ -266,11 +275,11 @@ pub fn deposit(
     );
 
     let (liquidity_transit, _) =
-        find_transit_program_address(program_id, depositor, liquidity_mint);
+        find_transit_program_address(program_id, depositor, liquidity_mint, "");
     let (collateral_transit, _) =
-        find_transit_program_address(program_id, depositor, collateral_mint);
+        find_transit_program_address(program_id, depositor, collateral_mint, "");
     let (mm_pool_collateral_transit, _) =
-        find_transit_program_address(program_id, depositor, mm_pool_collateral_mint);
+        find_transit_program_address(program_id, depositor, mm_pool_collateral_mint, "");
 
     let mut accounts = vec![
         AccountMeta::new_readonly(registry_config, false),
@@ -339,11 +348,14 @@ pub fn withdraw(
     );
 
     let (collateral_transit, _) =
-        find_transit_program_address(program_id, depositor, collateral_mint);
+        find_transit_program_address(program_id, depositor, collateral_mint, "");
     let (liquidity_transit, _) =
-        find_transit_program_address(program_id, depositor, liquidity_mint);
+        find_transit_program_address(program_id, depositor, liquidity_mint, "");
     let (mm_pool_collateral_transit, _) =
-        find_transit_program_address(program_id, depositor, mm_pool_collateral_mint);
+        find_transit_program_address(program_id, depositor, mm_pool_collateral_mint, "");
+
+    let (liquidity_reserve_transit, _) =
+        find_transit_program_address(program_id, depositor, liquidity_mint, "reserve");
 
     let mut accounts = vec![
         AccountMeta::new_readonly(registry_config, false),
@@ -365,6 +377,7 @@ pub fn withdraw(
         AccountMeta::new(collateral_transit, false),
         AccountMeta::new(*collateral_mint, false),
         AccountMeta::new(liquidity_transit, false),
+        AccountMeta::new(liquidity_reserve_transit, false),
         AccountMeta::new_readonly(*liquidity_mint, false),
         // Programs
         AccountMeta::new_readonly(sysvar::clock::id(), false),

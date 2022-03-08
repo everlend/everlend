@@ -99,7 +99,7 @@ async fn setup() -> (
 
     // 4.1 Create transit account for liquidity token
     test_depositor
-        .create_transit(&mut context, &general_pool.token_mint_pubkey)
+        .create_transit(&mut context, &general_pool.token_mint_pubkey, None)
         .await
         .unwrap();
 

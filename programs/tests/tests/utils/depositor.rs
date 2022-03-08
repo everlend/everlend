@@ -84,6 +84,7 @@ impl TestDepositor {
         &self,
         context: &mut ProgramTestContext,
         token_mint: &Pubkey,
+        seed: Option<String>,
     ) -> transport::Result<()> {
         let tx = Transaction::new_signed_with_payer(
             &[everlend_depositor::instruction::create_transit(
@@ -91,6 +92,7 @@ impl TestDepositor {
                 &self.depositor.pubkey(),
                 token_mint,
                 &context.payer.pubkey(),
+                seed,
             )],
             Some(&context.payer.pubkey()),
             &[&context.payer],

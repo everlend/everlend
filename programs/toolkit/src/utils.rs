@@ -2,7 +2,7 @@ use solana_client::{client_error::ClientError, rpc_client::RpcClient};
 use solana_program::pubkey::Pubkey;
 use solana_sdk::{signature::Signature, signer::Signer, transaction::Transaction};
 
-pub const SUPPORTED_MINTS: &[&str] = &["SOL", "USDC", "USDT"];
+// pub const SUPPORTED_MINTS: &[&str] = &["SOL", "USDC", "USDT"];
 
 pub const SOL_MINT: &str = "So11111111111111111111111111111111111111112";
 pub const USDC_MINT: &str = "G6YKv19AeGZ6pUYUwY9D7n4Ry9ESNFa376YqwEkUkhbi";
@@ -74,4 +74,28 @@ pub fn spl_create_associated_token_account(
         spl_associated_token_account::get_associated_token_address(wallet, mint);
 
     Ok(associated_token_address)
+}
+
+pub fn spl_token_transfer(
+    config: &Config,
+    source_pubkey: &Pubkey,
+    destination_pubkey: &Pubkey,
+    amount: u64,
+) -> Result<(), ClientError> {
+    let tx = Transaction::new_with_payer(
+        &[spl_token::instruction::transfer(
+            &spl_token::id(),
+            source_pubkey,
+            destination_pubkey,
+            &config.fee_payer.pubkey(),
+            &[],
+            amount,
+        )
+        .unwrap()],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
+
+    Ok(())
 }

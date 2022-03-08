@@ -7,7 +7,6 @@ use crate::{
     instruction::DepositorInstruction,
     state::{
         Depositor, InitDepositorParams, InitRebalancingParams, Rebalancing, RebalancingOperation,
-        RESERVED_LEAKED,
     },
     utils::{money_market_deposit, money_market_redeem},
 };
@@ -77,7 +76,11 @@ impl Processor {
     }
 
     /// Process CreateTransit instruction
-    pub fn create_transit(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+    pub fn create_transit(
+        program_id: &Pubkey,
+        seed: String,
+        accounts: &[AccountInfo],
+    ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
 
         let depositor_info = next_account_info(account_info_iter)?;
@@ -98,10 +101,11 @@ impl Processor {
 
         // Create transit account for SPL program
         let (transit_pubkey, bump_seed) =
-            find_transit_program_address(program_id, depositor_info.key, mint_info.key);
+            find_transit_program_address(program_id, depositor_info.key, mint_info.key, &seed);
         assert_account_key(transit_info, &transit_pubkey)?;
 
         let signers_seeds = &[
+            seed.as_bytes(),
             &depositor_info.key.to_bytes()[..32],
             &mint_info.key.to_bytes()[..32],
             &[bump_seed],
@@ -253,48 +257,26 @@ impl Processor {
             .saturating_sub(rebalancing.unused_liquidity()?);
         msg!("liquidity_transit_supply = {:?}", liquidity_transit_supply);
 
-        // Reserved lamports for leaking
-        // How many lamports do we need to borrow to transit account for leaked
-        // From 0 to 10
-        let leakage_reserve_compensation =
-            rebalancing.leakage_reserve_compensation(liquidity_transit_supply);
-        msg!(
-            "leakage_reserve_compensation = {:?}",
-            leakage_reserve_compensation
-        );
-
-        // How many lamports are already released to repay to the general pool
-        // Considering the reservation for leakage (10 + 10)
-        let released_liquidity_transit_supply =
-            liquidity_transit_supply.saturating_sub(RESERVED_LEAKED * 2);
-
-        let withdrawal_requests_compensation = rebalancing.withdrawal_requests_compensation(
-            released_liquidity_transit_supply,
-            withdrawal_requests.liquidity_supply,
-        );
+        let release_withdrawal_requests_amount = withdrawal_requests
+            .liquidity_supply
+            .saturating_sub(liquidity_transit_supply);
 
         let new_distributed_liquidity = general_pool_token_account
             .amount
             .checked_add(rebalancing.distributed_liquidity)
             .ok_or(EverlendError::MathOverflow)?
-            .checked_sub(withdrawal_requests_compensation)
-            .ok_or(EverlendError::MathOverflow)?
-            .checked_sub(leakage_reserve_compensation.0)
+            .checked_sub(release_withdrawal_requests_amount)
             .ok_or(EverlendError::MathOverflow)?;
         msg!(
             "new_distributed_liquidity = {:?}",
             new_distributed_liquidity
         );
 
-        let borrow_amount = new_distributed_liquidity
-            .saturating_sub(rebalancing.distributed_liquidity)
-            .checked_add(leakage_reserve_compensation.1)
-            .ok_or(EverlendError::MathOverflow)?;
-
+        let borrow_amount =
+            new_distributed_liquidity.saturating_sub(rebalancing.distributed_liquidity);
         let amount = (borrow_amount as i64)
-            .checked_sub(released_liquidity_transit_supply as i64)
+            .checked_sub(liquidity_transit_supply as i64)
             .ok_or(EverlendError::MathOverflow)?;
-
         msg!("amount = {:?}", amount);
 
         let (depositor_authority_pubkey, bump_seed) =
@@ -471,6 +453,7 @@ impl Processor {
         let collateral_transit_info = next_account_info(account_info_iter)?;
         let collateral_mint_info = next_account_info(account_info_iter)?;
         let liquidity_transit_info = next_account_info(account_info_iter)?;
+        let liquidity_reserve_transit_info = next_account_info(account_info_iter)?;
         let liquidity_mint_info = next_account_info(account_info_iter)?;
 
         let clock_info = next_account_info(account_info_iter)?;
@@ -558,18 +541,30 @@ impl Processor {
         msg!("Income amount: {}", income_amount);
 
         // Deposit to income pool if income amount > 0
-        if income_amount > 0 {
-            everlend_income_pools::cpi::deposit(
-                income_pool_market_info.clone(),
-                income_pool_info.clone(),
-                liquidity_transit_info.clone(),
-                income_pool_token_account_info.clone(),
-                depositor_authority_info.clone(),
-                income_amount as u64,
-                &[signers_seeds],
-            )?;
-        } else {
-            msg!("Leaked!");
+        match income_amount.cmp(&0) {
+            Ordering::Greater => {
+                everlend_income_pools::cpi::deposit(
+                    income_pool_market_info.clone(),
+                    income_pool_info.clone(),
+                    liquidity_transit_info.clone(),
+                    income_pool_token_account_info.clone(),
+                    depositor_authority_info.clone(),
+                    income_amount as u64,
+                    &[signers_seeds],
+                )?;
+            }
+            Ordering::Less => {
+                cpi::spl_token::transfer(
+                    liquidity_reserve_transit_info.clone(),
+                    liquidity_transit_info.clone(),
+                    depositor_authority_info.clone(),
+                    income_amount
+                        .checked_abs()
+                        .ok_or(EverlendError::MathOverflow)? as u64,
+                    &[signers_seeds],
+                )?;
+            }
+            Ordering::Equal => {}
         }
 
         rebalancing.execute_step(RebalancingOperation::Withdraw, None, clock.slot)?;
@@ -593,9 +588,9 @@ impl Processor {
                 Self::init(program_id, accounts)
             }
 
-            DepositorInstruction::CreateTransit => {
+            DepositorInstruction::CreateTransit { seed } => {
                 msg!("DepositorInstruction: CreateTransit");
-                Self::create_transit(program_id, accounts)
+                Self::create_transit(program_id, seed, accounts)
             }
 
             DepositorInstruction::StartRebalancing => {

@@ -59,21 +59,27 @@ pub fn create_transit(
     config: &Config,
     depositor_pubkey: &Pubkey,
     token_mint: &Pubkey,
+    seed: Option<String>,
 ) -> Result<Pubkey, ClientError> {
+    let (transit_pubkey, _) = find_transit_program_address(
+        &everlend_depositor::id(),
+        depositor_pubkey,
+        token_mint,
+        &seed.clone().unwrap_or_default(),
+    );
+
     let tx = Transaction::new_with_payer(
         &[everlend_depositor::instruction::create_transit(
             &everlend_depositor::id(),
             depositor_pubkey,
             token_mint,
             &config.fee_payer.pubkey(),
+            seed,
         )],
         Some(&config.fee_payer.pubkey()),
     );
 
     sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
-
-    let (transit_pubkey, _) =
-        find_transit_program_address(&everlend_depositor::id(), depositor_pubkey, token_mint);
 
     Ok(transit_pubkey)
 }
