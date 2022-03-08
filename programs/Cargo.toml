@@ -1,17 +1,12 @@
 [workspace]
 members = [
   "utils",
-  "depositor/program",
-  "depositor/cli",
-  "ulp/program",
-  "ulp/cli",
-  "liquidity_oracle/program",
-  "general_pool/program",
-  "general_pool/cli",
-  "income_pools/program",
-  "income_pools/cli",
-  "registry/program",
-  "registry/cli",
+  "depositor",
+  "ulp",
+  "liquidity_oracle",
+  "general_pool",
+  "income_pools",
+  "registry",
   "tests",
   "toolkit",
 ]

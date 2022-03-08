@@ -979,25 +979,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "everlend-depositor-cli"
-version = "0.1.0"
-dependencies = [
- "bs58 0.2.5",
- "clap",
- "everlend-depositor",
- "everlend-registry",
- "everlend-utils",
- "solana-account-decoder",
- "solana-clap-utils",
- "solana-cli-config",
- "solana-client",
- "solana-logger",
- "solana-program",
- "solana-sdk",
- "spl-token 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "everlend-general-pool"
 version = "0.1.0"
 dependencies = [
@@ -1010,23 +991,6 @@ dependencies = [
  "solana-sdk",
  "spl-token 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror",
-]
-
-[[package]]
-name = "everlend-general-pool-cli"
-version = "0.1.0"
-dependencies = [
- "bs58 0.2.5",
- "clap",
- "everlend-general-pool",
- "solana-account-decoder",
- "solana-clap-utils",
- "solana-cli-config",
- "solana-client",
- "solana-logger",
- "solana-program",
- "solana-sdk",
- "spl-token 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1043,23 +1007,6 @@ dependencies = [
  "solana-sdk",
  "spl-token 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror",
-]
-
-[[package]]
-name = "everlend-income-pools-cli"
-version = "0.1.0"
-dependencies = [
- "bs58 0.2.5",
- "clap",
- "everlend-income-pools",
- "solana-account-decoder",
- "solana-clap-utils",
- "solana-cli-config",
- "solana-client",
- "solana-logger",
- "solana-program",
- "solana-sdk",
- "spl-token 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1089,29 +1036,6 @@ dependencies = [
  "solana-sdk",
  "spl-token 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror",
-]
-
-[[package]]
-name = "everlend-registry-cli"
-version = "0.1.0"
-dependencies = [
- "bs58 0.2.5",
- "clap",
- "everlend-depositor",
- "everlend-general-pool",
- "everlend-income-pools",
- "everlend-liquidity-oracle",
- "everlend-registry",
- "everlend-ulp",
- "everlend-utils",
- "solana-account-decoder",
- "solana-clap-utils",
- "solana-cli-config",
- "solana-client",
- "solana-logger",
- "solana-program",
- "solana-sdk",
- "spl-token 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1178,23 +1102,6 @@ dependencies = [
  "solana-sdk",
  "spl-token 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror",
-]
-
-[[package]]
-name = "everlend-ulp-cli"
-version = "0.1.0"
-dependencies = [
- "bs58 0.2.5",
- "clap",
- "everlend-ulp",
- "solana-account-decoder",
- "solana-clap-utils",
- "solana-cli-config",
- "solana-client",
- "solana-logger",
- "solana-program",
- "solana-sdk",
- "spl-token 3.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
