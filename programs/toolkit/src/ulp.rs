@@ -71,6 +71,14 @@ pub fn create_pool(
     println!("Token account: {}", &token_account.pubkey());
     println!("Pool mint: {}", &pool_mint.pubkey());
 
+    let account_info = config
+        .rpc_client
+        .get_account_with_commitment(&pool_pubkey, config.rpc_client.commitment())?
+        .value;
+    if account_info.is_some() {
+        return Ok((pool_pubkey, token_account.pubkey(), pool_mint.pubkey()));
+    }
+
     let token_account_balance = config
         .rpc_client
         .get_minimum_balance_for_rent_exemption(spl_token::state::Account::LEN)?;

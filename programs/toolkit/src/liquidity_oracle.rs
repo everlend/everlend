@@ -59,6 +59,20 @@ pub fn create_token_distribution(
     token_mint: &Pubkey,
     distribution: &DistributionArray,
 ) -> Result<Pubkey, ClientError> {
+    let (token_distribution_pubkey, _) = find_liquidity_oracle_token_distribution_program_address(
+        &everlend_liquidity_oracle::id(),
+        oracle_pubkey,
+        token_mint,
+    );
+
+    let account_info = config
+        .rpc_client
+        .get_account_with_commitment(&token_distribution_pubkey, config.rpc_client.commitment())?
+        .value;
+    if account_info.is_some() {
+        return Ok(token_distribution_pubkey);
+    }
+
     let tx = Transaction::new_with_payer(
         &[instruction::create_token_distribution(
             &everlend_liquidity_oracle::id(),
@@ -71,12 +85,6 @@ pub fn create_token_distribution(
     );
 
     sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
-
-    let (token_distribution_pubkey, _) = find_liquidity_oracle_token_distribution_program_address(
-        &everlend_liquidity_oracle::id(),
-        oracle_pubkey,
-        token_mint,
-    );
 
     Ok(token_distribution_pubkey)
 }

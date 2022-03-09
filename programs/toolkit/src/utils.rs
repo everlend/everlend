@@ -2,12 +2,22 @@ use solana_client::{client_error::ClientError, rpc_client::RpcClient};
 use solana_program::pubkey::Pubkey;
 use solana_sdk::{signature::Signature, signer::Signer, transaction::Transaction};
 
+use crate::accounts_config::{DefaultAccounts, InitializedAccounts};
+
 pub struct Config {
     pub rpc_client: RpcClient,
     pub verbose: bool,
     pub owner: Box<dyn Signer>,
     pub fee_payer: Box<dyn Signer>,
     pub network: String,
+}
+
+pub fn get_default_accounts(config: &Config) -> DefaultAccounts {
+    DefaultAccounts::load(&format!("default.{}.yaml", config.network)).unwrap_or_default()
+}
+
+pub fn get_initialized_accounts(config: &Config) -> InitializedAccounts {
+    InitializedAccounts::load(&format!("accounts.{}.yaml", config.network)).unwrap_or_default()
 }
 
 pub fn sign_and_send_and_confirm_transaction(
@@ -31,6 +41,17 @@ pub fn spl_create_associated_token_account(
     wallet: &Pubkey,
     mint: &Pubkey,
 ) -> Result<Pubkey, ClientError> {
+    let associated_token_address =
+        spl_associated_token_account::get_associated_token_address(wallet, mint);
+
+    let account_info = config
+        .rpc_client
+        .get_account_with_commitment(&associated_token_address, config.rpc_client.commitment())?
+        .value;
+    if account_info.is_some() {
+        return Ok(associated_token_address);
+    }
+
     let tx = Transaction::new_with_payer(
         &[
             spl_associated_token_account::create_associated_token_account(
@@ -43,9 +64,6 @@ pub fn spl_create_associated_token_account(
     );
 
     sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
-
-    let associated_token_address =
-        spl_associated_token_account::get_associated_token_address(wallet, mint);
 
     Ok(associated_token_address)
 }

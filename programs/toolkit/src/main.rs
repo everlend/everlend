@@ -8,7 +8,9 @@ mod ulp;
 mod utils;
 
 use accounts_config::*;
-use clap::{crate_description, crate_name, crate_version, App, AppSettings, Arg, SubCommand};
+use clap::{
+    crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
+};
 use everlend_depositor::{
     find_rebalancing_program_address,
     state::{Rebalancing, RebalancingOperation},
@@ -18,17 +20,17 @@ use everlend_registry::{
     find_config_program_address,
     state::{RegistryConfig, SetRegistryConfigParams, TOTAL_DISTRIBUTIONS},
 };
-use everlend_utils::integrations::{self, MoneyMarketPubkeys};
+use everlend_utils::integrations::{self, MoneyMarket, MoneyMarketPubkeys};
 use solana_account_decoder::parse_token::UiTokenAmount;
 use solana_clap_utils::{
     fee_payer::fee_payer_arg,
-    input_parsers::value_of,
-    input_validators::{is_keypair, normalize_to_url_if_moniker},
+    input_parsers::{keypair_of, value_of},
+    input_validators::is_keypair,
     keypair::signer_from_path,
 };
 use solana_client::rpc_client::RpcClient;
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
-use solana_sdk::commitment_config::CommitmentConfig;
+use solana_sdk::{commitment_config::CommitmentConfig, signature::Keypair};
 use spl_associated_token_account::get_associated_token_address;
 use std::{collections::HashMap, process::exit};
 use utils::*;
@@ -45,6 +47,300 @@ macro_rules! distribution {
     }};
 }
 
+async fn command_create_registry(config: &Config, keypair: Option<Keypair>) -> anyhow::Result<()> {
+    let payer_pubkey = config.fee_payer.pubkey();
+    println!("Fee payer: {}", payer_pubkey);
+
+    let default_accounts = get_default_accounts(config);
+    let mut initialiazed_accounts = get_initialized_accounts(config);
+
+    let port_finance_program_id = default_accounts.port_finance_program_id;
+    let larix_program_id = default_accounts.larix_program_id;
+
+    let registry_pubkey = registry::init(config, keypair)?;
+    let mut registry_config = SetRegistryConfigParams {
+        general_pool_program_id: everlend_general_pool::id(),
+        ulp_program_id: everlend_ulp::id(),
+        liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
+        depositor_program_id: everlend_depositor::id(),
+        income_pools_program_id: everlend_income_pools::id(),
+        money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
+    };
+    registry_config.money_market_program_ids[0] = port_finance_program_id;
+    registry_config.money_market_program_ids[1] = larix_program_id;
+
+    println!("registry_config = {:#?}", registry_config);
+
+    registry::set_registry_config(config, &registry_pubkey, registry_config)?;
+
+    initialiazed_accounts.payer = payer_pubkey;
+    initialiazed_accounts.registry = registry_pubkey;
+
+    initialiazed_accounts
+        .save(&format!("accounts.{}.yaml", config.network))
+        .unwrap();
+
+    Ok(())
+}
+
+async fn command_create_general_pool_market(
+    config: &Config,
+    keypair: Option<Keypair>,
+) -> anyhow::Result<()> {
+    let mut initialiazed_accounts = get_initialized_accounts(config);
+
+    let general_pool_market_pubkey = general_pool::create_market(config, keypair)?;
+
+    initialiazed_accounts.general_pool_market = general_pool_market_pubkey;
+
+    initialiazed_accounts
+        .save(&format!("accounts.{}.yaml", config.network))
+        .unwrap();
+
+    Ok(())
+}
+
+async fn command_create_income_pool_market(
+    config: &Config,
+    keypair: Option<Keypair>,
+) -> anyhow::Result<()> {
+    let mut initialiazed_accounts = get_initialized_accounts(config);
+
+    let income_pool_market_pubkey =
+        income_pools::create_market(config, keypair, &initialiazed_accounts.general_pool_market)?;
+
+    initialiazed_accounts.income_pool_market = income_pool_market_pubkey;
+
+    initialiazed_accounts
+        .save(&format!("accounts.{}.yaml", config.network))
+        .unwrap();
+
+    Ok(())
+}
+
+async fn command_create_mm_pool_market(
+    config: &Config,
+    keypair: Option<Keypair>,
+    money_market: MoneyMarket,
+) -> anyhow::Result<()> {
+    let mut initialiazed_accounts = get_initialized_accounts(config);
+
+    let mm_pool_market_pubkey = ulp::create_market(config, keypair)?;
+
+    initialiazed_accounts.mm_pool_markets[money_market as usize] = mm_pool_market_pubkey;
+
+    initialiazed_accounts
+        .save(&format!("accounts.{}.yaml", config.network))
+        .unwrap();
+
+    Ok(())
+}
+
+async fn command_create_liquidity_oracle(
+    config: &Config,
+    keypair: Option<Keypair>,
+) -> anyhow::Result<()> {
+    let mut initialiazed_accounts = get_initialized_accounts(config);
+
+    let liquidity_oracle_pubkey = liquidity_oracle::init(config, keypair)?;
+
+    initialiazed_accounts.liquidity_oracle = liquidity_oracle_pubkey;
+
+    initialiazed_accounts
+        .save(&format!("accounts.{}.yaml", config.network))
+        .unwrap();
+
+    Ok(())
+}
+
+async fn command_create_depositor(config: &Config, keypair: Option<Keypair>) -> anyhow::Result<()> {
+    let mut initialiazed_accounts = get_initialized_accounts(config);
+
+    let depositor_pubkey = depositor::init(
+        config,
+        &initialiazed_accounts.registry,
+        keypair,
+        &initialiazed_accounts.general_pool_market,
+        &initialiazed_accounts.income_pool_market,
+        &initialiazed_accounts.liquidity_oracle,
+    )?;
+
+    initialiazed_accounts.depositor = depositor_pubkey;
+
+    initialiazed_accounts
+        .save(&format!("accounts.{}.yaml", config.network))
+        .unwrap();
+
+    Ok(())
+}
+
+async fn command_create_token_accounts(
+    config: &Config,
+    required_mints: Vec<&str>,
+) -> anyhow::Result<()> {
+    let payer_pubkey = config.fee_payer.pubkey();
+    let default_accounts = get_default_accounts(config);
+    let mut initialiazed_accounts = get_initialized_accounts(config);
+
+    let mint_map = HashMap::from([
+        ("SOL".to_string(), default_accounts.sol_mint),
+        ("USDC".to_string(), default_accounts.usdc_mint),
+        ("USDT".to_string(), default_accounts.usdt_mint),
+    ]);
+
+    let collateral_mint_map = HashMap::from([
+        ("SOL".to_string(), default_accounts.sol_collateral),
+        ("USDC".to_string(), default_accounts.usdc_collateral),
+        ("USDT".to_string(), default_accounts.usdt_collateral),
+    ]);
+
+    let mut distribution = DistributionArray::default();
+    distribution[0] = 0;
+    distribution[1] = 0;
+
+    println!("Prepare borrow authority");
+    let (depositor_authority, _) = &everlend_utils::find_program_address(
+        &everlend_depositor::id(),
+        &initialiazed_accounts.depositor,
+    );
+
+    for key in required_mints {
+        let mint = mint_map.get(key).unwrap();
+        let collateral_mints = collateral_mint_map.get(key).unwrap();
+
+        println!("General pool");
+        let (general_pool_pubkey, general_pool_token_account, general_pool_mint) =
+            general_pool::create_pool(config, &initialiazed_accounts.general_pool_market, mint)?;
+
+        println!("Payer token account");
+        let token_account = get_associated_token_address(&payer_pubkey, mint);
+        println!("Payer pool account");
+        // let pool_account = get_associated_token_address(&payer_pubkey, &general_pool_mint);
+        let pool_account =
+            spl_create_associated_token_account(config, &payer_pubkey, &general_pool_mint)?;
+
+        println!("Income pool");
+        let (income_pool_pubkey, income_pool_token_account) =
+            income_pools::create_pool(config, &initialiazed_accounts.income_pool_market, mint)?;
+
+        // MM Pools
+        println!("MM Pool: Port Finance");
+        let (
+            port_finance_mm_pool_pubkey,
+            port_finance_mm_pool_token_account,
+            port_finance_mm_pool_mint,
+        ) = ulp::create_pool(
+            config,
+            &initialiazed_accounts.mm_pool_markets[0],
+            &collateral_mints[0],
+        )?;
+
+        println!("MM Pool: Larix");
+        let (larix_mm_pool_pubkey, larix_mm_pool_token_account, larix_mm_pool_mint) =
+            ulp::create_pool(
+                config,
+                &initialiazed_accounts.mm_pool_markets[1],
+                &collateral_mints[1],
+            )?;
+
+        liquidity_oracle::create_token_distribution(
+            config,
+            &initialiazed_accounts.liquidity_oracle,
+            mint,
+            &distribution,
+        )?;
+
+        // Transit accounts
+        let liquidity_transit_pubkey =
+            depositor::create_transit(config, &initialiazed_accounts.depositor, mint, None)?;
+
+        // Reserve
+        println!("Reserve transit");
+        let liquidity_reserve_transit_pubkey = depositor::create_transit(
+            config,
+            &initialiazed_accounts.depositor,
+            mint,
+            Some("reserve".to_string()),
+        )?;
+        // spl_token_transfer(
+        //     config,
+        //     &token_account,
+        //     &liquidity_reserve_transit_pubkey,
+        //     10000,
+        // )?;
+
+        depositor::create_transit(
+            config,
+            &initialiazed_accounts.depositor,
+            &collateral_mints[0],
+            None,
+        )?;
+        depositor::create_transit(
+            config,
+            &initialiazed_accounts.depositor,
+            &collateral_mints[1],
+            None,
+        )?;
+
+        depositor::create_transit(
+            config,
+            &initialiazed_accounts.depositor,
+            &port_finance_mm_pool_mint,
+            None,
+        )?;
+        depositor::create_transit(
+            config,
+            &initialiazed_accounts.depositor,
+            &larix_mm_pool_mint,
+            None,
+        )?;
+
+        // Borrow authorities
+        general_pool::create_pool_borrow_authority(
+            config,
+            &initialiazed_accounts.general_pool_market,
+            &general_pool_pubkey,
+            depositor_authority,
+            10_000, // 100%
+        )?;
+
+        initialiazed_accounts.token_accounts.insert(
+            key.to_string(),
+            TokenAccounts {
+                mint: *mint,
+                liquidity_token_account: token_account,
+                collateral_token_account: pool_account,
+                general_pool: general_pool_pubkey,
+                general_pool_token_account,
+                general_pool_mint,
+                income_pool: income_pool_pubkey,
+                income_pool_token_account,
+                mm_pools: vec![
+                    MoneyMarketAccounts {
+                        pool: port_finance_mm_pool_pubkey,
+                        pool_token_account: port_finance_mm_pool_token_account,
+                        token_mint: collateral_mints[0],
+                        pool_mint: port_finance_mm_pool_mint,
+                    },
+                    MoneyMarketAccounts {
+                        pool: larix_mm_pool_pubkey,
+                        pool_token_account: larix_mm_pool_token_account,
+                        token_mint: collateral_mints[1],
+                        pool_mint: larix_mm_pool_mint,
+                    },
+                ],
+                liquidity_transit: liquidity_transit_pubkey,
+            },
+        );
+    }
+
+    initialiazed_accounts
+        .save(&format!("accounts.{}.yaml", config.network))
+        .unwrap();
+
+    Ok(())
+}
+
 async fn command_create(
     config: &Config,
     accounts_path: &str,
@@ -53,8 +349,7 @@ async fn command_create(
     let payer_pubkey = config.fee_payer.pubkey();
     println!("Fee payer: {}", payer_pubkey);
 
-    let default_accounts =
-        DefaultAccounts::load(&format!("default.{}.yaml", config.network)).unwrap_or_default();
+    let default_accounts = get_default_accounts(config);
 
     let mint_map = HashMap::from([
         ("SOL".to_string(), default_accounts.sol_mint),
@@ -239,8 +534,7 @@ async fn command_create(
 
 async fn command_info(config: &Config, accounts_path: &str) -> anyhow::Result<()> {
     let initialiazed_accounts = InitializedAccounts::load(accounts_path).unwrap_or_default();
-    let default_accounts =
-        DefaultAccounts::load(&format!("default.{}.yaml", config.network)).unwrap_or_default();
+    let default_accounts = get_default_accounts(config);
 
     println!("network: {:?}", config.network);
     println!("fee_payer: {:?}", config.fee_payer.pubkey());
@@ -257,8 +551,7 @@ async fn command_run_test(
 ) -> anyhow::Result<()> {
     println!("Run {:?}", case);
 
-    let default_accounts =
-        DefaultAccounts::load(&format!("default.{}.yaml", config.network)).unwrap_or_default();
+    let default_accounts = get_default_accounts(config);
     let initialiazed_accounts = InitializedAccounts::load(accounts_path).unwrap_or_default();
 
     let InitializedAccounts {
@@ -700,6 +993,100 @@ async fn main() -> anyhow::Result<()> {
         )
         .arg(fee_payer_arg().global(true))
         .subcommand(
+            SubCommand::with_name("create-registry")
+                .about("Create a new registry")
+                .arg(
+                    Arg::with_name("keypair")
+                        .long("keypair")
+                        .validator(is_keypair)
+                        .value_name("KEYPAIR")
+                        .takes_value(true)
+                        .help("Keypair [default: new keypair]"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("create-general-pool-market")
+                .about("Create a new general pool market")
+                .arg(
+                    Arg::with_name("keypair")
+                        .long("keypair")
+                        .validator(is_keypair)
+                        .value_name("KEYPAIR")
+                        .takes_value(true)
+                        .help("Keypair [default: new keypair]"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("create-income-pool-market")
+                .about("Create a new income pool market")
+                .arg(
+                    Arg::with_name("keypair")
+                        .validator(is_keypair)
+                        .long("keypair")
+                        .value_name("KEYPAIR")
+                        .takes_value(true)
+                        .help("Keypair [default: new keypair]"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("create-mm-pool-market")
+                .about("Create a new MM pool market")
+                .arg(
+                    Arg::with_name("money-market")
+                        .short("mm")
+                        .long("money-market")
+                        .value_name("NUMBER")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Money market index"),
+                )
+                .arg(
+                    Arg::with_name("keypair")
+                        .long("keypair")
+                        .validator(is_keypair)
+                        .value_name("KEYPAIR")
+                        .takes_value(true)
+                        .help("Keypair [default: new keypair]"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("create-liquidity-oracle")
+                .about("Create a new liquidity oracle")
+                .arg(
+                    Arg::with_name("keypair")
+                        .long("keypair")
+                        .validator(is_keypair)
+                        .value_name("KEYPAIR")
+                        .takes_value(true)
+                        .help("Keypair [default: new keypair]"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("create-depositor")
+                .about("Create a new depositor")
+                .arg(
+                    Arg::with_name("keypair")
+                        .long("keypair")
+                        .validator(is_keypair)
+                        .value_name("KEYPAIR")
+                        .takes_value(true)
+                        .help("Keypair [default: new keypair]"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("create-token-accounts")
+                .about("Create a new token accounts")
+                .arg(
+                    Arg::with_name("mints")
+                        .multiple(true)
+                        .long("mints")
+                        .short("m")
+                        .required(true)
+                        .min_values(1)
+                        .takes_value(true),
+                ),
+        )
+        .subcommand(
             SubCommand::with_name("create")
                 .about("Create a new accounts")
                 .arg(
@@ -756,13 +1143,15 @@ async fn main() -> anyhow::Result<()> {
     let mut wallet_manager = None;
     let config = {
         let cli_config = if let Some(config_file) = matches.value_of("config_file") {
+            println!("config_file = {:?}", config_file);
             solana_cli_config::Config::load(config_file).unwrap_or_default()
         } else {
             solana_cli_config::Config::default()
         };
 
         let network = matches.value_of("network").unwrap();
-        let json_rpc_url = normalize_to_url_if_moniker(network);
+        let json_rpc_url = value_t!(matches, "json_rpc_url", String)
+            .unwrap_or_else(|_| cli_config.json_rpc_url.clone());
 
         let owner = signer_from_path(
             &matches,
@@ -804,6 +1193,35 @@ async fn main() -> anyhow::Result<()> {
     solana_logger::setup_with_default("solana=info");
 
     let _ = match matches.subcommand() {
+        ("create-registry", Some(arg_matches)) => {
+            let keypair = keypair_of(arg_matches, "keypair");
+            command_create_registry(&config, keypair).await
+        }
+        ("create-general-pool-market", Some(arg_matches)) => {
+            let keypair = keypair_of(arg_matches, "keypair");
+            command_create_general_pool_market(&config, keypair).await
+        }
+        ("create-income-pool-market", Some(arg_matches)) => {
+            let keypair = keypair_of(arg_matches, "keypair");
+            command_create_income_pool_market(&config, keypair).await
+        }
+        ("create-mm-pool-market", Some(arg_matches)) => {
+            let keypair = keypair_of(arg_matches, "keypair");
+            let money_market = value_of::<usize>(arg_matches, "money-market").unwrap();
+            command_create_mm_pool_market(&config, keypair, MoneyMarket::from(money_market)).await
+        }
+        ("create-liquidity-oracle", Some(arg_matches)) => {
+            let keypair = keypair_of(arg_matches, "keypair");
+            command_create_liquidity_oracle(&config, keypair).await
+        }
+        ("create-depositor", Some(arg_matches)) => {
+            let keypair = keypair_of(arg_matches, "keypair");
+            command_create_depositor(&config, keypair).await
+        }
+        ("create-token-accounts", Some(arg_matches)) => {
+            let mints: Vec<_> = arg_matches.values_of("mints").unwrap().collect();
+            command_create_token_accounts(&config, mints).await
+        }
         ("create", Some(arg_matches)) => {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
             let mints: Vec<_> = arg_matches.values_of("mints").unwrap().collect();

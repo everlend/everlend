@@ -78,6 +78,14 @@ pub fn create_transit(
         &seed.clone().unwrap_or_default(),
     );
 
+    let account_info = config
+        .rpc_client
+        .get_account_with_commitment(&transit_pubkey, config.rpc_client.commitment())?
+        .value;
+    if account_info.is_some() {
+        return Ok(transit_pubkey);
+    }
+
     let tx = Transaction::new_with_payer(
         &[everlend_depositor::instruction::create_transit(
             &everlend_depositor::id(),
