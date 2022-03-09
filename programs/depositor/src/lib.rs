@@ -14,7 +14,7 @@ pub mod entrypoint;
 pub use solana_program;
 use solana_program::pubkey::Pubkey;
 
-solana_program::declare_id!("A3oFe74to7813qF5KhjTJeR4eTFZYKduXipV62tVZouC");
+solana_program::declare_id!("DepSR26sqzN67TNf1aZ3VCjTPduzKKqTEY8QQkk3KwEz");
 
 /// Generates transit address
 pub fn find_transit_program_address(

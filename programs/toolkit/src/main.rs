@@ -84,6 +84,8 @@ async fn command_create(
     registry_config.money_market_program_ids[0] = port_finance_program_id;
     registry_config.money_market_program_ids[1] = larix_program_id;
 
+    println!("registry_config = {:#?}", registry_config);
+
     registry::set_registry_config(config, &registry_pubkey, registry_config)?;
 
     let general_pool_market_pubkey = general_pool::create_market(config, None)?;

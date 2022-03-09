@@ -15,7 +15,7 @@ pub mod entrypoint;
 pub use solana_program;
 use solana_program::pubkey::Pubkey;
 
-solana_program::declare_id!("EzDzLfEtcDHfKduQ7pu36rUM2FWfDCLkifp2pzcmGM3p");
+solana_program::declare_id!("GenUMNGcWca1GiPLfg89698Gfys1dzk9BAGsyb9aEL2u");
 
 /// Generates pool address
 pub fn find_pool_program_address(

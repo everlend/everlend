@@ -10,5 +10,5 @@ export enum AccountType {
 }
 
 export class GeneralPoolsProgram extends Program {
-  static readonly PUBKEY = new PublicKey('EzDzLfEtcDHfKduQ7pu36rUM2FWfDCLkifp2pzcmGM3p')
+  static readonly PUBKEY = new PublicKey('GenUMNGcWca1GiPLfg89698Gfys1dzk9BAGsyb9aEL2u')
 }

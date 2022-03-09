@@ -9,5 +9,5 @@ export enum AccountType {
 }
 
 export class LiquidityPoolsProgram extends Program {
-  static readonly PUBKEY = new PublicKey('sFPqhpo9CJ4sCMPwsaZwmC25WERMW27x1M1be3DY5BM')
+  static readonly PUBKEY = new PublicKey('ULPo9DYcrWaAG9XGPwDoLP52qgzfaxKq1QConw2AQV6')
 }

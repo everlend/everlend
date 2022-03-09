@@ -13,7 +13,7 @@ pub mod entrypoint;
 pub use solana_program;
 use solana_program::pubkey::Pubkey;
 
-solana_program::declare_id!("EiMuP7K13nrYGwnKB63Fig8uCjJqCpUsY4q5BneRNjcZ");
+solana_program::declare_id!("RegYdXL5fJF247zmeLSXXiUPjhpn4TMYLr94QRqkN8P");
 
 /// Generates config address
 pub fn find_config_program_address(program_id: &Pubkey, registry: &Pubkey) -> (Pubkey, u8) {
