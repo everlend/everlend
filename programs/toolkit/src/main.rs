@@ -25,7 +25,7 @@ use solana_account_decoder::parse_token::UiTokenAmount;
 use solana_clap_utils::{
     fee_payer::fee_payer_arg,
     input_parsers::{keypair_of, value_of},
-    input_validators::is_keypair,
+    input_validators::{is_amount, is_keypair},
     keypair::signer_from_path,
 };
 use solana_client::rpc_client::RpcClient;
@@ -337,6 +337,46 @@ async fn command_create_token_accounts(
     initialiazed_accounts
         .save(&format!("accounts.{}.yaml", config.network))
         .unwrap();
+
+    Ok(())
+}
+
+async fn command_add_reserve_liquidity(
+    config: &Config,
+    mint_key: &str,
+    amount: u64,
+) -> anyhow::Result<()> {
+    let payer_pubkey = config.fee_payer.pubkey();
+    let default_accounts = get_default_accounts(config);
+    let initialiazed_accounts = get_initialized_accounts(config);
+
+    let mint_map = HashMap::from([
+        ("SOL".to_string(), default_accounts.sol_mint),
+        ("USDC".to_string(), default_accounts.usdc_mint),
+        ("USDT".to_string(), default_accounts.usdt_mint),
+    ]);
+    let mint = mint_map.get(mint_key).unwrap();
+
+    let (liquidity_reserve_transit_pubkey, _) = everlend_depositor::find_transit_program_address(
+        &everlend_depositor::id(),
+        &initialiazed_accounts.depositor,
+        mint,
+        "reserve",
+    );
+
+    let token_account = get_associated_token_address(&payer_pubkey, mint);
+
+    println!(
+        "Transfer {} lamports of {} to reserve liquidity account",
+        amount, mint_key
+    );
+
+    spl_token_transfer(
+        config,
+        &token_account,
+        &liquidity_reserve_transit_pubkey,
+        amount,
+    )?;
 
     Ok(())
 }
@@ -1087,6 +1127,26 @@ async fn main() -> anyhow::Result<()> {
                 ),
         )
         .subcommand(
+            SubCommand::with_name("add-reserve-liquidity")
+                .about("Transfer liquidity to reserve account")
+                .arg(
+                    Arg::with_name("mint")
+                        .long("mint")
+                        .short("m")
+                        .required(true)
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("amount")
+                        .long("amount")
+                        .validator(is_amount)
+                        .value_name("NUMBER")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Liquidity amount"),
+                ),
+        )
+        .subcommand(
             SubCommand::with_name("create")
                 .about("Create a new accounts")
                 .arg(
@@ -1221,6 +1281,11 @@ async fn main() -> anyhow::Result<()> {
         ("create-token-accounts", Some(arg_matches)) => {
             let mints: Vec<_> = arg_matches.values_of("mints").unwrap().collect();
             command_create_token_accounts(&config, mints).await
+        }
+        ("add-reserve-liquidity", Some(arg_matches)) => {
+            let mint = arg_matches.value_of("mint").unwrap();
+            let amount = value_of::<u64>(arg_matches, "amount").unwrap();
+            command_add_reserve_liquidity(&config, mint, amount).await
         }
         ("create", Some(arg_matches)) => {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
