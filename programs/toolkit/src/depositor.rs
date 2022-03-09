@@ -7,7 +7,11 @@ use solana_client::client_error::ClientError;
 use solana_program::{
     instruction::AccountMeta, program_pack::Pack, pubkey::Pubkey, system_instruction,
 };
-use solana_sdk::{signature::Keypair, signer::Signer, transaction::Transaction};
+use solana_sdk::{
+    signature::{write_keypair_file, Keypair},
+    signer::Signer,
+    transaction::Transaction,
+};
 
 pub fn init(
     config: &Config,
@@ -51,6 +55,12 @@ pub fn init(
         tx,
         vec![config.fee_payer.as_ref(), &depositor_keypair],
     )?;
+
+    write_keypair_file(
+        &depositor_keypair,
+        &format!(".keypairs/{}.json", depositor_keypair.pubkey()),
+    )
+    .unwrap();
 
     Ok(depositor_keypair.pubkey())
 }

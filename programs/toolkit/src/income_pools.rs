@@ -2,7 +2,11 @@ use crate::utils::*;
 use everlend_income_pools::{instruction, state::IncomePoolMarket};
 use solana_client::client_error::ClientError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
-use solana_sdk::{signature::Keypair, signer::Signer, transaction::Transaction};
+use solana_sdk::{
+    signature::{write_keypair_file, Keypair},
+    signer::Signer,
+    transaction::Transaction,
+};
 
 pub fn create_market(
     config: &Config,
@@ -46,6 +50,12 @@ pub fn create_market(
         tx,
         vec![config.fee_payer.as_ref(), &income_pool_market_keypair],
     )?;
+
+    write_keypair_file(
+        &income_pool_market_keypair,
+        &format!(".keypairs/{}.json", income_pool_market_keypair.pubkey()),
+    )
+    .unwrap();
 
     Ok(income_pool_market_keypair.pubkey())
 }

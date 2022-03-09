@@ -6,7 +6,11 @@ use everlend_general_pool::{
 };
 use solana_client::client_error::ClientError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
-use solana_sdk::{signature::Keypair, signer::Signer, transaction::Transaction};
+use solana_sdk::{
+    signature::{write_keypair_file, Keypair},
+    signer::Signer,
+    transaction::Transaction,
+};
 
 pub fn create_market(
     config: &Config,
@@ -45,6 +49,12 @@ pub fn create_market(
         tx,
         vec![config.fee_payer.as_ref(), &pool_market_keypair],
     )?;
+
+    write_keypair_file(
+        &pool_market_keypair,
+        &format!(".keypairs/{}.json", pool_market_keypair.pubkey()),
+    )
+    .unwrap();
 
     Ok(pool_market_keypair.pubkey())
 }

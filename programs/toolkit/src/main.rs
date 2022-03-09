@@ -243,6 +243,7 @@ async fn command_info(config: &Config, accounts_path: &str) -> anyhow::Result<()
         DefaultAccounts::load(&format!("default.{}.yaml", config.network)).unwrap_or_default();
 
     println!("network: {:?}", config.network);
+    println!("fee_payer: {:?}", config.fee_payer.pubkey());
     println!("default_accounts = {:#?}", default_accounts);
     println!("{:#?}", initialiazed_accounts);
 
@@ -765,7 +766,9 @@ async fn main() -> anyhow::Result<()> {
 
         let owner = signer_from_path(
             &matches,
-            &cli_config.keypair_path,
+            matches
+                .value_of("owner")
+                .unwrap_or(&cli_config.keypair_path),
             "owner",
             &mut wallet_manager,
         )
@@ -776,7 +779,9 @@ async fn main() -> anyhow::Result<()> {
 
         let fee_payer = signer_from_path(
             &matches,
-            &cli_config.keypair_path,
+            matches
+                .value_of("fee_payer")
+                .unwrap_or(&cli_config.keypair_path),
             "fee_payer",
             &mut wallet_manager,
         )

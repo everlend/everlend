@@ -5,7 +5,11 @@ use everlend_liquidity_oracle::{
 };
 use solana_client::client_error::ClientError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
-use solana_sdk::{signature::Keypair, signer::Signer, transaction::Transaction};
+use solana_sdk::{
+    signature::{write_keypair_file, Keypair},
+    signer::Signer,
+    transaction::Transaction,
+};
 
 pub fn init(config: &Config, oracle_keypair: Option<Keypair>) -> Result<Pubkey, ClientError> {
     let oracle_keypair = oracle_keypair.unwrap_or_else(Keypair::new);
@@ -39,6 +43,12 @@ pub fn init(config: &Config, oracle_keypair: Option<Keypair>) -> Result<Pubkey, 
         tx,
         vec![config.fee_payer.as_ref(), &oracle_keypair],
     )?;
+
+    write_keypair_file(
+        &oracle_keypair,
+        &format!(".keypairs/{}.json", oracle_keypair.pubkey()),
+    )
+    .unwrap();
 
     Ok(oracle_keypair.pubkey())
 }
