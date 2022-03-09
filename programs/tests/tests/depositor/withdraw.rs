@@ -298,7 +298,7 @@ async fn success() {
         income_pool,
         mm_pool_market,
         mm_pool,
-        liquidity_provider,
+        _liquidity_provider,
         test_depositor,
     ) = setup().await;
 

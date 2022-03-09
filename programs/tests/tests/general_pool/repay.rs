@@ -8,6 +8,7 @@ use solana_program_test::*;
 use solana_sdk::{
     pubkey::Pubkey, signer::Signer, transaction::Transaction, transaction::TransactionError,
 };
+use spl_token::error::TokenError;
 
 async fn setup() -> (
     ProgramTestContext,
@@ -30,13 +31,23 @@ async fn setup() -> (
     let test_pool_borrow_authority =
         TestGeneralPoolBorrowAuthority::new(&test_pool, context.payer.pubkey());
     test_pool_borrow_authority
-        .create(&mut context, &test_pool_market, &test_pool, ULP_SHARE_ALLOWED)
+        .create(
+            &mut context,
+            &test_pool_market,
+            &test_pool,
+            ULP_SHARE_ALLOWED,
+        )
         .await
         .unwrap();
 
-    let user = add_liquidity_provider(&mut context, &test_pool.token_mint_pubkey, &test_pool.pool_mint.pubkey(), 101)
-        .await
-        .unwrap();
+    let user = add_liquidity_provider(
+        &mut context,
+        &test_pool.token_mint_pubkey,
+        &test_pool.pool_mint.pubkey(),
+        101,
+    )
+    .await
+    .unwrap();
 
     test_pool
         .deposit(&mut context, &test_pool_market, &user, 100)
@@ -145,10 +156,9 @@ async fn fail_with_invalid_pool_pubkey_argument() {
     let tx = Transaction::new_signed_with_payer(
         &[instruction::repay(
             &everlend_general_pool::id(),
-            // Wrong pool market pubkey
             &test_pool_market.keypair.pubkey(),
+            // Wrong pool pubkey
             &Pubkey::new_unique(),
-            // &test_pool.pool_pubkey,
             &test_pool_borrow_authority.pool_borrow_authority_pubkey,
             &user.token_account,
             &test_pool.token_account.pubkey(),
@@ -186,12 +196,10 @@ async fn fail_with_invalid_pool_borrow_authority_argument() {
     let tx = Transaction::new_signed_with_payer(
         &[instruction::repay(
             &everlend_general_pool::id(),
-            // Wrong pool market pubkey
             &test_pool_market.keypair.pubkey(),
-            // &Pubkey::new_unique(),
             &test_pool.pool_pubkey,
+            // Wrong pubkey
             &Pubkey::new_unique(),
-            // &test_pool_borrow_authority.pool_borrow_authority_pubkey,
             &user.token_account,
             &test_pool.token_account.pubkey(),
             &user.pubkey(),
@@ -318,6 +326,54 @@ async fn fail_with_invalid_repay_amount() {
         TransactionError::InstructionError(
             0,
             InstructionError::Custom(EverlendError::RepayAmountCheckFailed as u32)
+        )
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_source() {
+    let (mut context, test_pool_market, test_pool, test_pool_borrow_authority, user) =
+        setup().await;
+
+    let amount = 1;
+    let interest_amount = 1;
+
+    let wrong_user = add_liquidity_provider(
+        &mut context,
+        &test_pool.token_mint_pubkey,
+        &test_pool.pool_mint.pubkey(),
+        101,
+    )
+    .await
+    .unwrap();
+
+    let tx = Transaction::new_signed_with_payer(
+        &[instruction::repay(
+            &everlend_general_pool::id(),
+            &test_pool_market.keypair.pubkey(),
+            &test_pool.pool_pubkey,
+            &test_pool_borrow_authority.pool_borrow_authority_pubkey,
+            &wrong_user.token_account,
+            &test_pool.token_account.pubkey(),
+            &user.pubkey(),
+            amount,
+            interest_amount,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer, &user.owner],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(TokenError::OwnerMismatch as u32)
         )
     );
 }

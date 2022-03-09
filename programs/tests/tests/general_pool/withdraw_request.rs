@@ -1,10 +1,19 @@
 #![cfg(feature = "test-bpf")]
 
-use crate::utils::*;
-use everlend_general_pool::{find_transit_program_address, state::WithdrawalRequest};
 use solana_program::clock::Slot;
+use solana_program::instruction::InstructionError;
+use solana_program::pubkey::Pubkey;
 use solana_program_test::*;
+use solana_sdk::signature::Keypair;
 use solana_sdk::signer::Signer;
+use solana_sdk::transaction::{Transaction, TransactionError};
+
+use everlend_general_pool::{find_transit_program_address, instruction, state::WithdrawalRequest};
+use everlend_utils::EverlendError;
+
+use crate::utils::*;
+
+const WARP_SLOT: Slot = 3;
 
 async fn setup() -> (
     ProgramTestContext,
@@ -72,6 +81,8 @@ async fn success() {
         .await
         .unwrap();
 
+    context.warp_to_slot(WARP_SLOT + 5).unwrap();
+
     test_pool
         .withdraw_request(&mut context, &test_pool_market, &user, 50, 1)
         .await
@@ -117,7 +128,6 @@ async fn success() {
     );
 }
 
-const WARP_SLOT: Slot = 3;
 #[tokio::test]
 async fn success_few_requests() {
     let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
@@ -126,6 +136,8 @@ async fn success_few_requests() {
         .deposit(&mut context, &test_pool_market, &user, 100)
         .await
         .unwrap();
+
+    context.warp_to_slot(WARP_SLOT).unwrap();
 
     test_pool
         .withdraw_request(&mut context, &test_pool_market, &user, 50, 1)
@@ -202,4 +214,417 @@ async fn success_few_requests() {
             collateral_amount: 10,
         },
     );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_pool_market() {
+    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
+
+    test_pool
+        .deposit(&mut context, &test_pool_market, &user, 100)
+        .await
+        .unwrap();
+
+    context.warp_to_slot(WARP_SLOT + 5).unwrap();
+
+    let withdraw_amount = 50;
+    let withdraw_index = 1;
+
+    let tx = Transaction::new_signed_with_payer(
+        &[instruction::withdraw_request(
+            &everlend_general_pool::id(),
+            &Pubkey::new_unique(),
+            &test_pool.pool_pubkey,
+            &user.pool_account,
+            &user.token_account,
+            &test_pool.token_account.pubkey(),
+            &test_pool.token_mint_pubkey,
+            &test_pool.pool_mint.pubkey(),
+            &user.pubkey(),
+            withdraw_amount,
+            withdraw_index,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer, &user.owner],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32)
+        )
+    )
+}
+
+#[tokio::test]
+async fn fail_with_invalid_pool() {
+    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
+
+    test_pool
+        .deposit(&mut context, &test_pool_market, &user, 100)
+        .await
+        .unwrap();
+
+    context.warp_to_slot(WARP_SLOT + 5).unwrap();
+
+    let withdraw_amount = 50;
+    let withdraw_index = 1;
+
+    let tx = Transaction::new_signed_with_payer(
+        &[instruction::withdraw_request(
+            &everlend_general_pool::id(),
+            &test_pool_market.keypair.pubkey(),
+            &Pubkey::new_unique(),
+            &user.pool_account,
+            &user.token_account,
+            &test_pool.token_account.pubkey(),
+            &test_pool.token_mint_pubkey,
+            &test_pool.pool_mint.pubkey(),
+            &user.pubkey(),
+            withdraw_amount,
+            withdraw_index,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer, &user.owner],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32)
+        )
+    )
+}
+
+#[tokio::test]
+async fn fail_with_invalid_destination() {
+    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
+
+    test_pool
+        .deposit(&mut context, &test_pool_market, &user, 100)
+        .await
+        .unwrap();
+
+    context.warp_to_slot(WARP_SLOT + 5).unwrap();
+
+    let withdraw_amount = 50;
+    let withdraw_index = 1;
+
+    let tx = Transaction::new_signed_with_payer(
+        &[instruction::withdraw_request(
+            &everlend_general_pool::id(),
+            &test_pool_market.keypair.pubkey(),
+            &test_pool.pool_pubkey,
+            &user.pool_account,
+            &Pubkey::new_unique(),
+            &test_pool.token_account.pubkey(),
+            &test_pool.token_mint_pubkey,
+            &test_pool.pool_mint.pubkey(),
+            &user.pubkey(),
+            withdraw_amount,
+            withdraw_index,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer, &user.owner],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(0, InstructionError::InvalidAccountData)
+    )
+}
+
+#[tokio::test]
+async fn fail_with_invalid_token_account() {
+    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
+
+    test_pool
+        .deposit(&mut context, &test_pool_market, &user, 100)
+        .await
+        .unwrap();
+
+    context.warp_to_slot(WARP_SLOT + 5).unwrap();
+
+    let withdraw_amount = 50;
+    let withdraw_index = 1;
+
+    let tx = Transaction::new_signed_with_payer(
+        &[instruction::withdraw_request(
+            &everlend_general_pool::id(),
+            &test_pool_market.keypair.pubkey(),
+            &test_pool.pool_pubkey,
+            &user.pool_account,
+            &user.token_account,
+            &Pubkey::new_unique(),
+            &test_pool.token_mint_pubkey,
+            &test_pool.pool_mint.pubkey(),
+            &user.pubkey(),
+            withdraw_amount,
+            withdraw_index,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer, &user.owner],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
+    )
+}
+
+#[tokio::test]
+async fn fail_with_invalid_token_mint() {
+    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
+
+    test_pool
+        .deposit(&mut context, &test_pool_market, &user, 100)
+        .await
+        .unwrap();
+
+    context.warp_to_slot(WARP_SLOT + 5).unwrap();
+
+    let withdraw_amount = 50;
+    let withdraw_index = 1;
+
+    let tx = Transaction::new_signed_with_payer(
+        &[instruction::withdraw_request(
+            &everlend_general_pool::id(),
+            &test_pool_market.keypair.pubkey(),
+            &test_pool.pool_pubkey,
+            &user.pool_account,
+            &user.token_account,
+            &test_pool.token_account.pubkey(),
+            &Pubkey::new_unique(),
+            &test_pool.pool_mint.pubkey(),
+            &user.pubkey(),
+            withdraw_amount,
+            withdraw_index,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer, &user.owner],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32)
+        )
+    )
+}
+
+#[tokio::test]
+async fn fail_with_invalid_pool_mint() {
+    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
+
+    test_pool
+        .deposit(&mut context, &test_pool_market, &user, 100)
+        .await
+        .unwrap();
+
+    context.warp_to_slot(WARP_SLOT + 5).unwrap();
+
+    let withdraw_amount = 50;
+    let withdraw_index = 1;
+
+    let tx = Transaction::new_signed_with_payer(
+        &[instruction::withdraw_request(
+            &everlend_general_pool::id(),
+            &test_pool_market.keypair.pubkey(),
+            &test_pool.pool_pubkey,
+            &user.pool_account,
+            &user.token_account,
+            &test_pool.token_account.pubkey(),
+            &test_pool.token_mint_pubkey,
+            &Pubkey::new_unique(),
+            &user.pubkey(),
+            withdraw_amount,
+            withdraw_index,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer, &user.owner],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        dbg!(context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err())
+        .unwrap(),
+        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
+    )
+}
+
+#[tokio::test]
+async fn fail_with_wrong_user_transfer_authority() {
+    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
+
+    test_pool
+        .deposit(&mut context, &test_pool_market, &user, 100)
+        .await
+        .unwrap();
+
+    context.warp_to_slot(WARP_SLOT + 5).unwrap();
+
+    let withdraw_amount = 50;
+    let withdraw_index = 1;
+
+    let wrong_user_authority = Keypair::new();
+
+    let tx = Transaction::new_signed_with_payer(
+        &[instruction::withdraw_request(
+            &everlend_general_pool::id(),
+            &test_pool_market.keypair.pubkey(),
+            &test_pool.pool_pubkey,
+            &user.pool_account,
+            &user.token_account,
+            &test_pool.token_account.pubkey(),
+            &test_pool.token_mint_pubkey,
+            &test_pool.pool_mint.pubkey(),
+            &wrong_user_authority.pubkey(),
+            withdraw_amount,
+            withdraw_index,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer, &wrong_user_authority],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(spl_token::error::TokenError::OwnerMismatch as u32)
+        )
+    )
+}
+
+#[tokio::test]
+async fn fail_with_invalid_withdraw_amount() {
+    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
+
+    test_pool
+        .deposit(&mut context, &test_pool_market, &user, 100)
+        .await
+        .unwrap();
+
+    context.warp_to_slot(WARP_SLOT + 5).unwrap();
+
+    let withdraw_amount = u64::MAX;
+    let withdraw_index = 1;
+
+    let tx = Transaction::new_signed_with_payer(
+        &[instruction::withdraw_request(
+            &everlend_general_pool::id(),
+            &test_pool_market.keypair.pubkey(),
+            &test_pool.pool_pubkey,
+            &user.pool_account,
+            &user.token_account,
+            &test_pool.token_account.pubkey(),
+            &test_pool.token_mint_pubkey,
+            &test_pool.pool_mint.pubkey(),
+            &user.pubkey(),
+            withdraw_amount,
+            withdraw_index,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer, &user.owner],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::MathOverflow as u32)
+        )
+    )
+}
+
+#[tokio::test]
+async fn fail_with_invalid_withdraw_index() {
+    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
+
+    test_pool
+        .deposit(&mut context, &test_pool_market, &user, 100)
+        .await
+        .unwrap();
+
+    context.warp_to_slot(WARP_SLOT + 5).unwrap();
+
+    let withdraw_amount = 50;
+    let withdraw_index = u64::MAX;
+
+    let tx = Transaction::new_signed_with_payer(
+        &[instruction::withdraw_request(
+            &everlend_general_pool::id(),
+            &test_pool_market.keypair.pubkey(),
+            &test_pool.pool_pubkey,
+            &user.pool_account,
+            &user.token_account,
+            &test_pool.token_account.pubkey(),
+            &test_pool.token_mint_pubkey,
+            &test_pool.pool_mint.pubkey(),
+            &user.pubkey(),
+            withdraw_amount,
+            withdraw_index,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer, &user.owner],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
+    )
 }
