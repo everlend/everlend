@@ -142,10 +142,6 @@ impl DefaultAccounts {
     pub fn load(config_file: &str) -> Result<Self, io::Error> {
         load_config_file(config_file)
     }
-
-    pub fn save(&self, config_file: &str) -> Result<(), io::Error> {
-        save_config_file(self, config_file)
-    }
 }
 
 pub fn load_config_file<T, P>(config_file: P) -> Result<T, io::Error>
