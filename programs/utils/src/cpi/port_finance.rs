@@ -32,13 +32,23 @@ pub fn refresh_reserve<'a>(
     reserve_liquidity_oracle: AccountInfo<'a>,
     clock: AccountInfo<'a>,
 ) -> Result<(), ProgramError> {
+
+    let reserve_key = *reserve.key;
+    let mut liquidity_oracle = COption::None;
+    let mut account_infos = vec![reserve, clock];
+
+    if reserve_liquidity_oracle.lamports() == 0 {
+        liquidity_oracle = COption::Some(*reserve_liquidity_oracle.key);
+        account_infos.push(reserve_liquidity_oracle);
+    }
+
     let ix = port_variable_rate_lending_instructions::instruction::refresh_reserve(
         *program_id,
-        *reserve.key,
-        COption::Some(*reserve_liquidity_oracle.key),
+        reserve_key,
+        liquidity_oracle,
     );
 
-    invoke(&ix, &[reserve, reserve_liquidity_oracle, clock])
+    invoke(&ix, &account_infos)
 }
 
 #[allow(clippy::too_many_arguments)]
