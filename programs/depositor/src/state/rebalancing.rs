@@ -159,20 +159,21 @@ impl Rebalancing {
                 continue;
             }
 
-            let liquidity_amount = math::share(self.distributed_liquidity, percent)?;
+            let prev_distribution_liquidity = math::share(self.distributed_liquidity, percent)?;
+            let distribution_liquidity = math::share(distributed_liquidity, percent)?;
             let collateral_amount = self.received_collateral[index];
 
             self.add_step(RebalancingStep::new(
                 index as u8,
                 RebalancingOperation::Withdraw,
-                liquidity_amount,
+                prev_distribution_liquidity,
                 Some(collateral_amount),
             ));
 
             self.add_step(RebalancingStep::new(
                 index as u8,
                 RebalancingOperation::Deposit,
-                liquidity_amount,
+                distribution_liquidity,
                 None, // Will be calculated at the deposit stage
             ));
         }
