@@ -4,6 +4,8 @@ use solana_sdk::{signature::Signature, signer::Signer, transaction::Transaction}
 
 use crate::accounts_config::{DefaultAccounts, InitializedAccounts};
 
+pub const REFRESH_INCOME_INTERVAL: u64 = 300;
+
 pub struct Config {
     pub rpc_client: RpcClient,
     pub verbose: bool,

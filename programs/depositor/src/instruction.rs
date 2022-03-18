@@ -59,11 +59,15 @@ pub enum DepositorInstruction {
     /// [R] Token distribution
     /// [WS] From account
     /// [R] Rent sysvar
+    /// [R] Clock sysvar
     /// [R] Sytem program
     /// [R] Token program id
     /// [R] Everlend Liquidity Oracle program id
     /// [R] Everlend general pool program id
-    StartRebalancing,
+    StartRebalancing {
+        /// Refresh income
+        refresh_income: bool,
+    },
 
     /// Deposit funds from liquidity transit account to money market.
     /// Collect collateral token to MM pool.
@@ -83,7 +87,7 @@ pub enum DepositorInstruction {
     /// [R] Liquidity mint
     /// [W] Collateral transit account
     /// [W] Collateral mint
-    /// [R] Sysvar clock program id
+    /// [R] Clock sysvar
     /// [R] Token program id
     /// [R] Everlend ULP program id
     /// [R] Money market program id
@@ -110,7 +114,7 @@ pub enum DepositorInstruction {
     /// [W] Collateral mint
     /// [W] Liquidity transit account
     /// [R] Liquidity mint
-    /// [R] Sysvar clock program id
+    /// [R] Clock sysvar
     /// [R] Token program id
     /// [R] Everlend ULP program id
     /// [R] Money market program id
@@ -184,6 +188,7 @@ pub fn start_rebalancing(
     general_pool_token_account: &Pubkey,
     liquidity_oracle: &Pubkey,
     from: &Pubkey,
+    refresh_income: bool,
 ) -> Instruction {
     let (registry_config, _) =
         everlend_registry::find_config_program_address(&everlend_registry::id(), registry);
@@ -234,6 +239,7 @@ pub fn start_rebalancing(
         AccountMeta::new_readonly(token_distribution, false),
         AccountMeta::new(*from, true),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
+        AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
         AccountMeta::new_readonly(everlend_liquidity_oracle::id(), false),
@@ -242,7 +248,7 @@ pub fn start_rebalancing(
 
     Instruction::new_with_borsh(
         *program_id,
-        &DepositorInstruction::StartRebalancing,
+        &DepositorInstruction::StartRebalancing { refresh_income },
         accounts,
     )
 }

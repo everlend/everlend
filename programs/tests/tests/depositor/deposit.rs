@@ -181,6 +181,7 @@ async fn setup() -> (
             &general_pool_market,
             &general_pool,
             &test_liquidity_oracle,
+            false,
         )
         .await
         .unwrap();
@@ -356,6 +357,7 @@ async fn success_increased_liquidity() {
             &general_pool_market,
             &general_pool,
             &test_liquidity_oracle,
+            false,
         )
         .await
         .unwrap();

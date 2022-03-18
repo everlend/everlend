@@ -39,6 +39,9 @@ pub struct Rebalancing {
 
     /// Rebalancing steps
     pub steps: Vec<RebalancingStep>,
+
+    /// Income refreshed mark to avoid frequent refresh
+    pub income_refreshed_at: Slot,
 }
 
 impl Rebalancing {
@@ -121,6 +124,64 @@ impl Rebalancing {
             .sort_by(|a, b| a.operation.partial_cmp(&b.operation).unwrap());
 
         self.token_distribution = token_distribution;
+        self.distributed_liquidity = distributed_liquidity;
+
+        Ok(())
+    }
+
+    /// Generate new steps for withdraw all funds and deposit them back in MM pools
+    pub fn compute_with_refresh_income(
+        &mut self,
+        registry_config: &RegistryConfig,
+        income_refreshed_at: Slot,
+        distributed_liquidity: u64,
+    ) -> Result<(), ProgramError> {
+        if self.income_refreshed_at + registry_config.refresh_income_interval > income_refreshed_at
+        {
+            return Err(EverlendError::IncomeRefreshed.into());
+        }
+
+        // Reset steps
+        self.steps = Vec::new();
+
+        // Compute steps
+        for (index, _) in registry_config
+            .money_market_program_ids
+            .iter()
+            .enumerate()
+            // Keeping index order
+            .filter(|&id| *id.1 != Default::default())
+        {
+            // Spread percents
+            let percent = self.token_distribution.distribution[index];
+            // Skip zero withdraws/deposits
+            if percent == 0 {
+                continue;
+            }
+
+            let liquidity_amount = math::share(self.distributed_liquidity, percent)?;
+            let collateral_amount = self.received_collateral[index];
+
+            self.add_step(RebalancingStep::new(
+                index as u8,
+                RebalancingOperation::Withdraw,
+                liquidity_amount,
+                Some(collateral_amount),
+            ));
+
+            self.add_step(RebalancingStep::new(
+                index as u8,
+                RebalancingOperation::Deposit,
+                liquidity_amount,
+                None, // Will be calculated at the deposit stage
+            ));
+        }
+
+        // Sort steps
+        self.steps
+            .sort_by(|a, b| a.operation.partial_cmp(&b.operation).unwrap());
+
+        self.income_refreshed_at = income_refreshed_at;
         self.distributed_liquidity = distributed_liquidity;
 
         Ok(())
