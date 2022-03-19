@@ -37,11 +37,11 @@ pub struct Rebalancing {
     /// Current token distribution from liquidity oracle
     pub token_distribution: TokenDistribution,
 
-    /// Rebalancing steps
-    pub steps: Vec<RebalancingStep>,
-
     /// Income refreshed mark to avoid frequent refresh
     pub income_refreshed_at: Slot,
+
+    /// Rebalancing steps
+    pub steps: Vec<RebalancingStep>,
 }
 
 impl Rebalancing {
@@ -272,10 +272,11 @@ pub struct InitRebalancingParams {
 
 impl Sealed for Rebalancing {}
 impl Pack for Rebalancing {
-    // 1 + 32 + 32 + 8 + (8 * 10) + 89 + (4 + 5 * 28) = 386
+    // 1 + 32 + 32 + 8 + (8 * 10) + 89 + 8 + (4 + 5 * 28) = 394
     const LEN: usize = 73
         + (8 * TOTAL_DISTRIBUTIONS)
         + TokenDistribution::LEN
+        + 8
         + (4 + TOTAL_REBALANCING_STEP * RebalancingStep::LEN);
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
