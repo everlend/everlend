@@ -1,5 +1,23 @@
 //! Program state processor
 
+use borsh::BorshDeserialize;
+use solana_program::{
+    account_info::{next_account_info, AccountInfo},
+    entrypoint::ProgramResult,
+    msg,
+    program_error::ProgramError,
+    program_pack::Pack,
+    pubkey::Pubkey,
+    rent::Rent,
+    sysvar::Sysvar,
+};
+use spl_token::state::{Account, Mint};
+
+use everlend_utils::{
+    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
+    cpi, find_program_address, EverlendError,
+};
+
 use crate::state::InitWithdrawalRequestsParams;
 use crate::{
     find_pool_borrow_authority_program_address, find_pool_program_address,
@@ -12,25 +30,10 @@ use crate::{
     },
     utils::*,
 };
-use borsh::BorshDeserialize;
-use everlend_utils::{
-    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
-    cpi, find_program_address, EverlendError,
-};
-use solana_program::{
-    account_info::{next_account_info, AccountInfo},
-    entrypoint::ProgramResult,
-    msg,
-    program_error::ProgramError,
-    program_pack::Pack,
-    pubkey::Pubkey,
-    rent::Rent,
-    sysvar::Sysvar,
-};
-use spl_token::state::Mint;
 
 /// Program state handler.
 pub struct Processor {}
+
 impl Processor {
     /// Process InitPoolMarket instruction
     pub fn init_pool_market(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
@@ -312,6 +315,7 @@ impl Processor {
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let pool_market_info = next_account_info(account_info_iter)?;
+        let pool_info = next_account_info(account_info_iter)?;
         let pool_borrow_authority_info = next_account_info(account_info_iter)?;
         let receiver_info = next_account_info(account_info_iter)?;
         let manager_info = next_account_info(account_info_iter)?;
@@ -323,6 +327,10 @@ impl Processor {
         // Get pool market state
         let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
         assert_account_key(manager_info, &pool_market.manager)?;
+
+        // Get pool state
+        let pool = Pool::unpack(&pool_info.data.borrow())?;
+        assert_account_key(pool_market_info, &pool.pool_market)?;
 
         // Get pool borrow authority state to check initialized
         PoolBorrowAuthority::unpack(&pool_borrow_authority_info.data.borrow())?;
@@ -558,6 +566,13 @@ impl Processor {
         assert_account_key(pool_market_info, &pool.pool_market)?;
         assert_account_key(token_account_info, &pool.token_account)?;
         assert_account_key(pool_mint_info, &pool.pool_mint)?;
+
+        let destination_account = Account::unpack(&destination_info.data.borrow())?;
+        //TODO double token_account unpacking, check the 617 line
+        let token_account = Account::unpack_unchecked(&token_account_info.data.borrow())?;
+        if token_account.mint != destination_account.mint {
+            return Err(ProgramError::InvalidArgument);
+        }
 
         // Check collateral token transit account
         let (collateral_transit_pubkey, _) =

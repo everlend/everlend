@@ -8,6 +8,7 @@ use solana_program_test::*;
 use solana_sdk::{
     pubkey::Pubkey, signer::Signer, transaction::Transaction, transaction::TransactionError,
 };
+use solana_sdk::signature::Keypair;
 use spl_token::error::TokenError;
 
 async fn setup() -> (
@@ -232,6 +233,44 @@ async fn fail_with_invalid_source_argument() {
         TransactionError::InstructionError(
             0,
             InstructionError::Custom(TokenError::InsufficientFunds as u32)
+        )
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_user_transfer_authority() {
+    let (mut context, test_pool_market, test_pool, user) = setup().await;
+
+    let wrong_authority = Keypair::new();
+
+    let tx = Transaction::new_signed_with_payer(
+        &[instruction::deposit(
+            &everlend_general_pool::id(),
+            &test_pool_market.keypair.pubkey(),
+            &test_pool.pool_pubkey,
+            &user.token_account,
+            &user.pool_account,
+            &test_pool.token_account.pubkey(),
+            &test_pool.pool_mint.pubkey(),
+            //Wrong authority
+            &wrong_authority.pubkey(),
+            AMOUNT,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer, &wrong_authority],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(TokenError::OwnerMismatch as u32)
         )
     );
 }

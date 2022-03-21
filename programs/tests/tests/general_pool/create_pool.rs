@@ -1,8 +1,13 @@
 #![cfg(feature = "test-bpf")]
 
 use crate::utils::*;
+use everlend_general_pool::instruction;
 use everlend_general_pool::state::AccountType;
+use solana_program::instruction::InstructionError;
+use solana_program::system_instruction::SystemError;
 use solana_program_test::*;
+use solana_sdk::signer::Signer;
+use solana_sdk::transaction::{Transaction, TransactionError};
 
 async fn setup() -> (ProgramTestContext, TestGeneralPoolMarket) {
     let mut context = presetup().await.0;
@@ -27,14 +32,58 @@ async fn success() {
 
     assert_eq!(pool.account_type, AccountType::Pool);
 
-    let requests =  test_pool.get_withdraw_requests(& mut context, &test_pool_market, &everlend_general_pool::id()).await;
-    assert_eq!(
-        requests.account_type,
-        AccountType::WithdrawRequests
+    let requests = test_pool
+        .get_withdraw_requests(
+            &mut context,
+            &test_pool_market,
+            &everlend_general_pool::id(),
+        )
+        .await;
+    assert_eq!(requests.account_type, AccountType::WithdrawRequests);
+
+    assert_eq!(requests.pool, test_pool.pool_pubkey,);
+}
+
+#[tokio::test]
+async fn fail_second_time_init() {
+    let (mut context, test_pool_market) = setup().await;
+
+    let test_pool = TestGeneralPool::new(&test_pool_market, None);
+    test_pool
+        .create(&mut context, &test_pool_market)
+        .await
+        .unwrap();
+
+    let pool = test_pool.get_data(&mut context).await;
+
+    assert_eq!(pool.account_type, AccountType::Pool);
+
+    context.warp_to_slot(3).unwrap();
+
+    let tx = Transaction::new_signed_with_payer(
+        &[instruction::create_pool(
+            &everlend_general_pool::id(),
+            &test_pool_market.keypair.pubkey(),
+            &test_pool.token_mint_pubkey,
+            &test_pool.token_account.pubkey(),
+            &test_pool.pool_mint.pubkey(),
+            &test_pool_market.manager.pubkey(),
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer, &test_pool_market.manager],
+        context.last_blockhash,
     );
 
     assert_eq!(
-        requests.pool,
-        test_pool.pool_pubkey,
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(SystemError::AccountAlreadyInUse as u32)
+        )
     );
 }
