@@ -109,6 +109,7 @@ impl TestDepositor {
         general_pool_market: &TestGeneralPoolMarket,
         general_pool: &TestGeneralPool,
         liquidity_oracle: &TestLiquidityOracle,
+        refresh_income: bool,
     ) -> transport::Result<()> {
         let tx = Transaction::new_signed_with_payer(
             &[everlend_depositor::instruction::start_rebalancing(
@@ -120,6 +121,7 @@ impl TestDepositor {
                 &general_pool.token_account.pubkey(),
                 &liquidity_oracle.keypair.pubkey(),
                 &context.payer.pubkey(),
+                refresh_income,
             )],
             Some(&context.payer.pubkey()),
             &[&context.payer],

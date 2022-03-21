@@ -65,6 +65,7 @@ async fn command_create_registry(config: &Config, keypair: Option<Keypair>) -> a
         depositor_program_id: everlend_depositor::id(),
         income_pools_program_id: everlend_income_pools::id(),
         money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
+        refresh_income_interval: REFRESH_INCOME_INTERVAL,
     };
     registry_config.money_market_program_ids[0] = port_finance_program_id;
     registry_config.money_market_program_ids[1] = larix_program_id;
@@ -415,6 +416,7 @@ async fn command_create(
         depositor_program_id: everlend_depositor::id(),
         income_pools_program_id: everlend_income_pools::id(),
         money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
+        refresh_income_interval: REFRESH_INCOME_INTERVAL,
     };
     registry_config.money_market_program_ids[0] = port_finance_program_id;
     registry_config.money_market_program_ids[1] = larix_program_id;
@@ -593,6 +595,7 @@ async fn command_run_test(
 
     let default_accounts = get_default_accounts(config);
     let initialiazed_accounts = InitializedAccounts::load(accounts_path).unwrap_or_default();
+    println!("default_accounts = {:#?}", default_accounts);
 
     let InitializedAccounts {
         payer,
@@ -654,6 +657,21 @@ async fn command_run_test(
             &general_pool_market,
             &sol.general_pool_token_account,
             &liquidity_oracle,
+            false,
+        )
+    };
+
+    let refresh_income = || {
+        println!("Rebalancing (Refresh income)");
+        depositor::start_rebalancing(
+            config,
+            &registry,
+            &depositor,
+            &sol.mint,
+            &general_pool_market,
+            &sol.general_pool_token_account,
+            &liquidity_oracle,
+            true,
         )
     };
 
@@ -786,6 +804,8 @@ async fn command_run_test(
         )
     };
 
+    complete_rebalancing(None)?;
+
     match case.as_deref() {
         Some("first") => {
             general_pool_deposit(1000)?;
@@ -820,7 +840,6 @@ async fn command_run_test(
             complete_rebalancing(Some(rebalancing))?;
         }
         Some("larix") => {
-            complete_rebalancing(None)?;
             general_pool_deposit(1000)?;
 
             update_token_distribution(distribution!([0, 1000000000]))?;
@@ -835,7 +854,6 @@ async fn command_run_test(
             complete_rebalancing(Some(rebalancing))?;
         }
         Some("deposit") => {
-            complete_rebalancing(None)?;
             general_pool_deposit(1000)?;
 
             update_token_distribution(distribution!([1000000000, 0]))?;
@@ -849,7 +867,6 @@ async fn command_run_test(
             println!("{:#?}", rebalancing);
         }
         Some("full") => {
-            complete_rebalancing(None)?;
             general_pool_deposit(1000)?;
 
             update_token_distribution(distribution!([1000000000, 0]))?;
@@ -873,7 +890,6 @@ async fn command_run_test(
             println!("{:#?}", rebalancing);
         }
         Some("full-two-withdrawal-requests") => {
-            complete_rebalancing(None)?;
             general_pool_deposit(1000)?;
 
             update_token_distribution(distribution!([1000000000, 0]))?;
@@ -900,7 +916,6 @@ async fn command_run_test(
             general_pool_withdraw(wi + 1)?;
         }
         Some("boundary") => {
-            complete_rebalancing(None)?;
             general_pool_deposit(2100000)?;
 
             update_token_distribution(distribution!([1000000000, 0]))?;
@@ -930,7 +945,6 @@ async fn command_run_test(
             general_pool_withdraw(wi + 1)?;
         }
         Some("11") => {
-            complete_rebalancing(None)?;
             general_pool_deposit(4321)?;
 
             update_token_distribution(distribution!([10, 10]))?;
@@ -945,8 +959,17 @@ async fn command_run_test(
             update_token_distribution(distribution!([1000000000, 0]))?;
             start_rebalancing()?;
         }
+        Some("refresh-income") => {
+            general_pool_deposit(1000)?;
+
+            update_token_distribution(distribution!([1000000000, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            complete_rebalancing(Some(rebalancing))?;
+
+            let (_, rebalancing) = refresh_income()?;
+            println!("{:#?}", rebalancing);
+        }
         None => {
-            complete_rebalancing(None)?;
             general_pool_deposit(1000)?;
 
             update_token_distribution(distribution!([500000000, 500000000]))?;

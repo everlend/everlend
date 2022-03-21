@@ -212,6 +212,7 @@ async fn setup() -> (
             &general_pool_market,
             &general_pool,
             &test_liquidity_oracle,
+            false,
         )
         .await
         .unwrap();
@@ -263,6 +264,7 @@ async fn setup() -> (
             &general_pool_market,
             &general_pool,
             &test_liquidity_oracle,
+            false,
         )
         .await
         .unwrap();
@@ -298,18 +300,13 @@ async fn success() {
         income_pool,
         mm_pool_market,
         mm_pool,
-        _liquidity_provider,
+        _,
         test_depositor,
     ) = setup().await;
 
     let reserve = money_market.get_reserve_data(&mut context).await;
-
     let reserve_balance_before =
         get_token_balance(&mut context, &reserve.liquidity.supply_pubkey).await;
-
-    context.warp_to_slot(5).unwrap();
-    pyth_oracle.update(&mut context, 5).await;
-
     let money_market_pubkeys =
         MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
             reserve: money_market.reserve_pubkey,
@@ -317,6 +314,9 @@ async fn success() {
             reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
             lending_market: money_market.market_pubkey,
         });
+
+    context.warp_to_slot(5).unwrap();
+    pyth_oracle.update(&mut context, 5).await;
 
     test_depositor
         .withdraw(
@@ -368,6 +368,13 @@ async fn success_with_incomes() {
     ) = setup().await;
 
     let mut reserve = money_market.get_reserve_data(&mut context).await;
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
 
     // Transfer some tokens to liquidity account to get incomes
     token_transfer(
@@ -387,20 +394,6 @@ async fn success_with_incomes() {
 
     context.warp_to_slot(5).unwrap();
     pyth_oracle.update(&mut context, 5).await;
-
-    let money_market_pubkeys =
-        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
-            reserve: money_market.reserve_pubkey,
-            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
-            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
-            lending_market: money_market.market_pubkey,
-        });
-
-    // let rebalancing = test_depositor
-    //     .get_rebalancing_data(&mut context, &general_pool.token_mint_pubkey)
-    //     .await;
-
-    // println!("Rebalancing: {:#?}", rebalancing);
 
     test_depositor
         .withdraw(

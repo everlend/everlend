@@ -102,6 +102,7 @@ pub fn create_transit(
     Ok(transit_pubkey)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn start_rebalancing(
     config: &Config,
     registry_pubkey: &Pubkey,
@@ -110,6 +111,7 @@ pub fn start_rebalancing(
     general_pool_market_pubkey: &Pubkey,
     general_pool_token_account: &Pubkey,
     liquidity_oracle_pubkey: &Pubkey,
+    refresh_income: bool,
 ) -> Result<(Pubkey, Rebalancing), ClientError> {
     let tx = Transaction::new_with_payer(
         &[everlend_depositor::instruction::start_rebalancing(
@@ -121,6 +123,7 @@ pub fn start_rebalancing(
             general_pool_token_account,
             liquidity_oracle_pubkey,
             &config.fee_payer.pubkey(),
+            refresh_income,
         )],
         Some(&config.fee_payer.pubkey()),
     );

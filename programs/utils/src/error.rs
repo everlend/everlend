@@ -11,6 +11,7 @@ use thiserror::Error;
 /// Errors that may be returned by the program.
 #[derive(Clone, Debug, Eq, Error, FromPrimitive, PartialEq)]
 pub enum EverlendError {
+    /// 0
     /// Input account owner
     #[error("Input account owner")]
     InvalidAccountOwner,
@@ -31,6 +32,7 @@ pub enum EverlendError {
     #[error("Amount allowed of interest on the borrowing is exceeded")]
     RepayAmountCheckFailed,
 
+    /// 5
     /// Incorrect instruction program id
     #[error("Incorrect instruction program id")]
     IncorrectInstructionProgramId,
@@ -53,6 +55,7 @@ pub enum EverlendError {
     #[error("Rebalancing: Operation does not match")]
     InvalidRebalancingOperation,
 
+    /// 10
     /// Amount does not match
     #[error("Rebalancing: Amount does not match")]
     InvalidRebalancingAmount,
@@ -60,6 +63,10 @@ pub enum EverlendError {
     /// Token distribution is stale
     #[error("Rebalancing: Token distribution is stale")]
     TokenDistributionIsStale,
+
+    /// Income has already been refreshed recently
+    #[error("Rebalancing: Income has already been refreshed recently")]
+    IncomeRefreshed,
 
     /// Withdraw requests
 

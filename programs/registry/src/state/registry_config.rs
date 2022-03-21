@@ -3,6 +3,7 @@
 use super::*;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use solana_program::{
+    clock::Slot,
     msg,
     program_error::ProgramError,
     program_pack::{IsInitialized, Pack, Sealed},
@@ -32,8 +33,10 @@ pub struct RegistryConfig {
     pub income_pools_program_id: Pubkey,
     /// Money market programs
     pub money_market_program_ids: [Pubkey; TOTAL_DISTRIBUTIONS],
+    /// Refresh income interval
+    pub refresh_income_interval: Slot,
     // Space for future values
-    // 511
+    // 503
 }
 
 impl RegistryConfig {
@@ -51,6 +54,7 @@ impl RegistryConfig {
         self.depositor_program_id = params.depositor_program_id;
         self.income_pools_program_id = params.income_pools_program_id;
         self.money_market_program_ids = params.money_market_program_ids;
+        self.refresh_income_interval = params.refresh_income_interval;
     }
 }
 
@@ -75,11 +79,13 @@ pub struct SetRegistryConfigParams {
     pub income_pools_program_id: Pubkey,
     /// Money market programs
     pub money_market_program_ids: [Pubkey; TOTAL_DISTRIBUTIONS],
+    /// Refresh income interval
+    pub refresh_income_interval: Slot,
 }
 
 impl Sealed for RegistryConfig {}
 impl Pack for RegistryConfig {
-    // 1 + 32 + 32 + 32 + 32 + 32 + 32 + (10 * 32) + 511 = 1024
+    // 1 + 32 + 32 + 32 + 32 + 32 + 32 + (10 * 32) + 8 + 503 = 1024
     const LEN: usize = 1024;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {

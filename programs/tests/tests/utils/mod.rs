@@ -41,6 +41,7 @@ pub use ulp_pool_market::*;
 pub use users::*;
 
 pub const EXP: u64 = 1_000_000_000;
+pub const REFRESH_INCOME_INTERVAL: u64 = 300; // About 2.5 min
 
 pub fn program_test() -> ProgramTest {
     let mut program = ProgramTest::new(
@@ -145,6 +146,7 @@ pub async fn presetup() -> (
         depositor_program_id: everlend_depositor::id(),
         income_pools_program_id: everlend_income_pools::id(),
         money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
+        refresh_income_interval: REFRESH_INCOME_INTERVAL,
     };
     config.money_market_program_ids[0] = spl_token_lending::id();
 

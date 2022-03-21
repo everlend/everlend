@@ -37,6 +37,9 @@ pub struct Rebalancing {
     /// Current token distribution from liquidity oracle
     pub token_distribution: TokenDistribution,
 
+    /// Income refreshed mark to avoid frequent refresh
+    pub income_refreshed_at: Slot,
+
     /// Rebalancing steps
     pub steps: Vec<RebalancingStep>,
 }
@@ -126,6 +129,65 @@ impl Rebalancing {
         Ok(())
     }
 
+    /// Generate new steps for withdraw all funds and deposit them back in MM pools
+    pub fn compute_with_refresh_income(
+        &mut self,
+        registry_config: &RegistryConfig,
+        income_refreshed_at: Slot,
+        distributed_liquidity: u64,
+    ) -> Result<(), ProgramError> {
+        if self.income_refreshed_at + registry_config.refresh_income_interval > income_refreshed_at
+        {
+            return Err(EverlendError::IncomeRefreshed.into());
+        }
+
+        // Reset steps
+        self.steps = Vec::new();
+
+        // Compute steps
+        for (index, _) in registry_config
+            .money_market_program_ids
+            .iter()
+            .enumerate()
+            // Keeping index order
+            .filter(|&id| *id.1 != Default::default())
+        {
+            // Spread percents
+            let percent = self.token_distribution.distribution[index];
+            // Skip zero withdraws/deposits
+            if percent == 0 {
+                continue;
+            }
+
+            let prev_distribution_liquidity = math::share(self.distributed_liquidity, percent)?;
+            let distribution_liquidity = math::share(distributed_liquidity, percent)?;
+            let collateral_amount = self.received_collateral[index];
+
+            self.add_step(RebalancingStep::new(
+                index as u8,
+                RebalancingOperation::Withdraw,
+                prev_distribution_liquidity,
+                Some(collateral_amount),
+            ));
+
+            self.add_step(RebalancingStep::new(
+                index as u8,
+                RebalancingOperation::Deposit,
+                distribution_liquidity,
+                None, // Will be calculated at the deposit stage
+            ));
+        }
+
+        // Sort steps
+        self.steps
+            .sort_by(|a, b| a.operation.partial_cmp(&b.operation).unwrap());
+
+        self.income_refreshed_at = income_refreshed_at;
+        self.distributed_liquidity = distributed_liquidity;
+
+        Ok(())
+    }
+
     /// Get next unexecuted rebalancing step
     pub fn next_step(&self) -> &RebalancingStep {
         self.steps
@@ -210,10 +272,11 @@ pub struct InitRebalancingParams {
 
 impl Sealed for Rebalancing {}
 impl Pack for Rebalancing {
-    // 1 + 32 + 32 + 8 + (8 * 10) + 89 + (4 + 5 * 28) = 386
+    // 1 + 32 + 32 + 8 + (8 * 10) + 89 + 8 + (4 + 5 * 28) = 394
     const LEN: usize = 73
         + (8 * TOTAL_DISTRIBUTIONS)
         + TokenDistribution::LEN
+        + 8
         + (4 + TOTAL_REBALANCING_STEP * RebalancingStep::LEN);
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
