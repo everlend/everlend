@@ -423,7 +423,7 @@ impl Processor {
         let withdraw_request_info = next_account_info(account_info_iter)?;
         let destination_info = next_account_info(account_info_iter)?;
         let token_account_info = next_account_info(account_info_iter)?;
-        let transit_collateral_info = next_account_info(account_info_iter)?;
+        let collateral_transit_info = next_account_info(account_info_iter)?;
         let pool_mint_info = next_account_info(account_info_iter)?;
         let pool_market_authority_info = next_account_info(account_info_iter)?;
         let rent_payer_info = next_account_info(account_info_iter)?;
@@ -435,7 +435,7 @@ impl Processor {
         // Check collateral token transit account
         let (collateral_transit_pubkey, _) =
             find_transit_program_address(program_id, pool_market_info.key, pool_mint_info.key);
-        assert_account_key(transit_collateral_info, &collateral_transit_pubkey)?;
+        assert_account_key(collateral_transit_info, &collateral_transit_pubkey)?;
 
         // Get pool state
         let pool = Pool::unpack(&pool_info.data.borrow())?;
@@ -504,7 +504,7 @@ impl Processor {
         // Burn from transit collateral pool token
         cpi::spl_token::burn(
             pool_mint_info.clone(),
-            transit_collateral_info.clone(),
+            collateral_transit_info.clone(),
             pool_market_authority_info.clone(),
             withdraw_request.collateral_amount,
             &[signers_seeds],
