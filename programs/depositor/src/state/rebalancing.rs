@@ -42,6 +42,8 @@ pub struct Rebalancing {
 
     /// Rebalancing steps
     pub steps: Vec<RebalancingStep>,
+    // Space for future values
+    // 20
 }
 
 impl Rebalancing {
@@ -272,12 +274,13 @@ pub struct InitRebalancingParams {
 
 impl Sealed for Rebalancing {}
 impl Pack for Rebalancing {
-    // 1 + 32 + 32 + 8 + (8 * 10) + 89 + 8 + (4 + 5 * 28) = 394
+    // 1 + 32 + 32 + 8 + (8 * 10) + 89 + 8 + (4 + 4 * 28) + 20 = 386
     const LEN: usize = 73
         + (8 * TOTAL_DISTRIBUTIONS)
         + TokenDistribution::LEN
         + 8
-        + (4 + TOTAL_REBALANCING_STEP * RebalancingStep::LEN);
+        + (4 + TOTAL_REBALANCING_STEP * RebalancingStep::LEN)
+        + 20;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;
