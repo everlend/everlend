@@ -1,6 +1,5 @@
 //! Registry config state definitions
 
-use super::*;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use solana_program::{
     clock::Slot,
@@ -9,6 +8,8 @@ use solana_program::{
     program_pack::{IsInitialized, Pack, Sealed},
     pubkey::Pubkey,
 };
+
+use super::*;
 
 /// Total number of money market distributions
 pub const TOTAL_DISTRIBUTIONS: usize = 10;
@@ -65,7 +66,7 @@ pub struct InitRegistryConfigParams {
 }
 
 /// Set a registry config params
-#[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, PartialEq)]
+#[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, PartialEq, Clone, Copy)]
 pub struct SetRegistryConfigParams {
     /// General pool program
     pub general_pool_program_id: Pubkey,
