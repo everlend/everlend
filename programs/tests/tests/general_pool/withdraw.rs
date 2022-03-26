@@ -81,7 +81,7 @@ async fn success() {
     context.warp_to_slot(3).unwrap();
 
     test_pool
-        .withdraw_request(&mut context, &test_pool_market, &user, 45, 1)
+        .withdraw_request(&mut context, &test_pool_market, &user, 45)
         .await
         .unwrap();
 
@@ -95,7 +95,7 @@ async fn success() {
     assert_eq!(get_token_balance(&mut context, &transit_account).await, 45);
 
     test_pool
-        .withdraw(&mut context, &test_pool_market, &user, 1)
+        .withdraw(&mut context, &test_pool_market, &user)
         .await
         .unwrap();
 
@@ -118,79 +118,6 @@ async fn success() {
 }
 
 #[tokio::test]
-async fn success_with_index() {
-    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
-
-    test_pool
-        .deposit(&mut context, &test_pool_market, &user, 100)
-        .await
-        .unwrap();
-
-    context.warp_to_slot(3).unwrap();
-
-    test_pool
-        .withdraw_request(&mut context, &test_pool_market, &user, 50, 1)
-        .await
-        .unwrap();
-
-    context.warp_to_slot(3 + 3).unwrap();
-
-    test_pool
-        .withdraw_request(&mut context, &test_pool_market, &user, 30, 2)
-        .await
-        .unwrap();
-
-    test_pool
-        .withdraw(&mut context, &test_pool_market, &user, 1)
-        .await
-        .unwrap();
-
-    context.warp_to_slot(3 + 3 + 3).unwrap();
-
-    let (transit_account, _) = find_transit_program_address(
-        &everlend_general_pool::id(),
-        &test_pool_market.keypair.pubkey(),
-        &test_pool.pool_mint.pubkey(),
-    );
-
-    assert_eq!(
-        get_token_balance(&mut context, &user.pool_account).await,
-        20
-    );
-    assert_eq!(
-        get_token_balance(&mut context, &user.token_account).await,
-        51
-    );
-    assert_eq!(
-        get_token_balance(&mut context, &test_pool.token_account.pubkey()).await,
-        50
-    );
-    assert_eq!(get_token_balance(&mut context, &transit_account).await, 30);
-
-    test_pool
-        .withdraw(&mut context, &test_pool_market, &user, 2)
-        .await
-        .unwrap();
-
-    assert_eq!(
-        get_token_balance(&mut context, &user.pool_account).await,
-        20
-    );
-    assert_eq!(
-        get_token_balance(&mut context, &user.token_account).await,
-        81
-    );
-    assert_eq!(
-        get_token_balance(&mut context, &test_pool.token_account.pubkey()).await,
-        20
-    );
-    assert_eq!(get_token_balance(&mut context, &transit_account).await, 0);
-
-    let user_account = get_account(&mut context, &user.owner.pubkey()).await;
-    assert_eq!(user_account.lamports, INITIAL_USER_BALANCE);
-}
-
-#[tokio::test]
 async fn fail_with_invalid_pool_market() {
     let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
 
@@ -202,7 +129,7 @@ async fn fail_with_invalid_pool_market() {
     context.warp_to_slot(3).unwrap();
 
     test_pool
-        .withdraw_request(&mut context, &test_pool_market, &user, 45, 1)
+        .withdraw_request(&mut context, &test_pool_market, &user, 45)
         .await
         .unwrap();
 
@@ -225,7 +152,6 @@ async fn fail_with_invalid_pool_market() {
             &test_pool.token_mint_pubkey,
             &test_pool.pool_mint.pubkey(),
             &user.owner.pubkey(),
-            1,
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer],
@@ -258,7 +184,7 @@ async fn fail_with_invalid_pool() {
     context.warp_to_slot(3).unwrap();
 
     test_pool
-        .withdraw_request(&mut context, &test_pool_market, &user, 45, 1)
+        .withdraw_request(&mut context, &test_pool_market, &user, 45)
         .await
         .unwrap();
 
@@ -281,7 +207,6 @@ async fn fail_with_invalid_pool() {
             &test_pool.token_mint_pubkey,
             &test_pool.pool_mint.pubkey(),
             &user.owner.pubkey(),
-            1,
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer],
@@ -314,7 +239,7 @@ async fn fail_with_invalid_destination() {
     context.warp_to_slot(3).unwrap();
 
     test_pool
-        .withdraw_request(&mut context, &test_pool_market, &user, 45, 1)
+        .withdraw_request(&mut context, &test_pool_market, &user, 45)
         .await
         .unwrap();
 
@@ -337,7 +262,6 @@ async fn fail_with_invalid_destination() {
             &test_pool.token_mint_pubkey,
             &test_pool.pool_mint.pubkey(),
             &user.owner.pubkey(),
-            1,
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer],
@@ -367,7 +291,7 @@ async fn fail_with_invalid_token_account() {
     context.warp_to_slot(3).unwrap();
 
     test_pool
-        .withdraw_request(&mut context, &test_pool_market, &user, 45, 1)
+        .withdraw_request(&mut context, &test_pool_market, &user, 45)
         .await
         .unwrap();
 
@@ -390,7 +314,6 @@ async fn fail_with_invalid_token_account() {
             &test_pool.token_mint_pubkey,
             &test_pool.pool_mint.pubkey(),
             &user.owner.pubkey(),
-            1,
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer],
@@ -420,7 +343,7 @@ async fn fail_with_invalid_token_mint() {
     context.warp_to_slot(3).unwrap();
 
     test_pool
-        .withdraw_request(&mut context, &test_pool_market, &user, 45, 1)
+        .withdraw_request(&mut context, &test_pool_market, &user, 45)
         .await
         .unwrap();
 
@@ -443,7 +366,6 @@ async fn fail_with_invalid_token_mint() {
             &Pubkey::new_unique(),
             &test_pool.pool_mint.pubkey(),
             &user.owner.pubkey(),
-            1,
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer],
@@ -457,7 +379,10 @@ async fn fail_with_invalid_token_mint() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32)
+        )
     )
 }
 
@@ -473,7 +398,7 @@ async fn fail_with_invalid_pool_mint() {
     context.warp_to_slot(3).unwrap();
 
     test_pool
-        .withdraw_request(&mut context, &test_pool_market, &user, 45, 1)
+        .withdraw_request(&mut context, &test_pool_market, &user, 45)
         .await
         .unwrap();
 
@@ -496,7 +421,6 @@ async fn fail_with_invalid_pool_mint() {
             &test_pool.token_mint_pubkey,
             &Pubkey::new_unique(),
             &user.owner.pubkey(),
-            1,
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer],
@@ -526,7 +450,7 @@ async fn success_with_random_tx_signer() {
     context.warp_to_slot(3).unwrap();
 
     test_pool
-        .withdraw_request(&mut context, &test_pool_market, &user, 45, 1)
+        .withdraw_request(&mut context, &test_pool_market, &user, 45)
         .await
         .unwrap();
 
@@ -552,7 +476,6 @@ async fn success_with_random_tx_signer() {
             &test_pool.token_mint_pubkey,
             &test_pool.pool_mint.pubkey(),
             &user.owner.pubkey(),
-            1,
         )],
         Some(&random_tx_signer.manager.pubkey()),
         &[&random_tx_signer.manager],

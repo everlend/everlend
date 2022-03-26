@@ -70,9 +70,9 @@ pub enum EverlendError {
 
     /// Withdraw requests
 
-    /// Withdraw requests list is empty
-    #[error("Withdraw requests list is empty")]
-    WithdrawRequestsListIsEmpty,
+    /// Invalid ticket
+    #[error("Withdraw requests: Invalid ticket")]
+    WithdrawRequestsInvalidTicket,
 }
 
 impl PrintProgramError for EverlendError {

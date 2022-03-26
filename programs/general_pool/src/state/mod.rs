@@ -24,6 +24,8 @@ pub enum AccountType {
     PoolBorrowAuthority,
     /// Withdraw requests
     WithdrawRequests,
+    /// Withdraw request
+    WithdrawRequest,
 }
 
 impl Default for AccountType {

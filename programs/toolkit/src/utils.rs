@@ -1,6 +1,14 @@
-use solana_client::{client_error::ClientError, rpc_client::RpcClient};
+use solana_account_decoder::UiAccountEncoding;
+use solana_client::{
+    client_error::ClientError,
+    rpc_client::RpcClient,
+    rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
+    rpc_filter::{Memcmp, MemcmpEncodedBytes, MemcmpEncoding, RpcFilterType},
+};
 use solana_program::pubkey::Pubkey;
-use solana_sdk::{signature::Signature, signer::Signer, transaction::Transaction};
+use solana_sdk::{
+    account::Account, signature::Signature, signer::Signer, transaction::Transaction,
+};
 
 use crate::accounts_config::{DefaultAccounts, InitializedAccounts};
 
@@ -20,6 +28,38 @@ pub fn get_default_accounts(config: &Config) -> DefaultAccounts {
 
 pub fn get_initialized_accounts(config: &Config) -> InitializedAccounts {
     InitializedAccounts::load(&format!("accounts.{}.yaml", config.network)).unwrap_or_default()
+}
+
+pub fn get_program_accounts(
+    config: &Config,
+    program_id: &Pubkey,
+    account_type: u8,
+    pubkey: &Pubkey,
+) -> Result<Vec<(Pubkey, Account)>, ClientError> {
+    config.rpc_client.get_program_accounts_with_config(
+        program_id,
+        RpcProgramAccountsConfig {
+            filters: Some(vec![
+                // Account type
+                RpcFilterType::Memcmp(Memcmp {
+                    offset: 0,
+                    bytes: MemcmpEncodedBytes::Base58(bs58::encode([account_type]).into_string()),
+                    encoding: Some(MemcmpEncoding::Binary),
+                }),
+                // Account parent
+                RpcFilterType::Memcmp(Memcmp {
+                    offset: 1,
+                    bytes: MemcmpEncodedBytes::Base58(pubkey.to_string()),
+                    encoding: Some(MemcmpEncoding::Binary),
+                }),
+            ]),
+            account_config: RpcAccountInfoConfig {
+                encoding: Some(UiAccountEncoding::Base64Zstd),
+                ..RpcAccountInfoConfig::default()
+            },
+            ..RpcProgramAccountsConfig::default()
+        },
+    )
 }
 
 pub fn sign_and_send_and_confirm_transaction(

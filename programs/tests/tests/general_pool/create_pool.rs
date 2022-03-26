@@ -32,16 +32,16 @@ async fn success() {
 
     assert_eq!(pool.account_type, AccountType::Pool);
 
-    let requests = test_pool
-        .get_withdraw_requests(
-            &mut context,
-            &test_pool_market,
-            &everlend_general_pool::id(),
-        )
-        .await;
-    assert_eq!(requests.account_type, AccountType::WithdrawRequests);
+    let withdrawal_requests = test_pool
+        .get_withdrawal_requests(&mut context, &test_pool_market)
+        .await
+        .1;
 
-    assert_eq!(requests.pool, test_pool.pool_pubkey,);
+    assert_eq!(
+        withdrawal_requests.account_type,
+        AccountType::WithdrawRequests
+    );
+    assert_eq!(withdrawal_requests.pool, test_pool.pool_pubkey,);
 }
 
 #[tokio::test]

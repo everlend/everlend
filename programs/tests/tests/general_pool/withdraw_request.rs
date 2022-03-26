@@ -1,5 +1,8 @@
 #![cfg(feature = "test-bpf")]
 
+use crate::utils::*;
+use everlend_general_pool::{find_transit_program_address, instruction};
+use everlend_utils::EverlendError;
 use solana_program::clock::Slot;
 use solana_program::instruction::InstructionError;
 use solana_program::pubkey::Pubkey;
@@ -7,11 +10,6 @@ use solana_program_test::*;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signer::Signer;
 use solana_sdk::transaction::{Transaction, TransactionError};
-
-use everlend_general_pool::{find_transit_program_address, instruction, state::WithdrawalRequest};
-use everlend_utils::EverlendError;
-
-use crate::utils::*;
 
 const WARP_SLOT: Slot = 3;
 
@@ -84,16 +82,12 @@ async fn success() {
     context.warp_to_slot(WARP_SLOT + 5).unwrap();
 
     test_pool
-        .withdraw_request(&mut context, &test_pool_market, &user, 50, 1)
+        .withdraw_request(&mut context, &test_pool_market, &user, 50)
         .await
         .unwrap();
 
-    let withdraw_requests = test_pool
-        .get_withdraw_requests(
-            &mut context,
-            &test_pool_market,
-            &everlend_general_pool::id(),
-        )
+    let (withdraw_requests_pubkey, withdraw_requests) = test_pool
+        .get_withdrawal_requests(&mut context, &test_pool_market)
         .await;
     let (transit_account, _) = find_transit_program_address(
         &everlend_general_pool::id(),
@@ -101,12 +95,7 @@ async fn success() {
         &test_pool.pool_mint.pubkey(),
     );
     let withdraw_request = test_pool
-        .get_user_withdraw_requests(
-            &mut context,
-            &test_pool_market,
-            1,
-            &everlend_general_pool::id(),
-        )
+        .get_withdrawal_request(&mut context, &withdraw_requests_pubkey, &user.pubkey())
         .await;
 
     assert_eq!(
@@ -114,106 +103,8 @@ async fn success() {
         50
     );
     assert_eq!(get_token_balance(&mut context, &transit_account).await, 50);
-    assert_eq!(withdraw_requests.last_request_id, 1,);
     assert_eq!(withdraw_requests.liquidity_supply, 50);
-    assert_eq!(
-        withdraw_request,
-        WithdrawalRequest {
-            rent_payer: user.owner.pubkey(),
-            source: user.pool_account,
-            destination: user.token_account,
-            liquidity_amount: 50,
-            collateral_amount: 50,
-        }
-    );
-}
-
-#[tokio::test]
-async fn success_few_requests() {
-    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
-
-    test_pool
-        .deposit(&mut context, &test_pool_market, &user, 100)
-        .await
-        .unwrap();
-
-    context.warp_to_slot(WARP_SLOT).unwrap();
-
-    test_pool
-        .withdraw_request(&mut context, &test_pool_market, &user, 50, 1)
-        .await
-        .unwrap();
-
-    context.warp_to_slot(WARP_SLOT + 5).unwrap();
-
-    test_pool
-        .withdraw_request(&mut context, &test_pool_market, &user, 10, 2)
-        .await
-        .unwrap();
-
-    context.warp_to_slot(WARP_SLOT + 9).unwrap();
-
-    let withdraw_requests = test_pool
-        .get_withdraw_requests(
-            &mut context,
-            &test_pool_market,
-            &everlend_general_pool::id(),
-        )
-        .await;
-    let (transit_account, _) = find_transit_program_address(
-        &everlend_general_pool::id(),
-        &test_pool_market.keypair.pubkey(),
-        &test_pool.pool_mint.pubkey(),
-    );
-    let withdraw_request_1 = test_pool
-        .get_user_withdraw_requests(
-            &mut context,
-            &test_pool_market,
-            1,
-            &everlend_general_pool::id(),
-        )
-        .await;
-    let withdraw_request_2 = test_pool
-        .get_user_withdraw_requests(
-            &mut context,
-            &test_pool_market,
-            2,
-            &everlend_general_pool::id(),
-        )
-        .await;
-
-    assert_eq!(
-        get_token_balance(&mut context, &user.pool_account).await,
-        40
-    );
-
-    assert_eq!(get_token_balance(&mut context, &transit_account).await, 60);
-
-    assert_eq!(withdraw_requests.last_request_id, 2);
-
-    assert_eq!(withdraw_requests.liquidity_supply, 60);
-
-    assert_eq!(
-        withdraw_request_1,
-        WithdrawalRequest {
-            rent_payer: user.owner.pubkey(),
-            source: user.pool_account,
-            destination: user.token_account,
-            liquidity_amount: 50,
-            collateral_amount: 50,
-        },
-    );
-
-    assert_eq!(
-        withdraw_request_2,
-        WithdrawalRequest {
-            rent_payer: user.owner.pubkey(),
-            source: user.pool_account,
-            destination: user.token_account,
-            liquidity_amount: 10,
-            collateral_amount: 10,
-        },
-    );
+    assert_eq!(withdraw_request.liquidity_amount, 50);
 }
 
 #[tokio::test]
@@ -228,7 +119,6 @@ async fn fail_with_invalid_pool_market() {
     context.warp_to_slot(WARP_SLOT + 5).unwrap();
 
     let withdraw_amount = 50;
-    let withdraw_index = 1;
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::withdraw_request(
@@ -242,7 +132,6 @@ async fn fail_with_invalid_pool_market() {
             &test_pool.pool_mint.pubkey(),
             &user.pubkey(),
             withdraw_amount,
-            withdraw_index,
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer, &user.owner],
@@ -275,7 +164,6 @@ async fn fail_with_invalid_pool() {
     context.warp_to_slot(WARP_SLOT + 5).unwrap();
 
     let withdraw_amount = 50;
-    let withdraw_index = 1;
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::withdraw_request(
@@ -289,7 +177,6 @@ async fn fail_with_invalid_pool() {
             &test_pool.pool_mint.pubkey(),
             &user.pubkey(),
             withdraw_amount,
-            withdraw_index,
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer, &user.owner],
@@ -322,7 +209,6 @@ async fn fail_with_invalid_destination() {
     context.warp_to_slot(WARP_SLOT + 5).unwrap();
 
     let withdraw_amount = 50;
-    let withdraw_index = 1;
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::withdraw_request(
@@ -336,7 +222,6 @@ async fn fail_with_invalid_destination() {
             &test_pool.pool_mint.pubkey(),
             &user.pubkey(),
             withdraw_amount,
-            withdraw_index,
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer, &user.owner],
@@ -366,7 +251,6 @@ async fn fail_with_invalid_token_account() {
     context.warp_to_slot(WARP_SLOT + 5).unwrap();
 
     let withdraw_amount = 50;
-    let withdraw_index = 1;
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::withdraw_request(
@@ -380,7 +264,6 @@ async fn fail_with_invalid_token_account() {
             &test_pool.pool_mint.pubkey(),
             &user.pubkey(),
             withdraw_amount,
-            withdraw_index,
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer, &user.owner],
@@ -410,7 +293,6 @@ async fn fail_with_invalid_token_mint() {
     context.warp_to_slot(WARP_SLOT + 5).unwrap();
 
     let withdraw_amount = 50;
-    let withdraw_index = 1;
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::withdraw_request(
@@ -424,7 +306,6 @@ async fn fail_with_invalid_token_mint() {
             &test_pool.pool_mint.pubkey(),
             &user.pubkey(),
             withdraw_amount,
-            withdraw_index,
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer, &user.owner],
@@ -457,7 +338,6 @@ async fn fail_with_invalid_pool_mint() {
     context.warp_to_slot(WARP_SLOT + 5).unwrap();
 
     let withdraw_amount = 50;
-    let withdraw_index = 1;
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::withdraw_request(
@@ -471,7 +351,6 @@ async fn fail_with_invalid_pool_mint() {
             &Pubkey::new_unique(),
             &user.pubkey(),
             withdraw_amount,
-            withdraw_index,
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer, &user.owner],
@@ -501,7 +380,6 @@ async fn fail_with_wrong_user_transfer_authority() {
     context.warp_to_slot(WARP_SLOT + 5).unwrap();
 
     let withdraw_amount = 50;
-    let withdraw_index = 1;
 
     let wrong_user_authority = Keypair::new();
 
@@ -517,7 +395,6 @@ async fn fail_with_wrong_user_transfer_authority() {
             &test_pool.pool_mint.pubkey(),
             &wrong_user_authority.pubkey(),
             withdraw_amount,
-            withdraw_index,
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer, &wrong_user_authority],
@@ -550,7 +427,6 @@ async fn fail_with_invalid_withdraw_amount() {
     context.warp_to_slot(WARP_SLOT + 5).unwrap();
 
     let withdraw_amount = u64::MAX;
-    let withdraw_index = 1;
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::withdraw_request(
@@ -564,7 +440,6 @@ async fn fail_with_invalid_withdraw_amount() {
             &test_pool.pool_mint.pubkey(),
             &user.pubkey(),
             withdraw_amount,
-            withdraw_index,
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer, &user.owner],
@@ -582,49 +457,5 @@ async fn fail_with_invalid_withdraw_amount() {
             0,
             InstructionError::Custom(EverlendError::MathOverflow as u32)
         )
-    )
-}
-
-#[tokio::test]
-async fn fail_with_invalid_withdraw_index() {
-    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
-
-    test_pool
-        .deposit(&mut context, &test_pool_market, &user, 100)
-        .await
-        .unwrap();
-
-    context.warp_to_slot(WARP_SLOT + 5).unwrap();
-
-    let withdraw_amount = 50;
-    let withdraw_index = u64::MAX;
-
-    let tx = Transaction::new_signed_with_payer(
-        &[instruction::withdraw_request(
-            &everlend_general_pool::id(),
-            &test_pool_market.keypair.pubkey(),
-            &test_pool.pool_pubkey,
-            &user.pool_account,
-            &user.token_account,
-            &test_pool.token_account.pubkey(),
-            &test_pool.token_mint_pubkey,
-            &test_pool.pool_mint.pubkey(),
-            &user.pubkey(),
-            withdraw_amount,
-            withdraw_index,
-        )],
-        Some(&context.payer.pubkey()),
-        &[&context.payer, &user.owner],
-        context.last_blockhash,
-    );
-
-    assert_eq!(
-        context
-            .banks_client
-            .process_transaction(tx)
-            .await
-            .unwrap_err()
-            .unwrap(),
-        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
     )
 }

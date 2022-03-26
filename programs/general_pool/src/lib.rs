@@ -52,7 +52,7 @@ pub fn find_withdrawal_requests_program_address(
 ) -> (Pubkey, u8) {
     Pubkey::find_program_address(
         &[
-            "withdrawals".as_bytes(),
+            br"withdrawals",
             &pool_market_pubkey.to_bytes(),
             &token_mint.to_bytes(),
         ],
@@ -61,18 +61,16 @@ pub fn find_withdrawal_requests_program_address(
 }
 
 /// Generates user withdrawal request address
-pub fn find_user_withdrawal_request_program_address(
+pub fn find_withdrawal_request_program_address(
     program_id: &Pubkey,
-    pool_market_pubkey: &Pubkey,
-    token_mint: &Pubkey,
-    index: u64,
+    withdrawal_requests_pubkey: &Pubkey,
+    from: &Pubkey,
 ) -> (Pubkey, u8) {
     Pubkey::find_program_address(
         &[
-            &index.to_be_bytes()[..],
-            "withdrawals".as_bytes(),
-            &pool_market_pubkey.to_bytes(),
-            &token_mint.to_bytes(),
+            br"withdrawal",
+            &withdrawal_requests_pubkey.to_bytes(),
+            &from.to_bytes(),
         ],
         program_id,
     )
@@ -85,11 +83,7 @@ pub fn find_transit_program_address(
     mint: &Pubkey,
 ) -> (Pubkey, u8) {
     Pubkey::find_program_address(
-        &[
-            "transit".as_bytes(),
-            &pool_market.to_bytes(),
-            &mint.to_bytes(),
-        ],
+        &[br"transit", &pool_market.to_bytes(), &mint.to_bytes()],
         program_id,
     )
 }
