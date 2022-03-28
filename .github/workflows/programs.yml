@@ -40,16 +40,10 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            ./rust/target
+            ./programs/target
           key: ${{ env.cache_id }}-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ env.RUSTC_HASH }}
 
-      # Build
-      - name: build-programs
-        id: run_build
-        working-directory: ./programs
-        run: |
-          cargo +${{ env.RUST_STABLE }} build-bpf --version
-          cargo +${{ env.RUST_STABLE }} build-bpf
+      - uses: ./.github/actions/build-programs
 
       # Run test
       - name: test-programs
