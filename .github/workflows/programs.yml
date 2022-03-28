@@ -1,4 +1,4 @@
-name: Program General Pool
+name: Programs
 
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     env:
-      cache_id: program-general-pool
+      cache_id: programs
 
     steps:
       # Setup Deps
@@ -43,10 +43,18 @@ jobs:
             ./rust/target
           key: ${{ env.cache_id }}-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ env.RUSTC_HASH }}
 
+      # Build
+      - name: build-programs
+        id: run_build
+        working-directory: ./programs
+        run: |
+          cargo +${{ env.RUST_STABLE }} build-bpf --version
+          cargo +${{ env.RUST_STABLE }} build-bpf
+
       # Run test
-      - name: test-program
+      - name: test-programs
         id: run_test
         working-directory: ./programs/tests
         run: |
           cargo +${{ env.RUST_TOOLCHAIN }} test-bpf --version
-          cargo +${{ env.RUST_TOOLCHAIN }} test-bpf --test tests -- general_pool --nocapture --test-threads 1
+          cargo +${{ env.RUST_TOOLCHAIN }} test-bpf --test tests -- --nocapture --test-threads 1
