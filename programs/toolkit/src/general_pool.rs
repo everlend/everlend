@@ -1,7 +1,7 @@
 use crate::utils::*;
 use everlend_general_pool::{
     find_pool_borrow_authority_program_address, find_pool_program_address, instruction,
-    state::{AccountType, PoolMarket},
+    state::{AccountType, PoolMarket, WithdrawalRequest},
 };
 use solana_client::client_error::ClientError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
@@ -267,14 +267,22 @@ pub fn get_withdrawal_request_accounts(
     config: &Config,
     pool_market_pubkey: &Pubkey,
     token_mint: &Pubkey,
-) -> Result<Vec<(Pubkey, Account)>, ClientError> {
+) -> Result<Vec<(Pubkey, WithdrawalRequest)>, ClientError> {
     let (pool_pubkey, _) =
         find_pool_program_address(&everlend_general_pool::id(), pool_market_pubkey, token_mint);
 
-    get_program_accounts(
+    Ok(get_program_accounts(
         config,
         &everlend_general_pool::id(),
         AccountType::WithdrawRequest as u8,
         &pool_pubkey,
+    )?
+    .into_iter()
+    .filter_map(
+        |(pk, account)| match WithdrawalRequest::unpack_unchecked(&account.data) {
+            Ok(pool) => Some((pk, pool)),
+            _ => None,
+        },
     )
+    .collect())
 }
