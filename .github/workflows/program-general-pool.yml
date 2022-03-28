@@ -2,9 +2,13 @@ name: Program General Pool
 
 on:
   push:
-    branches: [master]
+    branches:
+      - 'main'
+      - 'v1'
   pull_request:
-    branches: [master]
+    branches:
+      - 'main'
+      - 'v1'
 
 env:
   CARGO_TERM_COLOR: always
