@@ -1,14 +1,20 @@
 #![cfg(feature = "test-bpf")]
 
-use crate::utils::*;
+use solana_program::instruction::InstructionError;
+use solana_program::{program_pack::Pack, pubkey::Pubkey};
+use solana_program_test::*;
+use solana_sdk::signer::Signer;
+use solana_sdk::transaction::{Transaction, TransactionError};
+use spl_token_lending::error::LendingError;
+
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_utils::{
     find_program_address,
     integrations::{self, MoneyMarketPubkeys},
+    EverlendError,
 };
-use solana_program::{program_pack::Pack, pubkey::Pubkey};
-use solana_program_test::*;
-use solana_sdk::signer::Signer;
+
+use crate::utils::*;
 
 async fn setup() -> (
     ProgramTestContext,
@@ -32,7 +38,7 @@ async fn setup() -> (
 
     // 0. Prepare lending
     let reserve = money_market.get_reserve_data(&mut context).await;
-    println!("{:#?}", reserve);
+    // println!("{:#?}", reserve);
 
     let account = get_account(&mut context, &money_market.market_pubkey).await;
     let lending_market =
@@ -367,4 +373,596 @@ async fn success_increased_liquidity() {
     //     .await;
 
     // println!("Rebalancing: {:#?}", rebalancing);
+}
+
+#[tokio::test]
+async fn fail_with_invalid_registry() {
+    let (
+        mut context,
+        money_market,
+        pyth_oracle,
+        _,
+        _,
+        _,
+        _,
+        mm_pool_market,
+        mm_pool,
+        _,
+        test_depositor,
+        _,
+        _,
+        _,
+    ) = setup().await;
+
+    let reserve = money_market.get_reserve_data(&mut context).await;
+
+    // Rates should be refreshed
+    context.warp_to_slot(3).unwrap();
+    pyth_oracle.update(&mut context, 3).await;
+
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
+
+    let deposit_accounts =
+        integrations::deposit_accounts(&spl_token_lending::id(), &money_market_pubkeys);
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::deposit(
+            &everlend_depositor::id(),
+            &Pubkey::new_unique(),
+            &test_depositor.depositor.pubkey(),
+            &mm_pool_market.keypair.pubkey(),
+            &mm_pool.token_account.pubkey(),
+            &mm_pool.pool_mint.pubkey(),
+            &get_liquidity_mint().1,
+            &mm_pool.token_mint_pubkey,
+            &spl_token_lending::id(),
+            deposit_accounts,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
+        )
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_depositor() {
+    let (
+        mut context,
+        money_market,
+        pyth_oracle,
+        registry,
+        _,
+        _,
+        _,
+        mm_pool_market,
+        mm_pool,
+        _,
+        _,
+        _,
+        _,
+        _,
+    ) = setup().await;
+
+    let reserve = money_market.get_reserve_data(&mut context).await;
+
+    // Rates should be refreshed
+    context.warp_to_slot(3).unwrap();
+    pyth_oracle.update(&mut context, 3).await;
+
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
+
+    let deposit_accounts =
+        integrations::deposit_accounts(&spl_token_lending::id(), &money_market_pubkeys);
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::deposit(
+            &everlend_depositor::id(),
+            &registry.keypair.pubkey(),
+            &Pubkey::new_unique(),
+            &mm_pool_market.keypair.pubkey(),
+            &mm_pool.token_account.pubkey(),
+            &mm_pool.pool_mint.pubkey(),
+            &get_liquidity_mint().1,
+            &mm_pool.token_mint_pubkey,
+            &spl_token_lending::id(),
+            deposit_accounts,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
+        )
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_mm_pool_market() {
+    let (
+        mut context,
+        money_market,
+        pyth_oracle,
+        registry,
+        _,
+        _,
+        _,
+        _,
+        mm_pool,
+        _,
+        test_depositor,
+        _,
+        _,
+        _,
+    ) = setup().await;
+
+    let reserve = money_market.get_reserve_data(&mut context).await;
+
+    // Rates should be refreshed
+    context.warp_to_slot(3).unwrap();
+    pyth_oracle.update(&mut context, 3).await;
+
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
+
+    let deposit_accounts =
+        integrations::deposit_accounts(&spl_token_lending::id(), &money_market_pubkeys);
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::deposit(
+            &everlend_depositor::id(),
+            &registry.keypair.pubkey(),
+            &test_depositor.depositor.pubkey(),
+            &Pubkey::new_unique(),
+            &mm_pool.token_account.pubkey(),
+            &mm_pool.pool_mint.pubkey(),
+            &get_liquidity_mint().1,
+            &mm_pool.token_mint_pubkey,
+            &spl_token_lending::id(),
+            deposit_accounts,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
+        )
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_mm_pool_token_account() {
+    let (
+        mut context,
+        money_market,
+        pyth_oracle,
+        registry,
+        _,
+        _,
+        _,
+        mm_pool_market,
+        mm_pool,
+        _,
+        test_depositor,
+        _,
+        _,
+        _,
+    ) = setup().await;
+
+    let reserve = money_market.get_reserve_data(&mut context).await;
+
+    // Rates should be refreshed
+    context.warp_to_slot(3).unwrap();
+    pyth_oracle.update(&mut context, 3).await;
+
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
+
+    let deposit_accounts =
+        integrations::deposit_accounts(&spl_token_lending::id(), &money_market_pubkeys);
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::deposit(
+            &everlend_depositor::id(),
+            &registry.keypair.pubkey(),
+            &test_depositor.depositor.pubkey(),
+            &mm_pool_market.keypair.pubkey(),
+            &Pubkey::new_unique(),
+            &mm_pool.pool_mint.pubkey(),
+            &get_liquidity_mint().1,
+            &mm_pool.token_mint_pubkey,
+            &spl_token_lending::id(),
+            deposit_accounts,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_mm_pool_collateral_mint() {
+    let (
+        mut context,
+        money_market,
+        pyth_oracle,
+        registry,
+        _,
+        _,
+        _,
+        mm_pool_market,
+        mm_pool,
+        _,
+        test_depositor,
+        _,
+        _,
+        _,
+    ) = setup().await;
+
+    let reserve = money_market.get_reserve_data(&mut context).await;
+
+    // Rates should be refreshed
+    context.warp_to_slot(3).unwrap();
+    pyth_oracle.update(&mut context, 3).await;
+
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
+
+    let deposit_accounts =
+        integrations::deposit_accounts(&spl_token_lending::id(), &money_market_pubkeys);
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::deposit(
+            &everlend_depositor::id(),
+            &registry.keypair.pubkey(),
+            &test_depositor.depositor.pubkey(),
+            &mm_pool_market.keypair.pubkey(),
+            &mm_pool.token_account.pubkey(),
+            &Pubkey::new_unique(),
+            &get_liquidity_mint().1,
+            &mm_pool.token_mint_pubkey,
+            &spl_token_lending::id(),
+            deposit_accounts,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_liquidity_mint() {
+    let (
+        mut context,
+        money_market,
+        pyth_oracle,
+        registry,
+        _,
+        _,
+        _,
+        mm_pool_market,
+        mm_pool,
+        _,
+        test_depositor,
+        _,
+        _,
+        _,
+    ) = setup().await;
+
+    let reserve = money_market.get_reserve_data(&mut context).await;
+
+    // Rates should be refreshed
+    context.warp_to_slot(3).unwrap();
+    pyth_oracle.update(&mut context, 3).await;
+
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
+
+    let deposit_accounts =
+        integrations::deposit_accounts(&spl_token_lending::id(), &money_market_pubkeys);
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::deposit(
+            &everlend_depositor::id(),
+            &registry.keypair.pubkey(),
+            &test_depositor.depositor.pubkey(),
+            &mm_pool_market.keypair.pubkey(),
+            &mm_pool.token_account.pubkey(),
+            &mm_pool.pool_mint.pubkey(),
+            &Pubkey::new_unique(),
+            &mm_pool.token_mint_pubkey,
+            &spl_token_lending::id(),
+            deposit_accounts,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
+        )
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_collateral_mint() {
+    let (
+        mut context,
+        money_market,
+        pyth_oracle,
+        registry,
+        _,
+        _,
+        _,
+        mm_pool_market,
+        mm_pool,
+        _,
+        test_depositor,
+        _,
+        _,
+        _,
+    ) = setup().await;
+
+    let reserve = money_market.get_reserve_data(&mut context).await;
+
+    // Rates should be refreshed
+    context.warp_to_slot(3).unwrap();
+    pyth_oracle.update(&mut context, 3).await;
+
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
+
+    let deposit_accounts =
+        integrations::deposit_accounts(&spl_token_lending::id(), &money_market_pubkeys);
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::deposit(
+            &everlend_depositor::id(),
+            &registry.keypair.pubkey(),
+            &test_depositor.depositor.pubkey(),
+            &mm_pool_market.keypair.pubkey(),
+            &mm_pool.token_account.pubkey(),
+            &mm_pool.pool_mint.pubkey(),
+            &get_liquidity_mint().1,
+            &Pubkey::new_unique(),
+            &spl_token_lending::id(),
+            deposit_accounts,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(LendingError::InvalidAccountInput as u32),
+        )
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_money_market_program_id() {
+    let (
+        mut context,
+        money_market,
+        pyth_oracle,
+        registry,
+        _,
+        _,
+        _,
+        mm_pool_market,
+        mm_pool,
+        _,
+        test_depositor,
+        _,
+        _,
+        _,
+    ) = setup().await;
+
+    let reserve = money_market.get_reserve_data(&mut context).await;
+
+    // Rates should be refreshed
+    context.warp_to_slot(3).unwrap();
+    pyth_oracle.update(&mut context, 3).await;
+
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
+
+    let deposit_accounts =
+        integrations::deposit_accounts(&spl_token_lending::id(), &money_market_pubkeys);
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::deposit(
+            &everlend_depositor::id(),
+            &registry.keypair.pubkey(),
+            &test_depositor.depositor.pubkey(),
+            &mm_pool_market.keypair.pubkey(),
+            &mm_pool.token_account.pubkey(),
+            &mm_pool.pool_mint.pubkey(),
+            &get_liquidity_mint().1,
+            &mm_pool.token_mint_pubkey,
+            &Pubkey::new_unique(),
+            deposit_accounts,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidRebalancingMoneyMarket as u32),
+        )
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_money_market_accounts() {
+    let (
+        mut context,
+        _,
+        pyth_oracle,
+        registry,
+        _,
+        _,
+        _,
+        mm_pool_market,
+        mm_pool,
+        _,
+        test_depositor,
+        _,
+        _,
+        _,
+    ) = setup().await;
+
+    // Rates should be refreshed
+    context.warp_to_slot(3).unwrap();
+    pyth_oracle.update(&mut context, 3).await;
+
+    let deposit_accounts = vec![];
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::deposit(
+            &everlend_depositor::id(),
+            &registry.keypair.pubkey(),
+            &test_depositor.depositor.pubkey(),
+            &mm_pool_market.keypair.pubkey(),
+            &mm_pool.token_account.pubkey(),
+            &mm_pool.pool_mint.pubkey(),
+            &get_liquidity_mint().1,
+            &mm_pool.token_mint_pubkey,
+            &spl_token_lending::id(),
+            deposit_accounts,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(0, InstructionError::NotEnoughAccountKeys)
+    );
 }

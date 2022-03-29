@@ -1,6 +1,11 @@
 #![cfg(feature = "test-bpf")]
 
-use crate::utils::*;
+use solana_program::instruction::InstructionError;
+use solana_program::pubkey::Pubkey;
+use solana_program_test::*;
+use solana_sdk::transaction::Transaction;
+use solana_sdk::{signer::Signer, transaction::TransactionError};
+
 use everlend_depositor::find_transit_program_address;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_utils::{
@@ -8,9 +13,8 @@ use everlend_utils::{
     integrations::{self, MoneyMarketPubkeys},
     EverlendError,
 };
-use solana_program::instruction::InstructionError;
-use solana_program_test::*;
-use solana_sdk::{signer::Signer, transaction::TransactionError};
+
+use crate::utils::*;
 
 async fn setup() -> (
     ProgramTestContext,
@@ -223,7 +227,7 @@ async fn success() {
         registry,
         general_pool_market,
         general_pool,
-        _general_pool_borrow_authority,
+        _,
         _,
         _,
         _,
@@ -257,7 +261,7 @@ async fn success_with_refresh_income() {
         registry,
         general_pool_market,
         general_pool,
-        _general_pool_borrow_authority,
+        _,
         income_pool_market,
         income_pool,
         mm_pool_market,
@@ -397,7 +401,7 @@ async fn fail_with_already_refreshed_income() {
         registry,
         general_pool_market,
         general_pool,
-        _general_pool_borrow_authority,
+        _,
         _,
         _,
         mm_pool_market,
@@ -475,7 +479,325 @@ async fn fail_with_already_refreshed_income() {
             .unwrap(),
         TransactionError::InstructionError(
             0,
-            InstructionError::Custom(EverlendError::IncomeRefreshed as u32)
+            InstructionError::Custom(EverlendError::IncomeRefreshed as u32),
+        )
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_registry() {
+    let (
+        mut context,
+        _,
+        _,
+        _,
+        general_pool_market,
+        general_pool,
+        _,
+        _,
+        _,
+        _,
+        _,
+        _,
+        test_depositor,
+        test_liquidity_oracle,
+        _,
+        _,
+    ) = setup().await;
+
+    let refresh_income = false;
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::start_rebalancing(
+            &everlend_depositor::id(),
+            &Pubkey::new_unique(),
+            &test_depositor.depositor.pubkey(),
+            &general_pool.token_mint_pubkey,
+            &general_pool_market.keypair.pubkey(),
+            &general_pool.token_account.pubkey(),
+            &test_liquidity_oracle.keypair.pubkey(),
+            &context.payer.pubkey(),
+            refresh_income,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(0, InstructionError::InvalidAccountData)
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_depositor() {
+    let (
+        mut context,
+        _,
+        _,
+        registry,
+        general_pool_market,
+        general_pool,
+        _,
+        _,
+        _,
+        _,
+        _,
+        _,
+        _,
+        test_liquidity_oracle,
+        _,
+        _,
+    ) = setup().await;
+
+    let refresh_income = false;
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::start_rebalancing(
+            &everlend_depositor::id(),
+            &registry.keypair.pubkey(),
+            &Pubkey::new_unique(),
+            &general_pool.token_mint_pubkey,
+            &general_pool_market.keypair.pubkey(),
+            &general_pool.token_account.pubkey(),
+            &test_liquidity_oracle.keypair.pubkey(),
+            &context.payer.pubkey(),
+            refresh_income,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
+        )
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_mint() {
+    let (
+        mut context,
+        _,
+        _,
+        registry,
+        general_pool_market,
+        general_pool,
+        _,
+        _,
+        _,
+        _,
+        _,
+        _,
+        test_depositor,
+        test_liquidity_oracle,
+        _,
+        _,
+    ) = setup().await;
+
+    let refresh_income = false;
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::start_rebalancing(
+            &everlend_depositor::id(),
+            &registry.keypair.pubkey(),
+            &test_depositor.depositor.pubkey(),
+            &Pubkey::new_unique(),
+            &general_pool_market.keypair.pubkey(),
+            &general_pool.token_account.pubkey(),
+            &test_liquidity_oracle.keypair.pubkey(),
+            &context.payer.pubkey(),
+            refresh_income,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
+        )
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_general_pool_market() {
+    let (
+        mut context,
+        _,
+        _,
+        registry,
+        _,
+        general_pool,
+        _,
+        _,
+        _,
+        _,
+        _,
+        _,
+        test_depositor,
+        test_liquidity_oracle,
+        _,
+        _,
+    ) = setup().await;
+
+    let refresh_income = false;
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::start_rebalancing(
+            &everlend_depositor::id(),
+            &registry.keypair.pubkey(),
+            &test_depositor.depositor.pubkey(),
+            &general_pool.token_mint_pubkey,
+            &Pubkey::new_unique(),
+            &general_pool.token_account.pubkey(),
+            &test_liquidity_oracle.keypair.pubkey(),
+            &context.payer.pubkey(),
+            refresh_income,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
+        )
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_general_pool_token_account() {
+    let (
+        mut context,
+        _,
+        _,
+        registry,
+        general_pool_market,
+        general_pool,
+        _,
+        _,
+        _,
+        _,
+        _,
+        _,
+        test_depositor,
+        test_liquidity_oracle,
+        _,
+        _,
+    ) = setup().await;
+
+    let refresh_income = false;
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::start_rebalancing(
+            &everlend_depositor::id(),
+            &registry.keypair.pubkey(),
+            &test_depositor.depositor.pubkey(),
+            &general_pool.token_mint_pubkey,
+            &general_pool_market.keypair.pubkey(),
+            &Pubkey::new_unique(),
+            &test_liquidity_oracle.keypair.pubkey(),
+            &context.payer.pubkey(),
+            refresh_income,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_liquidity_oracle() {
+    let (
+        mut context,
+        _,
+        _,
+        registry,
+        general_pool_market,
+        general_pool,
+        _,
+        _,
+        _,
+        _,
+        _,
+        _,
+        test_depositor,
+        _,
+        _,
+        _,
+    ) = setup().await;
+
+    let refresh_income = false;
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::start_rebalancing(
+            &everlend_depositor::id(),
+            &registry.keypair.pubkey(),
+            &test_depositor.depositor.pubkey(),
+            &general_pool.token_mint_pubkey,
+            &general_pool_market.keypair.pubkey(),
+            &general_pool.token_account.pubkey(),
+            &Pubkey::new_unique(),
+            &context.payer.pubkey(),
+            refresh_income,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
         )
     );
 }
