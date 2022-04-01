@@ -5,7 +5,7 @@ import {
   Pool,
   PoolBorrowAuthority,
   PoolMarket,
-  UserWithdrawRequest,
+  WithdrawalRequest,
   WithdrawalRequests,
 } from './accounts'
 import { GeneralPoolsProgram } from './program'
@@ -153,7 +153,7 @@ export const deposit = async (
 export const withdrawRequest = async (
   { connection, payerPublicKey }: ActionOptions,
   pool: PublicKey,
-  amount: BN,
+  collateralAmount: BN,
   source: PublicKey,
   destination?: PublicKey,
 ): Promise<ActionResult> => {
@@ -162,16 +162,7 @@ export const withdrawRequest = async (
   } = await Pool.load(connection, pool)
 
   const withdrawRequests = await WithdrawalRequests.getPDA(poolMarket, tokenMint)
-
-  const {
-    data: { lastRequestId },
-  } = await WithdrawalRequests.load(connection, withdrawRequests)
-
-  const userWithdrawRequest = await UserWithdrawRequest.getPDA(
-    poolMarket,
-    tokenMint,
-    lastRequestId.add(new BN(1, 10)),
-  )
+  const withdrawalRequest = await WithdrawalRequest.getPDA(withdrawRequests, payerPublicKey)
 
   const collateralTransit = await GeneralPoolsProgram.findProgramAddress([
     Buffer.from('transit'),
@@ -201,13 +192,13 @@ export const withdrawRequest = async (
         poolMarket,
         pool,
         withdrawRequests,
-        userWithdrawRequest,
+        withdrawalRequest,
         source,
         destination,
         tokenAccount,
         collateralTransit,
         poolMint,
-        amount,
+        collateralAmount,
       },
     ),
   )

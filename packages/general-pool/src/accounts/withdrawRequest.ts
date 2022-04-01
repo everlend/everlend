@@ -5,31 +5,37 @@ import { Buffer } from 'buffer'
 import { Account, Borsh, Errors } from '@everlend/common'
 
 type Args = {
-  rentPayer: PublicKey
+  pool: PublicKey
+  from: PublicKey
   source: PublicKey
   destination: PublicKey
   liquidityAmount: BN
   collateralAmount: BN
+  ticket: BN
 }
 
-export class UserWithdrawRequestData extends Borsh.Data<Args> {
+export class WithdrawalRequestData extends Borsh.Data<Args> {
   static readonly SCHEMA = this.struct([
-    ['rentPayer', 'publicKey'],
+    ['pool', 'publicKey'],
+    ['from', 'publicKey'],
     ['source', 'publicKey'],
     ['destination', 'publicKey'],
     ['liquidityAmount', 'u64'],
     ['collateralAmount', 'u64'],
+    ['ticket', 'u64'],
   ])
 
-  rentPayer: PublicKey
+  pool: PublicKey
+  from: PublicKey
   source: PublicKey
   destination: PublicKey
   liquidityAmount: BN
   collateralAmount: BN
+  ticket: BN
 }
 
-export class UserWithdrawRequest extends Account<UserWithdrawRequestData> {
-  static readonly LEN = 112
+export class WithdrawalRequest extends Account<WithdrawalRequestData> {
+  static readonly LEN = 153
 
   constructor(key: PublicKey, info: AccountInfo<Buffer>) {
     super(key, info)
@@ -38,15 +44,14 @@ export class UserWithdrawRequest extends Account<UserWithdrawRequestData> {
       throw Errors.ERROR_INVALID_OWNER()
     }
 
-    this.data = UserWithdrawRequestData.deserialize(this.info.data)
+    this.data = WithdrawalRequestData.deserialize(this.info.data)
   }
 
-  static getPDA(poolMarket: PublicKey, tokenMint: PublicKey, index: BN) {
+  static getPDA(withdrawalRequests: PublicKey, from: PublicKey) {
     return GeneralPoolsProgram.findProgramAddress([
-      index.toArrayLike(Buffer, 'be', 8),
-      Buffer.from('withdrawals'),
-      new PublicKey(poolMarket).toBuffer(),
-      new PublicKey(tokenMint).toBuffer(),
+      Buffer.from('withdrawal'),
+      new PublicKey(withdrawalRequests).toBuffer(),
+      new PublicKey(from).toBuffer(),
     ])
   }
 }

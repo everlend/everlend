@@ -7,6 +7,7 @@ export enum AccountType {
   Pool = 2,
   PoolBorrowAuthority = 3,
   WithdrawRequests = 4,
+  WithdrawRequest = 5,
 }
 
 export class GeneralPoolsProgram extends Program {

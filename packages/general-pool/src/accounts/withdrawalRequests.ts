@@ -8,8 +8,8 @@ type Args = {
   accountType: AccountType
   pool: PublicKey
   mint: PublicKey
-  lastRequestId: BN
-  lastProcessedRequestId: BN
+  nextTicket: BN
+  nextProcessTicket: BN
   liquiditySupply: BN
 }
 
@@ -18,16 +18,16 @@ export class WithdrawalRequestsData extends Borsh.Data<Args> {
     ['accountType', 'u8'],
     ['pool', 'publicKey'],
     ['mint', 'publicKey'],
-    ['lastRequestId', 'u64'],
-    ['lastProcessedRequestId', 'u64'],
+    ['nextTicket', 'u64'],
+    ['nextProcessTicket', 'u64'],
     ['liquiditySupply', 'u64'],
   ])
 
   accountType: AccountType
   pool: PublicKey
   mint: PublicKey
-  lastRequestId: BN
-  lastProcessedRequestId: BN
+  nextTicket: BN
+  nextProcessTicket: BN
   liquiditySupply: BN
 }
 
