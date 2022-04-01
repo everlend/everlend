@@ -1,15 +1,20 @@
 #![cfg(feature = "test-bpf")]
 
-use crate::utils::*;
+use solana_program::instruction::InstructionError;
+use solana_program::{program_pack::Pack, pubkey::Pubkey};
+use solana_program_test::*;
+use solana_sdk::signer::Signer;
+use solana_sdk::transaction::{Transaction, TransactionError};
+
 use everlend_depositor::find_transit_program_address;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_utils::{
     find_program_address,
     integrations::{self, MoneyMarketPubkeys},
+    EverlendError,
 };
-use solana_program::{program_pack::Pack, pubkey::Pubkey};
-use solana_program_test::*;
-use solana_sdk::signer::Signer;
+
+use crate::utils::*;
 
 async fn setup() -> (
     ProgramTestContext,
@@ -425,5 +430,835 @@ async fn success_with_incomes() {
     assert_eq!(
         get_token_balance(&mut context, &reserve.liquidity.supply_pubkey).await,
         reserve_balance_before - rebalancing.steps[0].liquidity_amount - income_balance,
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_registry() {
+    let (
+        mut context,
+        money_market,
+        pyth_oracle,
+        _,
+        _general_pool_market,
+        _,
+        _general_pool_borrow_authority,
+        income_pool_market,
+        income_pool,
+        mm_pool_market,
+        mm_pool,
+        _,
+        test_depositor,
+    ) = setup().await;
+
+    let reserve = money_market.get_reserve_data(&mut context).await;
+
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
+
+    context.warp_to_slot(5).unwrap();
+    pyth_oracle.update(&mut context, 5).await;
+
+    let money_market_program_id = &spl_token_lending::id();
+
+    let collateral_mint = mm_pool.token_mint_pubkey;
+    let liquidity_mint = get_liquidity_mint().1;
+    let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
+
+    let withdraw_accounts =
+        integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::withdraw(
+            &everlend_depositor::id(),
+            &Pubkey::new_unique(),
+            &test_depositor.depositor.pubkey(),
+            &income_pool_market.keypair.pubkey(),
+            &income_pool.token_account.pubkey(),
+            &mm_pool_market.keypair.pubkey(),
+            &mm_pool.token_account.pubkey(),
+            &mm_pool_collateral_mint,
+            &collateral_mint,
+            &liquidity_mint,
+            money_market_program_id,
+            withdraw_accounts,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
+        )
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_depositor() {
+    let (
+        mut context,
+        money_market,
+        pyth_oracle,
+        registry,
+        _general_pool_market,
+        _,
+        _general_pool_borrow_authority,
+        income_pool_market,
+        income_pool,
+        mm_pool_market,
+        mm_pool,
+        _,
+        _,
+    ) = setup().await;
+
+    let reserve = money_market.get_reserve_data(&mut context).await;
+
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
+
+    context.warp_to_slot(5).unwrap();
+    pyth_oracle.update(&mut context, 5).await;
+
+    let money_market_program_id = &spl_token_lending::id();
+
+    let collateral_mint = mm_pool.token_mint_pubkey;
+    let liquidity_mint = get_liquidity_mint().1;
+    let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
+
+    let withdraw_accounts =
+        integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::withdraw(
+            &everlend_depositor::id(),
+            &registry.keypair.pubkey(),
+            &Pubkey::new_unique(),
+            &income_pool_market.keypair.pubkey(),
+            &income_pool.token_account.pubkey(),
+            &mm_pool_market.keypair.pubkey(),
+            &mm_pool.token_account.pubkey(),
+            &mm_pool_collateral_mint,
+            &collateral_mint,
+            &liquidity_mint,
+            money_market_program_id,
+            withdraw_accounts,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
+        )
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_income_pool_market() {
+    let (
+        mut context,
+        money_market,
+        pyth_oracle,
+        registry,
+        _general_pool_market,
+        _,
+        _general_pool_borrow_authority,
+        _,
+        income_pool,
+        mm_pool_market,
+        mm_pool,
+        liquidity_provider,
+        test_depositor,
+    ) = setup().await;
+
+    let mut reserve = money_market.get_reserve_data(&mut context).await;
+
+    // Transfer some tokens to liquidity account to get incomes
+    token_transfer(
+        &mut context,
+        &liquidity_provider.token_account,
+        &reserve.liquidity.supply_pubkey,
+        &liquidity_provider.owner,
+        10 * EXP,
+    )
+    .await
+    .unwrap();
+
+    reserve.liquidity.deposit(10 * EXP).unwrap();
+    money_market.update_reserve(&mut context, &reserve).await;
+
+    context.warp_to_slot(5).unwrap();
+    pyth_oracle.update(&mut context, 5).await;
+
+    let money_market_program_id = &spl_token_lending::id();
+
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
+
+    let collateral_mint = mm_pool.token_mint_pubkey;
+    let liquidity_mint = get_liquidity_mint().1;
+    let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
+
+    let withdraw_accounts =
+        integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::withdraw(
+            &everlend_depositor::id(),
+            &registry.keypair.pubkey(),
+            &test_depositor.depositor.pubkey(),
+            &Pubkey::new_unique(),
+            &income_pool.token_account.pubkey(),
+            &mm_pool_market.keypair.pubkey(),
+            &mm_pool.token_account.pubkey(),
+            &mm_pool_collateral_mint,
+            &collateral_mint,
+            &liquidity_mint,
+            money_market_program_id,
+            withdraw_accounts,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
+        )
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_income_pool_token_account() {
+    let (
+        mut context,
+        money_market,
+        pyth_oracle,
+        registry,
+        _general_pool_market,
+        _,
+        _general_pool_borrow_authority,
+        income_pool_market,
+        _,
+        mm_pool_market,
+        mm_pool,
+        liquidity_provider,
+        test_depositor,
+    ) = setup().await;
+
+    let mut reserve = money_market.get_reserve_data(&mut context).await;
+
+    // Transfer some tokens to liquidity account to get incomes
+    token_transfer(
+        &mut context,
+        &liquidity_provider.token_account,
+        &reserve.liquidity.supply_pubkey,
+        &liquidity_provider.owner,
+        10 * EXP,
+    )
+    .await
+    .unwrap();
+
+    reserve.liquidity.deposit(10 * EXP).unwrap();
+    money_market.update_reserve(&mut context, &reserve).await;
+
+    context.warp_to_slot(5).unwrap();
+    pyth_oracle.update(&mut context, 5).await;
+
+    let money_market_program_id = &spl_token_lending::id();
+
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
+
+    let collateral_mint = mm_pool.token_mint_pubkey;
+    let liquidity_mint = get_liquidity_mint().1;
+    let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
+
+    let withdraw_accounts =
+        integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::withdraw(
+            &everlend_depositor::id(),
+            &registry.keypair.pubkey(),
+            &test_depositor.depositor.pubkey(),
+            &income_pool_market.keypair.pubkey(),
+            &Pubkey::new_unique(),
+            &mm_pool_market.keypair.pubkey(),
+            &mm_pool.token_account.pubkey(),
+            &mm_pool_collateral_mint,
+            &collateral_mint,
+            &liquidity_mint,
+            money_market_program_id,
+            withdraw_accounts,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_mm_pool_market() {
+    let (
+        mut context,
+        money_market,
+        pyth_oracle,
+        registry,
+        _general_pool_market,
+        _,
+        _general_pool_borrow_authority,
+        income_pool_market,
+        income_pool,
+        _,
+        mm_pool,
+        _,
+        test_depositor,
+    ) = setup().await;
+
+    let reserve = money_market.get_reserve_data(&mut context).await;
+
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
+
+    context.warp_to_slot(5).unwrap();
+    pyth_oracle.update(&mut context, 5).await;
+
+    let money_market_program_id = &spl_token_lending::id();
+
+    let collateral_mint = mm_pool.token_mint_pubkey;
+    let liquidity_mint = get_liquidity_mint().1;
+    let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
+
+    let withdraw_accounts =
+        integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::withdraw(
+            &everlend_depositor::id(),
+            &registry.keypair.pubkey(),
+            &test_depositor.depositor.pubkey(),
+            &income_pool_market.keypair.pubkey(),
+            &income_pool.token_account.pubkey(),
+            &Pubkey::new_unique(),
+            &mm_pool.token_account.pubkey(),
+            &mm_pool_collateral_mint,
+            &collateral_mint,
+            &liquidity_mint,
+            money_market_program_id,
+            withdraw_accounts,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
+        )
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_mm_pool_token_account() {
+    let (
+        mut context,
+        money_market,
+        pyth_oracle,
+        registry,
+        _general_pool_market,
+        _,
+        _general_pool_borrow_authority,
+        income_pool_market,
+        income_pool,
+        mm_pool_market,
+        mm_pool,
+        _,
+        test_depositor,
+    ) = setup().await;
+
+    let reserve = money_market.get_reserve_data(&mut context).await;
+
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
+
+    context.warp_to_slot(5).unwrap();
+    pyth_oracle.update(&mut context, 5).await;
+
+    let money_market_program_id = &spl_token_lending::id();
+
+    let collateral_mint = mm_pool.token_mint_pubkey;
+    let liquidity_mint = get_liquidity_mint().1;
+    let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
+
+    let withdraw_accounts =
+        integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::withdraw(
+            &everlend_depositor::id(),
+            &registry.keypair.pubkey(),
+            &test_depositor.depositor.pubkey(),
+            &income_pool_market.keypair.pubkey(),
+            &income_pool.token_account.pubkey(),
+            &mm_pool_market.keypair.pubkey(),
+            &Pubkey::new_unique(),
+            &mm_pool_collateral_mint,
+            &collateral_mint,
+            &liquidity_mint,
+            money_market_program_id,
+            withdraw_accounts,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_mm_pool_collateral_mint() {
+    let (
+        mut context,
+        money_market,
+        pyth_oracle,
+        registry,
+        _general_pool_market,
+        _,
+        _general_pool_borrow_authority,
+        income_pool_market,
+        income_pool,
+        mm_pool_market,
+        mm_pool,
+        _,
+        test_depositor,
+    ) = setup().await;
+
+    let reserve = money_market.get_reserve_data(&mut context).await;
+
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
+
+    context.warp_to_slot(5).unwrap();
+    pyth_oracle.update(&mut context, 5).await;
+
+    let money_market_program_id = &spl_token_lending::id();
+
+    let collateral_mint = mm_pool.token_mint_pubkey;
+    let liquidity_mint = get_liquidity_mint().1;
+    let mm_pool_collateral_mint = Pubkey::new_unique();
+
+    let withdraw_accounts =
+        integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::withdraw(
+            &everlend_depositor::id(),
+            &registry.keypair.pubkey(),
+            &test_depositor.depositor.pubkey(),
+            &income_pool_market.keypair.pubkey(),
+            &income_pool.token_account.pubkey(),
+            &mm_pool_market.keypair.pubkey(),
+            &mm_pool.token_account.pubkey(),
+            &mm_pool_collateral_mint,
+            &collateral_mint,
+            &liquidity_mint,
+            money_market_program_id,
+            withdraw_accounts,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_collateral_mint() {
+    let (
+        mut context,
+        money_market,
+        pyth_oracle,
+        registry,
+        _general_pool_market,
+        _,
+        _general_pool_borrow_authority,
+        income_pool_market,
+        income_pool,
+        mm_pool_market,
+        mm_pool,
+        _,
+        test_depositor,
+    ) = setup().await;
+
+    let reserve = money_market.get_reserve_data(&mut context).await;
+
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
+
+    context.warp_to_slot(5).unwrap();
+    pyth_oracle.update(&mut context, 5).await;
+
+    let money_market_program_id = &spl_token_lending::id();
+
+    let collateral_mint = Pubkey::new_unique();
+    let liquidity_mint = get_liquidity_mint().1;
+    let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
+
+    let withdraw_accounts =
+        integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::withdraw(
+            &everlend_depositor::id(),
+            &registry.keypair.pubkey(),
+            &test_depositor.depositor.pubkey(),
+            &income_pool_market.keypair.pubkey(),
+            &income_pool.token_account.pubkey(),
+            &mm_pool_market.keypair.pubkey(),
+            &mm_pool.token_account.pubkey(),
+            &mm_pool_collateral_mint,
+            &collateral_mint,
+            &liquidity_mint,
+            money_market_program_id,
+            withdraw_accounts,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
+        )
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_liquidity_mint() {
+    let (
+        mut context,
+        money_market,
+        pyth_oracle,
+        registry,
+        _general_pool_market,
+        _,
+        _general_pool_borrow_authority,
+        income_pool_market,
+        income_pool,
+        mm_pool_market,
+        mm_pool,
+        _,
+        test_depositor,
+    ) = setup().await;
+
+    let reserve = money_market.get_reserve_data(&mut context).await;
+
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
+
+    context.warp_to_slot(5).unwrap();
+    pyth_oracle.update(&mut context, 5).await;
+
+    let money_market_program_id = &spl_token_lending::id();
+
+    let collateral_mint = mm_pool.token_mint_pubkey;
+    let liquidity_mint = Pubkey::new_unique();
+    let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
+
+    let withdraw_accounts =
+        integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::withdraw(
+            &everlend_depositor::id(),
+            &registry.keypair.pubkey(),
+            &test_depositor.depositor.pubkey(),
+            &income_pool_market.keypair.pubkey(),
+            &income_pool.token_account.pubkey(),
+            &mm_pool_market.keypair.pubkey(),
+            &mm_pool.token_account.pubkey(),
+            &mm_pool_collateral_mint,
+            &collateral_mint,
+            &liquidity_mint,
+            money_market_program_id,
+            withdraw_accounts,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
+        )
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_mm_program_id() {
+    let (
+        mut context,
+        money_market,
+        pyth_oracle,
+        registry,
+        _general_pool_market,
+        _,
+        _general_pool_borrow_authority,
+        income_pool_market,
+        income_pool,
+        mm_pool_market,
+        mm_pool,
+        _,
+        test_depositor,
+    ) = setup().await;
+
+    let reserve = money_market.get_reserve_data(&mut context).await;
+
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
+
+    context.warp_to_slot(5).unwrap();
+    pyth_oracle.update(&mut context, 5).await;
+
+    let money_market_program_id = &Pubkey::new_unique();
+
+    let collateral_mint = mm_pool.token_mint_pubkey;
+    let liquidity_mint = get_liquidity_mint().1;
+    let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
+
+    let withdraw_accounts =
+        integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::withdraw(
+            &everlend_depositor::id(),
+            &registry.keypair.pubkey(),
+            &test_depositor.depositor.pubkey(),
+            &income_pool_market.keypair.pubkey(),
+            &income_pool.token_account.pubkey(),
+            &mm_pool_market.keypair.pubkey(),
+            &mm_pool.token_account.pubkey(),
+            &mm_pool_collateral_mint,
+            &collateral_mint,
+            &liquidity_mint,
+            money_market_program_id,
+            withdraw_accounts,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidRebalancingMoneyMarket as u32),
+        )
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_withdraw_accounts() {
+    let (
+        mut context,
+        money_market,
+        pyth_oracle,
+        registry,
+        _general_pool_market,
+        _,
+        _general_pool_borrow_authority,
+        income_pool_market,
+        income_pool,
+        mm_pool_market,
+        mm_pool,
+        _,
+        test_depositor,
+    ) = setup().await;
+
+    let reserve = money_market.get_reserve_data(&mut context).await;
+
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
+
+    context.warp_to_slot(5).unwrap();
+    pyth_oracle.update(&mut context, 5).await;
+
+    let money_market_program_id = &spl_token_lending::id();
+
+    let collateral_mint = mm_pool.token_mint_pubkey;
+    let liquidity_mint = get_liquidity_mint().1;
+    let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
+
+    let withdraw_accounts =
+        integrations::withdraw_accounts(&Pubkey::new_unique(), &money_market_pubkeys);
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::withdraw(
+            &everlend_depositor::id(),
+            &registry.keypair.pubkey(),
+            &test_depositor.depositor.pubkey(),
+            &income_pool_market.keypair.pubkey(),
+            &income_pool.token_account.pubkey(),
+            &mm_pool_market.keypair.pubkey(),
+            &mm_pool.token_account.pubkey(),
+            &mm_pool_collateral_mint,
+            &collateral_mint,
+            &liquidity_mint,
+            money_market_program_id,
+            withdraw_accounts,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(0, InstructionError::MissingAccount)
     );
 }

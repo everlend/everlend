@@ -1,15 +1,17 @@
 //! Instruction types
 
-use crate::{find_rebalancing_program_address, find_transit_program_address};
 use borsh::{BorshDeserialize, BorshSerialize};
-use everlend_general_pool::find_withdrawal_requests_program_address;
-use everlend_liquidity_oracle::find_liquidity_oracle_token_distribution_program_address;
-use everlend_utils::find_program_address;
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
     system_program, sysvar,
 };
+
+use everlend_general_pool::find_withdrawal_requests_program_address;
+use everlend_liquidity_oracle::find_liquidity_oracle_token_distribution_program_address;
+use everlend_utils::find_program_address;
+
+use crate::{find_rebalancing_program_address, find_transit_program_address};
 
 /// Instructions supported by the program
 #[derive(Debug, BorshDeserialize, BorshSerialize, PartialEq)]
@@ -153,6 +155,7 @@ pub fn create_transit(
     depositor: &Pubkey,
     mint: &Pubkey,
     from: &Pubkey,
+    //todo! remove option
     seed: Option<String>,
 ) -> Instruction {
     let seed = seed.unwrap_or_default();
