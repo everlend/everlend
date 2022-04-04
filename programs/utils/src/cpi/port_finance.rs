@@ -117,3 +117,78 @@ pub fn redeem<'a>(
         signers_seeds,
     )
 }
+
+pub fn staking_deposit<'a>(
+    program_id: &Pubkey,
+    stake_account: AccountInfo<'a>,
+    staking_pool: AccountInfo<'a>,
+    authority: AccountInfo<'a>,
+    clock: AccountInfo<'a>,
+    amount: u64,
+    signers_seeds: &[&[&[u8]]],
+) -> Result<(), ProgramError> {
+    let ix = port_staking_instructions::instruction::deposit(
+        *program_id,
+        amount,
+        *authority.key,
+        *stake_account.key,
+        *staking_pool.key,
+    );
+
+    invoke_signed(
+        &ix,
+        &[authority, stake_account, staking_pool, clock],
+        signers_seeds,
+    )
+}
+
+pub fn staking_withdraw<'a>(
+    program_id: &Pubkey,
+    stake_account: AccountInfo<'a>,
+    staking_pool: AccountInfo<'a>,
+    authority: AccountInfo<'a>,
+    clock: AccountInfo<'a>,
+    amount: u64,
+    signers_seeds: &[&[&[u8]]],
+) -> Result<(), ProgramError> {
+    let ix = port_staking_instructions::instruction::withdraw(
+        *program_id,
+        amount,
+        *authority.key,
+        *stake_account.key,
+        *staking_pool.key,
+    );
+
+    invoke_signed(
+        &ix,
+        &[authority, stake_account, staking_pool, clock],
+        signers_seeds,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn staking_claim_reward<'a>(
+    program_id: &Pubkey,
+    stake_account: AccountInfo<'a>,
+    staking_pool: AccountInfo<'a>,
+    reward_token_pool: AccountInfo<'a>,
+    reward_destination: AccountInfo<'a>,
+    authority: AccountInfo<'a>,
+    clock: AccountInfo<'a>,
+    signers_seeds: &[&[&[u8]]],
+) -> Result<(), ProgramError> {
+    let ix = port_staking_instructions::instruction::claim_reward(
+        *program_id,
+        *authority.key,
+        *stake_account.key,
+        *staking_pool.key,
+        *reward_token_pool.key,
+        *reward_destination.key,
+    );
+
+    invoke_signed(
+        &ix,
+        &[authority, stake_account, staking_pool, clock],
+        signers_seeds,
+    )
+}

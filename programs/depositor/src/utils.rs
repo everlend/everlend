@@ -172,7 +172,7 @@ pub fn withdraw<'a>(
 #[allow(clippy::too_many_arguments)]
 pub fn money_market_deposit<'a>(
     registry_config: &RegistryConfig,
-    money_market_program: AccountInfo<'a>,
+    program: AccountInfo<'a>,
     source_liquidity: AccountInfo<'a>,
     _liquidity_mint: AccountInfo<'a>,
     destination_collateral: AccountInfo<'a>,
@@ -187,7 +187,7 @@ pub fn money_market_deposit<'a>(
     let larix_program_id = registry_config.money_market_program_ids[1];
 
     // Only for tests
-    if money_market_program.key.to_string() == integrations::SPL_TOKEN_LENDING_PROGRAM_ID {
+    if program.key.to_string() == integrations::SPL_TOKEN_LENDING_PROGRAM_ID {
         let reserve_info = next_account_info(money_market_account_info_iter)?;
         let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
         let lending_market_info = next_account_info(money_market_account_info_iter)?;
@@ -195,14 +195,14 @@ pub fn money_market_deposit<'a>(
         let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
 
         cpi::spl_token_lending::refresh_reserve(
-            money_market_program.key,
+            program.key,
             reserve_info.clone(),
             reserve_liquidity_oracle_info.clone(),
             clock.clone(),
         )?;
 
         return cpi::spl_token_lending::deposit(
-            money_market_program.key,
+            program.key,
             source_liquidity.clone(),
             destination_collateral.clone(),
             reserve_info.clone(),
@@ -217,7 +217,7 @@ pub fn money_market_deposit<'a>(
         );
     }
 
-    if *money_market_program.key == port_finance_program_id {
+    if *program.key == port_finance_program_id {
         let reserve_info = next_account_info(money_market_account_info_iter)?;
         let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
         let lending_market_info = next_account_info(money_market_account_info_iter)?;
@@ -225,14 +225,14 @@ pub fn money_market_deposit<'a>(
         let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
 
         cpi::port_finance::refresh_reserve(
-            money_market_program.key,
+            program.key,
             reserve_info.clone(),
             reserve_liquidity_oracle_info.clone(),
             clock.clone(),
         )?;
 
         cpi::port_finance::deposit(
-            money_market_program.key,
+            program.key,
             source_liquidity.clone(),
             destination_collateral.clone(),
             reserve_info.clone(),
@@ -245,7 +245,7 @@ pub fn money_market_deposit<'a>(
             amount,
             signers_seeds,
         )
-    } else if *money_market_program.key == larix_program_id {
+    } else if *program.key == larix_program_id {
         let reserve_info = next_account_info(money_market_account_info_iter)?;
         let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
         let lending_market_info = next_account_info(money_market_account_info_iter)?;
@@ -253,13 +253,13 @@ pub fn money_market_deposit<'a>(
         let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
 
         cpi::larix::refresh_reserve(
-            money_market_program.key,
+            program.key,
             reserve_info.clone(),
             reserve_liquidity_oracle_info.clone(),
         )?;
 
         cpi::larix::deposit(
-            money_market_program.key,
+            program.key,
             source_liquidity.clone(),
             destination_collateral.clone(),
             reserve_info.clone(),
@@ -280,7 +280,7 @@ pub fn money_market_deposit<'a>(
 #[allow(clippy::too_many_arguments)]
 pub fn money_market_redeem<'a>(
     registry_config: &RegistryConfig,
-    money_market_program: AccountInfo<'a>,
+    program: AccountInfo<'a>,
     source_collateral: AccountInfo<'a>,
     collateral_mint: AccountInfo<'a>,
     destination_liquidity: AccountInfo<'a>,
@@ -295,7 +295,7 @@ pub fn money_market_redeem<'a>(
     let larix_program_id = registry_config.money_market_program_ids[1];
 
     // Only for tests
-    if money_market_program.key.to_string() == integrations::SPL_TOKEN_LENDING_PROGRAM_ID {
+    if program.key.to_string() == integrations::SPL_TOKEN_LENDING_PROGRAM_ID {
         let reserve_info = next_account_info(money_market_account_info_iter)?;
         let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
         let lending_market_info = next_account_info(money_market_account_info_iter)?;
@@ -303,14 +303,14 @@ pub fn money_market_redeem<'a>(
         let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
 
         cpi::spl_token_lending::refresh_reserve(
-            money_market_program.key,
+            program.key,
             reserve_info.clone(),
             reserve_liquidity_oracle_info.clone(),
             clock.clone(),
         )?;
 
         return cpi::spl_token_lending::redeem(
-            money_market_program.key,
+            program.key,
             source_collateral.clone(),
             destination_liquidity.clone(),
             reserve_info.clone(),
@@ -325,7 +325,7 @@ pub fn money_market_redeem<'a>(
         );
     }
 
-    if *money_market_program.key == port_finance_program_id {
+    if *program.key == port_finance_program_id {
         let reserve_info = next_account_info(money_market_account_info_iter)?;
         let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
         let lending_market_info = next_account_info(money_market_account_info_iter)?;
@@ -333,14 +333,14 @@ pub fn money_market_redeem<'a>(
         let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
 
         cpi::port_finance::refresh_reserve(
-            money_market_program.key,
+            program.key,
             reserve_info.clone(),
             reserve_liquidity_oracle_info.clone(),
             clock.clone(),
         )?;
 
         cpi::port_finance::redeem(
-            money_market_program.key,
+            program.key,
             source_collateral.clone(),
             destination_liquidity.clone(),
             reserve_info.clone(),
@@ -353,7 +353,7 @@ pub fn money_market_redeem<'a>(
             amount,
             signers_seeds,
         )
-    } else if *money_market_program.key == larix_program_id {
+    } else if *program.key == larix_program_id {
         let reserve_info = next_account_info(money_market_account_info_iter)?;
         let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
         let lending_market_info = next_account_info(money_market_account_info_iter)?;
@@ -361,13 +361,13 @@ pub fn money_market_redeem<'a>(
         let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
 
         cpi::larix::refresh_reserve(
-            money_market_program.key,
+            program.key,
             reserve_info.clone(),
             reserve_liquidity_oracle_info.clone(),
         )?;
 
         cpi::larix::redeem(
-            money_market_program.key,
+            program.key,
             source_collateral.clone(),
             destination_liquidity.clone(),
             reserve_info.clone(),
@@ -382,4 +382,39 @@ pub fn money_market_redeem<'a>(
     } else {
         Err(EverlendError::IncorrectInstructionProgramId.into())
     }
+}
+
+/// Money market rewards deposit
+#[allow(clippy::too_many_arguments)]
+pub fn money_market_rewards_deposit<'a>(
+    registry_config: &RegistryConfig,
+    program: AccountInfo<'a>,
+    authority: AccountInfo<'a>,
+    money_market_account_info_iter: &mut Iter<AccountInfo<'a>>,
+    clock: AccountInfo<'a>,
+    amount: u64,
+    signers_seeds: &[&[&[u8]]],
+) -> Result<(), ProgramError> {
+    Ok(())
+    // let port_finance_program_id = registry_config.reward_program_ids[0];
+    // let larix_program_id = registry_config.reward_program_ids[1];
+
+    // if *program.key == port_finance_program_id {
+    //     let stake_account_info = next_account_info(money_market_account_info_iter)?;
+    //     let staking_pool_info = next_account_info(money_market_account_info_iter)?;
+
+    //     cpi::port_finance::staking_deposit(
+    //         program.key,
+    //         stake_account_info.clone(),
+    //         staking_pool_info.clone(),
+    //         authority.clone(),
+    //         clock.clone(),
+    //         amount,
+    //         signers_seeds,
+    //     )
+    // } else if *program.key == larix_program_id {
+    //     todo!()
+    // } else {
+    //     Err(EverlendError::IncorrectInstructionProgramId.into())
+    // }
 }

@@ -66,6 +66,7 @@ async fn command_create_registry(config: &Config, keypair: Option<Keypair>) -> a
         income_pools_program_id: everlend_income_pools::id(),
         money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
         refresh_income_interval: REFRESH_INCOME_INTERVAL,
+        reward_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
     };
     registry_config.money_market_program_ids[0] = port_finance_program_id;
     registry_config.money_market_program_ids[1] = larix_program_id;
@@ -417,6 +418,7 @@ async fn command_create(
         income_pools_program_id: everlend_income_pools::id(),
         money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
         refresh_income_interval: REFRESH_INCOME_INTERVAL,
+        reward_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
     };
     registry_config.money_market_program_ids[0] = port_finance_program_id;
     registry_config.money_market_program_ids[1] = larix_program_id;
