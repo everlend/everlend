@@ -62,6 +62,7 @@ pub enum LiquidityPoolsInstruction {
     ///
     /// Accounts:
     /// [R] Pool market
+    /// [R] Pool
     /// [W] Pool borrow authority
     /// [RS] Market manager
     UpdatePoolBorrowAuthority {
@@ -271,6 +272,7 @@ pub fn update_pool_borrow_authority(
 
     let accounts = vec![
         AccountMeta::new_readonly(*pool_market, false),
+        AccountMeta::new_readonly(*pool, false),
         AccountMeta::new(pool_borrow_authority, false),
         AccountMeta::new_readonly(*manager, true),
     ];
