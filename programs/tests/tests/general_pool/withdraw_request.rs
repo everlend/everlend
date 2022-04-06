@@ -1,8 +1,5 @@
 #![cfg(feature = "test-bpf")]
 
-use crate::utils::*;
-use everlend_general_pool::{find_transit_program_address, instruction};
-use everlend_utils::EverlendError;
 use solana_program::clock::Slot;
 use solana_program::instruction::InstructionError;
 use solana_program::pubkey::Pubkey;
@@ -10,6 +7,11 @@ use solana_program_test::*;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signer::Signer;
 use solana_sdk::transaction::{Transaction, TransactionError};
+
+use everlend_general_pool::{find_transit_program_address, instruction};
+use everlend_utils::EverlendError;
+
+use crate::utils::*;
 
 const WARP_SLOT: Slot = 3;
 

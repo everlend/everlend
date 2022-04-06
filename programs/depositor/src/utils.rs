@@ -1,7 +1,7 @@
 //! Utils
 
-use everlend_registry::state::RegistryConfig;
-use everlend_utils::{cpi, integrations, EverlendError};
+use std::{cmp::Ordering, slice::Iter};
+
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
@@ -10,7 +10,9 @@ use solana_program::{
     program_pack::Pack,
 };
 use spl_token::state::Account;
-use std::{cmp::Ordering, slice::Iter};
+
+use everlend_registry::state::RegistryConfig;
+use everlend_utils::{cpi, integrations, EverlendError};
 
 /// Deposit
 #[allow(clippy::too_many_arguments)]
@@ -252,7 +254,7 @@ pub fn money_market_deposit<'a>(
         let lending_market_authority_info = next_account_info(money_market_account_info_iter)?;
         let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
 
-        cpi::larix::refresh_reserve(
+        cpi::larix::refresh_reserves(
             money_market_program.key,
             reserve_info.clone(),
             reserve_liquidity_oracle_info.clone(),
@@ -360,7 +362,7 @@ pub fn money_market_redeem<'a>(
         let lending_market_authority_info = next_account_info(money_market_account_info_iter)?;
         let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
 
-        cpi::larix::refresh_reserve(
+        cpi::larix::refresh_reserves(
             money_market_program.key,
             reserve_info.clone(),
             reserve_liquidity_oracle_info.clone(),
