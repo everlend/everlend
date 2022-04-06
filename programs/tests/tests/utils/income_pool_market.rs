@@ -1,11 +1,10 @@
-use super::{get_account, TestGeneralPoolMarket};
+use super::{get_account, BanksClientResult, TestGeneralPoolMarket};
 use everlend_income_pools::{instruction, state::IncomePoolMarket};
 use solana_program::{program_pack::Pack, system_instruction};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::Transaction,
-    transport,
 };
 
 #[derive(Debug)]
@@ -31,7 +30,7 @@ impl TestIncomePoolMarket {
         &self,
         context: &mut ProgramTestContext,
         general_pool_market: &TestGeneralPoolMarket,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let rent = context.banks_client.get_rent().await.unwrap();
         let tx = Transaction::new_signed_with_payer(
             &[

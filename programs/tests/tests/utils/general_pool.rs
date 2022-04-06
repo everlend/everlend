@@ -1,3 +1,4 @@
+use super::BanksClientResult;
 use super::{
     general_pool_borrow_authority::TestGeneralPoolBorrowAuthority, get_account, get_liquidity_mint,
     LiquidityProvider, TestGeneralPoolMarket, User,
@@ -12,7 +13,6 @@ use solana_program_test::ProgramTestContext;
 use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::Transaction,
-    transport,
 };
 
 #[derive(Debug)]
@@ -90,7 +90,7 @@ impl TestGeneralPool {
         &self,
         context: &mut ProgramTestContext,
         test_pool_market: &TestGeneralPoolMarket,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let rent = context.banks_client.get_rent().await.unwrap();
         let tx = Transaction::new_signed_with_payer(
             &[
@@ -136,7 +136,7 @@ impl TestGeneralPool {
         test_pool_market: &TestGeneralPoolMarket,
         user: &LiquidityProvider,
         amount: u64,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::deposit(
                 &everlend_general_pool::id(),
@@ -162,7 +162,7 @@ impl TestGeneralPool {
         context: &mut ProgramTestContext,
         test_pool_market: &TestGeneralPoolMarket,
         user: &LiquidityProvider,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::withdraw(
                 &everlend_general_pool::id(),
@@ -188,7 +188,7 @@ impl TestGeneralPool {
         test_pool_market: &TestGeneralPoolMarket,
         user: &LiquidityProvider,
         collateral_amount: u64,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::withdraw_request(
                 &everlend_general_pool::id(),
@@ -218,7 +218,7 @@ impl TestGeneralPool {
         borrow_authority: Option<&Keypair>,
         destination: &Pubkey,
         amount: u64,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let borrow_authority = borrow_authority.unwrap_or(&context.payer);
 
         let tx = Transaction::new_signed_with_payer(
@@ -248,7 +248,7 @@ impl TestGeneralPool {
         user: &LiquidityProvider,
         amount: u64,
         interest_amount: u64,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::repay(
                 &everlend_general_pool::id(),

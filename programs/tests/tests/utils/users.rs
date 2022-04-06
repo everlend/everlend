@@ -1,10 +1,7 @@
-use super::{create_token_account, mint_tokens};
+use super::{create_token_account, mint_tokens, BanksClientResult};
 use solana_program::pubkey::Pubkey;
 use solana_program_test::ProgramTestContext;
-use solana_sdk::{
-    signature::{Keypair, Signer},
-    transport,
-};
+use solana_sdk::signature::{Keypair, Signer};
 
 pub trait User {
     fn pubkey(&self) -> Pubkey;
@@ -30,7 +27,7 @@ pub async fn add_liquidity_provider(
     pool_mint: &Pubkey,
 
     mint_amount: u64,
-) -> transport::Result<LiquidityProvider> {
+) -> BanksClientResult<LiquidityProvider> {
     let user = Keypair::new();
     let token_account = Keypair::new();
     let pool_account = Keypair::new();
@@ -85,7 +82,7 @@ pub async fn add_token_holder(
     context: &mut ProgramTestContext,
     token_mint_pubkey: &Pubkey,
     mint_amount: u64,
-) -> transport::Result<TokenHolder> {
+) -> BanksClientResult<TokenHolder> {
     let user = Keypair::new();
     let token_account = Keypair::new();
 

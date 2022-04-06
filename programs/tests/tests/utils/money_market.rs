@@ -48,11 +48,11 @@ pub fn add_pyth_oracle(
         product_pubkey,
         u32::MAX as u64,
         oracle_program.pubkey(),
-        &format!("{}.bin", product_pubkey.to_string()),
+        &format!("{}.bin", product_pubkey),
     );
 
     // Add Pyth price account after setting the price
-    let filename = &format!("{}.bin", price_pubkey.to_string());
+    let filename = &format!("{}.bin", price_pubkey);
     let mut pyth_price_data = read_file(find_file(filename).unwrap_or_else(|| {
         panic!("Unable to locate {}", filename);
     }));
@@ -127,11 +127,11 @@ pub fn add_spl_token_lending(test: &mut ProgramTest) -> TestSPLTokenLending {
         market_pubkey,
         u32::MAX as u64,
         spl_token_lending::id(),
-        &format!("{}.bin", market_pubkey.to_string()),
+        &format!("{}.bin", market_pubkey),
     );
 
     // Reserve
-    let filename = &format!("{}.bin", reserve_pubkey.to_string());
+    let filename = &format!("{}.bin", reserve_pubkey);
     let mut reserve_data = read_file(find_file(filename).unwrap_or_else(|| {
         panic!("Unable to locate {}", filename);
     }));
@@ -143,25 +143,25 @@ pub fn add_spl_token_lending(test: &mut ProgramTest) -> TestSPLTokenLending {
         reserve.liquidity.supply_pubkey,
         u32::MAX as u64,
         spl_token::id(),
-        &format!("{}.bin", reserve.liquidity.supply_pubkey.to_string()),
+        &format!("{}.bin", reserve.liquidity.supply_pubkey),
     );
     test.add_account_with_file_data(
         reserve.liquidity.fee_receiver,
         u32::MAX as u64,
         spl_token::id(),
-        &format!("{}.bin", reserve.liquidity.fee_receiver.to_string()),
+        &format!("{}.bin", reserve.liquidity.fee_receiver),
     );
     test.add_account_with_file_data(
         reserve.collateral.mint_pubkey,
         u32::MAX as u64,
         spl_token::id(),
-        &format!("{}.bin", reserve.collateral.mint_pubkey.to_string()),
+        &format!("{}.bin", reserve.collateral.mint_pubkey),
     );
     test.add_account_with_file_data(
         reserve.collateral.supply_pubkey,
         u32::MAX as u64,
         spl_token::id(),
-        &format!("{}.bin", reserve.collateral.supply_pubkey.to_string()),
+        &format!("{}.bin", reserve.collateral.supply_pubkey),
     );
 
     reserve.last_update.update_slot(0);

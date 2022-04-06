@@ -9,7 +9,6 @@ use solana_sdk::{
     account::Account,
     signature::{Keypair, Signer},
     transaction::Transaction,
-    transport,
 };
 
 pub mod depositor;
@@ -42,6 +41,8 @@ pub use users::*;
 
 pub const EXP: u64 = 1_000_000_000;
 pub const REFRESH_INCOME_INTERVAL: u64 = 300; // About 2.5 min
+
+pub type BanksClientResult<T> = Result<T, BanksClientError>;
 
 pub fn program_test() -> ProgramTest {
     let mut program = ProgramTest::new(
@@ -162,7 +163,7 @@ pub async fn transfer(
     context: &mut ProgramTestContext,
     pubkey: &Pubkey,
     amount: u64,
-) -> transport::Result<()> {
+) -> BanksClientResult<()> {
     let tx = Transaction::new_signed_with_payer(
         &[system_instruction::transfer(
             &context.payer.pubkey(),
@@ -183,7 +184,7 @@ pub async fn token_transfer(
     destination: &Pubkey,
     authority: &Keypair,
     amount: u64,
-) -> transport::Result<()> {
+) -> BanksClientResult<()> {
     let tx = Transaction::new_signed_with_payer(
         &[spl_token::instruction::transfer(
             &spl_token::id(),
@@ -207,7 +208,7 @@ pub async fn create_token_account(
     account: &Keypair,
     mint: &Pubkey,
     manager: &Pubkey,
-) -> transport::Result<()> {
+) -> BanksClientResult<()> {
     let rent = context.banks_client.get_rent().await.unwrap();
 
     let tx = Transaction::new_signed_with_payer(
@@ -239,7 +240,7 @@ pub async fn create_mint(
     context: &mut ProgramTestContext,
     mint: &Keypair,
     manager: &Pubkey,
-) -> transport::Result<()> {
+) -> BanksClientResult<()> {
     let rent = context.banks_client.get_rent().await.unwrap();
 
     let tx = Transaction::new_signed_with_payer(
@@ -273,7 +274,7 @@ pub async fn mint_tokens(
     mint: &Pubkey,
     account: &Pubkey,
     amount: u64,
-) -> transport::Result<()> {
+) -> BanksClientResult<()> {
     let tx = Transaction::new_signed_with_payer(
         &[spl_token::instruction::mint_to(
             &spl_token::id(),
