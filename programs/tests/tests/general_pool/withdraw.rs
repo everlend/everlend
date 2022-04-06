@@ -99,6 +99,11 @@ async fn success() {
         .await
         .unwrap();
 
+    let (_, withdraw_requests) = test_pool
+        .get_withdrawal_requests(&mut context, &test_pool_market)
+        .await;
+
+    assert_eq!(withdraw_requests.next_process_ticket, 1);
     assert_eq!(
         get_token_balance(&mut context, &user.pool_account).await,
         55
