@@ -4,9 +4,10 @@ members = [
   "depositor",
   "ulp",
   "liquidity_oracle",
-  "general_pool",
+  "general_pool/program",
+  "general_pool/anchor",
   "income_pools",
   "registry",
   "tests",
-  "toolkit",
+  "toolkit"
 ]

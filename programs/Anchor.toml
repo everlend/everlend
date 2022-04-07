@@ -1,0 +1,21 @@
+anchor_version = "0.23.0"
+solana_version = "1.8.14"
+
+[workspace]
+members = [
+  "utils",
+  "depositor",
+  "ulp",
+  "liquidity_oracle",
+  "general_pool/program",
+  "general_pool/anchor",
+  "income_pools",
+  "registry",
+]
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[programs.localnet]
+general_pool = "GenUMNGcWca1GiPLfg89698Gfys1dzk9BAGsyb9aEL2u"

@@ -7,15 +7,15 @@ edition = "2018"
 test-bpf = []
 
 [dev-dependencies]
-solana-sdk = "1.10.6"
-solana-program = "1.10.6"
-solana-program-test = "1.10.6"
+solana-sdk = "1.8.14"
+solana-program = "1.8.14"
+solana-program-test = "1.8.14"
 spl-token = { version = "3.1", features = [ "no-entrypoint" ] }
-spl-token-lending = { git = "https://github.com/everlend/solana-program-library", features = [ "no-entrypoint" ] }
+spl-token-lending = { git = "https://github.com/everlend/solana-program-library", branch = "stable-token-lending", features = [ "no-entrypoint" ] }
 everlend-ulp = { path = "../ulp", features = [ "no-entrypoint" ] }
 everlend-income-pools = { path = "../income_pools", features = [ "no-entrypoint" ] }
 everlend-depositor = { path = "../depositor", features = [ "no-entrypoint" ] }
-everlend-general-pool = { path = "../general_pool", features = [ "no-entrypoint" ] }
+everlend-general-pool = { path = "../general_pool/program", features = [ "no-entrypoint" ] }
 everlend-liquidity-oracle = { path = "../liquidity_oracle", features = [ "no-entrypoint" ] }
 everlend-registry = { path = "../registry", features = [ "no-entrypoint" ] }
 everlend-utils = { path = "../utils" }

@@ -12,7 +12,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  SOLANA_VERSION: 1.10.6
+  SOLANA_VERSION: 1.8.14
   RUST_TOOLCHAIN: stable
 
 jobs:

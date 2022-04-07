@@ -12,7 +12,7 @@ pub use pool_market::*;
 pub use withdrawal_request::*;
 
 /// Enum representing the account type managed by the program
-#[derive(Clone, Debug, PartialEq, BorshDeserialize, BorshSerialize, BorshSchema)]
+#[derive(Clone, Copy, Debug, PartialEq, BorshDeserialize, BorshSerialize, BorshSchema)]
 pub enum AccountType {
     /// If the account has not been initialized, the enum will be 0
     Uninitialized,

@@ -12,19 +12,19 @@ serde = "1.0.130"
 serde_derive = "1.0.103"
 serde_yaml = "0.8.21"
 serde_with = "1.12.0"
-solana-clap-utils = "1.10.6"
-solana-cli-config = "1.10.6"
-solana-account-decoder = "1.10.6"
-solana-client = "1.10.6"
-solana-sdk = "1.10.6"
-solana-logger = "1.10.6"
-solana-program = "1.10.6"
+solana-clap-utils = "1.8.14"
+solana-cli-config = "1.8.14"
+solana-account-decoder = "1.8.14"
+solana-client = "1.8.14"
+solana-sdk = "1.8.14"
+solana-logger = "1.8.14"
+solana-program = "1.8.14"
 tokio = "1.9.0"
 spl-associated-token-account = { version = "1.0.3", features = [ "no-entrypoint" ] }
 spl-token = { version = "3.1", features = [ "no-entrypoint" ] }
-spl-token-lending = { git = "https://github.com/everlend/solana-program-library", features = [ "no-entrypoint" ] }
+spl-token-lending = { git = "https://github.com/everlend/solana-program-library", branch = "stable-token-lending", features = [ "no-entrypoint" ] }
 everlend-registry = { path = "../registry", features = [ "no-entrypoint" ] }
-everlend-general-pool = { path = "../general_pool", features = [ "no-entrypoint" ] }
+everlend-general-pool = { path = "../general_pool/program", features = [ "no-entrypoint" ] }
 everlend-ulp = { path = "../ulp", features = [ "no-entrypoint" ] }
 everlend-income-pools = { path = "../income_pools", features = [ "no-entrypoint" ] }
 everlend-depositor = { path = "../depositor", features = [ "no-entrypoint" ] }

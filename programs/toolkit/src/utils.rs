@@ -67,7 +67,8 @@ pub fn sign_and_send_and_confirm_transaction(
     mut tx: Transaction,
     signers: Vec<&dyn Signer>,
 ) -> Result<Signature, ClientError> {
-    let recent_blockhash = config.rpc_client.get_latest_blockhash()?;
+    // let recent_blockhash = config.rpc_client.get_latest_blockhash()?;
+    let (recent_blockhash, _) = config.rpc_client.get_recent_blockhash()?;
 
     tx.try_sign(&signers, recent_blockhash)?;
 

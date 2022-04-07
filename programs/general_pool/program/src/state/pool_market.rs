@@ -10,7 +10,7 @@ use solana_program::{
 
 /// Pool market
 #[repr(C)]
-#[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
+#[derive(Clone, Copy, Debug, PartialEq, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
 pub struct PoolMarket {
     /// Account type - PoolMarket
     pub account_type: AccountType,
