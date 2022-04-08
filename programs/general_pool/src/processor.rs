@@ -1,8 +1,13 @@
 //! Program state processor
 
 use borsh::BorshDeserialize;
+use everlend_utils::{
+    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
+    cpi, find_program_address, EverlendError,
+};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
+    clock::Clock,
     entrypoint::ProgramResult,
     msg,
     program_error::ProgramError,
@@ -13,12 +18,7 @@ use solana_program::{
 };
 use spl_token::state::{Account, Mint};
 
-use everlend_utils::{
-    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
-    cpi, find_program_address, EverlendError,
-};
-
-use crate::state::{InitWithdrawalRequestParams, InitWithdrawalRequestsParams};
+use crate::state::{InitWithdrawalRequestParams, InitWithdrawalRequestsParams, WITHDRAW_DELAY};
 use crate::{
     find_pool_borrow_authority_program_address, find_pool_program_address,
     find_transit_program_address, find_withdrawal_request_program_address,
@@ -426,6 +426,8 @@ impl Processor {
         let token_account_info = next_account_info(account_info_iter)?;
         let collateral_transit_info = next_account_info(account_info_iter)?;
         let from_info = next_account_info(account_info_iter)?;
+        let clock_info = next_account_info(account_info_iter)?;
+        let clock = Clock::from_account_info(clock_info)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
         assert_owned_by(pool_market_info, program_id)?;
@@ -452,7 +454,7 @@ impl Processor {
         assert_account_key(destination_info, &withdrawal_request.destination)?;
         assert_account_key(from_info, &withdrawal_request.from)?;
 
-        if withdrawal_requests.next_process_ticket != withdrawal_request.ticket {
+        if withdrawal_request.ticket > clock.slot {
             return Err(EverlendError::WithdrawRequestsInvalidTicket.into());
         }
 
@@ -519,6 +521,8 @@ impl Processor {
         let user_transfer_authority_info = next_account_info(account_info_iter)?;
         let rent_info = next_account_info(account_info_iter)?;
         let rent = &Rent::from_account_info(rent_info)?;
+        let clock_info = next_account_info(account_info_iter)?;
+        let clock = Clock::from_account_info(clock_info)?;
         let _system_program_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
@@ -599,7 +603,7 @@ impl Processor {
             destination: *destination_info.key,
             liquidity_amount,
             collateral_amount,
-            ticket: withdrawal_requests.next_ticket,
+            ticket: clock.slot + WITHDRAW_DELAY,
         });
 
         withdrawal_requests.add(liquidity_amount)?;

@@ -109,6 +109,7 @@ pub enum LiquidityPoolsInstruction {
     /// [W] Pool token account
     /// [W] Collateral transit account
     /// [W] From account
+    /// [R] Clock sysvar
     /// [R] Token program id
     Withdraw,
 
@@ -160,6 +161,7 @@ pub enum LiquidityPoolsInstruction {
     /// [W] Collateral transit account
     /// [RS] User transfer authority
     /// [R] Rent sysvar
+    /// [R] Clock sysvar
     /// [R] System program
     /// [R] Token program id
     WithdrawRequest {
@@ -375,6 +377,7 @@ pub fn withdraw(
         AccountMeta::new(*token_account, false),
         AccountMeta::new(collateral_transit, false),
         AccountMeta::new(*from, false),
+        AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
     ];
 
@@ -416,6 +419,7 @@ pub fn withdraw_request(
         AccountMeta::new(collateral_transit, false),
         AccountMeta::new(*user_transfer_authority, true),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
+        AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
     ];

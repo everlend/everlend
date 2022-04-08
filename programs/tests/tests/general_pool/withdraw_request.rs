@@ -104,7 +104,6 @@ async fn success() {
     );
     assert_eq!(get_token_balance(&mut context, &transit_account).await, 50);
     assert_eq!(withdraw_requests.liquidity_supply, 50);
-    assert_eq!(withdraw_requests.next_ticket, 1);
     assert_eq!(withdraw_request.liquidity_amount, 50);
 }
 

@@ -1,6 +1,7 @@
 #![cfg(feature = "test-bpf")]
 
 use crate::utils::*;
+use everlend_general_pool::state::WITHDRAW_DELAY;
 use everlend_general_pool::{find_transit_program_address, instruction};
 use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
@@ -85,7 +86,7 @@ async fn success() {
         .await
         .unwrap();
 
-    context.warp_to_slot(3 + 3).unwrap();
+    context.warp_to_slot(3 + WITHDRAW_DELAY).unwrap();
 
     let (transit_account, _) = find_transit_program_address(
         &everlend_general_pool::id(),
@@ -99,11 +100,6 @@ async fn success() {
         .await
         .unwrap();
 
-    let (_, withdraw_requests) = test_pool
-        .get_withdrawal_requests(&mut context, &test_pool_market)
-        .await;
-
-    assert_eq!(withdraw_requests.next_process_ticket, 1);
     assert_eq!(
         get_token_balance(&mut context, &user.pool_account).await,
         55
@@ -123,6 +119,35 @@ async fn success() {
 }
 
 #[tokio::test]
+async fn fail_with_invalid_ticket() {
+    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
+
+    test_pool
+        .deposit(&mut context, &test_pool_market, &user, 100)
+        .await
+        .unwrap();
+    context.warp_to_slot(3).unwrap();
+
+    test_pool
+        .withdraw_request(&mut context, &test_pool_market, &user, 45)
+        .await
+        .unwrap();
+    context.warp_to_slot(3 + WITHDRAW_DELAY - 1).unwrap();
+
+    assert_eq!(
+        test_pool
+            .withdraw(&mut context, &test_pool_market, &user)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::WithdrawRequestsInvalidTicket as u32)
+        )
+    )
+}
+
+#[tokio::test]
 async fn fail_with_invalid_pool_market() {
     let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
 
@@ -138,7 +163,7 @@ async fn fail_with_invalid_pool_market() {
         .await
         .unwrap();
 
-    context.warp_to_slot(3 + 3).unwrap();
+    context.warp_to_slot(3 + WITHDRAW_DELAY).unwrap();
 
     let (transit_account, _) = find_transit_program_address(
         &everlend_general_pool::id(),
@@ -193,7 +218,7 @@ async fn fail_with_invalid_pool() {
         .await
         .unwrap();
 
-    context.warp_to_slot(3 + 3).unwrap();
+    context.warp_to_slot(3 + WITHDRAW_DELAY).unwrap();
 
     let (transit_account, _) = find_transit_program_address(
         &everlend_general_pool::id(),
@@ -248,7 +273,7 @@ async fn fail_with_invalid_destination() {
         .await
         .unwrap();
 
-    context.warp_to_slot(3 + 3).unwrap();
+    context.warp_to_slot(3 + WITHDRAW_DELAY).unwrap();
 
     let (transit_account, _) = find_transit_program_address(
         &everlend_general_pool::id(),
@@ -300,7 +325,7 @@ async fn fail_with_invalid_token_account() {
         .await
         .unwrap();
 
-    context.warp_to_slot(3 + 3).unwrap();
+    context.warp_to_slot(3 + WITHDRAW_DELAY).unwrap();
 
     let (transit_account, _) = find_transit_program_address(
         &everlend_general_pool::id(),
@@ -352,7 +377,7 @@ async fn fail_with_invalid_token_mint() {
         .await
         .unwrap();
 
-    context.warp_to_slot(3 + 3).unwrap();
+    context.warp_to_slot(3 + WITHDRAW_DELAY).unwrap();
 
     let (transit_account, _) = find_transit_program_address(
         &everlend_general_pool::id(),
@@ -407,7 +432,7 @@ async fn fail_with_invalid_pool_mint() {
         .await
         .unwrap();
 
-    context.warp_to_slot(3 + 3).unwrap();
+    context.warp_to_slot(3 + WITHDRAW_DELAY).unwrap();
 
     let (transit_account, _) = find_transit_program_address(
         &everlend_general_pool::id(),
@@ -462,7 +487,7 @@ async fn success_with_random_tx_signer() {
     let random_tx_signer = TestGeneralPoolMarket::new();
     random_tx_signer.init(&mut context).await.unwrap();
 
-    context.warp_to_slot(3 + 3).unwrap();
+    context.warp_to_slot(3 + WITHDRAW_DELAY).unwrap();
 
     let (transit_account, _) = find_transit_program_address(
         &everlend_general_pool::id(),

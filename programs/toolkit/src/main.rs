@@ -11,10 +11,12 @@ use accounts_config::*;
 use clap::{
     crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
 };
+use core::time;
 use everlend_depositor::{
     find_rebalancing_program_address,
     state::{Rebalancing, RebalancingOperation},
 };
+use everlend_general_pool::state::WITHDRAW_DELAY;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::{
     find_config_program_address,
@@ -32,7 +34,7 @@ use solana_client::rpc_client::RpcClient;
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_sdk::{commitment_config::CommitmentConfig, signature::Keypair};
 use spl_associated_token_account::get_associated_token_address;
-use std::{collections::HashMap, process::exit};
+use std::{collections::HashMap, process::exit, thread};
 use utils::*;
 
 use crate::general_pool::get_withdrawal_request_accounts;
@@ -789,6 +791,11 @@ async fn command_run_test(
         )
     };
 
+    let delay = |secs| {
+        println!("Waiting {} secs for ticket...", secs);
+        thread::sleep(time::Duration::from_secs(secs))
+    };
+
     let general_pool_withdraw = || {
         println!("Withdraw");
         general_pool::withdraw(
@@ -882,6 +889,8 @@ async fn command_run_test(
             update_token_distribution(distribution!([1000000000, 0]))?;
             let (_, rebalancing) = start_rebalancing()?;
             println!("{:#?}", rebalancing);
+
+            delay(WITHDRAW_DELAY / 2);
             general_pool_withdraw()?;
 
             update_token_distribution(distribution!([1000000000, 0]))?;
@@ -928,6 +937,7 @@ async fn command_run_test(
 
             update_token_distribution(distribution!([0, 1000000000]))?;
             let (_, rebalancing) = start_rebalancing()?;
+            delay(WITHDRAW_DELAY / 2);
             general_pool_withdraw()?;
             complete_rebalancing(Some(rebalancing))?;
 
