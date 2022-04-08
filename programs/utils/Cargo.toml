@@ -8,7 +8,7 @@ num-derive = "0.3"
 num-traits = "0.2"
 num_enum = "0.5.7"
 thiserror = "1.0"
-solana-program = "1.10.6"
+solana-program = "1.9.13"
 spl-token = { version = "3.1", features = [ "no-entrypoint" ] }
 spl-token-lending = { git = "https://github.com/everlend/solana-program-library", features = [ "no-entrypoint" ] }
 port-variable-rate-lending-instructions = "0.2.9"
@@ -16,7 +16,7 @@ larix-lending = { git = "https://github.com/ProjectLarix/larix-lending", feature
 borsh = "0.9.0"
 
 [dev-dependencies]
-solana-sdk = "1.10.6"
+solana-sdk = "1.9.13"
 
 [lib]
 crate-type = ["cdylib", "lib"]
