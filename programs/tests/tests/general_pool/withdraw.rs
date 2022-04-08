@@ -1,13 +1,15 @@
 #![cfg(feature = "test-bpf")]
 
-use crate::utils::*;
-use everlend_general_pool::{find_transit_program_address, instruction};
-use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::*;
 use solana_sdk::signer::Signer;
 use solana_sdk::transaction::{Transaction, TransactionError};
+
+use everlend_general_pool::{find_transit_program_address, instruction};
+use everlend_utils::EverlendError;
+
+use crate::utils::*;
 
 const INITIAL_USER_BALANCE: u64 = 5000000;
 
@@ -434,7 +436,7 @@ async fn fail_with_invalid_pool_mint() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(0, InstructionError::InvalidAccountData)
+        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
     )
 }
 
@@ -454,10 +456,12 @@ async fn success_with_random_tx_signer() {
         .await
         .unwrap();
 
+    context.warp_to_slot(3 + 3).unwrap();
+
     let random_tx_signer = TestGeneralPoolMarket::new();
     random_tx_signer.init(&mut context).await.unwrap();
 
-    context.warp_to_slot(3 + 3).unwrap();
+    context.warp_to_slot(3 + 3 + 3).unwrap();
 
     let (transit_account, _) = find_transit_program_address(
         &everlend_general_pool::id(),

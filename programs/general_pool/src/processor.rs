@@ -450,6 +450,7 @@ impl Processor {
         let pool = Pool::unpack(&pool_info.data.borrow())?;
         assert_account_key(pool_market_info, &pool.pool_market)?;
         assert_account_key(token_account_info, &pool.token_account)?;
+        assert_account_key(pool_mint_info, &pool.pool_mint)?;
 
         let mut withdrawal_requests =
             WithdrawalRequests::unpack(&withdrawal_requests_info.data.borrow())?;
