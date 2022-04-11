@@ -1,8 +1,9 @@
 use crate::utils::*;
 use everlend_general_pool::{
     find_pool_borrow_authority_program_address, find_pool_program_address,
-    find_withdrawal_requests_program_address, instruction,
-    state::{PoolMarket, WithdrawalRequests},
+    find_user_withdrawal_request_program_address, find_withdrawal_requests_program_address,
+    instruction,
+    state::{PoolMarket, WithdrawalRequest, WithdrawalRequests},
 };
 use solana_client::client_error::ClientError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
@@ -265,6 +266,81 @@ pub fn withdraw(
     sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
 
     Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn cancel_withdraw_request(
+    config: &Config,
+    pool_market_pubkey: &Pubkey,
+    pool_pubkey: &Pubkey,
+    source: &Pubkey,
+    token_mint: &Pubkey,
+    pool_mint: &Pubkey,
+    rent_payer: &Pubkey,
+    index: u64,
+) -> Result<(), ClientError> {
+    let tx = Transaction::new_with_payer(
+        &[instruction::cancel_withdraw_request(
+            &everlend_general_pool::id(),
+            pool_market_pubkey,
+            pool_pubkey,
+            source,
+            token_mint,
+            pool_mint,
+            &config.fee_payer.pubkey(),
+            rent_payer,
+            index,
+        )],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
+
+    Ok(())
+}
+
+pub fn get_general_pool_market(
+    config: &Config,
+    pool_market_pubkey: &Pubkey,
+) -> Result<PoolMarket, ClientError> {
+    let account = config.rpc_client.get_account(&pool_market_pubkey)?;
+    Ok(PoolMarket::unpack(&account.data).unwrap())
+}
+
+pub fn get_withdraw_requests(
+    config: &Config,
+    pool_market_pubkey: &Pubkey,
+    token_mint: &Pubkey,
+) -> Result<(Pubkey, WithdrawalRequests), ClientError> {
+    let (withdrawal_requests_pubkey, _) = find_withdrawal_requests_program_address(
+        &everlend_general_pool::id(),
+        pool_market_pubkey,
+        token_mint,
+    );
+
+    let withdrawal_requests_account = config.rpc_client.get_account(&withdrawal_requests_pubkey)?;
+    let withdrawal_requests =
+        WithdrawalRequests::unpack(&withdrawal_requests_account.data).unwrap();
+
+    Ok((withdrawal_requests_pubkey, withdrawal_requests))
+}
+
+pub fn get_withdraw_request(
+    config: &Config,
+    pool_market_pubkey: &Pubkey,
+    token_mint: &Pubkey,
+    index: u64,
+) -> Result<(Pubkey, WithdrawalRequest), ClientError> {
+    let (withdrawal_request_pubkey, _) = find_user_withdrawal_request_program_address(
+        &everlend_general_pool::id(),
+        pool_market_pubkey,
+        token_mint,
+        index,
+    );
+    let withdrawal_request_account = config.rpc_client.get_account(&withdrawal_request_pubkey)?;
+    let withdrawal_request = WithdrawalRequest::unpack(&withdrawal_request_account.data).unwrap();
+
+    Ok((withdrawal_request_pubkey, withdrawal_request))
 }
 
 pub fn current_withdrawal_request_index(

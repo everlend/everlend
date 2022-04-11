@@ -15,12 +15,16 @@ use everlend_depositor::{
     find_rebalancing_program_address,
     state::{Rebalancing, RebalancingOperation},
 };
+use everlend_general_pool::{
+    find_user_withdrawal_request_program_address, state::WithdrawalRequest,
+};
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::{
     find_config_program_address,
     state::{RegistryConfig, SetRegistryConfigParams, TOTAL_DISTRIBUTIONS},
 };
 use everlend_utils::integrations::{self, MoneyMarket, MoneyMarketPubkeys};
+use general_pool::{get_withdraw_request, get_withdraw_requests};
 use solana_account_decoder::parse_token::UiTokenAmount;
 use solana_clap_utils::{
     fee_payer::fee_payer_arg,
@@ -35,7 +39,7 @@ use spl_associated_token_account::get_associated_token_address;
 use std::{collections::HashMap, process::exit};
 use utils::*;
 
-use crate::general_pool::current_withdrawal_request_index;
+use crate::general_pool::{current_withdrawal_request_index, get_general_pool_market};
 
 /// Generates fixed distribution from slice
 #[macro_export]
@@ -382,6 +386,39 @@ async fn command_add_reserve_liquidity(
     Ok(())
 }
 
+async fn command_cancel_withdraw_request(config: &Config, mint_key: &str) -> anyhow::Result<()> {
+    let initialiazed_accounts = get_initialized_accounts(config);
+
+    let token_accounts = initialiazed_accounts.token_accounts.get(mint_key).unwrap();
+
+    let (_, withdraw_requests) = get_withdraw_requests(
+        config,
+        &initialiazed_accounts.general_pool_market,
+        &token_accounts.mint,
+    )?;
+    let next_processed_request_id = withdraw_requests.last_processed_request_id + 1;
+
+    let (_, withdraw_request) = get_withdraw_request(
+        config,
+        &initialiazed_accounts.general_pool_market,
+        &token_accounts.mint,
+        next_processed_request_id,
+    )?;
+
+    general_pool::cancel_withdraw_request(
+        config,
+        &initialiazed_accounts.general_pool_market,
+        &token_accounts.general_pool,
+        &withdraw_request.source,
+        &token_accounts.mint,
+        &token_accounts.general_pool_mint,
+        &withdraw_request.rent_payer,
+        next_processed_request_id,
+    )?;
+
+    Ok(())
+}
+
 async fn command_create(
     config: &Config,
     accounts_path: &str,
@@ -582,6 +619,32 @@ async fn command_info(config: &Config, accounts_path: &str) -> anyhow::Result<()
     println!("fee_payer: {:?}", config.fee_payer.pubkey());
     println!("default_accounts = {:#?}", default_accounts);
     println!("{:#?}", initialiazed_accounts);
+
+    println!(
+        "{:#?}",
+        get_general_pool_market(config, &initialiazed_accounts.general_pool_market)?
+    );
+
+    for (_, token_accounts) in initialiazed_accounts.token_accounts {
+        println!("mint = {:?}", token_accounts.mint);
+        let (withdraw_requests_pubkey, withdraw_requests) = get_withdraw_requests(
+            config,
+            &initialiazed_accounts.general_pool_market,
+            &token_accounts.mint,
+        )?;
+        println!("{:#?}", (withdraw_requests_pubkey, &withdraw_requests));
+
+        if withdraw_requests.last_request_id > withdraw_requests.last_processed_request_id {
+            let next_processed_request_id = withdraw_requests.last_processed_request_id + 1;
+            let (withdraw_request_pubkey, withdraw_request) = get_withdraw_request(
+                config,
+                &initialiazed_accounts.general_pool_market,
+                &token_accounts.mint,
+                next_processed_request_id,
+            )?;
+            println!("{:#?}", (withdraw_request_pubkey, &withdraw_request));
+        }
+    }
 
     Ok(())
 }
@@ -1170,6 +1233,17 @@ async fn main() -> anyhow::Result<()> {
                 ),
         )
         .subcommand(
+            SubCommand::with_name("cancel-withdraw-request")
+                .about("Cancel withdraw request")
+                .arg(
+                    Arg::with_name("mint")
+                        .long("mint")
+                        .short("m")
+                        .required(true)
+                        .takes_value(true),
+                ),
+        )
+        .subcommand(
             SubCommand::with_name("create")
                 .about("Create a new accounts")
                 .arg(
@@ -1309,6 +1383,10 @@ async fn main() -> anyhow::Result<()> {
             let mint = arg_matches.value_of("mint").unwrap();
             let amount = value_of::<u64>(arg_matches, "amount").unwrap();
             command_add_reserve_liquidity(&config, mint, amount).await
+        }
+        ("cancel-withdraw-request", Some(arg_matches)) => {
+            let mint = arg_matches.value_of("mint").unwrap();
+            command_cancel_withdraw_request(&config, mint).await
         }
         ("create", Some(arg_matches)) => {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
