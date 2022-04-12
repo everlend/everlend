@@ -23,6 +23,7 @@ use everlend_registry::{
     state::{RegistryConfig, SetRegistryConfigParams, TOTAL_DISTRIBUTIONS},
 };
 use everlend_utils::integrations::{self, MoneyMarket, MoneyMarketPubkeys};
+use general_pool::get_withdrawal_requests;
 use solana_account_decoder::parse_token::UiTokenAmount;
 use solana_clap_utils::{
     fee_payer::fee_payer_arg,
@@ -37,7 +38,7 @@ use spl_associated_token_account::get_associated_token_address;
 use std::{collections::HashMap, process::exit, thread};
 use utils::*;
 
-use crate::general_pool::get_withdrawal_request_accounts;
+use crate::general_pool::{get_general_pool_market, get_withdrawal_request_accounts};
 
 /// Generates fixed distribution from slice
 #[macro_export]
@@ -584,6 +585,21 @@ async fn command_info(config: &Config, accounts_path: &str) -> anyhow::Result<()
     println!("fee_payer: {:?}", config.fee_payer.pubkey());
     println!("default_accounts = {:#?}", default_accounts);
     println!("{:#?}", initialiazed_accounts);
+
+    println!(
+        "{:#?}",
+        get_general_pool_market(config, &initialiazed_accounts.general_pool_market)?
+    );
+
+    for (_, token_accounts) in initialiazed_accounts.token_accounts {
+        println!("mint = {:?}", token_accounts.mint);
+        let (withdraw_requests_pubkey, withdraw_requests) = get_withdrawal_requests(
+            config,
+            &initialiazed_accounts.general_pool_market,
+            &token_accounts.mint,
+        )?;
+        println!("{:#?}", (withdraw_requests_pubkey, &withdraw_requests));
+    }
 
     Ok(())
 }

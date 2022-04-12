@@ -1,12 +1,12 @@
 use crate::utils::*;
 use everlend_general_pool::{
-    find_pool_borrow_authority_program_address, find_pool_program_address, instruction,
-    state::{AccountType, PoolMarket, WithdrawalRequest},
+    find_pool_borrow_authority_program_address, find_pool_program_address,
+    find_withdrawal_request_program_address, find_withdrawal_requests_program_address, instruction,
+    state::{AccountType, PoolMarket, WithdrawalRequest, WithdrawalRequests},
 };
 use solana_client::client_error::ClientError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_sdk::{
-    account::Account,
     signature::{write_keypair_file, Keypair},
     signer::Signer,
     transaction::Transaction,
@@ -261,6 +261,48 @@ pub fn withdraw(
     sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
 
     Ok(())
+}
+
+pub fn get_general_pool_market(
+    config: &Config,
+    pool_market_pubkey: &Pubkey,
+) -> Result<PoolMarket, ClientError> {
+    let account = config.rpc_client.get_account(pool_market_pubkey)?;
+    Ok(PoolMarket::unpack(&account.data).unwrap())
+}
+
+pub fn get_withdrawal_requests(
+    config: &Config,
+    pool_market_pubkey: &Pubkey,
+    token_mint: &Pubkey,
+) -> Result<(Pubkey, WithdrawalRequests), ClientError> {
+    let (withdrawal_requests_pubkey, _) = find_withdrawal_requests_program_address(
+        &everlend_general_pool::id(),
+        pool_market_pubkey,
+        token_mint,
+    );
+
+    let withdrawal_requests_account = config.rpc_client.get_account(&withdrawal_requests_pubkey)?;
+    let withdrawal_requests =
+        WithdrawalRequests::unpack(&withdrawal_requests_account.data).unwrap();
+
+    Ok((withdrawal_requests_pubkey, withdrawal_requests))
+}
+
+pub fn get_withdrawal_request(
+    config: &Config,
+    withdrawal_requests_pubkey: &Pubkey,
+    from: &Pubkey,
+) -> Result<(Pubkey, WithdrawalRequest), ClientError> {
+    let (withdrawal_request_pubkey, _) = find_withdrawal_request_program_address(
+        &everlend_general_pool::id(),
+        withdrawal_requests_pubkey,
+        from,
+    );
+    let withdrawal_request_account = config.rpc_client.get_account(&withdrawal_request_pubkey)?;
+    let withdrawal_request = WithdrawalRequest::unpack(&withdrawal_request_account.data).unwrap();
+
+    Ok((withdrawal_request_pubkey, withdrawal_request))
 }
 
 pub fn get_withdrawal_request_accounts(
