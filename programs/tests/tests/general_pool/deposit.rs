@@ -5,10 +5,10 @@ use everlend_general_pool::instruction;
 use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program_test::*;
+use solana_sdk::signature::Keypair;
 use solana_sdk::{
     pubkey::Pubkey, signer::Signer, transaction::Transaction, transaction::TransactionError,
 };
-use solana_sdk::signature::Keypair;
 use spl_token::error::TokenError;
 
 async fn setup() -> (

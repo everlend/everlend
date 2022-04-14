@@ -208,6 +208,7 @@ pub async fn create_token_account(
     account: &Keypair,
     mint: &Pubkey,
     manager: &Pubkey,
+    lamports: u64,
 ) -> BanksClientResult<()> {
     let rent = context.banks_client.get_rent().await.unwrap();
 
@@ -216,7 +217,7 @@ pub async fn create_token_account(
             system_instruction::create_account(
                 &context.payer.pubkey(),
                 &account.pubkey(),
-                rent.minimum_balance(spl_token::state::Account::LEN),
+                rent.minimum_balance(spl_token::state::Account::LEN) + lamports,
                 spl_token::state::Account::LEN as u64,
                 &spl_token::id(),
             ),
