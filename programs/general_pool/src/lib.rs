@@ -91,11 +91,10 @@ pub fn find_transit_program_address(
 /// Generate transit unwrap address
 pub fn find_transit_sol_unwrap_address(
     program_id: &Pubkey,
-    pool_market: &Pubkey,
-    mint: &Pubkey,
+    withdrawal_request: &Pubkey,
 ) -> (Pubkey, u8) {
     Pubkey::find_program_address(
-        &[br"unwrap", &pool_market.to_bytes(), &mint.to_bytes()],
+        &[br"unwrap", &withdrawal_request.to_bytes()],
         program_id,
     )
 }

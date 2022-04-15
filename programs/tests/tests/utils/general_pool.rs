@@ -172,10 +172,18 @@ impl TestGeneralPool {
         let mut addition_accounts: Vec<AccountMeta> = vec![];
         let mut destination = user.token_account;
         if self.token_mint_pubkey == Pubkey::from_str(SOL_MINT).unwrap() {
+
+            let (withdrawal_requests, _) =
+                find_withdrawal_requests_program_address(&everlend_general_pool::id(), &test_pool_market.keypair.pubkey(), &self.token_mint_pubkey);
+            let (withdrawal_request, _) = find_withdrawal_request_program_address(
+                &everlend_general_pool::id(),
+                &withdrawal_requests,
+                &user.owner.pubkey(),
+            );
+
             let (unwrap_sol_pubkey, _) = find_transit_sol_unwrap_address(
                 &everlend_general_pool::id(),
-                &test_pool_market.keypair.pubkey(),
-                &self.pool_mint.pubkey(),
+                &withdrawal_request,
             );
 
             addition_accounts = vec![

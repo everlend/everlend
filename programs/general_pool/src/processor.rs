@@ -470,8 +470,7 @@ impl Processor {
             // Check withdraw requests account
             let (unwrap_sol_pubkey, bump_seed) = find_transit_sol_unwrap_address(
                 program_id,
-                pool_market_info.key,
-                pool_mint_info.key,
+                withdrawal_request_info.key,
             );
 
             assert_account_key(unwrap_sol_info, &unwrap_sol_pubkey)?;
@@ -484,8 +483,7 @@ impl Processor {
 
             let unwrap_acc_signers_seeds = &[
                 br"unwrap",
-                &pool_market_info.key.to_bytes()[..32],
-                &pool_mint_info.key.to_bytes()[..32],
+                &withdrawal_request_info.key.to_bytes()[..32],
                 &[bump_seed],
             ];
 
