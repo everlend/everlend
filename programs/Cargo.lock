@@ -1187,6 +1187,7 @@ dependencies = [
  "everlend-ulp",
  "everlend-utils",
  "port-variable-rate-lending-instructions",
+ "regex",
  "serde",
  "serde_derive",
  "serde_with",
