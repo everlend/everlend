@@ -497,7 +497,6 @@ impl Processor {
                 rent,
             )?;
 
-            msg!("initialize_account");
             cpi::spl_token::initialize_account(
                 unwrap_sol_info.clone(),
                 token_mint_info.clone(),
