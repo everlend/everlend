@@ -2,9 +2,7 @@
 
 use crate::utils::*;
 use everlend_general_pool::state::WITHDRAW_DELAY;
-use everlend_general_pool::{
-    find_transit_program_address, find_transit_sol_unwrap_address, instruction,
-};
+use everlend_general_pool::{find_transit_program_address, instruction};
 use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program::pubkey::Pubkey;
@@ -14,6 +12,7 @@ use solana_sdk::transaction::{Transaction, TransactionError};
 use std::str::FromStr;
 
 const INITIAL_USER_BALANCE: u64 = 5000000;
+const WITHDRAW_REQUEST_RENT: u64 = 1955760;
 const WITHDRAW_AMOUNT: u64 = 45;
 const SOL_MINT: &str = "So11111111111111111111111111111111111111112";
 
@@ -109,7 +108,10 @@ async fn success_with_sol() {
     assert_eq!(get_token_balance(&mut context, &transit_account).await, 45);
 
     let user_account = get_account(&mut context, &user.owner.pubkey()).await;
-    assert_eq!(user_account.lamports, INITIAL_USER_BALANCE);
+    assert_eq!(
+        user_account.lamports,
+        INITIAL_USER_BALANCE - WITHDRAW_REQUEST_RENT
+    );
 
     test_pool
         .withdraw(&mut context, &test_pool_market, &user)

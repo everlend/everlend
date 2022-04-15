@@ -1,7 +1,7 @@
 use super::BanksClientResult;
 use super::{
     general_pool_borrow_authority::TestGeneralPoolBorrowAuthority, get_account, get_liquidity_mint,
-    LiquidityProvider, TestGeneralPoolMarket, User,
+    LiquidityProvider, TestGeneralPoolMarket, User, SOL_MINT,
 };
 use everlend_general_pool::state::{WithdrawalRequest, WithdrawalRequests};
 use everlend_general_pool::{
@@ -28,8 +28,6 @@ pub struct TestGeneralPool {
     pub token_account: Keypair,
     pub pool_mint: Keypair,
 }
-
-const SOL_MINT: &str = "So11111111111111111111111111111111111111112";
 
 impl TestGeneralPool {
     pub fn new(

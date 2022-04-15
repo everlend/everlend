@@ -1,6 +1,4 @@
-use super::{
-    create_token_account, get_token_balance, mint_tokens, transfer, BanksClientResult, SOL_MINT,
-};
+use super::{create_token_account, mint_tokens, transfer, BanksClientResult, SOL_MINT};
 use solana_program::pubkey::Pubkey;
 use solana_program_test::ProgramTestContext;
 use solana_sdk::signature::{Keypair, Signer};
