@@ -357,6 +357,7 @@ pub fn withdraw(
     token_mint: &Pubkey,
     pool_mint: &Pubkey,
     from: &Pubkey,
+    addition_accounts: Vec<AccountMeta>,
 ) -> Instruction {
     let (pool_market_authority, _) = find_program_address(program_id, pool_market);
 
@@ -366,7 +367,7 @@ pub fn withdraw(
         find_withdrawal_request_program_address(program_id, &withdrawal_requests, from);
     let (collateral_transit, _) = find_transit_program_address(program_id, pool_market, pool_mint);
 
-    let accounts = vec![
+    let mut accounts = vec![
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new_readonly(pool_market_authority, false),
         AccountMeta::new_readonly(*pool, false),
@@ -380,6 +381,8 @@ pub fn withdraw(
         AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
     ];
+
+    accounts.extend(addition_accounts);
 
     Instruction::new_with_borsh(*program_id, &LiquidityPoolsInstruction::Withdraw, accounts)
 }

@@ -30,13 +30,23 @@ async fn setup() -> (
     let test_pool_borrow_authority =
         TestPoolBorrowAuthority::new(&test_pool, context.payer.pubkey());
     test_pool_borrow_authority
-        .create(&mut context, &test_pool_market, &test_pool, ULP_SHARE_ALLOWED)
+        .create(
+            &mut context,
+            &test_pool_market,
+            &test_pool,
+            ULP_SHARE_ALLOWED,
+        )
         .await
         .unwrap();
 
-    let user = add_liquidity_provider(&mut context,  &test_pool.token_mint_pubkey, &test_pool.pool_mint.pubkey(), 101)
-        .await
-        .unwrap();
+    let user = add_liquidity_provider(
+        &mut context,
+        &test_pool.token_mint_pubkey,
+        &test_pool.pool_mint.pubkey(),
+        101,
+    )
+    .await
+    .unwrap();
 
     test_pool
         .deposit(&mut context, &test_pool_market, &user, 100)

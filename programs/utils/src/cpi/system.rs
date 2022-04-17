@@ -22,3 +22,16 @@ pub fn create_account<'a, S: Pack>(
 
     invoke_signed(&ix, &[from, to], signers_seeds)
 }
+
+/// Transfer
+#[allow(clippy::too_many_arguments)]
+pub fn transfer<'a>(
+    from: AccountInfo<'a>,
+    to: AccountInfo<'a>,
+    lamports: u64,
+    signers_seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let ix = system_instruction::transfer(from.key, to.key, lamports);
+
+    invoke_signed(&ix, &[from, to], signers_seeds)
+}

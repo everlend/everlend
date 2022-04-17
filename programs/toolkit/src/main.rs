@@ -924,6 +924,9 @@ async fn command_run_test(
             let (_, rebalancing) = start_rebalancing()?;
             println!("{:#?}", rebalancing);
         }
+        Some("withdraw") => {
+            general_pool_withdraw()?;
+        }
         Some("11") => {
             general_pool_deposit(4321)?;
 

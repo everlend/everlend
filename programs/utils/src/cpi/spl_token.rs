@@ -99,3 +99,21 @@ pub fn burn<'a>(
 
     invoke_signed(&ix, &[mint, account, authority], signers_seeds)
 }
+
+/// SPL close account instruction.
+pub fn close_account<'a>(
+    destination: AccountInfo<'a>,
+    account: AccountInfo<'a>,
+    authority: AccountInfo<'a>,
+    signers_seeds: &[&[&[u8]]],
+) -> Result<(), ProgramError> {
+    let ix = spl_token::instruction::close_account(
+        &spl_token::id(),
+        account.key,
+        destination.key,
+        authority.key,
+        &[],
+    )?;
+
+    invoke_signed(&ix, &[account, destination, authority], signers_seeds)
+}

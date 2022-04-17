@@ -1,7 +1,8 @@
 use crate::utils::*;
 use everlend_general_pool::{
     find_pool_borrow_authority_program_address, find_pool_program_address,
-    find_withdrawal_request_program_address, find_withdrawal_requests_program_address, instruction,
+    find_withdrawal_request_program_address, find_withdrawal_requests_program_address,
+    general_pool_withdraw_sol_accounts, instruction,
     state::{AccountType, PoolMarket, WithdrawalRequest, WithdrawalRequests},
 };
 use solana_client::client_error::ClientError;
@@ -213,6 +214,13 @@ pub fn withdraw_request(
     pool_mint: &Pubkey,
     amount: u64,
 ) -> Result<(), ClientError> {
+    let payer_pubkey = config.fee_payer.pubkey();
+    let destination = if token_mint == &spl_token::native_mint::id() {
+        &payer_pubkey
+    } else {
+        destination
+    };
+
     let tx = Transaction::new_with_payer(
         &[instruction::withdraw_request(
             &everlend_general_pool::id(),
@@ -244,6 +252,26 @@ pub fn withdraw(
     token_mint: &Pubkey,
     pool_mint: &Pubkey,
 ) -> Result<(), ClientError> {
+    let payer_pubkey = config.fee_payer.pubkey();
+    let (addition_accounts, destination) = if token_mint == &spl_token::native_mint::id() {
+        (
+            general_pool_withdraw_sol_accounts(
+                &everlend_general_pool::id(),
+                pool_market_pubkey,
+                token_mint,
+                &payer_pubkey,
+            ),
+            &payer_pubkey,
+        )
+    } else {
+        (vec![], destination)
+    };
+
+    println!(
+        "addition_accounts = {:?}, destination = {:?}",
+        addition_accounts, destination
+    );
+
     let tx = Transaction::new_with_payer(
         &[instruction::withdraw(
             &everlend_general_pool::id(),
@@ -254,6 +282,7 @@ pub fn withdraw(
             token_mint,
             pool_mint,
             &config.fee_payer.pubkey(),
+            addition_accounts,
         )],
         Some(&config.fee_payer.pubkey()),
     );

@@ -41,6 +41,7 @@ pub use users::*;
 
 pub const EXP: u64 = 1_000_000_000;
 pub const REFRESH_INCOME_INTERVAL: u64 = 300; // About 2.5 min
+pub const SOL_MINT: &str = "So11111111111111111111111111111111111111112";
 
 pub type BanksClientResult<T> = Result<T, BanksClientError>;
 
@@ -208,6 +209,7 @@ pub async fn create_token_account(
     account: &Keypair,
     mint: &Pubkey,
     manager: &Pubkey,
+    lamports: u64,
 ) -> BanksClientResult<()> {
     let rent = context.banks_client.get_rent().await.unwrap();
 
@@ -216,7 +218,7 @@ pub async fn create_token_account(
             system_instruction::create_account(
                 &context.payer.pubkey(),
                 &account.pubkey(),
-                rent.minimum_balance(spl_token::state::Account::LEN),
+                rent.minimum_balance(spl_token::state::Account::LEN) + lamports,
                 spl_token::state::Account::LEN as u64,
                 &spl_token::id(),
             ),

@@ -1,19 +1,25 @@
 use super::BanksClientResult;
 use super::{
     general_pool_borrow_authority::TestGeneralPoolBorrowAuthority, get_account, get_liquidity_mint,
-    LiquidityProvider, TestGeneralPoolMarket, User,
+    LiquidityProvider, TestGeneralPoolMarket, User, SOL_MINT,
 };
 use everlend_general_pool::state::{WithdrawalRequest, WithdrawalRequests};
 use everlend_general_pool::{
-    find_pool_program_address, find_withdrawal_request_program_address,
-    find_withdrawal_requests_program_address, instruction, state::Pool,
+    find_pool_program_address, find_transit_sol_unwrap_address,
+    find_withdrawal_request_program_address, find_withdrawal_requests_program_address, instruction,
+    state::Pool,
 };
-use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
+
+use solana_program::{
+    instruction::AccountMeta, program_pack::Pack, pubkey::Pubkey, system_instruction,
+    system_program, sysvar,
+};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
+use std::str::FromStr;
 
 #[derive(Debug)]
 pub struct TestGeneralPool {
@@ -163,16 +169,45 @@ impl TestGeneralPool {
         test_pool_market: &TestGeneralPoolMarket,
         user: &LiquidityProvider,
     ) -> BanksClientResult<()> {
+        let mut addition_accounts: Vec<AccountMeta> = vec![];
+        let mut destination = user.token_account;
+        if self.token_mint_pubkey == Pubkey::from_str(SOL_MINT).unwrap() {
+
+            let (withdrawal_requests, _) =
+                find_withdrawal_requests_program_address(&everlend_general_pool::id(), &test_pool_market.keypair.pubkey(), &self.token_mint_pubkey);
+            let (withdrawal_request, _) = find_withdrawal_request_program_address(
+                &everlend_general_pool::id(),
+                &withdrawal_requests,
+                &user.owner.pubkey(),
+            );
+
+            let (unwrap_sol_pubkey, _) = find_transit_sol_unwrap_address(
+                &everlend_general_pool::id(),
+                &withdrawal_request,
+            );
+
+            addition_accounts = vec![
+                AccountMeta::new_readonly(self.token_mint_pubkey, false),
+                AccountMeta::new(unwrap_sol_pubkey, false),
+                AccountMeta::new(context.payer.pubkey(), true),
+                AccountMeta::new_readonly(sysvar::rent::id(), false),
+                AccountMeta::new_readonly(system_program::id(), false),
+            ];
+
+            destination = user.owner.pubkey();
+        }
+
         let tx = Transaction::new_signed_with_payer(
             &[instruction::withdraw(
                 &everlend_general_pool::id(),
                 &test_pool_market.keypair.pubkey(),
                 &self.pool_pubkey,
-                &user.token_account,
+                &destination,
                 &self.token_account.pubkey(),
                 &self.token_mint_pubkey,
                 &self.pool_mint.pubkey(),
                 &user.owner.pubkey(),
+                addition_accounts,
             )],
             Some(&context.payer.pubkey()),
             &[&context.payer],
@@ -189,13 +224,18 @@ impl TestGeneralPool {
         user: &LiquidityProvider,
         collateral_amount: u64,
     ) -> BanksClientResult<()> {
+        let mut destination = user.token_account;
+        if self.token_mint_pubkey == Pubkey::from_str(SOL_MINT).unwrap() {
+            destination = user.owner.pubkey();
+        };
+
         let tx = Transaction::new_signed_with_payer(
             &[instruction::withdraw_request(
                 &everlend_general_pool::id(),
                 &test_pool_market.keypair.pubkey(),
                 &self.pool_pubkey,
                 &user.pool_account,
-                &user.token_account,
+                &destination,
                 &self.token_account.pubkey(),
                 &self.token_mint_pubkey,
                 &self.pool_mint.pubkey(),
