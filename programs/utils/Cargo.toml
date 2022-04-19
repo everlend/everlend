@@ -14,6 +14,8 @@ spl-token-lending = { git = "https://github.com/everlend/solana-program-library"
 port-variable-rate-lending-instructions = "0.2.9"
 larix-lending = { git = "https://github.com/ProjectLarix/larix-lending", features = [ "no-entrypoint" ], branch = "lp-v2" }
 borsh = "0.9.0"
+solend-program = { git = "https://github.com/wedancedalot/solana-program-library", features = [ "no-entrypoint" ], branch = "mainnet" }
+
 
 [dev-dependencies]
 solana-sdk = "1.9.2"
