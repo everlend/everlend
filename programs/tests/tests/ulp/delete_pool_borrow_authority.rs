@@ -1,17 +1,16 @@
 #![cfg(feature = "test-bpf")]
 
-use crate::utils::*;
-use everlend_ulp::state::AccountType;
-use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program_test::*;
 use solana_sdk::{signer::Signer, transaction::TransactionError};
 
-async fn setup() -> (ProgramTestContext, TestPoolMarket, TestPool) {
-    let mut context = presetup().await.0;
+use everlend_ulp::state::AccountType;
+use everlend_utils::EverlendError;
 
-    let test_pool_market = TestPoolMarket::new();
-    test_pool_market.init(&mut context).await.unwrap();
+use crate::utils::*;
+
+async fn setup() -> (ProgramTestContext, TestUlpPoolMarket, TestPool) {
+    let (mut context, .., test_pool_market) = presetup().await;
 
     let test_pool = TestPool::new(&test_pool_market, None);
     test_pool

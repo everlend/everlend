@@ -8,6 +8,7 @@ use solana_sdk::transaction::{Transaction, TransactionError};
 
 use everlend_depositor::find_transit_program_address;
 use everlend_liquidity_oracle::state::DistributionArray;
+use everlend_registry::state::{PoolMarketsConfig, SetRegistryConfigParams, TOTAL_DISTRIBUTIONS};
 use everlend_utils::{
     find_program_address,
     integrations::{self, MoneyMarketPubkeys},
@@ -26,16 +27,24 @@ async fn setup() -> (
     TestGeneralPoolBorrowAuthority,
     TestIncomePoolMarket,
     TestIncomePool,
-    TestPoolMarket,
+    TestUlpPoolMarket,
     TestPool,
     LiquidityProvider,
     TestDepositor,
 ) {
-    let (mut context, money_market, pyth_oracle, registry) = presetup().await;
+    let (
+        mut context,
+        money_market,
+        pyth_oracle,
+        registry,
+        general_pool_market,
+        income_pool_market,
+        mm_pool_market,
+    ) = presetup().await;
 
     let payer_pubkey = context.payer.pubkey();
 
-    // 0. Prepare lending
+    // Prepare lending
     let reserve = money_market.get_reserve_data(&mut context).await;
     println!("{:#?}", reserve);
 
@@ -56,10 +65,7 @@ async fn setup() -> (
     let collateral_mint = get_mint_data(&mut context, &reserve.collateral.mint_pubkey).await;
     println!("{:#?}", collateral_mint);
 
-    // 1. Prepare general pool
-
-    let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context).await.unwrap();
+    // Prepare general pool
 
     let general_pool = TestGeneralPool::new(&general_pool_market, None);
     general_pool
@@ -67,7 +73,7 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    // 1.1 Add liquidity to general pool
+    // Add liquidity to general pool
 
     let liquidity_provider = add_liquidity_provider(
         &mut context,
@@ -88,12 +94,7 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    // 2. Prepare income pool
-    let income_pool_market = TestIncomePoolMarket::new();
-    income_pool_market
-        .init(&mut context, &general_pool_market)
-        .await
-        .unwrap();
+    // Prepare income pool
 
     let income_pool = TestIncomePool::new(&income_pool_market, None);
     income_pool
@@ -101,17 +102,36 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    // 3. Prepare money market pool
-
-    let mm_pool_market = TestPoolMarket::new();
-    mm_pool_market.init(&mut context).await.unwrap();
+    // Prepare money market pool
 
     let mm_pool = TestPool::new(&mm_pool_market, Some(reserve.collateral.mint_pubkey));
     mm_pool.create(&mut context, &mm_pool_market).await.unwrap();
 
-    // 4. Prepare depositor
+    // Prepare configuration registry
 
-    // 4.1. Prepare liquidity oracle
+    let config = SetRegistryConfigParams {
+        general_pool_program_id: everlend_general_pool::id(),
+        ulp_program_id: everlend_ulp::id(),
+        liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
+        depositor_program_id: everlend_depositor::id(),
+        income_pools_program_id: everlend_income_pools::id(),
+        money_market_program_ids: [spl_token_lending::id(); TOTAL_DISTRIBUTIONS],
+        refresh_income_interval: REFRESH_INCOME_INTERVAL,
+    };
+
+    let pool_markets_cfg = PoolMarketsConfig {
+        general_pool_market: general_pool_market.keypair.pubkey(),
+        income_pool_market: income_pool_market.keypair.pubkey(),
+        ulp_pool_market: mm_pool_market.keypair.pubkey(),
+    };
+
+    registry
+        .set_registry_config(&mut context, config, pool_markets_cfg)
+        .await
+        .unwrap();
+
+    // Prepare depositor:
+    // Prepare liquidity oracle
 
     let test_liquidity_oracle = TestLiquidityOracle::new();
     test_liquidity_oracle.init(&mut context).await.unwrap();
@@ -149,13 +169,13 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    // 4.2 Create transit account for liquidity token
+    // Create transit account for liquidity token
     test_depositor
         .create_transit(&mut context, &general_pool.token_mint_pubkey, None)
         .await
         .unwrap();
 
-    // 4.2.1 Create reserve transit account for liquidity token
+    // Create reserve transit account for liquidity token
     test_depositor
         .create_transit(
             &mut context,
@@ -180,19 +200,19 @@ async fn setup() -> (
     .await
     .unwrap();
 
-    // 4.3 Create transit account for collateral token
+    // Create transit account for collateral token
     test_depositor
         .create_transit(&mut context, &mm_pool.token_mint_pubkey, None)
         .await
         .unwrap();
 
-    // 4.4 Create transit account for mm pool collateral token
+    // Create transit account for mm pool collateral token
     test_depositor
         .create_transit(&mut context, &mm_pool.pool_mint.pubkey(), None)
         .await
         .unwrap();
 
-    // 5. Prepare borrow authority
+    // Prepare borrow authority
     let (depositor_authority, _) = find_program_address(
         &everlend_depositor::id(),
         &test_depositor.depositor.pubkey(),
@@ -209,7 +229,7 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    // 6. Start rebalancing
+    // Start rebalancing
     test_depositor
         .start_rebalancing(
             &mut context,
@@ -222,7 +242,7 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    // 7. Deposit
+    // Deposit
 
     // Rates should be refreshed
     context.warp_to_slot(3).unwrap();
@@ -249,7 +269,7 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    // 7.1 Decrease distribution & restart rebalancing
+    // Decrease distribution & restart rebalancing
 
     distribution[0] = 0u64; // Decrease to 0%
     test_token_distribution
@@ -1003,7 +1023,7 @@ async fn fail_with_invalid_collateral_mint() {
 
     let money_market_program_id = &spl_token_lending::id();
 
-    let collateral_mint = Pubkey::new_unique();
+    let invalid_collateral_mint = Pubkey::new_unique();
     let liquidity_mint = get_liquidity_mint().1;
     let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
 
@@ -1020,7 +1040,7 @@ async fn fail_with_invalid_collateral_mint() {
             &mm_pool_market.keypair.pubkey(),
             &mm_pool.token_account.pubkey(),
             &mm_pool_collateral_mint,
-            &collateral_mint,
+            &invalid_collateral_mint,
             &liquidity_mint,
             money_market_program_id,
             withdraw_accounts,
@@ -1037,10 +1057,7 @@ async fn fail_with_invalid_collateral_mint() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(
-            0,
-            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
-        )
+        TransactionError::InstructionError(0, InstructionError::InvalidAccountData)
     );
 }
 

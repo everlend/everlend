@@ -1,25 +1,24 @@
 #![cfg(feature = "test-bpf")]
 
-use crate::utils::*;
-use everlend_ulp::instruction;
-use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program_test::*;
 use solana_sdk::{
     pubkey::Pubkey, signer::Signer, transaction::Transaction, transaction::TransactionError,
 };
 
+use everlend_ulp::instruction;
+use everlend_utils::EverlendError;
+
+use crate::utils::*;
+
 async fn setup() -> (
     ProgramTestContext,
-    TestPoolMarket,
+    TestUlpPoolMarket,
     TestPool,
     TestPoolBorrowAuthority,
     LiquidityProvider,
 ) {
-    let mut context = presetup().await.0;
-
-    let test_pool_market = TestPoolMarket::new();
-    test_pool_market.init(&mut context).await.unwrap();
+    let (mut context, .., test_pool_market) = presetup().await;
 
     let test_pool = TestPool::new(&test_pool_market, None);
     test_pool
@@ -235,7 +234,7 @@ async fn fail_with_invalid_pool_market() {
     let amount = 1;
     let interest_amount = 1;
 
-    let test_pool_market = TestPoolMarket::new();
+    let test_pool_market = TestUlpPoolMarket::new();
     test_pool_market.init(&mut context).await.unwrap();
 
     let tx = Transaction::new_signed_with_payer(

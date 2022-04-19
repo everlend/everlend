@@ -1,5 +1,3 @@
-use super::{get_account, BanksClientResult};
-use everlend_ulp::{instruction, state::PoolMarket};
 use solana_program::{program_pack::Pack, system_instruction};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{
@@ -7,17 +5,28 @@ use solana_sdk::{
     transaction::Transaction,
 };
 
+use everlend_ulp::{instruction, state::PoolMarket};
+
+use super::{get_account, BanksClientResult};
+
 #[derive(Debug)]
-pub struct TestPoolMarket {
+pub struct TestUlpPoolMarket {
     pub keypair: Keypair,
     pub manager: Keypair,
 }
 
-impl TestPoolMarket {
+impl TestUlpPoolMarket {
     pub fn new() -> Self {
         Self {
             keypair: Keypair::new(),
             manager: Keypair::new(),
+        }
+    }
+
+    pub fn new_with_manager(manager: Keypair) -> Self {
+        Self {
+            keypair: Keypair::new(),
+            manager,
         }
     }
 

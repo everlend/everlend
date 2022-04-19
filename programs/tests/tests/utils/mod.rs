@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 
-use everlend_registry::state::{SetRegistryConfigParams, TOTAL_DISTRIBUTIONS};
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::*;
 use solana_program_test::{ProgramTest, ProgramTestContext};
@@ -10,6 +9,21 @@ use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
+
+pub use depositor::*;
+use everlend_registry::state::{PoolMarketsConfig, SetRegistryConfigParams, TOTAL_DISTRIBUTIONS};
+pub use general_pool::*;
+pub use general_pool_borrow_authority::*;
+pub use general_pool_market::*;
+pub use income_pool::*;
+pub use income_pool_market::*;
+pub use liquidity_oracle::*;
+pub use money_market::*;
+pub use registry::*;
+pub use ulp_pool::*;
+pub use ulp_pool_borrow_authority::*;
+pub use ulp_pool_market::*;
+pub use users::*;
 
 pub mod depositor;
 pub mod general_pool;
@@ -24,20 +38,6 @@ pub mod ulp_pool;
 pub mod ulp_pool_borrow_authority;
 pub mod ulp_pool_market;
 pub mod users;
-
-pub use depositor::*;
-pub use general_pool::*;
-pub use general_pool_borrow_authority::*;
-pub use general_pool_market::*;
-pub use income_pool::*;
-pub use income_pool_market::*;
-pub use liquidity_oracle::*;
-pub use money_market::*;
-pub use registry::*;
-pub use ulp_pool::*;
-pub use ulp_pool_borrow_authority::*;
-pub use ulp_pool_market::*;
-pub use users::*;
 
 pub const EXP: u64 = 1_000_000_000;
 pub const REFRESH_INCOME_INTERVAL: u64 = 300; // About 2.5 min
@@ -126,6 +126,9 @@ pub async fn presetup() -> (
     TestSPLTokenLending,
     TestPythOracle,
     TestRegistry,
+    TestGeneralPoolMarket,
+    TestIncomePoolMarket,
+    TestUlpPoolMarket,
 ) {
     let mut test = program_test();
     let sol_oracle = add_sol_oracle(&mut test);
@@ -138,7 +141,27 @@ pub async fn presetup() -> (
         .await
         .unwrap();
 
-    let registry = TestRegistry::new();
+    let test_general_pool_market = TestGeneralPoolMarket::new_with_manager(
+        Keypair::from_bytes(context.payer.to_bytes().as_ref()).unwrap(),
+    );
+    test_general_pool_market.init(&mut context).await.unwrap();
+
+    let test_income_pool_market = TestIncomePoolMarket::new_with_manager(
+        Keypair::from_bytes(context.payer.to_bytes().as_ref()).unwrap(),
+    );
+    test_income_pool_market
+        .init(&mut context, &test_general_pool_market)
+        .await
+        .unwrap();
+
+    let test_ulp_pool_market = TestUlpPoolMarket::new_with_manager(
+        Keypair::from_bytes(context.payer.to_bytes().as_ref()).unwrap(),
+    );
+    test_ulp_pool_market.init(&mut context).await.unwrap();
+
+    let registry = TestRegistry::new_with_manager(
+        Keypair::from_bytes(context.payer.to_bytes().as_ref()).unwrap(),
+    );
     registry.init(&mut context).await.unwrap();
 
     let mut config = SetRegistryConfigParams {
@@ -152,12 +175,26 @@ pub async fn presetup() -> (
     };
     config.money_market_program_ids[0] = spl_token_lending::id();
 
+    let pool_markets_cfg = PoolMarketsConfig {
+        general_pool_market: test_general_pool_market.keypair.pubkey(),
+        income_pool_market: test_income_pool_market.keypair.pubkey(),
+        ulp_pool_market: test_ulp_pool_market.keypair.pubkey(),
+    };
+
     registry
-        .set_registry_config(&mut context, config)
+        .set_registry_config(&mut context, config, pool_markets_cfg)
         .await
         .unwrap();
 
-    (context, spl_token_lending, sol_oracle, registry)
+    (
+        context,
+        spl_token_lending,
+        sol_oracle,
+        registry,
+        test_general_pool_market,
+        test_income_pool_market,
+        test_ulp_pool_market,
+    )
 }
 
 pub async fn transfer(

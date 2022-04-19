@@ -1,7 +1,7 @@
 use super::{
     get_account, get_liquidity_mint, BanksClientResult, TestGeneralPool, TestGeneralPoolMarket,
-    TestIncomePool, TestIncomePoolMarket, TestLiquidityOracle, TestPool, TestPoolMarket,
-    TestRegistry,
+    TestIncomePool, TestIncomePoolMarket, TestLiquidityOracle, TestPool, TestRegistry,
+    TestUlpPoolMarket,
 };
 use everlend_depositor::{
     find_rebalancing_program_address,
@@ -136,7 +136,7 @@ impl TestDepositor {
         &self,
         context: &mut ProgramTestContext,
         registry: &TestRegistry,
-        mm_pool_market: &TestPoolMarket,
+        mm_pool_market: &TestUlpPoolMarket,
         mm_pool: &TestPool,
         money_market_program_id: &Pubkey,
         money_market_pubkeys: &MoneyMarketPubkeys,
@@ -176,7 +176,7 @@ impl TestDepositor {
         registry: &TestRegistry,
         income_pool_market: &TestIncomePoolMarket,
         income_pool: &TestIncomePool,
-        mm_pool_market: &TestPoolMarket,
+        mm_pool_market: &TestUlpPoolMarket,
         mm_pool: &TestPool,
         money_market_program_id: &Pubkey,
         money_market_pubkeys: &MoneyMarketPubkeys,

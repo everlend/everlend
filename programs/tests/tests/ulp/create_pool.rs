@@ -1,14 +1,13 @@
 #![cfg(feature = "test-bpf")]
 
-use crate::utils::*;
-use everlend_ulp::state::AccountType;
 use solana_program_test::*;
 
-async fn setup() -> (ProgramTestContext, TestPoolMarket) {
-    let mut context = presetup().await.0;
+use everlend_ulp::state::AccountType;
 
-    let test_pool_market = TestPoolMarket::new();
-    test_pool_market.init(&mut context).await.unwrap();
+use crate::utils::*;
+
+async fn setup() -> (ProgramTestContext, TestUlpPoolMarket) {
+    let (context, .., test_pool_market) = presetup().await;
 
     (context, test_pool_market)
 }

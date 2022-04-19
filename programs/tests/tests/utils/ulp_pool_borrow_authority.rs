@@ -1,4 +1,4 @@
-use super::{get_account, get_token_balance, BanksClientResult, TestPool, TestPoolMarket};
+use super::{get_account, get_token_balance, BanksClientResult, TestPool, TestUlpPoolMarket};
 use everlend_ulp::{
     find_pool_borrow_authority_program_address, instruction,
     state::{Pool, PoolBorrowAuthority},
@@ -50,7 +50,7 @@ impl TestPoolBorrowAuthority {
     pub async fn create(
         &self,
         context: &mut ProgramTestContext,
-        test_pool_market: &TestPoolMarket,
+        test_pool_market: &TestUlpPoolMarket,
         test_pool: &TestPool,
         share_allowed: u16,
     ) -> BanksClientResult<()> {
@@ -74,7 +74,7 @@ impl TestPoolBorrowAuthority {
     pub async fn update(
         &self,
         context: &mut ProgramTestContext,
-        test_pool_market: &TestPoolMarket,
+        test_pool_market: &TestUlpPoolMarket,
         test_pool: &TestPool,
         share_allowed: u16,
     ) -> BanksClientResult<()> {
@@ -98,7 +98,7 @@ impl TestPoolBorrowAuthority {
     pub async fn delete(
         &self,
         context: &mut ProgramTestContext,
-        test_pool_market: &TestPoolMarket,
+        test_pool_market: &TestUlpPoolMarket,
         test_pool: &TestPool,
     ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(

@@ -63,14 +63,22 @@ impl Processor {
         assert_owned_by(income_pool_market_info, &config.income_pools_program_id)?;
         assert_owned_by(liquidity_oracle_info, &config.liquidity_oracle_program_id)?;
 
+        assert_account_key(
+            general_pool_market_info,
+            &config.pool_markets_cfg.general_pool_market,
+        )?;
+        assert_account_key(
+            income_pool_market_info,
+            &config.pool_markets_cfg.income_pool_market,
+        )?;
+
         // Get depositor state
         let mut depositor = Depositor::unpack_unchecked(&depositor_info.data.borrow())?;
         assert_uninitialized(&depositor)?;
 
         depositor.init(InitDepositorParams {
-            general_pool_market: *general_pool_market_info.key,
-            income_pool_market: *income_pool_market_info.key,
             liquidity_oracle: *liquidity_oracle_info.key,
+            registry_config: *registry_config_info.key,
         });
 
         Depositor::pack(depositor, *depositor_info.data.borrow_mut())?;
@@ -142,7 +150,6 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
 
         let registry_config_info = next_account_info(account_info_iter)?;
-        let config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
 
         let depositor_info = next_account_info(account_info_iter)?;
         let depositor_authority_info = next_account_info(account_info_iter)?;
@@ -174,14 +181,21 @@ impl Processor {
 
         assert_owned_by(registry_config_info, &everlend_registry::id())?;
         assert_owned_by(depositor_info, program_id)?;
+
+        // Get depositor state
+        let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
+        assert_account_key(registry_config_info, &depositor.registry_config)?;
+
+        let config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
+
         assert_owned_by(token_distribution_info, &config.liquidity_oracle_program_id)?;
         assert_owned_by(general_pool_info, &config.general_pool_program_id)?;
         assert_owned_by(withdrawal_requests_info, &config.general_pool_program_id)?;
 
-        // Get depositor state
-        let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
-
-        assert_account_key(general_pool_market_info, &depositor.general_pool_market)?;
+        assert_account_key(
+            general_pool_market_info,
+            &config.pool_markets_cfg.general_pool_market,
+        )?;
         assert_account_key(liquidity_oracle_info, &depositor.liquidity_oracle)?;
 
         let (rebalancing_pubkey, bump_seed) =
@@ -375,8 +389,34 @@ impl Processor {
         assert_owned_by(depositor_info, program_id)?;
         assert_owned_by(rebalancing_info, program_id)?;
 
-        let registry_config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
+        // Get depositor state
+        let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
+        assert_account_key(registry_config_info, &depositor.registry_config)?;
 
+        let registry_config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
+        let ulp_program_id = &registry_config.ulp_program_id;
+        assert_owned_by(mm_pool_market_info, ulp_program_id)?;
+        assert_account_key(
+            mm_pool_market_info,
+            &registry_config.pool_markets_cfg.ulp_pool_market,
+        )?;
+
+        let (ulp_pool_pubkey, _) = everlend_ulp::find_pool_program_address(
+            ulp_program_id,
+            mm_pool_market_info.key,
+            &collateral_mint_info.key,
+        );
+
+        assert_account_key(mm_pool_info, &ulp_pool_pubkey)?;
+
+        let mm_pool = everlend_ulp::state::Pool::unpack(&mm_pool_info.data.borrow())?;
+        msg!("1");
+        assert_account_key(collateral_mint_info, &mm_pool.token_mint)?;
+        msg!("2");
+        assert_account_key(mm_pool_token_account_info, &mm_pool.token_account)?;
+        msg!("3");
+        assert_account_key(mm_pool_collateral_mint_info, &mm_pool.pool_mint)?;
+        msg!("4");
         let mut rebalancing = Rebalancing::unpack(&rebalancing_info.data.borrow())?;
         assert_account_key(depositor_info, &rebalancing.depositor)?;
         assert_account_key(liquidity_mint_info, &rebalancing.mint)?;
@@ -470,7 +510,34 @@ impl Processor {
         assert_owned_by(depositor_info, program_id)?;
         assert_owned_by(rebalancing_info, program_id)?;
 
+        // Get depositor state
+        let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
+        assert_account_key(registry_config_info, &depositor.registry_config)?;
+
         let registry_config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
+        let ulp_program_id = &registry_config.ulp_program_id;
+        assert_owned_by(mm_pool_market_info, ulp_program_id)?;
+        assert_account_key(
+            mm_pool_market_info,
+            &registry_config.pool_markets_cfg.ulp_pool_market,
+        )?;
+
+        let (ulp_pool_pubkey, _) = everlend_ulp::find_pool_program_address(
+            ulp_program_id,
+            mm_pool_market_info.key,
+            &collateral_mint_info.key,
+        );
+
+        assert_account_key(mm_pool_info, &ulp_pool_pubkey)?;
+
+        let mm_pool = everlend_ulp::state::Pool::unpack(&mm_pool_info.data.borrow())?;
+        msg!("1");
+        assert_account_key(collateral_mint_info, &mm_pool.token_mint)?;
+        msg!("2");
+        assert_account_key(mm_pool_token_account_info, &mm_pool.token_account)?;
+        msg!("3");
+        assert_account_key(mm_pool_collateral_mint_info, &mm_pool.pool_mint)?;
+        msg!("4");
 
         let mut rebalancing = Rebalancing::unpack(&rebalancing_info.data.borrow())?;
         assert_account_key(depositor_info, &rebalancing.depositor)?;

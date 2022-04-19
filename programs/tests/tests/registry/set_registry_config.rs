@@ -7,7 +7,9 @@ use solana_sdk::signature::Keypair;
 use solana_sdk::signer::Signer;
 use solana_sdk::transaction::{Transaction, TransactionError};
 
-use everlend_registry::state::{AccountType, SetRegistryConfigParams, TOTAL_DISTRIBUTIONS};
+use everlend_registry::state::{
+    AccountType, PoolMarketsConfig, SetRegistryConfigParams, TOTAL_DISTRIBUTIONS,
+};
 use everlend_utils::EverlendError;
 
 use crate::utils::*;
@@ -16,8 +18,28 @@ use crate::utils::*;
 async fn success() {
     let mut context = program_test().start_with_context().await;
 
-    let test_registry = TestRegistry::new();
+    let test_registry = TestRegistry::new_with_manager(
+        Keypair::from_bytes(context.payer.to_bytes().as_ref()).unwrap(),
+    );
     test_registry.init(&mut context).await.unwrap();
+
+    let general_pool_market = TestGeneralPoolMarket::new_with_manager(
+        Keypair::from_bytes(context.payer.to_bytes().as_ref()).unwrap(),
+    );
+    general_pool_market.init(&mut context).await.unwrap();
+
+    let income_pool_market = TestIncomePoolMarket::new_with_manager(
+        Keypair::from_bytes(context.payer.to_bytes().as_ref()).unwrap(),
+    );
+    income_pool_market
+        .init(&mut context, &general_pool_market)
+        .await
+        .unwrap();
+
+    let ulp_pool_market = TestUlpPoolMarket::new_with_manager(
+        Keypair::from_bytes(context.payer.to_bytes().as_ref()).unwrap(),
+    );
+    ulp_pool_market.init(&mut context).await.unwrap();
 
     let mut config = SetRegistryConfigParams {
         general_pool_program_id: everlend_general_pool::id(),
@@ -30,8 +52,14 @@ async fn success() {
     };
     config.money_market_program_ids[0] = spl_token_lending::id();
 
+    let pool_markets_cfg = PoolMarketsConfig {
+        general_pool_market: general_pool_market.keypair.pubkey(),
+        income_pool_market: income_pool_market.keypair.pubkey(),
+        ulp_pool_market: ulp_pool_market.keypair.pubkey(),
+    };
+
     test_registry
-        .set_registry_config(&mut context, config)
+        .set_registry_config(&mut context, config, pool_markets_cfg)
         .await
         .unwrap();
 
@@ -43,8 +71,28 @@ async fn success() {
 async fn success_change_registry_config() {
     let mut context = program_test().start_with_context().await;
 
-    let test_registry = TestRegistry::new();
+    let test_registry = TestRegistry::new_with_manager(
+        Keypair::from_bytes(context.payer.to_bytes().as_ref()).unwrap(),
+    );
     test_registry.init(&mut context).await.unwrap();
+
+    let general_pool_market = TestGeneralPoolMarket::new_with_manager(
+        Keypair::from_bytes(context.payer.to_bytes().as_ref()).unwrap(),
+    );
+    general_pool_market.init(&mut context).await.unwrap();
+
+    let income_pool_market = TestIncomePoolMarket::new_with_manager(
+        Keypair::from_bytes(context.payer.to_bytes().as_ref()).unwrap(),
+    );
+    income_pool_market
+        .init(&mut context, &general_pool_market)
+        .await
+        .unwrap();
+
+    let ulp_pool_market = TestUlpPoolMarket::new_with_manager(
+        Keypair::from_bytes(context.payer.to_bytes().as_ref()).unwrap(),
+    );
+    ulp_pool_market.init(&mut context).await.unwrap();
 
     let config = SetRegistryConfigParams {
         general_pool_program_id: Pubkey::new_unique(),
@@ -56,8 +104,14 @@ async fn success_change_registry_config() {
         refresh_income_interval: REFRESH_INCOME_INTERVAL,
     };
 
+    let pool_markets_cfg = PoolMarketsConfig {
+        general_pool_market: general_pool_market.keypair.pubkey(),
+        income_pool_market: income_pool_market.keypair.pubkey(),
+        ulp_pool_market: ulp_pool_market.keypair.pubkey(),
+    };
+
     test_registry
-        .set_registry_config(&mut context, config)
+        .set_registry_config(&mut context, config, pool_markets_cfg)
         .await
         .unwrap();
 
@@ -77,7 +131,7 @@ async fn success_change_registry_config() {
     };
 
     test_registry
-        .set_registry_config(&mut context, config)
+        .set_registry_config(&mut context, config, pool_markets_cfg)
         .await
         .unwrap();
 
@@ -104,6 +158,18 @@ async fn fail_with_invalid_registry() {
     let test_registry = TestRegistry::new();
     test_registry.init(&mut context).await.unwrap();
 
+    let general_pool_market = TestGeneralPoolMarket::new();
+    general_pool_market.init(&mut context).await.unwrap();
+
+    let income_pool_market = TestIncomePoolMarket::new();
+    income_pool_market
+        .init(&mut context, &general_pool_market)
+        .await
+        .unwrap();
+
+    let ulp_pool_market = TestUlpPoolMarket::new();
+    ulp_pool_market.init(&mut context).await.unwrap();
+
     let mut config = SetRegistryConfigParams {
         general_pool_program_id: everlend_general_pool::id(),
         ulp_program_id: everlend_ulp::id(),
@@ -115,12 +181,22 @@ async fn fail_with_invalid_registry() {
     };
     config.money_market_program_ids[0] = spl_token_lending::id();
 
+    let pool_markets_cfg = PoolMarketsConfig {
+        general_pool_market: general_pool_market.keypair.pubkey(),
+        income_pool_market: income_pool_market.keypair.pubkey(),
+        ulp_pool_market: ulp_pool_market.keypair.pubkey(),
+    };
+
     let tx = Transaction::new_signed_with_payer(
         &[everlend_registry::instruction::set_registry_config(
             &everlend_registry::id(),
             &Pubkey::new_unique(),
             &test_registry.manager.pubkey(),
+            &general_pool_market.keypair.pubkey(),
+            &income_pool_market.keypair.pubkey(),
+            &ulp_pool_market.keypair.pubkey(),
             config,
+            pool_markets_cfg,
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer, &test_registry.manager],
@@ -148,6 +224,18 @@ async fn fail_with_wrong_manager() {
     let test_registry = TestRegistry::new();
     test_registry.init(&mut context).await.unwrap();
 
+    let general_pool_market = TestGeneralPoolMarket::new();
+    general_pool_market.init(&mut context).await.unwrap();
+
+    let income_pool_market = TestIncomePoolMarket::new();
+    income_pool_market
+        .init(&mut context, &general_pool_market)
+        .await
+        .unwrap();
+
+    let ulp_pool_market = TestUlpPoolMarket::new();
+    ulp_pool_market.init(&mut context).await.unwrap();
+
     let mut config = SetRegistryConfigParams {
         general_pool_program_id: everlend_general_pool::id(),
         ulp_program_id: everlend_ulp::id(),
@@ -159,6 +247,12 @@ async fn fail_with_wrong_manager() {
     };
     config.money_market_program_ids[0] = spl_token_lending::id();
 
+    let pool_markets_cfg = PoolMarketsConfig {
+        general_pool_market: general_pool_market.keypair.pubkey(),
+        income_pool_market: income_pool_market.keypair.pubkey(),
+        ulp_pool_market: ulp_pool_market.keypair.pubkey(),
+    };
+
     let wrong_manager = Keypair::new();
 
     let tx = Transaction::new_signed_with_payer(
@@ -166,7 +260,11 @@ async fn fail_with_wrong_manager() {
             &everlend_registry::id(),
             &test_registry.keypair.pubkey(),
             &wrong_manager.pubkey(),
+            &general_pool_market.keypair.pubkey(),
+            &income_pool_market.keypair.pubkey(),
+            &ulp_pool_market.keypair.pubkey(),
             config,
+            pool_markets_cfg,
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer, &wrong_manager],

@@ -1,11 +1,13 @@
-use super::{get_account, BanksClientResult, TestGeneralPoolMarket};
-use everlend_income_pools::{instruction, state::IncomePoolMarket};
 use solana_program::{program_pack::Pack, system_instruction};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
+
+use everlend_income_pools::{instruction, state::IncomePoolMarket};
+
+use super::{get_account, BanksClientResult, TestGeneralPoolMarket};
 
 #[derive(Debug)]
 pub struct TestIncomePoolMarket {
@@ -18,6 +20,13 @@ impl TestIncomePoolMarket {
         Self {
             keypair: Keypair::new(),
             manager: Keypair::new(),
+        }
+    }
+
+    pub fn new_with_manager(manager: Keypair) -> Self {
+        Self {
+            keypair: Keypair::new(),
+            manager,
         }
     }
 

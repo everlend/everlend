@@ -1,14 +1,16 @@
-use super::{get_account, BanksClientResult};
-use everlend_registry::{
-    find_config_program_address,
-    state::{Registry, RegistryConfig, SetRegistryConfigParams},
-};
 use solana_program::{program_pack::Pack, system_instruction};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
+
+use everlend_registry::{
+    find_config_program_address,
+    state::{PoolMarketsConfig, Registry, RegistryConfig, SetRegistryConfigParams},
+};
+
+use super::{get_account, BanksClientResult};
 
 #[derive(Debug)]
 pub struct TestRegistry {
@@ -21,6 +23,13 @@ impl TestRegistry {
         Self {
             keypair: Keypair::new(),
             manager: Keypair::new(),
+        }
+    }
+
+    pub fn new_with_manager(manager: Keypair) -> Self {
+        Self {
+            keypair: Keypair::new(),
+            manager,
         }
     }
 
@@ -71,13 +80,18 @@ impl TestRegistry {
         &self,
         context: &mut ProgramTestContext,
         params: SetRegistryConfigParams,
+        pool_markets_cfg: PoolMarketsConfig,
     ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
             &[everlend_registry::instruction::set_registry_config(
                 &everlend_registry::id(),
                 &self.keypair.pubkey(),
                 &self.manager.pubkey(),
+                &pool_markets_cfg.general_pool_market,
+                &pool_markets_cfg.income_pool_market,
+                &pool_markets_cfg.ulp_pool_market,
                 params,
+                pool_markets_cfg,
             )],
             Some(&context.payer.pubkey()),
             &[&context.payer, &self.manager],
