@@ -2,27 +2,7 @@
 
 use std::cmp::Ordering;
 
-use crate::{
-    find_rebalancing_program_address, find_transit_program_address,
-    instruction::DepositorInstruction,
-    state::{
-        Depositor, InitDepositorParams, InitRebalancingParams, Rebalancing, RebalancingOperation,
-    },
-    utils::{deposit, withdraw},
-};
 use borsh::BorshDeserialize;
-use everlend_general_pool::{
-    find_withdrawal_requests_program_address,
-    state::{Pool, WithdrawalRequests},
-};
-use everlend_liquidity_oracle::{
-    find_liquidity_oracle_token_distribution_program_address, state::TokenDistribution,
-};
-use everlend_registry::state::RegistryConfig;
-use everlend_utils::{
-    assert_account_key, assert_owned_by, assert_rent_exempt, assert_uninitialized, cpi,
-    find_program_address, EverlendError,
-};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     clock::Clock,
@@ -35,8 +15,31 @@ use solana_program::{
 };
 use spl_token::state::Account;
 
+use everlend_general_pool::{
+    find_withdrawal_requests_program_address,
+    state::{Pool, WithdrawalRequests},
+};
+use everlend_liquidity_oracle::{
+    find_liquidity_oracle_token_distribution_program_address, state::TokenDistribution,
+};
+use everlend_registry::state::RegistryConfig;
+use everlend_utils::{
+    assert_account_key, assert_owned_by, assert_rent_exempt, assert_uninitialized, cpi,
+    find_program_address, EverlendError,
+};
+
+use crate::{
+    find_rebalancing_program_address, find_transit_program_address,
+    instruction::DepositorInstruction,
+    state::{
+        Depositor, InitDepositorParams, InitRebalancingParams, Rebalancing, RebalancingOperation,
+    },
+    utils::{deposit, withdraw},
+};
+
 /// Program state handler.
 pub struct Processor {}
+
 impl Processor {
     /// Process Init instruction
     pub fn init(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
@@ -181,6 +184,12 @@ impl Processor {
         assert_account_key(general_pool_market_info, &depositor.general_pool_market)?;
         assert_account_key(liquidity_oracle_info, &depositor.liquidity_oracle)?;
 
+        // Get general pool state
+        let general_pool = Pool::unpack(&general_pool_info.data.borrow())?;
+        assert_account_key(general_pool_market_info, &general_pool.pool_market)?;
+        assert_account_key(general_pool_token_account_info, &general_pool.token_account)?;
+        assert_account_key(mint_info, &general_pool.token_mint)?;
+
         let (rebalancing_pubkey, bump_seed) =
             find_rebalancing_program_address(program_id, depositor_info.key, mint_info.key);
         assert_account_key(rebalancing_info, &rebalancing_pubkey)?;
@@ -239,11 +248,6 @@ impl Processor {
         assert_account_key(token_distribution_info, &token_distribution_pubkey)?;
         let new_token_distribution =
             TokenDistribution::unpack(&token_distribution_info.data.borrow())?;
-
-        // Get general pool state
-        let general_pool = Pool::unpack(&general_pool_info.data.borrow())?;
-        assert_account_key(general_pool_market_info, &general_pool.pool_market)?;
-        assert_account_key(general_pool_token_account_info, &general_pool.token_account)?;
 
         let (withdrawal_requests_pubkey, _) = find_withdrawal_requests_program_address(
             &config.general_pool_program_id,

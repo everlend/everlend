@@ -1,13 +1,6 @@
 //! Program state processor.
 
-use crate::{
-    find_liquidity_oracle_token_distribution_program_address,
-    instruction::LiquidityOracleInstruction,
-    state::{DistributionArray, InitLiquidityOracleParams, LiquidityOracle, TokenDistribution},
-};
-
 use borsh::BorshDeserialize;
-use everlend_utils::{assert_owned_by, assert_signer, assert_uninitialized, cpi};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     clock::Clock,
@@ -20,8 +13,19 @@ use solana_program::{
     sysvar::Sysvar,
 };
 
+use everlend_utils::{
+    assert_account_key, assert_owned_by, assert_signer, assert_uninitialized, cpi,
+};
+
+use crate::{
+    find_liquidity_oracle_token_distribution_program_address,
+    instruction::LiquidityOracleInstruction,
+    state::{DistributionArray, InitLiquidityOracleParams, LiquidityOracle, TokenDistribution},
+};
+
 /// Program state handler.
 pub struct Processor {}
+
 impl Processor {
     /// Process `InitLiquidityOracle` instruction.
     pub fn init_liquidity_oracle(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
@@ -107,6 +111,10 @@ impl Processor {
         // Check liquidity oracle owner
         assert_owned_by(liquidity_oracle_info, program_id)?;
 
+        // Get state
+        let liquidity_oracle = LiquidityOracle::unpack(&liquidity_oracle_info.data.borrow())?;
+        assert_account_key(authority_info, &liquidity_oracle.authority)?;
+
         // Check token distribution account
         let (token_distribution_pubkey, bump_seed) =
             find_liquidity_oracle_token_distribution_program_address(
@@ -170,6 +178,10 @@ impl Processor {
 
         // Check liquidity oracle owner
         assert_owned_by(liquidity_oracle_info, program_id)?;
+
+        // Get state
+        let liquidity_oracle = LiquidityOracle::unpack(&liquidity_oracle_info.data.borrow())?;
+        assert_account_key(authority_info, &liquidity_oracle.authority)?;
 
         let (token_distribution_pubkey, _) =
             find_liquidity_oracle_token_distribution_program_address(

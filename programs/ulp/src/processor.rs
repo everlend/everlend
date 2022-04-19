@@ -1,19 +1,6 @@
 //! Program state processor
 
-use crate::{
-    find_pool_borrow_authority_program_address, find_pool_program_address,
-    instruction::LiquidityPoolsInstruction,
-    state::{
-        InitPoolBorrowAuthorityParams, InitPoolMarketParams, InitPoolParams, Pool,
-        PoolBorrowAuthority, PoolMarket,
-    },
-    utils::*,
-};
 use borsh::BorshDeserialize;
-use everlend_utils::{
-    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
-    cpi, find_program_address, EverlendError,
-};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
@@ -26,8 +13,24 @@ use solana_program::{
 };
 use spl_token::state::Mint;
 
+use everlend_utils::{
+    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
+    cpi, find_program_address, EverlendError,
+};
+
+use crate::{
+    find_pool_borrow_authority_program_address, find_pool_program_address,
+    instruction::LiquidityPoolsInstruction,
+    state::{
+        InitPoolBorrowAuthorityParams, InitPoolMarketParams, InitPoolParams, Pool,
+        PoolBorrowAuthority, PoolMarket,
+    },
+    utils::*,
+};
+
 /// Program state handler.
 pub struct Processor {}
+
 impl Processor {
     /// Process InitPoolMarket instruction
     pub fn init_pool_market(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
@@ -209,6 +212,7 @@ impl Processor {
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let pool_market_info = next_account_info(account_info_iter)?;
+        let pool_info = next_account_info(account_info_iter)?;
         let pool_borrow_authority_info = next_account_info(account_info_iter)?;
         let manager_info = next_account_info(account_info_iter)?;
 
@@ -220,9 +224,14 @@ impl Processor {
         let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
         assert_account_key(manager_info, &pool_market.manager)?;
 
+        // Get pool state
+        let pool = Pool::unpack(&pool_info.data.borrow())?;
+        assert_account_key(pool_market_info, &pool.pool_market)?;
+
         // Get pool borrow authority state
         let mut pool_borrow_authority =
             PoolBorrowAuthority::unpack(&pool_borrow_authority_info.data.borrow())?;
+        assert_account_key(pool_info, &pool_borrow_authority.pool)?;
 
         pool_borrow_authority.update_share_allowed(share_allowed);
 
@@ -241,6 +250,7 @@ impl Processor {
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let pool_market_info = next_account_info(account_info_iter)?;
+        let pool_info = next_account_info(account_info_iter)?;
         let pool_borrow_authority_info = next_account_info(account_info_iter)?;
         let receiver_info = next_account_info(account_info_iter)?;
         let manager_info = next_account_info(account_info_iter)?;
@@ -253,8 +263,14 @@ impl Processor {
         let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
         assert_account_key(manager_info, &pool_market.manager)?;
 
+        // Get pool state
+        let pool = Pool::unpack(&pool_info.data.borrow())?;
+        assert_account_key(pool_market_info, &pool.pool_market)?;
+
         // Get pool borrow authority state to check initialized
-        PoolBorrowAuthority::unpack(&pool_borrow_authority_info.data.borrow())?;
+        let pool_borrow_authority =
+            PoolBorrowAuthority::unpack(&pool_borrow_authority_info.data.borrow())?;
+        assert_account_key(pool_info, &pool_borrow_authority.pool)?;
 
         let receiver_starting_lamports = receiver_info.lamports();
         let pool_borrow_authority_lamports = pool_borrow_authority_info.lamports();
