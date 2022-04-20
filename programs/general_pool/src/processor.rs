@@ -1,8 +1,13 @@
 //! Program state processor
 
 use borsh::BorshDeserialize;
+use everlend_utils::{
+    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
+    cpi, find_program_address, EverlendError,
+};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
+    clock::Clock,
     entrypoint::ProgramResult,
     msg,
     program_error::ProgramError,
@@ -12,17 +17,13 @@ use solana_program::{
     sysvar::Sysvar,
 };
 use spl_token::state::{Account, Mint};
+use std::str::FromStr;
 
-use everlend_utils::{
-    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
-    cpi, find_program_address, EverlendError,
-};
-
-use crate::state::{InitWithdrawalRequestParams, InitWithdrawalRequestsParams};
+use crate::state::{InitWithdrawalRequestParams, InitWithdrawalRequestsParams, WITHDRAW_DELAY};
 use crate::{
     find_pool_borrow_authority_program_address, find_pool_program_address,
-    find_transit_program_address, find_withdrawal_request_program_address,
-    find_withdrawal_requests_program_address,
+    find_transit_program_address, find_transit_sol_unwrap_address,
+    find_withdrawal_request_program_address, find_withdrawal_requests_program_address,
     instruction::LiquidityPoolsInstruction,
     state::{
         InitPoolBorrowAuthorityParams, InitPoolMarketParams, InitPoolParams, Pool,
@@ -33,6 +34,9 @@ use crate::{
 
 /// Program state handler.
 pub struct Processor {}
+
+/// Sol mint
+const SOL_MINT: &str = "So11111111111111111111111111111111111111112";
 
 impl Processor {
     /// Process InitPoolMarket instruction
@@ -434,6 +438,8 @@ impl Processor {
         let token_account_info = next_account_info(account_info_iter)?;
         let collateral_transit_info = next_account_info(account_info_iter)?;
         let from_info = next_account_info(account_info_iter)?;
+        let clock_info = next_account_info(account_info_iter)?;
+        let clock = Clock::from_account_info(clock_info)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
         assert_owned_by(pool_market_info, program_id)?;
@@ -461,21 +467,91 @@ impl Processor {
         assert_account_key(destination_info, &withdrawal_request.destination)?;
         assert_account_key(from_info, &withdrawal_request.from)?;
 
-        if withdrawal_requests.next_process_ticket != withdrawal_request.ticket {
+        if withdrawal_request.ticket > clock.slot {
             return Err(EverlendError::WithdrawRequestsInvalidTicket.into());
         }
 
+        if pool.token_mint == Pubkey::from_str(SOL_MINT).unwrap() {
+            let token_mint_info = next_account_info(account_info_iter)?;
+            assert_account_key(token_mint_info, &pool.token_mint)?;
+
+            let unwrap_sol_info = next_account_info(account_info_iter)?;
+            // Check withdraw requests account
+            let (unwrap_sol_pubkey, bump_seed) = find_transit_sol_unwrap_address(
+                program_id,
+                withdrawal_request_info.key,
+            );
+
+            assert_account_key(unwrap_sol_info, &unwrap_sol_pubkey)?;
+
+            let signer_info = next_account_info(account_info_iter)?;
+
+            let rent_info = next_account_info(account_info_iter)?;
+            let rent = &Rent::from_account_info(rent_info)?;
+            let _system_info = next_account_info(account_info_iter)?;
+
+            let unwrap_acc_signers_seeds = &[
+                br"unwrap",
+                &withdrawal_request_info.key.to_bytes()[..32],
+                &[bump_seed],
+            ];
+
+            cpi::system::create_account::<spl_token::state::Account>(
+                &spl_token::id(),
+                signer_info.clone(),
+                unwrap_sol_info.clone(),
+                &[unwrap_acc_signers_seeds],
+                rent,
+            )?;
+
+            cpi::spl_token::initialize_account(
+                unwrap_sol_info.clone(),
+                token_mint_info.clone(),
+                pool_market_authority_info.clone(),
+                rent_info.clone(),
+            )?;
+
+            let (_, bump_seed) = find_program_address(program_id, pool_market_info.key);
+            let signers_seeds = &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]];
+
+            // Transfer from token account to destination
+            cpi::spl_token::transfer(
+                token_account_info.clone(),
+                unwrap_sol_info.clone(),
+                pool_market_authority_info.clone(),
+                withdrawal_request.liquidity_amount,
+                &[signers_seeds],
+            )?;
+
+            cpi::spl_token::close_account(
+                signer_info.clone(),
+                unwrap_sol_info.clone(),
+                pool_market_authority_info.clone(),
+                &[signers_seeds],
+            )?;
+
+            cpi::system::transfer(
+                signer_info.clone(),
+                destination_info.clone(),
+                withdrawal_request.liquidity_amount,
+                &[],
+            )?;
+        } else {
+            let (_, bump_seed) = find_program_address(program_id, pool_market_info.key);
+            let signers_seeds = &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]];
+
+            // Transfer from token account to destination
+            cpi::spl_token::transfer(
+                token_account_info.clone(),
+                destination_info.clone(),
+                pool_market_authority_info.clone(),
+                withdrawal_request.liquidity_amount,
+                &[signers_seeds],
+            )?;
+        };
+
         let (_, bump_seed) = find_program_address(program_id, pool_market_info.key);
         let signers_seeds = &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]];
-
-        // Transfer from token account to destination
-        cpi::spl_token::transfer(
-            token_account_info.clone(),
-            destination_info.clone(),
-            pool_market_authority_info.clone(),
-            withdrawal_request.liquidity_amount,
-            &[signers_seeds],
-        )?;
 
         // Burn from transit collateral pool token
         cpi::spl_token::burn(
@@ -528,6 +604,8 @@ impl Processor {
         let user_transfer_authority_info = next_account_info(account_info_iter)?;
         let rent_info = next_account_info(account_info_iter)?;
         let rent = &Rent::from_account_info(rent_info)?;
+        let clock_info = next_account_info(account_info_iter)?;
+        let clock = Clock::from_account_info(clock_info)?;
         let _system_program_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
@@ -543,9 +621,11 @@ impl Processor {
         assert_account_key(token_account_info, &pool.token_account)?;
         assert_account_key(pool_mint_info, &pool.pool_mint)?;
 
-        let destination_account = Account::unpack(&destination_info.data.borrow())?;
-        if pool.token_mint != destination_account.mint {
-            return Err(ProgramError::InvalidArgument);
+        if pool.token_mint != Pubkey::from_str(SOL_MINT).unwrap() {
+            let destination_account = Account::unpack(&destination_info.data.borrow())?;
+            if pool.token_mint != destination_account.mint {
+                return Err(ProgramError::InvalidArgument);
+            }
         }
 
         // Check collateral token transit account
@@ -608,7 +688,7 @@ impl Processor {
             destination: *destination_info.key,
             liquidity_amount,
             collateral_amount,
-            ticket: withdrawal_requests.next_ticket,
+            ticket: clock.slot + WITHDRAW_DELAY,
         });
 
         withdrawal_requests.add(liquidity_amount)?;

@@ -110,6 +110,7 @@ pub enum LiquidityPoolsInstruction {
     /// [W] Pool token account
     /// [W] Collateral transit account
     /// [W] From account
+    /// [R] Clock sysvar
     /// [R] Token program id
     Withdraw,
 
@@ -161,6 +162,7 @@ pub enum LiquidityPoolsInstruction {
     /// [W] Collateral transit account
     /// [RS] User transfer authority
     /// [R] Rent sysvar
+    /// [R] Clock sysvar
     /// [R] System program
     /// [R] Token program id
     WithdrawRequest {
@@ -357,6 +359,7 @@ pub fn withdraw(
     token_mint: &Pubkey,
     pool_mint: &Pubkey,
     from: &Pubkey,
+    addition_accounts: Vec<AccountMeta>,
 ) -> Instruction {
     let (pool_market_authority, _) = find_program_address(program_id, pool_market);
 
@@ -366,7 +369,7 @@ pub fn withdraw(
         find_withdrawal_request_program_address(program_id, &withdrawal_requests, from);
     let (collateral_transit, _) = find_transit_program_address(program_id, pool_market, pool_mint);
 
-    let accounts = vec![
+    let mut accounts = vec![
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new_readonly(pool_market_authority, false),
         AccountMeta::new_readonly(*pool, false),
@@ -377,8 +380,11 @@ pub fn withdraw(
         AccountMeta::new(*token_account, false),
         AccountMeta::new(collateral_transit, false),
         AccountMeta::new(*from, false),
+        AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
     ];
+
+    accounts.extend(addition_accounts);
 
     Instruction::new_with_borsh(*program_id, &LiquidityPoolsInstruction::Withdraw, accounts)
 }
@@ -418,6 +424,7 @@ pub fn withdraw_request(
         AccountMeta::new(collateral_transit, false),
         AccountMeta::new(*user_transfer_authority, true),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
+        AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
     ];

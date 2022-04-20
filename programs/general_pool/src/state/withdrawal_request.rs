@@ -2,12 +2,16 @@ use super::AccountType;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use everlend_utils::EverlendError;
 use solana_program::{
+    clock::Slot,
     entrypoint::ProgramResult,
     msg,
     program_error::ProgramError,
     program_pack::{IsInitialized, Pack, Sealed},
     pubkey::Pubkey,
 };
+
+/// How long after the request, you can execute a withdraw
+pub const WITHDRAW_DELAY: Slot = 200;
 
 /// Withdrawal requests
 #[repr(C)]
@@ -21,12 +25,6 @@ pub struct WithdrawalRequests {
 
     /// Mint
     pub mint: Pubkey,
-
-    /// Next request index
-    pub next_ticket: u64,
-
-    /// Next process index
-    pub next_process_ticket: u64,
 
     /// Total requests amount
     pub liquidity_supply: u64,
@@ -55,8 +53,6 @@ impl WithdrawalRequests {
             .checked_add(liquidity_amount)
             .ok_or(EverlendError::MathOverflow)?;
 
-        self.next_ticket += 1;
-
         Ok(())
     }
 
@@ -67,16 +63,14 @@ impl WithdrawalRequests {
             .checked_sub(liquidity_amount)
             .ok_or(EverlendError::MathOverflow)?;
 
-        self.next_process_ticket += 1;
-
         Ok(())
     }
 }
 
 impl Sealed for WithdrawalRequests {}
 impl Pack for WithdrawalRequests {
-    // 1 + 32 + 32 + 8 + 8 + 8
-    const LEN: usize = 89;
+    // 1 + 32 + 32 + 8
+    const LEN: usize = 73;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;
@@ -125,8 +119,8 @@ pub struct WithdrawalRequest {
     /// Withdraw collateral amount
     pub collateral_amount: u64,
 
-    /// Index in the requests queue
-    pub ticket: u64,
+    /// Slot after which you can withdraw
+    pub ticket: Slot,
 }
 
 impl WithdrawalRequest {
@@ -157,8 +151,8 @@ pub struct InitWithdrawalRequestParams {
     pub liquidity_amount: u64,
     /// Withdraw collateral amount
     pub collateral_amount: u64,
-    /// Index in the requests queue
-    pub ticket: u64,
+    /// Slot after which you can withdraw
+    pub ticket: Slot,
 }
 
 impl Sealed for WithdrawalRequest {}

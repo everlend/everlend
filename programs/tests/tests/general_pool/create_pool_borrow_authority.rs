@@ -1,15 +1,15 @@
 #![cfg(feature = "test-bpf")]
 
+use crate::utils::*;
+use everlend_general_pool::instruction;
+use everlend_general_pool::state::AccountType;
+use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program::pubkey::Pubkey;
-use crate::utils::*;
-use everlend_general_pool::state::AccountType;
 use solana_program_test::*;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signer::Signer;
 use solana_sdk::transaction::{Transaction, TransactionError};
-use everlend_general_pool::instruction;
-use everlend_utils::EverlendError;
 
 async fn setup() -> (ProgramTestContext, TestGeneralPoolMarket, TestGeneralPool) {
     let mut context = presetup().await.0;
@@ -33,7 +33,12 @@ async fn success() {
     let test_pool_borrow_authority =
         TestGeneralPoolBorrowAuthority::new(&test_pool, context.payer.pubkey());
     test_pool_borrow_authority
-        .create(&mut context, &test_pool_market, &test_pool, GENERAL_POOL_SHARE_ALLOWED)
+        .create(
+            &mut context,
+            &test_pool_market,
+            &test_pool,
+            GENERAL_POOL_SHARE_ALLOWED,
+        )
         .await
         .unwrap();
 

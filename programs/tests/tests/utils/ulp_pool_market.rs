@@ -1,11 +1,10 @@
-use super::get_account;
+use super::{get_account, BanksClientResult};
 use everlend_ulp::{instruction, state::PoolMarket};
 use solana_program::{program_pack::Pack, system_instruction};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::Transaction,
-    transport,
 };
 
 #[derive(Debug)]
@@ -27,7 +26,7 @@ impl TestPoolMarket {
         PoolMarket::unpack_unchecked(&account.data).unwrap()
     }
 
-    pub async fn init(&self, context: &mut ProgramTestContext) -> transport::Result<()> {
+    pub async fn init(&self, context: &mut ProgramTestContext) -> BanksClientResult<()> {
         let rent = context.banks_client.get_rent().await.unwrap();
         let tx = Transaction::new_signed_with_payer(
             &[

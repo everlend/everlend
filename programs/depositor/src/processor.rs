@@ -184,12 +184,6 @@ impl Processor {
         assert_account_key(general_pool_market_info, &depositor.general_pool_market)?;
         assert_account_key(liquidity_oracle_info, &depositor.liquidity_oracle)?;
 
-        // Get general pool state
-        let general_pool = Pool::unpack(&general_pool_info.data.borrow())?;
-        assert_account_key(general_pool_market_info, &general_pool.pool_market)?;
-        assert_account_key(general_pool_token_account_info, &general_pool.token_account)?;
-        assert_account_key(mint_info, &general_pool.token_mint)?;
-
         let (rebalancing_pubkey, bump_seed) =
             find_rebalancing_program_address(program_id, depositor_info.key, mint_info.key);
         assert_account_key(rebalancing_info, &rebalancing_pubkey)?;
@@ -248,6 +242,11 @@ impl Processor {
         assert_account_key(token_distribution_info, &token_distribution_pubkey)?;
         let new_token_distribution =
             TokenDistribution::unpack(&token_distribution_info.data.borrow())?;
+
+        let general_pool = Pool::unpack(&general_pool_info.data.borrow())?;
+        assert_account_key(general_pool_market_info, &general_pool.pool_market)?;
+        assert_account_key(general_pool_token_account_info, &general_pool.token_account)?;
+        assert_account_key(mint_info, &general_pool.token_mint)?;
 
         let (withdrawal_requests_pubkey, _) = find_withdrawal_requests_program_address(
             &config.general_pool_program_id,

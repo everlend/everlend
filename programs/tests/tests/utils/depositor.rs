@@ -1,6 +1,7 @@
 use super::{
-    get_account, get_liquidity_mint, TestGeneralPool, TestGeneralPoolMarket, TestIncomePool,
-    TestIncomePoolMarket, TestLiquidityOracle, TestPool, TestPoolMarket, TestRegistry,
+    get_account, get_liquidity_mint, BanksClientResult, TestGeneralPool, TestGeneralPoolMarket,
+    TestIncomePool, TestIncomePoolMarket, TestLiquidityOracle, TestPool, TestPoolMarket,
+    TestRegistry,
 };
 use everlend_depositor::{
     find_rebalancing_program_address,
@@ -12,7 +13,6 @@ use solana_program_test::ProgramTestContext;
 use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::Transaction,
-    transport,
 };
 
 #[derive(Debug)]
@@ -52,7 +52,7 @@ impl TestDepositor {
         general_pool_market: &TestGeneralPoolMarket,
         income_pool_market: &TestIncomePoolMarket,
         liquidity_oracle: &TestLiquidityOracle,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let rent = context.banks_client.get_rent().await.unwrap();
         let tx = Transaction::new_signed_with_payer(
             &[
@@ -85,7 +85,7 @@ impl TestDepositor {
         context: &mut ProgramTestContext,
         token_mint: &Pubkey,
         seed: Option<String>,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
             &[everlend_depositor::instruction::create_transit(
                 &everlend_depositor::id(),
@@ -110,7 +110,7 @@ impl TestDepositor {
         general_pool: &TestGeneralPool,
         liquidity_oracle: &TestLiquidityOracle,
         refresh_income: bool,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
             &[everlend_depositor::instruction::start_rebalancing(
                 &everlend_depositor::id(),
@@ -140,7 +140,7 @@ impl TestDepositor {
         mm_pool: &TestPool,
         money_market_program_id: &Pubkey,
         money_market_pubkeys: &MoneyMarketPubkeys,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let liquidity_mint = get_liquidity_mint().1;
         let collateral_mint = mm_pool.token_mint_pubkey;
         let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
@@ -180,7 +180,7 @@ impl TestDepositor {
         mm_pool: &TestPool,
         money_market_program_id: &Pubkey,
         money_market_pubkeys: &MoneyMarketPubkeys,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let collateral_mint = mm_pool.token_mint_pubkey;
         let liquidity_mint = get_liquidity_mint().1;
         let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();

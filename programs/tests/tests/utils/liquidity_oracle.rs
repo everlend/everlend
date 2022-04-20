@@ -1,4 +1,4 @@
-use super::get_account;
+use super::{get_account, BanksClientResult};
 
 use everlend_liquidity_oracle::{
     find_liquidity_oracle_token_distribution_program_address, instruction,
@@ -8,7 +8,7 @@ use solana_program_test::*;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::{
     program_pack::Pack, signature::Keypair, signer::Signer, system_instruction,
-    transaction::Transaction, transport,
+    transaction::Transaction,
 };
 
 pub struct TestLiquidityOracle {
@@ -22,7 +22,7 @@ impl TestLiquidityOracle {
         }
     }
 
-    pub async fn init(&self, context: &mut ProgramTestContext) -> transport::Result<()> {
+    pub async fn init(&self, context: &mut ProgramTestContext) -> BanksClientResult<()> {
         let rent = context.banks_client.get_rent().await.unwrap();
         let tx = Transaction::new_signed_with_payer(
             &[
@@ -51,7 +51,7 @@ impl TestLiquidityOracle {
         &self,
         context: &mut ProgramTestContext,
         authority: &Pubkey,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::update_liquidity_oracle_authority(
                 &everlend_liquidity_oracle::id(),
@@ -93,7 +93,7 @@ impl TestTokenDistribution {
         context: &mut ProgramTestContext,
         liquidity_oracle: &TestLiquidityOracle,
         authority: Pubkey,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::create_token_distribution(
                 &everlend_liquidity_oracle::id(),
@@ -116,7 +116,7 @@ impl TestTokenDistribution {
         liquidity_oracle: &TestLiquidityOracle,
         authority: Pubkey,
         distribution: DistributionArray,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::update_token_distribution(
                 &everlend_liquidity_oracle::id(),

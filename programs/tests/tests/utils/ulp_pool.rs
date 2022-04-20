@@ -1,6 +1,6 @@
 use super::{
     get_account, get_liquidity_mint, ulp_pool_borrow_authority::TestPoolBorrowAuthority,
-    LiquidityProvider, TestPoolMarket, User,
+    BanksClientResult, LiquidityProvider, TestPoolMarket, User,
 };
 use everlend_ulp::{find_pool_program_address, instruction, state::Pool};
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
@@ -8,7 +8,6 @@ use solana_program_test::ProgramTestContext;
 use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::Transaction,
-    transport,
 };
 
 #[derive(Debug)]
@@ -46,7 +45,7 @@ impl TestPool {
         &self,
         context: &mut ProgramTestContext,
         test_pool_market: &TestPoolMarket,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let rent = context.banks_client.get_rent().await.unwrap();
         let tx = Transaction::new_signed_with_payer(
             &[
@@ -92,7 +91,7 @@ impl TestPool {
         test_pool_market: &TestPoolMarket,
         user: &LiquidityProvider,
         amount: u64,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::deposit(
                 &everlend_ulp::id(),
@@ -119,7 +118,7 @@ impl TestPool {
         test_pool_market: &TestPoolMarket,
         user: &LiquidityProvider,
         amount: u64,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::withdraw(
                 &everlend_ulp::id(),
@@ -148,7 +147,7 @@ impl TestPool {
         borrow_authority: Option<&Keypair>,
         destination: &Pubkey,
         amount: u64,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let borrow_authority = borrow_authority.unwrap_or(&context.payer);
 
         let tx = Transaction::new_signed_with_payer(
@@ -178,7 +177,7 @@ impl TestPool {
         user: &LiquidityProvider,
         amount: u64,
         interest_amount: u64,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::repay(
                 &everlend_ulp::id(),

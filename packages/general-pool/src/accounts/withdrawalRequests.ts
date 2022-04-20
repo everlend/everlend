@@ -8,8 +8,6 @@ type Args = {
   accountType: AccountType
   pool: PublicKey
   mint: PublicKey
-  nextTicket: BN
-  nextProcessTicket: BN
   liquiditySupply: BN
 }
 
@@ -18,21 +16,17 @@ export class WithdrawalRequestsData extends Borsh.Data<Args> {
     ['accountType', 'u8'],
     ['pool', 'publicKey'],
     ['mint', 'publicKey'],
-    ['nextTicket', 'u64'],
-    ['nextProcessTicket', 'u64'],
     ['liquiditySupply', 'u64'],
   ])
 
   accountType: AccountType
   pool: PublicKey
   mint: PublicKey
-  nextTicket: BN
-  nextProcessTicket: BN
   liquiditySupply: BN
 }
 
 export class WithdrawalRequests extends Account<WithdrawalRequestsData> {
-  static readonly LEN = 89
+  static readonly LEN = 73
 
   constructor(key: PublicKey, info: AccountInfo<Buffer>) {
     super(key, info)

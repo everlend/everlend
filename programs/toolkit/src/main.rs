@@ -11,16 +11,20 @@ use accounts_config::*;
 use clap::{
     crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
 };
+use core::time;
 use everlend_depositor::{
     find_rebalancing_program_address,
     state::{Rebalancing, RebalancingOperation},
 };
+use everlend_general_pool::state::WITHDRAW_DELAY;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::{
     find_config_program_address,
     state::{RegistryConfig, SetRegistryConfigParams, TOTAL_DISTRIBUTIONS},
 };
 use everlend_utils::integrations::{self, MoneyMarket, MoneyMarketPubkeys};
+use general_pool::get_withdrawal_requests;
+use regex::Regex;
 use solana_account_decoder::parse_token::UiTokenAmount;
 use solana_clap_utils::{
     fee_payer::fee_payer_arg,
@@ -32,10 +36,10 @@ use solana_client::rpc_client::RpcClient;
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_sdk::{commitment_config::CommitmentConfig, signature::Keypair};
 use spl_associated_token_account::get_associated_token_address;
-use std::{collections::HashMap, process::exit};
+use std::{collections::HashMap, process::exit, thread};
 use utils::*;
 
-use crate::general_pool::get_withdrawal_request_accounts;
+use crate::general_pool::{get_general_pool_market, get_withdrawal_request_accounts};
 
 /// Generates fixed distribution from slice
 #[macro_export]
@@ -45,6 +49,17 @@ macro_rules! distribution {
         new_distribuition[..$distribuition.len()].copy_from_slice(&$distribuition);
         new_distribuition
     }};
+}
+
+pub fn url_to_moniker(url: &str) -> String {
+    let re = Regex::new(r"devnet|mainnet|localhost|testnet").unwrap();
+    let cap = &re.captures(url).unwrap()[0];
+
+    match cap {
+        "mainnet" => "mainnet-beta",
+        _ => cap,
+    }
+    .to_string()
 }
 
 async fn command_create_registry(config: &Config, keypair: Option<Keypair>) -> anyhow::Result<()> {
@@ -578,10 +593,24 @@ async fn command_info(config: &Config, accounts_path: &str) -> anyhow::Result<()
     let initialiazed_accounts = InitializedAccounts::load(accounts_path).unwrap_or_default();
     let default_accounts = get_default_accounts(config);
 
-    println!("network: {:?}", config.network);
     println!("fee_payer: {:?}", config.fee_payer.pubkey());
     println!("default_accounts = {:#?}", default_accounts);
     println!("{:#?}", initialiazed_accounts);
+
+    println!(
+        "{:#?}",
+        get_general_pool_market(config, &initialiazed_accounts.general_pool_market)?
+    );
+
+    for (_, token_accounts) in initialiazed_accounts.token_accounts {
+        println!("mint = {:?}", token_accounts.mint);
+        let (withdraw_requests_pubkey, withdraw_requests) = get_withdrawal_requests(
+            config,
+            &initialiazed_accounts.general_pool_market,
+            &token_accounts.mint,
+        )?;
+        println!("{:#?}", (withdraw_requests_pubkey, &withdraw_requests));
+    }
 
     Ok(())
 }
@@ -789,6 +818,11 @@ async fn command_run_test(
         )
     };
 
+    let delay = |secs| {
+        println!("Waiting {} secs for ticket...", secs);
+        thread::sleep(time::Duration::from_secs(secs))
+    };
+
     let general_pool_withdraw = || {
         println!("Withdraw");
         general_pool::withdraw(
@@ -882,11 +916,16 @@ async fn command_run_test(
             update_token_distribution(distribution!([1000000000, 0]))?;
             let (_, rebalancing) = start_rebalancing()?;
             println!("{:#?}", rebalancing);
+
+            delay(WITHDRAW_DELAY / 2);
             general_pool_withdraw()?;
 
             update_token_distribution(distribution!([1000000000, 0]))?;
             let (_, rebalancing) = start_rebalancing()?;
             println!("{:#?}", rebalancing);
+        }
+        Some("withdraw") => {
+            general_pool_withdraw()?;
         }
         Some("11") => {
             general_pool_deposit(4321)?;
@@ -928,6 +967,7 @@ async fn command_run_test(
 
             update_token_distribution(distribution!([0, 1000000000]))?;
             let (_, rebalancing) = start_rebalancing()?;
+            delay(WITHDRAW_DELAY / 2);
             general_pool_withdraw()?;
             complete_rebalancing(Some(rebalancing))?;
 
@@ -970,19 +1010,6 @@ async fn main() -> anyhow::Result<()> {
                 .takes_value(false)
                 .global(true)
                 .help("Show additional information"),
-        )
-        .arg(
-            Arg::with_name("network")
-                .short("n")
-                .long("network")
-                .value_name("MONIKER")
-                .takes_value(true)
-                .global(true)
-                .default_value("devnet")
-                .help(
-                    "Solana's network moniker: \
-                       [mainnet-beta, testnet, devnet, localhost]",
-                ),
         )
         .arg(
             Arg::with_name("owner")
@@ -1175,9 +1202,10 @@ async fn main() -> anyhow::Result<()> {
             solana_cli_config::Config::default()
         };
 
-        let network = matches.value_of("network").unwrap();
         let json_rpc_url = value_t!(matches, "json_rpc_url", String)
             .unwrap_or_else(|_| cli_config.json_rpc_url.clone());
+        let network = url_to_moniker(&json_rpc_url);
+        println!("network = {:?}", network);
 
         let owner = signer_from_path(
             &matches,
@@ -1212,7 +1240,7 @@ async fn main() -> anyhow::Result<()> {
             verbose,
             owner,
             fee_payer,
-            network: network.to_string(),
+            network,
         }
     };
 
