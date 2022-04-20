@@ -32,3 +32,4 @@ everlend-depositor = { path = "../depositor", features = [ "no-entrypoint" ] }
 everlend-liquidity-oracle = { path = "../liquidity_oracle", features = [ "no-entrypoint" ] }
 everlend-utils = { path = "../utils" }
 port-variable-rate-lending-instructions = "0.2.9"
+serum-multisig = { git = "https://github.com/everlend/multisig", features = [ "no-entrypoint" ] }
