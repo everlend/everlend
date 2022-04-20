@@ -540,7 +540,7 @@ async fn fail_with_invalid_pool_mint() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(0, InstructionError::InvalidAccountData)
+        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
     )
 }
 
@@ -561,10 +561,12 @@ async fn success_with_random_tx_signer() {
         .await
         .unwrap();
 
+    context.warp_to_slot(3 + WITHDRAW_DELAY).unwrap();
+
     let random_tx_signer = TestGeneralPoolMarket::new();
     random_tx_signer.init(&mut context).await.unwrap();
 
-    context.warp_to_slot(3 + WITHDRAW_DELAY).unwrap();
+    context.warp_to_slot(3 + WITHDRAW_DELAY + 3).unwrap();
 
     let (transit_account, _) = find_transit_program_address(
         &everlend_general_pool::id(),
