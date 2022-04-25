@@ -983,6 +983,32 @@ async fn command_run_test(
     Ok(())
 }
 
+async fn command_run_migrate(
+    config: &Config,
+    case: Option<String>,
+) -> anyhow::Result<()> {
+
+    let initialized_accounts = get_initialized_accounts(config);
+
+    if case.is_none(){
+        println!("Migrate token mint not presented");
+        return Ok(())
+    }
+
+    let token = initialized_accounts.token_accounts.get(&case.unwrap()).unwrap();
+
+    println!("Migrate withdraw requests");
+    general_pool::migrate_withdraw_requests(
+        config,
+      &initialized_accounts.general_pool_market,
+            &token.general_pool,
+            &token.mint,
+        )?;
+    println!("Finished!");
+
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let matches = App::new(crate_name!())
@@ -1294,6 +1320,10 @@ async fn main() -> anyhow::Result<()> {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
             let case = value_of::<String>(arg_matches, "case");
             command_run_test(&config, accounts_path, case).await
+        }
+        ("migrate-general-pool", Some(arg_matches)) => {
+            let case = value_of::<String>(arg_matches, "case");
+            command_run_migrate(&config, case).await
         }
         _ => unreachable!(),
     }

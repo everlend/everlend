@@ -1,13 +1,15 @@
 use super::BanksClientResult;
 use super::{
     general_pool_borrow_authority::TestGeneralPoolBorrowAuthority, get_account, get_liquidity_mint,
-    LiquidityProvider, TestGeneralPoolMarket, User, SOL_MINT,
+    LiquidityProvider, TestGeneralPoolMarket, User,
 };
-use everlend_general_pool::state::{WithdrawalRequest, WithdrawalRequests};
+use everlend_general_pool::state::{
+    WithdrawalRequest, WithdrawalRequests, WithdrawalRequestsDeprecated,
+};
 use everlend_general_pool::{
     find_pool_program_address, find_transit_sol_unwrap_address,
-    find_withdrawal_request_program_address, find_withdrawal_requests_program_address, instruction,
-    state::Pool,
+    find_withdrawal_request_program_address, find_withdrawal_requests_program_address,
+    find_withdrawal_requests_program_address_deprecated, instruction, state::Pool,
 };
 
 use solana_program::{
@@ -53,6 +55,24 @@ impl TestGeneralPool {
     pub async fn get_data(&self, context: &mut ProgramTestContext) -> Pool {
         let account = get_account(context, &self.pool_pubkey).await;
         Pool::unpack_unchecked(&account.data).unwrap()
+    }
+
+    pub async fn get_withdrawal_requests_deprecated(
+        &self,
+        context: &mut ProgramTestContext,
+        test_pool_market: &TestGeneralPoolMarket,
+    ) -> (Pubkey, WithdrawalRequestsDeprecated) {
+        let (withdrawal_requests, _) = find_withdrawal_requests_program_address_deprecated(
+            &everlend_general_pool::id(),
+            &test_pool_market.keypair.pubkey(),
+            &self.token_mint_pubkey,
+        );
+
+        let account = get_account(context, &withdrawal_requests).await;
+        (
+            withdrawal_requests,
+            WithdrawalRequestsDeprecated::unpack_unchecked(&account.data).unwrap(),
+        )
     }
 
     pub async fn get_withdrawal_requests(
@@ -171,20 +191,20 @@ impl TestGeneralPool {
     ) -> BanksClientResult<()> {
         let mut addition_accounts: Vec<AccountMeta> = vec![];
         let mut destination = user.token_account;
-        if self.token_mint_pubkey == Pubkey::from_str(SOL_MINT).unwrap() {
-
-            let (withdrawal_requests, _) =
-                find_withdrawal_requests_program_address(&everlend_general_pool::id(), &test_pool_market.keypair.pubkey(), &self.token_mint_pubkey);
+        if self.token_mint_pubkey == spl_token::native_mint::id() {
+            let (withdrawal_requests, _) = find_withdrawal_requests_program_address(
+                &everlend_general_pool::id(),
+                &test_pool_market.keypair.pubkey(),
+                &self.token_mint_pubkey,
+            );
             let (withdrawal_request, _) = find_withdrawal_request_program_address(
                 &everlend_general_pool::id(),
                 &withdrawal_requests,
                 &user.owner.pubkey(),
             );
 
-            let (unwrap_sol_pubkey, _) = find_transit_sol_unwrap_address(
-                &everlend_general_pool::id(),
-                &withdrawal_request,
-            );
+            let (unwrap_sol_pubkey, _) =
+                find_transit_sol_unwrap_address(&everlend_general_pool::id(), &withdrawal_request);
 
             addition_accounts = vec![
                 AccountMeta::new_readonly(self.token_mint_pubkey, false),
@@ -225,7 +245,7 @@ impl TestGeneralPool {
         collateral_amount: u64,
     ) -> BanksClientResult<()> {
         let mut destination = user.token_account;
-        if self.token_mint_pubkey == Pubkey::from_str(SOL_MINT).unwrap() {
+        if self.token_mint_pubkey == spl_token::native_mint::id() {
             destination = user.owner.pubkey();
         };
 
@@ -303,6 +323,28 @@ impl TestGeneralPool {
             )],
             Some(&context.payer.pubkey()),
             &[&context.payer, &user.owner],
+            context.last_blockhash,
+        );
+
+        context.banks_client.process_transaction(tx).await
+    }
+
+    pub async fn migrate_withdraw_requests_account(
+        &self,
+        context: &mut ProgramTestContext,
+        test_pool_market: &TestGeneralPoolMarket,
+    ) -> BanksClientResult<()> {
+
+        let tx = Transaction::new_signed_with_payer(
+            &[instruction::migrate_withdraw_request_account(
+                &everlend_general_pool::id(),
+                &test_pool_market.keypair.pubkey(),
+                &self.pool_pubkey,
+                &self.token_mint_pubkey,
+                &test_pool_market.manager.pubkey(),
+            )],
+            Some(&context.payer.pubkey()),
+            &[&context.payer, &test_pool_market.manager],
             context.last_blockhash,
         );
 

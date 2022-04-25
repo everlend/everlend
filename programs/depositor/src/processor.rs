@@ -16,7 +16,7 @@ use solana_program::{
 use spl_token::state::Account;
 
 use everlend_general_pool::{
-    find_withdrawal_requests_program_address,
+    find_withdrawal_requests_program_address_deprecated,
     state::{Pool, WithdrawalRequests},
 };
 use everlend_liquidity_oracle::{
@@ -248,7 +248,7 @@ impl Processor {
         assert_account_key(general_pool_token_account_info, &general_pool.token_account)?;
         assert_account_key(mint_info, &general_pool.token_mint)?;
 
-        let (withdrawal_requests_pubkey, _) = find_withdrawal_requests_program_address(
+        let (withdrawal_requests_pubkey, _) = find_withdrawal_requests_program_address_deprecated(
             &config.general_pool_program_id,
             general_pool_market_info.key,
             &general_pool.token_mint,

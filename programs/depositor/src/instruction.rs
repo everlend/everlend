@@ -7,7 +7,9 @@ use solana_program::{
     system_program, sysvar,
 };
 
-use everlend_general_pool::find_withdrawal_requests_program_address;
+use everlend_general_pool::{
+    find_withdrawal_requests_program_address, find_withdrawal_requests_program_address_deprecated,
+};
 use everlend_liquidity_oracle::find_liquidity_oracle_token_distribution_program_address;
 use everlend_utils::find_program_address;
 
@@ -217,7 +219,7 @@ pub fn start_rebalancing(
             &general_pool,
             &depositor_authority,
         );
-    let (withdrawal_requests, _) = find_withdrawal_requests_program_address(
+    let (withdrawal_requests, _) = find_withdrawal_requests_program_address_deprecated(
         &everlend_general_pool::id(),
         general_pool_market,
         mint,
