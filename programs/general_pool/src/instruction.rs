@@ -172,7 +172,14 @@ pub enum LiquidityPoolsInstruction {
     },
 
     /// Migrate withdraw request data
-    ///
+    /// [R] Pool market
+    /// [R] Pool
+    /// [R] Token mint
+    /// [W] Withdrawal requests deprecated account
+    /// [W] Withdrawal requests account
+    /// [S] Manager
+    /// [R] Rent sysvar
+    /// [R] System program
     WithdrawRequestMigration,
 }
 
@@ -525,7 +532,7 @@ pub fn migrate_withdraw_request_account(
     let accounts = vec![
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new_readonly(*pool, false),
-        AccountMeta::new(*token_mint, false),
+        AccountMeta::new_readonly(*token_mint, false),
         AccountMeta::new(withdrawal_requests_deprecated, false),
         AccountMeta::new(withdrawal_requests, false),
         AccountMeta::new(*manager, true),
