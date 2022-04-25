@@ -292,19 +292,12 @@ pub fn withdraw(
     Ok(())
 }
 
-pub fn migrate_withdraw_requests(
+pub fn migrate_general_pool_account(
     config: &Config,
-    pool_market_pubkey: &Pubkey,
-    pool_pubkey: &Pubkey,
-    token_mint: &Pubkey,
 ) -> Result<(), ClientError> {
     let tx = Transaction::new_with_payer(
-        &[instruction::migrate_withdraw_request_account(
+        &[instruction::migrate_instruction(
             &everlend_general_pool::id(),
-            pool_market_pubkey,
-            pool_pubkey,
-            token_mint,
-            &config.fee_payer.pubkey(),
         )],
         Some(&config.fee_payer.pubkey()),
     );
