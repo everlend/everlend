@@ -17,7 +17,7 @@ use spl_token::state::Account;
 
 use everlend_general_pool::{
     find_withdrawal_requests_program_address_deprecated,
-    state::{Pool, WithdrawalRequests},
+    state::{Pool, WithdrawalRequestsDeprecated},
 };
 use everlend_liquidity_oracle::{
     find_liquidity_oracle_token_distribution_program_address, state::TokenDistribution,
@@ -255,7 +255,7 @@ impl Processor {
         );
         assert_account_key(withdrawal_requests_info, &withdrawal_requests_pubkey)?;
         let withdrawal_requests =
-            WithdrawalRequests::unpack(&withdrawal_requests_info.data.borrow())?;
+            WithdrawalRequestsDeprecated::unpack(&withdrawal_requests_info.data.borrow())?;
 
         // Calculate total liquidity supply
         let general_pool_token_account =
