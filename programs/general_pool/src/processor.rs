@@ -819,8 +819,8 @@ impl Processor {
     }
 
     /// Migrate withdraw request
-    pub fn migrate_instruction(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
-        return Err(EverlendError::TemporaryUnavailable.into());
+    pub fn migrate_instruction(_program_id: &Pubkey, _accounts: &[AccountInfo]) -> ProgramResult {
+        Err(EverlendError::TemporaryUnavailable.into())
     }
 
     /// Instruction processing router
