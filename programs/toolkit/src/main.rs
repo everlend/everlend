@@ -983,27 +983,26 @@ async fn command_run_test(
     Ok(())
 }
 
-async fn command_run_migrate(
-    config: &Config,
-    case: Option<String>,
-) -> anyhow::Result<()> {
-
+async fn command_run_migrate(config: &Config, case: Option<String>) -> anyhow::Result<()> {
     let initialized_accounts = get_initialized_accounts(config);
 
-    if case.is_none(){
+    if case.is_none() {
         println!("Migrate token mint not presented");
-        return Ok(())
+        return Ok(());
     }
 
-    let token = initialized_accounts.token_accounts.get(&case.unwrap()).unwrap();
+    let token = initialized_accounts
+        .token_accounts
+        .get(&case.unwrap())
+        .unwrap();
 
     println!("Migrate withdraw requests");
     general_pool::migrate_withdraw_requests(
         config,
-      &initialized_accounts.general_pool_market,
-            &token.general_pool,
-            &token.mint,
-        )?;
+        &initialized_accounts.general_pool_market,
+        &token.general_pool,
+        &token.mint,
+    )?;
     println!("Finished!");
 
     Ok(())

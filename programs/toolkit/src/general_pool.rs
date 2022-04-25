@@ -298,8 +298,6 @@ pub fn migrate_withdraw_requests(
     pool_pubkey: &Pubkey,
     token_mint: &Pubkey,
 ) -> Result<(), ClientError> {
-
-
     let tx = Transaction::new_with_payer(
         &[instruction::migrate_withdraw_request_account(
             &everlend_general_pool::id(),
