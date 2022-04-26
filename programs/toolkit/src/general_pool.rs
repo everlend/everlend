@@ -1,10 +1,3 @@
-use crate::utils::*;
-use everlend_general_pool::{
-    find_pool_borrow_authority_program_address, find_pool_program_address,
-    find_withdrawal_request_program_address, find_withdrawal_requests_program_address,
-    general_pool_withdraw_sol_accounts, instruction,
-    state::{AccountType, PoolMarket, WithdrawalRequest, WithdrawalRequests},
-};
 use solana_client::client_error::ClientError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_sdk::{
@@ -12,6 +5,15 @@ use solana_sdk::{
     signer::Signer,
     transaction::Transaction,
 };
+
+use everlend_general_pool::{
+    find_pool_borrow_authority_program_address, find_pool_program_address,
+    find_withdrawal_request_program_address, find_withdrawal_requests_program_address,
+    general_pool_withdraw_sol_accounts, instruction,
+    state::{AccountType, PoolMarket, WithdrawalRequest, WithdrawalRequests},
+};
+
+use crate::utils::*;
 
 pub fn create_market(
     config: &Config,
@@ -318,6 +320,7 @@ pub fn get_withdrawal_requests(
     Ok((withdrawal_requests_pubkey, withdrawal_requests))
 }
 
+#[allow(dead_code)]
 pub fn get_withdrawal_request(
     config: &Config,
     withdrawal_requests_pubkey: &Pubkey,

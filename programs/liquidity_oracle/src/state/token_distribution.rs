@@ -1,14 +1,16 @@
 //! Token distribution state definitions.
 
-use super::AccountType;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-use everlend_registry::state::TOTAL_DISTRIBUTIONS;
 use solana_program::{
     clock::Slot,
     msg,
     program_error::ProgramError,
     program_pack::{IsInitialized, Pack, Sealed},
 };
+
+use everlend_registry::state::TOTAL_DISTRIBUTIONS;
+
+use super::AccountType;
 
 pub type DistributionArray = [u64; TOTAL_DISTRIBUTIONS];
 

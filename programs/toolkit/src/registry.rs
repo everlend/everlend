@@ -1,8 +1,3 @@
-use crate::utils::*;
-use everlend_registry::{
-    find_config_program_address,
-    state::{Registry, SetRegistryConfigParams},
-};
 use solana_client::client_error::ClientError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_sdk::{
@@ -10,6 +5,14 @@ use solana_sdk::{
     signer::Signer,
     transaction::Transaction,
 };
+
+use everlend_registry::state::PoolMarketsConfig;
+use everlend_registry::{
+    find_config_program_address,
+    state::{Registry, SetRegistryConfigParams},
+};
+
+use crate::utils::*;
 
 pub fn init(config: &Config, registry_keypair: Option<Keypair>) -> Result<Pubkey, ClientError> {
     let registry_keypair = registry_keypair.unwrap_or_else(Keypair::new);
@@ -57,6 +60,7 @@ pub fn set_registry_config(
     config: &Config,
     registry_pubkey: &Pubkey,
     params: SetRegistryConfigParams,
+    pool_markets_cfg: PoolMarketsConfig,
 ) -> Result<Pubkey, ClientError> {
     let tx = Transaction::new_with_payer(
         &[everlend_registry::instruction::set_registry_config(
@@ -64,6 +68,7 @@ pub fn set_registry_config(
             registry_pubkey,
             &config.fee_payer.pubkey(),
             params,
+            pool_markets_cfg,
         )],
         Some(&config.fee_payer.pubkey()),
     );

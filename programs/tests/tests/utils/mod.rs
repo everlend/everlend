@@ -175,10 +175,13 @@ pub async fn presetup() -> (
     };
     config.money_market_program_ids[0] = spl_token_lending::id();
 
+    let mut ulp_pool_markets = [Pubkey::default(); TOTAL_DISTRIBUTIONS];
+    ulp_pool_markets[0] = test_ulp_pool_market.keypair.pubkey();
+
     let pool_markets_cfg = PoolMarketsConfig {
         general_pool_market: test_general_pool_market.keypair.pubkey(),
         income_pool_market: test_income_pool_market.keypair.pubkey(),
-        ulp_pool_market: test_ulp_pool_market.keypair.pubkey(),
+        ulp_pool_markets,
     };
 
     registry

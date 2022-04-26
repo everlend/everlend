@@ -28,11 +28,11 @@ pub enum RegistryInstruction {
     /// [R] Registry
     /// [W] Registry config
     /// [WS] Manager
-    /// [R] General pool market
-    /// [R] Income pool market
-    /// [R] ULP pool market
     /// [R] Rent sysvar
     /// [R] Sytem program
+    /// [R] General pool market
+    /// [R] Income pool market
+    /// [R, ...] List of ULP pool markets
     SetRegistryConfig {
         /// Set registry config params
         params: SetRegistryConfigParams,
@@ -57,24 +57,26 @@ pub fn set_registry_config(
     program_id: &Pubkey,
     registry: &Pubkey,
     manager: &Pubkey,
-    general_pool_market: &Pubkey,
-    income_pool_market: &Pubkey,
-    ulp_pool_market: &Pubkey,
     params: SetRegistryConfigParams,
     pool_markets_cfg: PoolMarketsConfig,
 ) -> Instruction {
     let (registry_config, _) = find_config_program_address(program_id, registry);
 
-    let accounts = vec![
+    let mut accounts = vec![
         AccountMeta::new_readonly(*registry, false),
         AccountMeta::new(registry_config, false),
         AccountMeta::new(*manager, true),
-        AccountMeta::new_readonly(*general_pool_market, false),
-        AccountMeta::new_readonly(*income_pool_market, false),
-        AccountMeta::new_readonly(*ulp_pool_market, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
+        AccountMeta::new_readonly(pool_markets_cfg.general_pool_market, false),
+        AccountMeta::new_readonly(pool_markets_cfg.income_pool_market, false),
     ];
+
+    accounts.extend(
+        pool_markets_cfg
+            .iter_filtered_ulp_pool_markets()
+            .map(|ulp_pool_market| AccountMeta::new_readonly(*ulp_pool_market, false)),
+    );
 
     Instruction::new_with_borsh(
         *program_id,

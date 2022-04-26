@@ -22,8 +22,17 @@ pub struct PoolMarketsConfig {
     pub general_pool_market: Pubkey,
     /// Income pool market
     pub income_pool_market: Pubkey,
-    /// ULP pool market
-    pub ulp_pool_market: Pubkey,
+    /// ULP pool markets
+    pub ulp_pool_markets: [Pubkey; TOTAL_DISTRIBUTIONS],
+}
+
+impl PoolMarketsConfig {
+    /// Return filtered from zero pubkeys iterator over ulp_pool_markets
+    pub fn iter_filtered_ulp_pool_markets(&self) -> impl Iterator<Item = &Pubkey> {
+        self.ulp_pool_markets
+            .iter()
+            .filter(|ulp_pool_market| ulp_pool_market != &&Pubkey::default())
+    }
 }
 
 /// Initialize a registry config params

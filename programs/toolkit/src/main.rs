@@ -1,31 +1,17 @@
-mod accounts_config;
-mod depositor;
-mod general_pool;
-mod income_pools;
-mod liquidity_oracle;
-mod registry;
-mod ulp;
-mod utils;
+extern crate core;
 
-use accounts_config::*;
+use core::time;
+use std::convert::TryInto;
+use std::{collections::HashMap, process::exit, thread};
+
+use anyhow::bail;
 use clap::{
     crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
 };
-use core::time;
-use everlend_depositor::{
-    find_rebalancing_program_address,
-    state::{Rebalancing, RebalancingOperation},
-};
-use everlend_general_pool::state::WITHDRAW_DELAY;
-use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::{
-    find_config_program_address,
-    state::{RegistryConfig, SetRegistryConfigParams, TOTAL_DISTRIBUTIONS},
-};
-use everlend_utils::integrations::{self, MoneyMarket, MoneyMarketPubkeys};
-use general_pool::get_withdrawal_requests;
 use regex::Regex;
 use solana_account_decoder::parse_token::UiTokenAmount;
+use solana_clap_utils::input_parsers::{pubkey_of, pubkeys_of};
+use solana_clap_utils::input_validators::is_pubkey;
 use solana_clap_utils::{
     fee_payer::fee_payer_arg,
     input_parsers::{keypair_of, value_of},
@@ -36,10 +22,33 @@ use solana_client::rpc_client::RpcClient;
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_sdk::{commitment_config::CommitmentConfig, signature::Keypair};
 use spl_associated_token_account::get_associated_token_address;
-use std::{collections::HashMap, process::exit, thread};
+
+use accounts_config::*;
+use everlend_depositor::{
+    find_rebalancing_program_address,
+    state::{Rebalancing, RebalancingOperation},
+};
+use everlend_general_pool::state::WITHDRAW_DELAY;
+use everlend_liquidity_oracle::state::DistributionArray;
+use everlend_registry::state::PoolMarketsConfig;
+use everlend_registry::{
+    find_config_program_address,
+    state::{RegistryConfig, SetRegistryConfigParams, TOTAL_DISTRIBUTIONS},
+};
+use everlend_utils::integrations::{self, MoneyMarket, MoneyMarketPubkeys};
+use general_pool::get_withdrawal_requests;
 use utils::*;
 
 use crate::general_pool::{get_general_pool_market, get_withdrawal_request_accounts};
+
+mod accounts_config;
+mod depositor;
+mod general_pool;
+mod income_pools;
+mod liquidity_oracle;
+mod registry;
+mod ulp;
+mod utils;
 
 /// Generates fixed distribution from slice
 #[macro_export]
@@ -62,7 +71,11 @@ pub fn url_to_moniker(url: &str) -> String {
     .to_string()
 }
 
-async fn command_create_registry(config: &Config, keypair: Option<Keypair>) -> anyhow::Result<()> {
+async fn command_create_registry(
+    config: &Config,
+    keypair: Option<Keypair>,
+    pool_markets_cfg: PoolMarketsConfig,
+) -> anyhow::Result<()> {
     let payer_pubkey = config.fee_payer.pubkey();
     println!("Fee payer: {}", payer_pubkey);
 
@@ -87,7 +100,7 @@ async fn command_create_registry(config: &Config, keypair: Option<Keypair>) -> a
 
     println!("registry_config = {:#?}", registry_config);
 
-    registry::set_registry_config(config, &registry_pubkey, registry_config)?;
+    registry::set_registry_config(config, &registry_pubkey, registry_config, pool_markets_cfg)?;
 
     initialiazed_accounts.payer = payer_pubkey;
     initialiazed_accounts.registry = registry_pubkey;
@@ -272,7 +285,7 @@ async fn command_create_token_accounts(
 
         // Reserve
         println!("Reserve transit");
-        let liquidity_reserve_transit_pubkey = depositor::create_transit(
+        let _liquidity_reserve_transit_pubkey = depositor::create_transit(
             config,
             &initialiazed_accounts.depositor,
             mint,
@@ -422,6 +435,13 @@ async fn command_create(
     let port_finance_program_id = default_accounts.port_finance_program_id;
     let larix_program_id = default_accounts.larix_program_id;
 
+    let general_pool_market_pubkey = general_pool::create_market(config, None)?;
+    let income_pool_market_pubkey =
+        income_pools::create_market(config, None, &general_pool_market_pubkey)?;
+
+    let port_finance_mm_pool_market_pubkey = ulp::create_market(config, None)?;
+    let larix_mm_pool_market_pubkey = ulp::create_market(config, None)?;
+
     println!("Registry");
     let registry_pubkey = registry::init(config, None)?;
     let mut registry_config = SetRegistryConfigParams {
@@ -438,14 +458,16 @@ async fn command_create(
 
     println!("registry_config = {:#?}", registry_config);
 
-    registry::set_registry_config(config, &registry_pubkey, registry_config)?;
+    let mut pool_markets_cfg = PoolMarketsConfig {
+        general_pool_market: general_pool_market_pubkey,
+        income_pool_market: income_pool_market_pubkey,
+        ulp_pool_markets: Default::default(),
+    };
 
-    let general_pool_market_pubkey = general_pool::create_market(config, None)?;
-    let income_pool_market_pubkey =
-        income_pools::create_market(config, None, &general_pool_market_pubkey)?;
+    pool_markets_cfg.ulp_pool_markets[0] = port_finance_mm_pool_market_pubkey;
+    pool_markets_cfg.ulp_pool_markets[1] = larix_mm_pool_market_pubkey;
 
-    let port_finance_mm_pool_market_pubkey = ulp::create_market(config, None)?;
-    let larix_mm_pool_market_pubkey = ulp::create_market(config, None)?;
+    registry::set_registry_config(config, &registry_pubkey, registry_config, pool_markets_cfg)?;
 
     println!("Liquidity oracle");
     let liquidity_oracle_pubkey = liquidity_oracle::init(config, None)?;
@@ -627,7 +649,7 @@ async fn command_run_test(
     println!("default_accounts = {:#?}", default_accounts);
 
     let InitializedAccounts {
-        payer,
+        payer: _,
         registry,
         general_pool_market,
         income_pool_market,
@@ -1035,6 +1057,36 @@ async fn main() -> anyhow::Result<()> {
                         .value_name("KEYPAIR")
                         .takes_value(true)
                         .help("Keypair [default: new keypair]"),
+                )
+                .arg(
+                    Arg::with_name("general-pool-market")
+                        .short("gpm")
+                        .required(true)
+                        .validator(is_pubkey)
+                        .value_name("PUBKEY")
+                        .takes_value(true)
+                        .help("General pool market pubkey"),
+                )
+                .arg(
+                    Arg::with_name("income-pool-market")
+                        .short("ipm")
+                        .required(true)
+                        .validator(is_pubkey)
+                        .value_name("PUBKEY")
+                        .takes_value(true)
+                        .help("Income pool market pubkey"),
+                )
+                .arg(
+                    Arg::with_name("ulp-pool-markets")
+                        .short("upm")
+                        .required(true)
+                        .multiple(true)
+                        .min_values(1)
+                        .max_values(TOTAL_DISTRIBUTIONS as u64)
+                        .validator(is_pubkey)
+                        .value_name("PUBKEY")
+                        .takes_value(true)
+                        .help("ULP pool market pubkey"),
                 ),
         )
         .subcommand(
@@ -1249,7 +1301,25 @@ async fn main() -> anyhow::Result<()> {
     let _ = match matches.subcommand() {
         ("create-registry", Some(arg_matches)) => {
             let keypair = keypair_of(arg_matches, "keypair");
-            command_create_registry(&config, keypair).await
+            let general_pool_market = pubkey_of(arg_matches, "general-pool-market").unwrap();
+            let income_pool_market = pubkey_of(arg_matches, "income-pool-market").unwrap();
+            let mut ulp_pool_markets = pubkeys_of(arg_matches, "ulp-pool-markets").unwrap();
+            if ulp_pool_markets.len() > TOTAL_DISTRIBUTIONS {
+                bail!(
+                    "Length of ulp-pool-markets must be <= {}",
+                    TOTAL_DISTRIBUTIONS
+                )
+            };
+            ulp_pool_markets.extend_from_slice(
+                vec![Pubkey::default(); TOTAL_DISTRIBUTIONS - ulp_pool_markets.len()].as_slice(),
+            );
+
+            let pool_market_cfg = PoolMarketsConfig {
+                general_pool_market,
+                income_pool_market,
+                ulp_pool_markets: ulp_pool_markets.try_into().unwrap(),
+            };
+            command_create_registry(&config, keypair, pool_market_cfg).await
         }
         ("create-general-pool-market", Some(arg_matches)) => {
             let keypair = keypair_of(arg_matches, "keypair");

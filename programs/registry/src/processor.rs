@@ -1,6 +1,7 @@
 //! Program state processor
 
 use borsh::BorshDeserialize;
+use solana_program::program_error::ProgramError;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
@@ -64,21 +65,19 @@ impl Processor {
         let registry_info = next_account_info(account_info_iter)?;
         let registry_config_info = next_account_info(account_info_iter)?;
         let manager_info = next_account_info(account_info_iter)?;
-        let general_pool_market_info = next_account_info(account_info_iter)?;
-        let income_pool_market_info = next_account_info(account_info_iter)?;
-        let ulp_pool_market_info = next_account_info(account_info_iter)?;
         let rent_info = next_account_info(account_info_iter)?;
         let rent = &Rent::from_account_info(rent_info)?;
         let _system_program_info = next_account_info(account_info_iter)?;
+        let general_pool_market_info = next_account_info(account_info_iter)?;
+        let income_pool_market_info = next_account_info(account_info_iter)?;
+        let ulp_pool_markets_info = account_info_iter;
 
         assert_signer(manager_info)?;
-
         assert_owned_by(registry_info, program_id)?;
 
         // Get registry state
         let registry = Registry::unpack(&registry_info.data.borrow())?;
         assert_account_key(manager_info, &registry.manager)?;
-
         assert_account_key(
             general_pool_market_info,
             &pool_markets_cfg.general_pool_market,
@@ -87,7 +86,6 @@ impl Processor {
             income_pool_market_info,
             &pool_markets_cfg.income_pool_market,
         )?;
-        assert_account_key(ulp_pool_market_info, &pool_markets_cfg.ulp_pool_market)?;
 
         let general_pool_market = everlend_general_pool::state::PoolMarket::unpack(
             &general_pool_market_info.data.borrow(),
@@ -103,9 +101,23 @@ impl Processor {
             &income_pool_market.general_pool_market,
         )?;
 
-        let ulp_pool_market =
-            everlend_ulp::state::PoolMarket::unpack(&ulp_pool_market_info.data.borrow())?;
-        assert_account_key(manager_info, &ulp_pool_market.manager)?;
+        pool_markets_cfg
+            .iter_filtered_ulp_pool_markets()
+            .map(|ulp_pool_market_pubkey| {
+                next_account_info(ulp_pool_markets_info).and_then(|ulp_pool_market_info| {
+                    assert_account_key(ulp_pool_market_info, ulp_pool_market_pubkey).and_then(
+                        |_| {
+                            everlend_ulp::state::PoolMarket::unpack(
+                                &ulp_pool_market_info.data.borrow(),
+                            )
+                            .and_then(|ulp_pool_market| {
+                                assert_account_key(manager_info, &ulp_pool_market.manager)
+                            })
+                        },
+                    )
+                })
+            })
+            .collect::<Result<(), ProgramError>>()?;
 
         let (registry_config_pubkey, bump_seed) =
             find_config_program_address(program_id, registry_info.key);

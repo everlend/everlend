@@ -52,10 +52,13 @@ async fn success() {
     };
     config.money_market_program_ids[0] = spl_token_lending::id();
 
+    let mut ulp_pool_markets = [Pubkey::default(); TOTAL_DISTRIBUTIONS];
+    ulp_pool_markets[0] = ulp_pool_market.keypair.pubkey();
+
     let pool_markets_cfg = PoolMarketsConfig {
         general_pool_market: general_pool_market.keypair.pubkey(),
         income_pool_market: income_pool_market.keypair.pubkey(),
-        ulp_pool_market: ulp_pool_market.keypair.pubkey(),
+        ulp_pool_markets,
     };
 
     test_registry
@@ -104,10 +107,13 @@ async fn success_change_registry_config() {
         refresh_income_interval: REFRESH_INCOME_INTERVAL,
     };
 
+    let mut ulp_pool_markets = [Pubkey::default(); TOTAL_DISTRIBUTIONS];
+    ulp_pool_markets[0] = ulp_pool_market.keypair.pubkey();
+
     let pool_markets_cfg = PoolMarketsConfig {
         general_pool_market: general_pool_market.keypair.pubkey(),
         income_pool_market: income_pool_market.keypair.pubkey(),
-        ulp_pool_market: ulp_pool_market.keypair.pubkey(),
+        ulp_pool_markets,
     };
 
     test_registry
@@ -181,10 +187,13 @@ async fn fail_with_invalid_registry() {
     };
     config.money_market_program_ids[0] = spl_token_lending::id();
 
+    let mut ulp_pool_markets = [Pubkey::default(); TOTAL_DISTRIBUTIONS];
+    ulp_pool_markets[0] = ulp_pool_market.keypair.pubkey();
+
     let pool_markets_cfg = PoolMarketsConfig {
         general_pool_market: general_pool_market.keypair.pubkey(),
         income_pool_market: income_pool_market.keypair.pubkey(),
-        ulp_pool_market: ulp_pool_market.keypair.pubkey(),
+        ulp_pool_markets,
     };
 
     let tx = Transaction::new_signed_with_payer(
@@ -192,9 +201,6 @@ async fn fail_with_invalid_registry() {
             &everlend_registry::id(),
             &Pubkey::new_unique(),
             &test_registry.manager.pubkey(),
-            &general_pool_market.keypair.pubkey(),
-            &income_pool_market.keypair.pubkey(),
-            &ulp_pool_market.keypair.pubkey(),
             config,
             pool_markets_cfg,
         )],
@@ -247,10 +253,13 @@ async fn fail_with_wrong_manager() {
     };
     config.money_market_program_ids[0] = spl_token_lending::id();
 
+    let mut ulp_pool_markets = [Pubkey::default(); TOTAL_DISTRIBUTIONS];
+    ulp_pool_markets[0] = ulp_pool_market.keypair.pubkey();
+
     let pool_markets_cfg = PoolMarketsConfig {
         general_pool_market: general_pool_market.keypair.pubkey(),
         income_pool_market: income_pool_market.keypair.pubkey(),
-        ulp_pool_market: ulp_pool_market.keypair.pubkey(),
+        ulp_pool_markets,
     };
 
     let wrong_manager = Keypair::new();
@@ -260,9 +269,6 @@ async fn fail_with_wrong_manager() {
             &everlend_registry::id(),
             &test_registry.keypair.pubkey(),
             &wrong_manager.pubkey(),
-            &general_pool_market.keypair.pubkey(),
-            &income_pool_market.keypair.pubkey(),
-            &ulp_pool_market.keypair.pubkey(),
             config,
             pool_markets_cfg,
         )],

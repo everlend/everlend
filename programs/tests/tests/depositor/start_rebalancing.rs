@@ -523,10 +523,13 @@ async fn fail_with_invalid_registry() {
             refresh_income_interval: REFRESH_INCOME_INTERVAL,
         };
 
+        let mut ulp_pool_markets = [Pubkey::default(); TOTAL_DISTRIBUTIONS];
+        ulp_pool_markets[0] = mm_pool_market.keypair.pubkey();
+
         let pool_markets_cfg = PoolMarketsConfig {
             general_pool_market: general_pool_market.keypair.pubkey(),
             income_pool_market: income_pool_market.keypair.pubkey(),
-            ulp_pool_market: mm_pool_market.keypair.pubkey(),
+            ulp_pool_markets,
         };
 
         wrong_registry
