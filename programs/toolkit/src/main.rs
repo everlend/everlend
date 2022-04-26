@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::convert::TryInto;
-use std::{collections::HashMap, process::exit, str::FromStr};
+use std::path::PathBuf;
+use std::{process::exit, str::FromStr};
 
 use anyhow::bail;
 use clap::{
@@ -38,6 +39,7 @@ mod depositor;
 mod general_pool;
 mod income_pools;
 mod liquidity_oracle;
+mod migrations;
 mod multisig;
 mod registry;
 mod ulp;
@@ -566,6 +568,7 @@ async fn main() -> anyhow::Result<()> {
                         .help("Accounts file"),
                 ),
         )
+        .subcommand(SubCommand::with_name("test-close-account").about("Run a test"))
         .subcommand(
             SubCommand::with_name("multisig")
                 .about("Multisig")
@@ -705,13 +708,59 @@ async fn main() -> anyhow::Result<()> {
                         .help("Accounts file"),
                 ),
         )
+        .subcommand(
+            SubCommand::with_name("migrate-depositor")
+                .about("Migrate Depositor account")
+                .arg(
+                    Arg::with_name("keypair")
+                        .validator(is_keypair)
+                        .required(true)
+                        .long("keypair")
+                        .value_name("KEYPAIR")
+                        .takes_value(true)
+                        .help("Keypair of depositor account"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("migrate-registry-config")
+                .about("Migrate RegistryConfig account. Must be signed by registry manager."),
+        )
+        .subcommand(
+            SubCommand::with_name("migrate-token-distribution")
+                .about("Migrate TokenDistribution account. Must be signed by TokenDistribution authority.").arg(
+                Arg::with_name("mints")
+                    .long("mints")
+                    .short("m")
+                    .takes_value(true),
+            ),
+        )
+        .subcommand(
+            SubCommand::with_name("migrate-rebalancing")
+                .about("Migrate Rebalancing account.").arg(
+                Arg::with_name("mints")
+                    .long("mints")
+                    .short("m")
+                    .takes_value(true),
+            ),
+        )
         .get_matches();
 
     let mut wallet_manager = None;
     let config = {
         let cli_config = if let Some(config_file) = matches.value_of("config_file") {
             println!("config_file = {:?}", config_file);
-            solana_cli_config::Config::load(config_file).unwrap_or_default()
+            solana_cli_config::Config::load(config_file)
+                .map(|mut cfg| {
+                    let path = PathBuf::from(cfg.keypair_path.clone());
+                    if !path.is_absolute() {
+                        let mut keypair_path = dirs_next::home_dir().expect("home directory");
+                        keypair_path.push(path);
+                        cfg.keypair_path = keypair_path.to_str().unwrap().to_string();
+                    }
+
+                    cfg
+                })
+                .unwrap_or_default()
         } else {
             solana_cli_config::Config::default()
         };
@@ -832,6 +881,9 @@ async fn main() -> anyhow::Result<()> {
             let case = value_of::<String>(arg_matches, "case");
             commands_test::command_run_test(&config, accounts_path, case).await
         }
+        ("test-close-account", Some(_)) => {
+            commands_test::command_run_test_close_account(&config).await
+        }
         ("multisig", Some(arg_matches)) => {
             let _ = match arg_matches.subcommand() {
                 ("create", Some(arg_matches)) => {
@@ -899,6 +951,25 @@ async fn main() -> anyhow::Result<()> {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
             let case = value_of::<String>(arg_matches, "case");
             command_run_migrate(&config, accounts_path, case).await
+        }
+        ("migrate-depositor", Some(arg_matches)) => {
+            let keypair = keypair_of(arg_matches, "keypair").expect("Keypair unrepresented");
+            println!("Started Depositor migration");
+            depositor::migrate_depositor(&config, keypair)
+        }
+        ("migrate-registry-config", Some(_)) => {
+            println!("Started RegistryConfig migration");
+            registry::migrate_registry_config(&config)
+        }
+        ("migrate-token-distribution", Some(arg_matches)) => {
+            let mints = arg_matches.value_of("mints");
+            println!("Started TokenDistribution migration");
+            liquidity_oracle::migrate_wrapper(&config, mints)
+        }
+        ("migrate-rebalancing", Some(arg_matches)) => {
+            let mints = arg_matches.value_of("mints");
+            println!("Started Rebalancing migration");
+            depositor::migrate_rebalancing_wrapper(&config, mints)
         }
         _ => unreachable!(),
     }

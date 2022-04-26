@@ -1,8 +1,3 @@
-use crate::utils::*;
-use everlend_depositor::{
-    find_rebalancing_program_address, find_transit_program_address,
-    state::{Depositor, Rebalancing},
-};
 use solana_client::client_error::ClientError;
 use solana_program::{
     instruction::AccountMeta, program_pack::Pack, pubkey::Pubkey, system_instruction,
@@ -12,6 +7,13 @@ use solana_sdk::{
     signer::Signer,
     transaction::Transaction,
 };
+
+use everlend_depositor::{
+    find_rebalancing_program_address, find_transit_program_address,
+    state::{Depositor, Rebalancing},
+};
+
+use crate::utils::*;
 
 pub fn init(
     config: &Config,
@@ -207,5 +209,92 @@ pub fn withdraw(
 
     config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
+    Ok(())
+}
+
+pub fn migrate_depositor(config: &Config, depositor_keypair: Keypair) -> Result<(), anyhow::Error> {
+    let accounts = config.get_initialized_accounts();
+
+    println!("Sending migration itx ...");
+    let tx = Transaction::new_with_payer(
+        &[everlend_depositor::instruction::migrate_depositor(
+            &everlend_depositor::id(),
+            &accounts.depositor,
+            &accounts.registry,
+        )],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    config.sign_and_send_and_confirm_transaction(
+        tx,
+        vec![config.fee_payer.as_ref(), &depositor_keypair],
+    )?;
+
+    let new_depositor: Depositor = config.get_account_unpack(&accounts.depositor)?;
+
+    println!("Migration of Depositor successfully: \n{:?}", new_depositor);
+
+    Ok(())
+}
+
+fn migrate_rebalancing(config: &Config, token_mint: Pubkey) -> Result<(), ClientError> {
+    let accounts = config.get_initialized_accounts();
+
+    let liqduidty_mint = &token_mint;
+
+    println!("Sending migration itx ...");
+    let tx = Transaction::new_with_payer(
+        &[everlend_depositor::instruction::migrate_rebalancing(
+            &everlend_depositor::id(),
+            &config.fee_payer.pubkey(),
+            &accounts.depositor,
+            &liqduidty_mint,
+        )],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+
+    let (new_reb_key, _) = find_rebalancing_program_address(
+        &everlend_depositor::id(),
+        &accounts.depositor,
+        &liqduidty_mint,
+    );
+
+    let new_rebalancing: Rebalancing = config.get_account_unpack(&new_reb_key)?;
+
+    println!(
+        "Migration of Rebalancing successfully: \n{:?}",
+        new_rebalancing
+    );
+
+    Ok(())
+}
+
+pub fn migrate_rebalancing_wrapper(
+    config: &Config,
+    token_mint: Option<&str>,
+) -> Result<(), anyhow::Error> {
+    let default_accounts = config.get_default_accounts();
+
+    let (mint_map, _) = get_asset_maps(default_accounts);
+
+    if token_mint.is_none() {
+        mint_map
+            .iter()
+            .map(|mint| {
+                println!("Migration for {}: {}", mint.0, mint.1);
+                migrate_rebalancing(config, *mint.1)
+            })
+            .collect::<Result<Vec<()>, ClientError>>()?;
+        print!("Migration completed for all mints");
+    } else {
+        let mint_name = token_mint.unwrap();
+        let mint = mint_map
+            .get(mint_name)
+            .expect(&format!("Mint not found for token: {}", mint_name));
+        println!("Migration for {}: {}", mint_name, mint);
+        migrate_rebalancing(config, *mint)?;
+    }
     Ok(())
 }

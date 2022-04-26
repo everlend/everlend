@@ -8,6 +8,9 @@ use solana_program::{
     pubkey::Pubkey,
 };
 
+pub use deprecated::DeprecatedDepositor;
+use everlend_utils::EverlendError;
+
 use super::AccountType;
 
 /// Depositor
@@ -21,7 +24,7 @@ pub struct Depositor {
     /// Liquidity oracle
     pub liquidity_oracle: Pubkey,
     /// Registry
-    pub registry_config: Pubkey,
+    pub registry: Pubkey,
 }
 
 impl Depositor {
@@ -31,14 +34,25 @@ impl Depositor {
     /// Index of account type byte
     pub const ACCOUNT_TYPE_BYTE_INDEX: usize = 0;
 
-    /// Create a voting pool
+    /// Reserved space for future values
+    pub const FREE_SPACE: usize = 31;
+
+    /// Create a depositor
     pub fn new(params: InitDepositorParams) -> Self {
         Self {
             account_type: AccountType::Depositor,
             version: Self::ACTUAL_VERSION,
             liquidity_oracle: params.liquidity_oracle,
-            registry_config: params.registry_config,
+            registry: params.registry,
         }
+    }
+
+    /// Initialize a depositor
+    pub fn init(&mut self, params: InitDepositorParams) {
+        self.account_type = AccountType::Depositor;
+        self.version = Self::ACTUAL_VERSION;
+        self.liquidity_oracle = params.liquidity_oracle;
+        self.registry = params.registry;
     }
 }
 
@@ -47,13 +61,13 @@ pub struct InitDepositorParams {
     /// Liquidity oracle
     pub liquidity_oracle: Pubkey,
     /// Registry
-    pub registry_config: Pubkey,
+    pub registry: Pubkey,
 }
 
 impl Sealed for Depositor {}
 impl Pack for Depositor {
-    // 1 + 1 + 32 + 32
-    const LEN: usize = 66;
+    // 1 + 1 + 32 + 32 + 31
+    const LEN: usize = 97;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;
@@ -61,7 +75,14 @@ impl Pack for Depositor {
     }
 
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
-        Self::try_from_slice(src).map_err(|_| {
+        if !src[Self::LEN - Self::FREE_SPACE..]
+            .iter()
+            .all(|byte| byte == &0)
+        {
+            Err(EverlendError::TemporaryUnavailable)?
+        }
+
+        Self::try_from_slice(&src[..Self::LEN - Self::FREE_SPACE]).map_err(|_| {
             msg!("Failed to deserialize");
             ProgramError::InvalidAccountData
         })
@@ -73,5 +94,58 @@ impl IsInitialized for Depositor {
         self.account_type != AccountType::Uninitialized
             && self.account_type == AccountType::Depositor
             && self.version == Self::ACTUAL_VERSION
+    }
+}
+
+mod deprecated {
+    use super::*;
+
+    ///
+    #[repr(C)]
+    #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
+    pub struct DeprecatedDepositor {
+        /// Account type - Depositor
+        pub account_type: AccountType,
+
+        /// General pool market
+        pub general_pool_market: Pubkey,
+
+        /// Income pool market
+        pub income_pool_market: Pubkey,
+
+        /// Liquidity oracle
+        pub liquidity_oracle: Pubkey,
+    }
+
+    impl Sealed for DeprecatedDepositor {}
+
+    impl Pack for DeprecatedDepositor {
+        // 1 + 32 + 32 + 32
+        const LEN: usize = 97;
+
+        fn pack_into_slice(&self, dst: &mut [u8]) {
+            let mut slice = dst;
+            self.serialize(&mut slice).unwrap()
+        }
+
+        fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
+            if src[Depositor::LEN - Depositor::FREE_SPACE..]
+                .iter()
+                .all(|byte| byte == &0)
+            {
+                Err(EverlendError::TemporaryUnavailable)?
+            }
+            Self::try_from_slice(src).map_err(|_| {
+                msg!("Failed to deserialize");
+                ProgramError::InvalidAccountData
+            })
+        }
+    }
+
+    impl IsInitialized for DeprecatedDepositor {
+        fn is_initialized(&self) -> bool {
+            self.account_type != AccountType::Uninitialized
+                && self.account_type == AccountType::Depositor
+        }
     }
 }

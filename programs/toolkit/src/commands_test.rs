@@ -1,5 +1,15 @@
-use anyhow::Context;
 use core::time;
+use std::thread;
+
+use anyhow::Context;
+use solana_account_decoder::parse_token::UiTokenAmount;
+use solana_program::program_pack::Pack;
+use solana_program::pubkey::Pubkey;
+use solana_program::system_instruction;
+use solana_sdk::signature::Keypair;
+use solana_sdk::signer::Signer;
+use solana_sdk::transaction::Transaction;
+
 use everlend_depositor::{
     find_rebalancing_program_address,
     state::{Rebalancing, RebalancingOperation},
@@ -8,10 +18,6 @@ use everlend_general_pool::state::WITHDRAW_DELAY;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::{find_config_program_address, state::RegistryConfig};
 use everlend_utils::integrations::{self, MoneyMarketPubkeys};
-use solana_account_decoder::parse_token::UiTokenAmount;
-use solana_program::program_pack::Pack;
-use solana_program::pubkey::Pubkey;
-use std::thread;
 
 use crate::{
     accounts_config::InitializedAccounts,
@@ -428,6 +434,85 @@ pub async fn command_run_test(
     }
 
     println!("Finished!");
+
+    Ok(())
+}
+
+pub async fn command_run_test_close_account(config: &Config) -> anyhow::Result<()> {
+    todo!();
+    println!("Run");
+
+    let account_keypair = Keypair::new();
+    println!("Account: {}", account_keypair.pubkey());
+    println!("Fee payer: {}", &config.fee_payer.pubkey());
+
+    let balance = 10000;
+
+    {
+        println!("Creating account");
+        let tx = Transaction::new_with_payer(
+            &[system_instruction::create_account(
+                &config.fee_payer.pubkey(),
+                &account_keypair.pubkey(),
+                balance,
+                0,
+                &everlend_depositor::id(),
+            )],
+            Some(&config.fee_payer.pubkey()),
+        );
+
+        config.sign_and_send_and_confirm_transaction(
+            tx,
+            vec![config.fee_payer.as_ref(), &account_keypair],
+        )?;
+    }
+
+    let account = config.rpc_client.get_account(&account_keypair.pubkey())?;
+    assert_ne!(account.lamports, 0);
+    assert_eq!(account.owner, everlend_depositor::id());
+
+    {
+        println!("Closing account");
+        let tx = Transaction::new_with_payer(
+            &[system_instruction::transfer(
+                &account_keypair.pubkey(),
+                &config.fee_payer.pubkey(),
+                balance,
+            )],
+            Some(&config.fee_payer.pubkey()),
+        );
+
+        config.sign_and_send_and_confirm_transaction(
+            tx,
+            vec![config.fee_payer.as_ref(), &account_keypair],
+        )?;
+    }
+
+    let time_after_deleting = std::time::SystemTime::now();
+
+    let delay = |secs| {
+        println!("Waiting {} secs for ticket...", secs);
+        thread::sleep(time::Duration::from_secs(secs))
+    };
+
+    while config
+        .rpc_client
+        .get_account(&account_keypair.pubkey())?
+        .owner
+        == everlend_depositor::id()
+    {
+        delay(1);
+    }
+
+    let time_at_finish = std::time::SystemTime::now();
+
+    println!(
+        "Account closed for: {} sec",
+        time_at_finish
+            .duration_since(time_after_deleting)
+            .unwrap()
+            .as_secs()
+    );
 
     Ok(())
 }

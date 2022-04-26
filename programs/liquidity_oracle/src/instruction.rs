@@ -1,12 +1,14 @@
 //! Instruction states definitions.
 
-use crate::{find_liquidity_oracle_token_distribution_program_address, state::DistributionArray};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
     system_program, sysvar,
 };
+
+use crate::deprecated::deprecated_find_liquidity_oracle_token_distribution_program_address;
+use crate::{find_liquidity_oracle_token_distribution_program_address, state::DistributionArray};
 
 /// Instructions supported by the program.
 #[derive(Debug, BorshDeserialize, BorshSerialize, PartialEq)]
@@ -43,10 +45,21 @@ pub enum LiquidityOracleInstruction {
     /// Accounts:
     /// [R] Liquidity oracle - off-chain created account.
     /// [R]  Token mint account
-    /// [RW] TokenDistribution - token distribution to update state
+    /// [W] TokenDistribution - token distribution to update state
     /// [RS] Authority - liquidity oracle authority.
     /// [R] Clock sysvar.
     UpdateTokenDistribution { value: DistributionArray },
+
+    /// Migrate.
+    /// Accounts:
+    /// [R] Liquidity oracle - off-chain created account.
+    /// [R]  Token mint account
+    /// [W] TokenDistribution - token distribution to update state
+    /// [W] TokenDistribution - deprecated token distribution to update state
+    /// [RS] Authority - liquidity oracle authority.
+    /// [R] Rent sysvar
+    /// [R] System program
+    Migrate,
 }
 
 /// Creates 'InitLiquidityOracle' instruction.
@@ -148,4 +161,36 @@ pub fn update_token_distribution(
         },
         accounts,
     )
+}
+
+pub fn migrate(
+    program_id: &Pubkey,
+    liquidity_oracle: &Pubkey,
+    authority: &Pubkey,
+    token_mint: &Pubkey,
+) -> Instruction {
+    let (token_distribution, _) = find_liquidity_oracle_token_distribution_program_address(
+        program_id,
+        liquidity_oracle,
+        token_mint,
+    );
+
+    let (deprecated_token_distribution, _) =
+        deprecated_find_liquidity_oracle_token_distribution_program_address(
+            program_id,
+            liquidity_oracle,
+            token_mint,
+        );
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*liquidity_oracle, false),
+        AccountMeta::new_readonly(*token_mint, false),
+        AccountMeta::new(token_distribution, false),
+        AccountMeta::new(deprecated_token_distribution, false),
+        AccountMeta::new_readonly(*authority, true),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+        AccountMeta::new_readonly(system_program::id(), false),
+    ];
+
+    Instruction::new_with_borsh(*program_id, &LiquidityOracleInstruction::Migrate, accounts)
 }

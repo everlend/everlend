@@ -1,11 +1,8 @@
 //! Program state definitions
 
-use super::{AccountType, RebalancingStep, TOTAL_REBALANCING_STEP};
-use crate::state::RebalancingOperation;
+use std::cmp::Ordering;
+
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-use everlend_liquidity_oracle::state::TokenDistribution;
-use everlend_registry::state::{RegistryConfig, TOTAL_DISTRIBUTIONS};
-use everlend_utils::{math, EverlendError, PRECISION_SCALER};
 use solana_program::{
     clock::Slot,
     msg,
@@ -13,7 +10,15 @@ use solana_program::{
     program_pack::{IsInitialized, Pack, Sealed},
     pubkey::Pubkey,
 };
-use std::cmp::Ordering;
+
+pub use deprecated::DeprecatedRebalancing;
+use everlend_liquidity_oracle::state::TokenDistribution;
+use everlend_registry::state::{RegistryConfig, TOTAL_DISTRIBUTIONS};
+use everlend_utils::{math, EverlendError, PRECISION_SCALER};
+
+use crate::state::RebalancingOperation;
+
+use super::{AccountType, RebalancingStep, TOTAL_REBALANCING_STEP};
 
 /// Rebalancing
 #[repr(C)]
@@ -21,37 +26,38 @@ use std::cmp::Ordering;
 pub struct Rebalancing {
     /// Account type - Rebalancing
     pub account_type: AccountType,
-
+    /// Struct version
+    pub version: u8,
     /// Depositor
     pub depositor: Pubkey,
-
     /// Mint
     pub mint: Pubkey,
-
     /// Distributed liquidity
     pub distributed_liquidity: u64,
-
     /// Received collateral in each market
     pub received_collateral: [u64; TOTAL_DISTRIBUTIONS],
-
     /// Current token distribution from liquidity oracle
     pub token_distribution: TokenDistribution,
-
     /// Rebalancing steps
     pub steps: Vec<RebalancingStep>,
-
     /// Income refreshed mark to avoid frequent refresh
     pub income_refreshed_at: Slot,
     // Space for future values
-    // 20
+    // 59
 }
 
 impl Rebalancing {
+    /// Actual version of this struct
+    pub const ACTUAL_VERSION: u8 = 1;
+
+    /// Reserved space for future values
+    pub const FREE_SPACE: usize = 59;
     /// Initialize a rebalancing
     pub fn init(&mut self, params: InitRebalancingParams) {
         self.account_type = AccountType::Rebalancing;
         self.depositor = params.depositor;
         self.mint = params.mint;
+        self.version = Self::ACTUAL_VERSION;
     }
 
     /// Generate new steps from new and latest distribuition arrays
@@ -274,13 +280,8 @@ pub struct InitRebalancingParams {
 
 impl Sealed for Rebalancing {}
 impl Pack for Rebalancing {
-    // 1 + 32 + 32 + 8 + (8 * 10) + 89 + (4 + 4 * 28) + 8 + 20 = 386
-    const LEN: usize = 73
-        + (8 * TOTAL_DISTRIBUTIONS)
-        + TokenDistribution::LEN
-        + (4 + TOTAL_REBALANCING_STEP * RebalancingStep::LEN)
-        + 8
-        + 20;
+    // 1 + 1 + 32 + 32 + 8 + (8 * 5) + 89 + (4 + 4 * 28) + 8 + 59 = 386
+    const LEN: usize = 386;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;
@@ -288,6 +289,12 @@ impl Pack for Rebalancing {
     }
 
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
+        if !src[Self::LEN - Self::FREE_SPACE..]
+            .iter()
+            .all(|byte| byte == &0)
+        {
+            Err(EverlendError::TemporaryUnavailable)?
+        }
         let mut src_mut = src;
         Self::deserialize(&mut src_mut).map_err(|err| {
             msg!("Failed to deserialize");
@@ -301,14 +308,99 @@ impl IsInitialized for Rebalancing {
     fn is_initialized(&self) -> bool {
         self.account_type != AccountType::Uninitialized
             && self.account_type == AccountType::Rebalancing
+            && self.version == Self::ACTUAL_VERSION
+    }
+}
+
+mod deprecated {
+    use std::convert::TryInto;
+
+    use everlend_liquidity_oracle::state::DeprecatedTokenDistribution;
+
+    use super::*;
+
+    /// Rebalancing
+    #[repr(C)]
+    #[derive(Debug, Clone, PartialEq, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
+    pub struct DeprecatedRebalancing {
+        /// Account type - Rebalancing
+        pub account_type: AccountType,
+
+        /// Depositor
+        pub depositor: Pubkey,
+
+        /// Mint
+        pub mint: Pubkey,
+
+        /// Distributed liquidity
+        pub distributed_liquidity: u64,
+
+        /// Received collateral in each market
+        pub received_collateral: [u64; 10],
+
+        /// Current token distribution from liquidity oracle
+        pub token_distribution: DeprecatedTokenDistribution,
+
+        /// Rebalancing steps
+        pub steps: Vec<RebalancingStep>,
+
+        /// Income refreshed mark to avoid frequent refresh
+        pub income_refreshed_at: Slot,
+    }
+
+    impl From<DeprecatedRebalancing> for Rebalancing {
+        fn from(deprecated: DeprecatedRebalancing) -> Self {
+            Self {
+                account_type: AccountType::Rebalancing,
+                version: Self::ACTUAL_VERSION,
+                depositor: deprecated.depositor,
+                mint: deprecated.mint,
+                distributed_liquidity: deprecated.distributed_liquidity,
+                received_collateral: deprecated.received_collateral[..TOTAL_DISTRIBUTIONS]
+                    .try_into()
+                    .unwrap(),
+                token_distribution: deprecated.token_distribution.into(),
+                steps: deprecated.steps,
+                income_refreshed_at: deprecated.income_refreshed_at,
+            }
+        }
+    }
+
+    impl Sealed for DeprecatedRebalancing {}
+
+    impl Pack for DeprecatedRebalancing {
+        const LEN: usize = 386;
+
+        fn pack_into_slice(&self, dst: &mut [u8]) {
+            let mut slice = dst;
+            self.serialize(&mut slice).unwrap()
+        }
+
+        fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
+            let mut src_mut = src;
+            Self::deserialize(&mut src_mut).map_err(|err| {
+                msg!("Failed to deserialize");
+                msg!(&err.to_string());
+                ProgramError::InvalidAccountData
+            })
+        }
+    }
+
+    impl IsInitialized for DeprecatedRebalancing {
+        fn is_initialized(&self) -> bool {
+            self.account_type != AccountType::Uninitialized
+                && self.account_type == AccountType::Rebalancing
+        }
     }
 }
 
 #[cfg(test)]
 pub mod tests {
-    use super::*;
-    use crate::state::RebalancingOperation;
     use everlend_liquidity_oracle::state::DistributionArray;
+
+    use crate::state::RebalancingOperation;
+
+    use super::*;
 
     #[test]
     fn packing() {

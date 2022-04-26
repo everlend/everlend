@@ -14,12 +14,15 @@ use solana_program::{
 };
 
 use everlend_utils::{
-    assert_account_key, assert_owned_by, assert_signer, assert_uninitialized, cpi,
+    assert_account_key, assert_owned_by, assert_signer, assert_uninitialized, cpi, EverlendError,
 };
 
+use crate::deprecated::deprecated_find_liquidity_oracle_token_distribution_program_address;
+use crate::state::DeprecatedTokenDistribution;
 use crate::{
     find_liquidity_oracle_token_distribution_program_address,
     instruction::LiquidityOracleInstruction,
+    seed,
     state::{DistributionArray, InitLiquidityOracleParams, LiquidityOracle, TokenDistribution},
 };
 
@@ -137,7 +140,10 @@ impl Processor {
             assert_uninitialized(&distribution)?;
         }
 
+        let seed = seed();
+
         let signers_seeds = &[
+            seed.as_bytes(),
             &liquidity_oracle_info.key.to_bytes()[..32],
             &token_mint.key.to_bytes()[..32],
             &[bump_seed],
@@ -204,6 +210,85 @@ impl Processor {
         Ok(())
     }
 
+    /// Process `migrate` instruction.
+    pub fn migrate(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let liquidity_oracle_info = next_account_info(account_info_iter)?;
+        let token_mint = next_account_info(account_info_iter)?;
+        let token_distribution_info = next_account_info(account_info_iter)?;
+        let deprecated_token_distribution_info = next_account_info(account_info_iter)?;
+        let authority_info = next_account_info(account_info_iter)?;
+        let rent_info = next_account_info(account_info_iter)?;
+        let rent = &Rent::from_account_info(rent_info)?;
+        let _system_program_info = next_account_info(account_info_iter)?;
+
+        // Check signer
+        assert_signer(authority_info)?;
+
+        // Check liquidity oracle owner
+        assert_owned_by(liquidity_oracle_info, program_id)?;
+
+        // Get state
+        let liquidity_oracle = LiquidityOracle::unpack(&liquidity_oracle_info.data.borrow())?;
+        assert_account_key(authority_info, &liquidity_oracle.authority)?;
+
+        let (deprecated_token_distribution_pubkey, _) =
+            deprecated_find_liquidity_oracle_token_distribution_program_address(
+                program_id,
+                liquidity_oracle_info.key,
+                token_mint.key,
+            );
+        assert_account_key(
+            deprecated_token_distribution_info,
+            &deprecated_token_distribution_pubkey,
+        )?;
+
+        let (token_distribution_pubkey, bump_seed) =
+            find_liquidity_oracle_token_distribution_program_address(
+                program_id,
+                liquidity_oracle_info.key,
+                token_mint.key,
+            );
+        assert_account_key(token_distribution_info, &token_distribution_pubkey)?;
+
+        let deprecated_distribution =
+            DeprecatedTokenDistribution::unpack(&token_distribution_info.data.borrow())?;
+
+        let from_starting_lamports = authority_info.lamports();
+        let deprecated_lamports = deprecated_token_distribution_info.lamports();
+
+        **deprecated_token_distribution_info.lamports.borrow_mut() = 0;
+        **authority_info.lamports.borrow_mut() = from_starting_lamports
+            .checked_add(deprecated_lamports)
+            .ok_or(EverlendError::MathOverflow)?;
+
+        let seed = seed();
+
+        let signers_seeds = &[
+            seed.as_bytes(),
+            &liquidity_oracle_info.key.to_bytes()[..32],
+            &token_mint.key.to_bytes()[..32],
+            &[bump_seed],
+        ];
+
+        cpi::system::create_account::<TokenDistribution>(
+            program_id,
+            authority_info.clone(),
+            token_distribution_info.clone(),
+            &[signers_seeds],
+            rent,
+        )?;
+
+        let tmp = TokenDistribution::unpack_unchecked(*token_distribution_info.data.borrow())?;
+        assert_uninitialized(&tmp)?;
+
+        let distribution = deprecated_distribution.into();
+
+        TokenDistribution::pack(distribution, *token_distribution_info.data.borrow_mut())?;
+
+        Ok(())
+    }
+
     /// Instruction processing router.
     pub fn process_instruction(
         program_id: &Pubkey,
@@ -228,6 +313,11 @@ impl Processor {
             LiquidityOracleInstruction::UpdateTokenDistribution { value } => {
                 msg!("LiquidityOracleInstruction: UpdateTokenDistribution");
                 Self::update_token_distribution(program_id, accounts, value)
+            }
+
+            LiquidityOracleInstruction::Migrate => {
+                msg!("LiquidityOracleInstruction: Migrate");
+                Self::migrate(program_id, accounts)
             }
         }
     }

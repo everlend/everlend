@@ -11,6 +11,7 @@ use everlend_general_pool::find_withdrawal_requests_program_address;
 use everlend_liquidity_oracle::find_liquidity_oracle_token_distribution_program_address;
 use everlend_utils::find_program_address;
 
+use crate::deprecated::deprecated_find_rebalancing_program_address;
 use crate::{find_rebalancing_program_address, find_transit_program_address};
 
 /// Instructions supported by the program
@@ -19,6 +20,8 @@ pub enum DepositorInstruction {
     /// Initializes a new depositor
     ///
     /// Accounts:
+    /// [R] Registry
+    /// [R] Registry config
     /// [W] Depositor account - uninitialized
     /// [R] General pool market
     /// [R] Income pool market
@@ -121,6 +124,25 @@ pub enum DepositorInstruction {
     /// [R] Everlend ULP program id
     /// [R] Money market program id
     Withdraw,
+
+    /// Migrate depositor to v1
+    ///
+    /// Accounts
+    /// [S] Depositor
+    /// [R] Registry
+    /// [R] Registry config
+    MigrateDepositor,
+
+    /// Migrate rebalancing.
+    /// Accounts:
+    /// [WS] From account
+    /// [R] Depositor
+    /// [R] Liquidity mint
+    /// [W] Rebalancing account
+    /// [W] Rebalancing account deprecated
+    /// [R] Rent sysvar
+    /// [R] System program
+    MigrateRebalancing,
 }
 
 /// Creates 'Init' instruction.
@@ -137,6 +159,7 @@ pub fn init(
         everlend_registry::find_config_program_address(&everlend_registry::id(), registry);
 
     let accounts = vec![
+        AccountMeta::new_readonly(*registry, false),
         AccountMeta::new_readonly(registry_config, false),
         AccountMeta::new(*depositor, false),
         AccountMeta::new_readonly(*general_pool_market, false),
@@ -400,4 +423,55 @@ pub fn withdraw(
     accounts.extend(money_market_accounts);
 
     Instruction::new_with_borsh(*program_id, &DepositorInstruction::Withdraw, accounts)
+}
+
+/// Creates 'MigrateDepositor' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn migrate_depositor(
+    program_id: &Pubkey,
+    depositor: &Pubkey,
+    registry: &Pubkey,
+) -> Instruction {
+    let (registry_config, _) =
+        everlend_registry::find_config_program_address(&everlend_registry::id(), registry);
+
+    let accounts = vec![
+        AccountMeta::new(*depositor, true),
+        AccountMeta::new_readonly(*registry, false),
+        AccountMeta::new_readonly(registry_config, false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &DepositorInstruction::MigrateDepositor,
+        accounts,
+    )
+}
+
+/// Creates 'MigrateRebalancing' instruction.
+pub fn migrate_rebalancing(
+    program_id: &Pubkey,
+    from: &Pubkey,
+    depositor: &Pubkey,
+    liquidity_mint: &Pubkey,
+) -> Instruction {
+    let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
+    let (deprecated_rebalancing, _) =
+        deprecated_find_rebalancing_program_address(program_id, depositor, liquidity_mint);
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*from, true),
+        AccountMeta::new_readonly(*depositor, false),
+        AccountMeta::new_readonly(*liquidity_mint, false),
+        AccountMeta::new(rebalancing, false),
+        AccountMeta::new(deprecated_rebalancing, false),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+        AccountMeta::new_readonly(system_program::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &DepositorInstruction::MigrateRebalancing,
+        accounts,
+    )
 }

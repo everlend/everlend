@@ -26,6 +26,7 @@ pub use ulp_pool_borrow_authority::*;
 pub use ulp_pool_market::*;
 pub use users::*;
 
+pub mod close_account;
 pub mod depositor;
 pub mod general_pool;
 pub mod general_pool_borrow_authority;
@@ -325,6 +326,27 @@ pub async fn mint_tokens(
             &context.payer.pubkey(),
             &[],
             amount,
+        )
+        .unwrap()],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    context.banks_client.process_transaction(tx).await
+}
+
+pub async fn close_account(
+    context: &mut ProgramTestContext,
+    account: &Pubkey,
+) -> BanksClientResult<()> {
+    let tx = Transaction::new_signed_with_payer(
+        &[spl_token::instruction::close_account(
+            &spl_token::id(),
+            account,
+            &context.payer.pubkey(),
+            &context.payer.pubkey(),
+            &[],
         )
         .unwrap()],
         Some(&context.payer.pubkey()),

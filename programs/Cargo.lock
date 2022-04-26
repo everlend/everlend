@@ -1118,6 +1118,7 @@ dependencies = [
  "anyhow",
  "bs58 0.2.5",
  "clap",
+ "dirs-next",
  "everlend-depositor",
  "everlend-general-pool",
  "everlend-income-pools",

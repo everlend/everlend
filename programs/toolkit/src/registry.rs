@@ -1,3 +1,5 @@
+use std::convert::TryInto;
+
 use solana_client::client_error::ClientError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_sdk::{
@@ -6,7 +8,7 @@ use solana_sdk::{
     transaction::Transaction,
 };
 
-use everlend_registry::state::PoolMarketsConfig;
+use everlend_registry::state::{PoolMarketsConfig, RegistryConfig, TOTAL_DISTRIBUTIONS};
 use everlend_registry::{
     find_config_program_address,
     state::{Registry, SetRegistryConfigParams},
@@ -78,4 +80,45 @@ pub fn set_registry_config(
         find_config_program_address(&everlend_registry::id(), registry_pubkey);
 
     Ok(registry_config_pubkey)
+}
+
+pub fn migrate_registry_config(config: &Config) -> Result<(), anyhow::Error> {
+    let accounts = config.get_initialized_accounts();
+
+    let mut ulp_pool_markets = accounts.mm_pool_markets.clone();
+
+    ulp_pool_markets.extend_from_slice(
+        vec![Pubkey::default(); TOTAL_DISTRIBUTIONS - ulp_pool_markets.len()].as_slice(),
+    );
+
+    let pool_markets_cfg = PoolMarketsConfig {
+        general_pool_market: accounts.general_pool_market,
+        income_pool_market: accounts.income_pool_market,
+        ulp_pool_markets: ulp_pool_markets.try_into().unwrap(),
+    };
+
+    println!("Sending migration itx ...");
+    let tx = Transaction::new_with_payer(
+        &[everlend_registry::instruction::migrate_registry_config(
+            &everlend_registry::id(),
+            &accounts.registry,
+            &config.fee_payer.pubkey(),
+            pool_markets_cfg,
+        )],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+
+    let (new_registry_config, _) =
+        find_config_program_address(&everlend_registry::id(), &accounts.registry);
+
+    let new_registry: RegistryConfig = config.get_account_unpack(&new_registry_config)?;
+
+    println!(
+        "Migration of RgistryConfig successfully: \n{:?}",
+        new_registry
+    );
+
+    Ok(())
 }

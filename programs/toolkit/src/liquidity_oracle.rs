@@ -1,8 +1,3 @@
-use crate::utils::*;
-use everlend_liquidity_oracle::{
-    find_liquidity_oracle_token_distribution_program_address, instruction,
-    state::{DistributionArray, LiquidityOracle},
-};
 use solana_client::client_error::ClientError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_sdk::{
@@ -10,6 +5,14 @@ use solana_sdk::{
     signer::Signer,
     transaction::Transaction,
 };
+
+use everlend_liquidity_oracle::state::TokenDistribution;
+use everlend_liquidity_oracle::{
+    find_liquidity_oracle_token_distribution_program_address, instruction,
+    state::{DistributionArray, LiquidityOracle},
+};
+
+use crate::utils::*;
 
 pub fn init(config: &Config, oracle_keypair: Option<Keypair>) -> Result<Pubkey, ClientError> {
     let oracle_keypair = oracle_keypair.unwrap_or_else(Keypair::new);
@@ -114,4 +117,60 @@ pub fn update_token_distribution(
     );
 
     Ok(token_distribution_pubkey)
+}
+
+fn migrate(config: &Config, token_mint: Pubkey) -> Result<(), ClientError> {
+    let accounts = config.get_initialized_accounts();
+
+    let liqduidty_mint = &token_mint;
+
+    println!("Sending migration itx ...");
+    let tx = Transaction::new_with_payer(
+        &[instruction::migrate(
+            &everlend_liquidity_oracle::id(),
+            &accounts.liquidity_oracle,
+            &config.fee_payer.pubkey(),
+            &liqduidty_mint,
+        )],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+
+    let (new_acc_key, _) = find_liquidity_oracle_token_distribution_program_address(
+        &everlend_depositor::id(),
+        &accounts.liquidity_oracle,
+        &liqduidty_mint,
+    );
+
+    let new: TokenDistribution = config.get_account_unpack(&new_acc_key)?;
+
+    println!("Migration of TokenDistribution successfully: \n{:?}", new);
+
+    Ok(())
+}
+
+pub fn migrate_wrapper(config: &Config, token_mint: Option<&str>) -> Result<(), anyhow::Error> {
+    let default_accounts = config.get_default_accounts();
+
+    let (mint_map, _) = get_asset_maps(default_accounts);
+
+    if token_mint.is_none() {
+        mint_map
+            .iter()
+            .map(|mint| {
+                println!("Migration for {}: {}", mint.0, mint.1);
+                migrate(config, *mint.1)
+            })
+            .collect::<Result<Vec<()>, ClientError>>()?;
+        print!("Migration completed for all mints");
+    } else {
+        let mint_name = token_mint.unwrap();
+        let mint = mint_map
+            .get(mint_name)
+            .expect(&format!("Mint not found for token: {}", mint_name));
+        println!("Migration for {}: {}", mint_name, mint);
+        migrate(config, *mint)?;
+    }
+    Ok(())
 }

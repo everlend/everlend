@@ -4,6 +4,7 @@ use std::cmp::Ordering;
 
 use borsh::BorshDeserialize;
 use solana_program::program_error::ProgramError;
+use solana_program::program_memory::sol_memset;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     clock::Clock,
@@ -25,14 +26,16 @@ use everlend_liquidity_oracle::{
 };
 use everlend_registry::state::RegistryConfig;
 use everlend_utils::{
-    assert_account_key, assert_owned_by, assert_rent_exempt, cpi, find_program_address,
-    EverlendError,
+    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
+    cpi, find_program_address, EverlendError,
 };
 
-use crate::state::AccountType;
+use crate::deprecated::deprecated_find_rebalancing_program_address;
+use crate::state::{DeprecatedDepositor, DeprecatedRebalancing};
 use crate::{
     find_rebalancing_program_address, find_transit_program_address,
     instruction::DepositorInstruction,
+    seed,
     state::{
         Depositor, InitDepositorParams, InitRebalancingParams, Rebalancing, RebalancingOperation,
     },
@@ -47,7 +50,15 @@ impl Processor {
     pub fn init(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
 
+        let registry_info = next_account_info(account_info_iter)?;
         let registry_config_info = next_account_info(account_info_iter)?;
+
+        let (registry_config, _) = everlend_registry::find_config_program_address(
+            &everlend_registry::id(),
+            registry_info.key,
+        );
+        assert_account_key(registry_config_info, &registry_config)?;
+
         let config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
 
         let depositor_info = next_account_info(account_info_iter)?;
@@ -60,6 +71,7 @@ impl Processor {
         assert_rent_exempt(rent, depositor_info)?;
 
         assert_owned_by(registry_config_info, &everlend_registry::id())?;
+        assert_owned_by(registry_info, &everlend_registry::id())?;
         assert_owned_by(depositor_info, program_id)?;
         assert_owned_by(general_pool_market_info, &config.general_pool_program_id)?;
         assert_owned_by(income_pool_market_info, &config.income_pools_program_id)?;
@@ -74,22 +86,32 @@ impl Processor {
             &config.pool_markets_cfg.income_pool_market,
         )?;
 
-        // Check that account data uninitialized.
-        // todo need refactor fn assert_uninitialized(..)
-        if depositor_info
-            .data
-            .borrow()
-            .get(Depositor::ACCOUNT_TYPE_BYTE_INDEX)
-            .ok_or(ProgramError::InvalidAccountData)?
-            != &(AccountType::Uninitialized as u8)
-        {
-            return Err(ProgramError::AccountAlreadyInitialized);
-        }
+        let mut depositor = Depositor::unpack_unchecked(&depositor_info.data.borrow())?;
+        assert_uninitialized(&depositor)?;
 
-        let depositor = Depositor::new(InitDepositorParams {
+        depositor.init(InitDepositorParams {
             liquidity_oracle: *liquidity_oracle_info.key,
-            registry_config: *registry_config_info.key,
+            registry: *registry_info.key,
         });
+
+        // {
+        //     // Check that account data uninitialized.
+        //     // todo need refactor fn assert_uninitialized(..)
+        //     if depositor_info
+        //         .data
+        //         .borrow()
+        //         .get(Depositor::ACCOUNT_TYPE_BYTE_INDEX)
+        //         .ok_or(ProgramError::InvalidAccountData)?
+        //         != &(AccountType::Uninitialized as u8)
+        //     {
+        //         return Err(ProgramError::AccountAlreadyInitialized);
+        //     }
+        // }
+        //
+        // let depositor = Depositor::new(InitDepositorParams {
+        //     liquidity_oracle: *liquidity_oracle_info.key,
+        //     registry: *registry_info.key,
+        // });
 
         Depositor::pack(depositor, *depositor_info.data.borrow_mut())?;
 
@@ -194,7 +216,11 @@ impl Processor {
 
         // Get depositor state
         let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
-        assert_account_key(registry_config_info, &depositor.registry_config)?;
+        let (registry_config, _) = everlend_registry::find_config_program_address(
+            &everlend_registry::id(),
+            &depositor.registry,
+        );
+        assert_account_key(registry_config_info, &registry_config)?;
 
         let config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
 
@@ -216,8 +242,9 @@ impl Processor {
         let mut rebalancing = match rebalancing_info.lamports() {
             // Create rebalancing account
             0 => {
+                let seed = seed();
                 let signers_seeds = &[
-                    "rebalancing".as_bytes(),
+                    seed.as_bytes(),
                     &depositor_info.key.to_bytes()[..32],
                     &mint_info.key.to_bytes()[..32],
                     &[bump_seed],
@@ -401,7 +428,12 @@ impl Processor {
 
         // Get depositor state
         let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
-        assert_account_key(registry_config_info, &depositor.registry_config)?;
+
+        let (registry_config, _) = everlend_registry::find_config_program_address(
+            &everlend_registry::id(),
+            &depositor.registry,
+        );
+        assert_account_key(registry_config_info, &registry_config)?;
 
         let registry_config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
         let ulp_program_id = &registry_config.ulp_program_id;
@@ -521,7 +553,12 @@ impl Processor {
 
         // Get depositor state
         let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
-        assert_account_key(registry_config_info, &depositor.registry_config)?;
+
+        let (registry_config, _) = everlend_registry::find_config_program_address(
+            &everlend_registry::id(),
+            &depositor.registry,
+        );
+        assert_account_key(registry_config_info, &registry_config)?;
 
         let registry_config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
         let ulp_program_id = &registry_config.ulp_program_id;
@@ -601,6 +638,126 @@ impl Processor {
         Ok(())
     }
 
+    /// Process MigrateDepositor instruction
+    pub fn migrate_depositor(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+
+        let depositor_info = next_account_info(account_info_iter)?;
+        let registry_info = next_account_info(account_info_iter)?;
+        let registry_config_info = next_account_info(account_info_iter)?;
+
+        assert_signer(depositor_info)?;
+
+        assert_owned_by(registry_config_info, &everlend_registry::id())?;
+        assert_owned_by(registry_info, &everlend_registry::id())?;
+        assert_owned_by(depositor_info, program_id)?;
+
+        let (registry_config, _) = everlend_registry::find_config_program_address(
+            &everlend_registry::id(),
+            registry_info.key,
+        );
+        assert_account_key(registry_config_info, &registry_config)?;
+
+        // Get deprecated depositor state
+        let deprecated_depositor = DeprecatedDepositor::unpack(&depositor_info.data.borrow())?;
+
+        let registry_config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
+        if &deprecated_depositor.general_pool_market
+            != &registry_config.pool_markets_cfg.general_pool_market
+        {
+            Err(ProgramError::InvalidArgument)?;
+        }
+
+        if &deprecated_depositor.income_pool_market
+            != &registry_config.pool_markets_cfg.income_pool_market
+        {
+            Err(ProgramError::InvalidArgument)?;
+        }
+
+        let actual_depositor = Depositor::new(InitDepositorParams {
+            liquidity_oracle: deprecated_depositor.liquidity_oracle,
+            registry: *registry_info.key,
+        });
+
+        sol_memset(*depositor_info.data.borrow_mut(), 0, Depositor::LEN);
+        Depositor::pack(actual_depositor, *depositor_info.data.borrow_mut())?;
+
+        Ok(())
+    }
+
+    /// Process MigrateRebalancing instruction
+    pub fn migrate_rebalancing(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+
+        let from_info = next_account_info(account_info_iter)?;
+        let depositor_info = next_account_info(account_info_iter)?;
+        let liquidity_mint_info = next_account_info(account_info_iter)?;
+        let rebalancing_info = next_account_info(account_info_iter)?;
+        let deprecated_rebalancing_info = next_account_info(account_info_iter)?;
+        let rent_info = next_account_info(account_info_iter)?;
+        let rent = &Rent::from_account_info(rent_info)?;
+        let _system_program_info = next_account_info(account_info_iter)?;
+
+        assert_signer(from_info)?;
+
+        assert_owned_by(rebalancing_info, &everlend_registry::id())?;
+        assert_owned_by(depositor_info, program_id)?;
+
+        let (rebalancing_pubkey, bump_seed) = find_rebalancing_program_address(
+            program_id,
+            depositor_info.key,
+            liquidity_mint_info.key,
+        );
+        assert_account_key(rebalancing_info, &rebalancing_pubkey)?;
+
+        let (deprecated_rebalancing_pubkey, _) = deprecated_find_rebalancing_program_address(
+            program_id,
+            depositor_info.key,
+            liquidity_mint_info.key,
+        );
+        assert_account_key(deprecated_rebalancing_info, &deprecated_rebalancing_pubkey)?;
+
+        // Get deprecated depositor state
+        let deprecated_rebalancing =
+            DeprecatedRebalancing::unpack(&deprecated_rebalancing_info.data.borrow())?;
+        assert_account_key(liquidity_mint_info, &deprecated_rebalancing.mint)?;
+        assert_account_key(depositor_info, &deprecated_rebalancing.depositor)?;
+
+        let from_starting_lamports = from_info.lamports();
+        let deprecated_lamports = deprecated_rebalancing_info.lamports();
+
+        **deprecated_rebalancing_info.lamports.borrow_mut() = 0;
+        **from_info.lamports.borrow_mut() = from_starting_lamports
+            .checked_add(deprecated_lamports)
+            .ok_or(EverlendError::MathOverflow)?;
+
+        let seed = seed();
+
+        let signers_seeds = &[
+            seed.as_bytes(),
+            &depositor_info.key.to_bytes()[..32],
+            &liquidity_mint_info.key.to_bytes()[..32],
+            &[bump_seed],
+        ];
+
+        cpi::system::create_account::<Rebalancing>(
+            program_id,
+            from_info.clone(),
+            rebalancing_info.clone(),
+            &[signers_seeds],
+            rent,
+        )?;
+
+        let tmp = Rebalancing::unpack_unchecked(*rebalancing_info.data.borrow())?;
+        assert_uninitialized(&tmp)?;
+
+        let rebalancing = deprecated_rebalancing.into();
+
+        Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
+
+        Ok(())
+    }
+
     /// Instruction processing router
     pub fn process_instruction(
         program_id: &Pubkey,
@@ -633,6 +790,16 @@ impl Processor {
             DepositorInstruction::Withdraw => {
                 msg!("DepositorInstruction: Withdraw");
                 Self::withdraw(program_id, accounts)
+            }
+
+            DepositorInstruction::MigrateDepositor => {
+                msg!("DepositorInstruction: MigrateDepositor");
+                Self::migrate_depositor(program_id, accounts)
+            }
+
+            DepositorInstruction::MigrateRebalancing => {
+                msg!("DepositorInstruction: MigrateRebalancing");
+                Self::migrate_rebalancing(program_id, accounts)
             }
         }
     }
