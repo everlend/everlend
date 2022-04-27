@@ -38,8 +38,7 @@ pub fn init(config: &Config, registry_keypair: Option<Keypair>) -> Result<Pubkey
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(
-        config,
+    config.sign_and_send_and_confirm_transaction(
         tx,
         vec![config.fee_payer.as_ref(), &registry_keypair],
     )?;
@@ -68,7 +67,7 @@ pub fn set_registry_config(
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
     let (registry_config_pubkey, _) =
         find_config_program_address(&everlend_registry::id(), registry_pubkey);
