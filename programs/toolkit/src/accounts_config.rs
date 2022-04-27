@@ -49,6 +49,9 @@ pub struct DefaultAccounts {
     #[serde_as(as = "PubkeyAsString")]
     pub larix_reserve_sol_supply: Pubkey,
 
+    #[serde_as(as = "PubkeyAsString")]
+    pub multisig_program_id: Pubkey,
+
     #[serde(default)]
     #[serde_as(as = "Vec<PubkeyAsString>")]
     pub sol_collateral: Vec<Pubkey>,

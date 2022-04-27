@@ -50,8 +50,7 @@ pub fn init(
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(
-        config,
+    config.sign_and_send_and_confirm_transaction(
         tx,
         vec![config.fee_payer.as_ref(), &depositor_keypair],
     )?;
@@ -97,7 +96,7 @@ pub fn create_transit(
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
     Ok(transit_pubkey)
 }
@@ -128,7 +127,7 @@ pub fn start_rebalancing(
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
     let (rebalancing_pubkey, _) =
         find_rebalancing_program_address(&everlend_depositor::id(), depositor_pubkey, token_mint);
@@ -168,7 +167,7 @@ pub fn deposit(
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
     Ok(())
 }
@@ -206,7 +205,7 @@ pub fn withdraw(
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
     Ok(())
 }

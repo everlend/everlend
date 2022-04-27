@@ -5,6 +5,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.42"
+anchor-lang = "0.24.2"
 bs58 = "0.2.5"
 clap = "2.33.3"
 url = "2.2.2"
