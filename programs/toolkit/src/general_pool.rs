@@ -297,7 +297,6 @@ pub fn migrate_withdraw_requests(
     token_mint: &Pubkey,
 ) -> Result<(), ClientError> {
 
-
     let tx = Transaction::new_with_payer(
         &[instruction::migrate_withdraw_request_account(
             &everlend_general_pool::id(),
@@ -309,7 +308,7 @@ pub fn migrate_withdraw_requests(
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
     Ok(())
 }

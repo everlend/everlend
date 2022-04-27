@@ -267,22 +267,24 @@ async fn command_info(config: &Config, accounts_path: &str) -> anyhow::Result<()
 
 async fn command_run_migrate(
     config: &Config,
+    accounts_path: &str,
     case: Option<String>,
 ) -> anyhow::Result<()> {
 
-    let initialized_accounts = get_initialized_accounts(config);
+    let initialiazed_accounts = InitializedAccounts::load(accounts_path).unwrap_or_default();
 
     if case.is_none(){
         println!("Migrate token mint not presented");
         return Ok(())
     }
 
-    let token = initialized_accounts.token_accounts.get(&case.unwrap()).unwrap();
+    let token = initialiazed_accounts.token_accounts.get(&case.unwrap()).unwrap();
+    println!("Accounts {} {} {}",initialiazed_accounts.general_pool_market, token.general_pool,token.mint);
 
     println!("Migrate withdraw requests");
     general_pool::migrate_withdraw_requests(
         config,
-        &initialized_accounts.general_pool_market,
+        &initialiazed_accounts.general_pool_market,
         &token.general_pool,
         &token.mint,
     )?;
@@ -564,6 +566,25 @@ async fn main() -> anyhow::Result<()> {
                         ),
                 ),
         )
+        .subcommand(
+            SubCommand::with_name("migrate-general-pool")
+                .about("Migrate general pool account")
+                .arg(
+                    Arg::with_name("case")
+                        .value_name("TOKEN")
+                        .takes_value(true)
+                        .index(1)
+                        .help("Case"),
+                )
+                .arg(
+                    Arg::with_name("accounts")
+                        .short("A")
+                        .long("accounts")
+                        .value_name("PATH")
+                        .takes_value(true)
+                        .help("Accounts file"),
+                ),
+        )
         .get_matches();
 
     let mut wallet_manager = None;
@@ -705,8 +726,9 @@ async fn main() -> anyhow::Result<()> {
             Ok(())
         }
         ("migrate-general-pool", Some(arg_matches)) => {
+            let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
             let case = value_of::<String>(arg_matches, "case");
-            command_run_migrate(&config, case).await
+            command_run_migrate(&config, accounts_path, case).await
         }
         _ => unreachable!(),
     }
