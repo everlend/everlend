@@ -121,8 +121,8 @@ pub async fn command_run_test(
     let deposit = |i: usize| {
         println!("Rebalancing: Deposit: {}", i);
         let pubkeys = match i {
-            1 => MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
-            2 => MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
+            0 => MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
+            1 => MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
             _ => MoneyMarketPubkeys::Solend(solend_pubkeys.clone()),
         };
 
@@ -143,8 +143,8 @@ pub async fn command_run_test(
     let withdraw = |i| {
         println!("Rebalancing: Withdraw: {}", i);
         let pubkeys = match i {
-            1 => MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
-            2 => MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
+            0 => MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
+            1 => MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
             _ => MoneyMarketPubkeys::Solend(solend_pubkeys.clone()),
         };
 
