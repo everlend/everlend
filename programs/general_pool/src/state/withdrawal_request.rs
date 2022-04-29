@@ -1,4 +1,4 @@
-use super::AccountType;
+use super::{AccountType, AccountVersion};
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use everlend_utils::EverlendError;
 use solana_program::{
@@ -13,12 +13,18 @@ use solana_program::{
 /// How long after the request, you can execute a withdraw
 pub const WITHDRAW_DELAY: Slot = 200;
 
+/// Actual version of withdrawal requests struct
+pub const ACTUAL_VERSION: AccountVersion = AccountVersion::V0;
+
 /// Withdrawal requests
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
 pub struct WithdrawalRequests {
     /// Account type - WithdrawalRequests
     pub account_type: AccountType,
+
+    /// Account version
+    pub account_version: AccountVersion,
 
     /// Pool
     pub pool: Pubkey,
@@ -42,6 +48,7 @@ impl WithdrawalRequests {
     /// Initialize a withdrawal requests
     pub fn init(&mut self, params: InitWithdrawalRequestsParams) {
         self.account_type = AccountType::WithdrawRequests;
+        self.account_version = ACTUAL_VERSION;
         self.pool = params.pool;
         self.mint = params.mint;
     }
@@ -69,8 +76,8 @@ impl WithdrawalRequests {
 
 impl Sealed for WithdrawalRequests {}
 impl Pack for WithdrawalRequests {
-    // 1 + 32 + 32 + 8
-    const LEN: usize = 73;
+    // 1 + 1 + 32 + 32 + 8
+    const LEN: usize = 74;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;
@@ -91,6 +98,7 @@ impl IsInitialized for WithdrawalRequests {
     fn is_initialized(&self) -> bool {
         self.account_type != AccountType::Uninitialized
             && self.account_type == AccountType::WithdrawRequests
+            && self.account_version == ACTUAL_VERSION
     }
 }
 

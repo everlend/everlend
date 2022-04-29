@@ -12,6 +12,7 @@ pub mod utils;
 pub mod entrypoint;
 
 // Export current sdk types for downstream users building with a different sdk version
+use crate::state::ACTUAL_VERSION;
 pub use solana_program;
 use solana_program::{instruction::AccountMeta, pubkey::Pubkey, system_program, sysvar};
 
@@ -52,12 +53,20 @@ pub fn find_withdrawal_requests_program_address(
 ) -> (Pubkey, u8) {
     Pubkey::find_program_address(
         &[
-            br"withdrawals",
+            withdrawal_requests_seed().as_bytes(),
             &pool_market_pubkey.to_bytes(),
             &token_mint.to_bytes(),
         ],
         program_id,
     )
+}
+
+/// Generates withdrawal requests seed
+pub fn withdrawal_requests_seed() -> String {
+    let mut withdrawal_requests_seed = "withdrawals".to_owned();
+    withdrawal_requests_seed.push_str(&ACTUAL_VERSION.to_string());
+
+    return withdrawal_requests_seed;
 }
 
 /// Generates user withdrawal request address

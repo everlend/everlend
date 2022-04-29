@@ -17,7 +17,6 @@ use solana_program::{
     sysvar::Sysvar,
 };
 use spl_token::state::{Account, Mint};
-use std::str::FromStr;
 
 use crate::state::{InitWithdrawalRequestParams, InitWithdrawalRequestsParams, WITHDRAW_DELAY};
 use crate::{
@@ -30,13 +29,11 @@ use crate::{
         PoolBorrowAuthority, PoolMarket, WithdrawalRequest, WithdrawalRequests,
     },
     utils::*,
+    withdrawal_requests_seed,
 };
 
 /// Program state handler.
 pub struct Processor {}
-
-/// Sol mint
-const SOL_MINT: &str = "So11111111111111111111111111111111111111112";
 
 impl Processor {
     /// Process InitPoolMarket instruction
@@ -167,8 +164,9 @@ impl Processor {
         );
         assert_account_key(withdrawal_requests_info, &withdrawal_requests_pubkey)?;
 
+        let withdrawal_requests_seed = withdrawal_requests_seed();
         let signers_seeds = &[
-            br"withdrawals",
+            withdrawal_requests_seed.as_bytes(),
             &pool_market_info.key.to_bytes()[..32],
             &token_mint_info.key.to_bytes()[..32],
             &[bump_seed],
@@ -471,16 +469,14 @@ impl Processor {
             return Err(EverlendError::WithdrawRequestsInvalidTicket.into());
         }
 
-        if pool.token_mint == Pubkey::from_str(SOL_MINT).unwrap() {
+        if pool.token_mint == spl_token::native_mint::id() {
             let token_mint_info = next_account_info(account_info_iter)?;
             assert_account_key(token_mint_info, &pool.token_mint)?;
 
             let unwrap_sol_info = next_account_info(account_info_iter)?;
             // Check withdraw requests account
-            let (unwrap_sol_pubkey, bump_seed) = find_transit_sol_unwrap_address(
-                program_id,
-                withdrawal_request_info.key,
-            );
+            let (unwrap_sol_pubkey, bump_seed) =
+                find_transit_sol_unwrap_address(program_id, withdrawal_request_info.key);
 
             assert_account_key(unwrap_sol_info, &unwrap_sol_pubkey)?;
 
@@ -621,7 +617,7 @@ impl Processor {
         assert_account_key(token_account_info, &pool.token_account)?;
         assert_account_key(pool_mint_info, &pool.pool_mint)?;
 
-        if pool.token_mint != Pubkey::from_str(SOL_MINT).unwrap() {
+        if pool.token_mint != spl_token::native_mint::id() {
             let destination_account = Account::unpack(&destination_info.data.borrow())?;
             if pool.token_mint != destination_account.mint {
                 return Err(ProgramError::InvalidArgument);
@@ -822,6 +818,11 @@ impl Processor {
         Ok(())
     }
 
+    /// Migrate withdraw request
+    pub fn migrate_instruction(_program_id: &Pubkey, _accounts: &[AccountInfo]) -> ProgramResult {
+        Err(EverlendError::TemporaryUnavailable.into())
+    }
+
     /// Instruction processing router
     pub fn process_instruction(
         program_id: &Pubkey,
@@ -882,6 +883,11 @@ impl Processor {
             } => {
                 msg!("LiquidityPoolsInstruction: Repay");
                 Self::repay(program_id, amount, interest_amount, accounts)
+            }
+
+            LiquidityPoolsInstruction::MigrationInstruction => {
+                msg!("LiquidityPoolsInstruction: MigrationInstruction");
+                Self::migrate_instruction(program_id, accounts)
             }
         }
     }

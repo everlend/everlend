@@ -169,6 +169,10 @@ pub enum LiquidityPoolsInstruction {
         /// Collateral amount
         collateral_amount: u64,
     },
+
+    /// Migrate account data
+    ///
+    MigrationInstruction,
 }
 
 /// Creates 'InitPoolMarket' instruction.
@@ -497,6 +501,18 @@ pub fn repay(
             amount,
             interest_amount,
         },
+        accounts,
+    )
+}
+
+/// Creates 'Migration' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn migrate_instruction(program_id: &Pubkey) -> Instruction {
+    let accounts = vec![];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &LiquidityPoolsInstruction::MigrationInstruction,
         accounts,
     )
 }

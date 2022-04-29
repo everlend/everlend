@@ -62,6 +62,9 @@ pub struct DefaultAccounts {
     #[serde_as(as = "PubkeyAsString")]
     pub solend_reserve_switchboard_oracle: Pubkey,
 
+    #[serde_as(as = "PubkeyAsString")]
+    pub multisig_program_id: Pubkey,
+
     #[serde(default)]
     #[serde_as(as = "Vec<PubkeyAsString>")]
     pub sol_collateral: Vec<Pubkey>,

@@ -1,5 +1,6 @@
 //! State types
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+use std::fmt;
 
 mod pool;
 mod pool_borrow_authority;
@@ -31,6 +32,27 @@ pub enum AccountType {
 impl Default for AccountType {
     fn default() -> Self {
         AccountType::Uninitialized
+    }
+}
+
+/// Enum representing the account version managed by the program
+#[derive(Clone, Debug, PartialEq, BorshDeserialize, BorshSerialize, BorshSchema)]
+pub enum AccountVersion {
+    /// Default version 0
+    V0,
+    /// Updated version
+    V1,
+}
+
+impl Default for AccountVersion {
+    fn default() -> Self {
+        AccountVersion::V0
+    }
+}
+
+impl fmt::Display for AccountVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
     }
 }
 

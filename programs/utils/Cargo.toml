@@ -13,9 +13,12 @@ anchor-lang = "0.24.2"
 spl-token = { version = "3.1", features = [ "no-entrypoint" ] }
 spl-token-lending = { git = "https://github.com/everlend/solana-program-library", features = [ "no-entrypoint" ] }
 port-variable-rate-lending-instructions = "0.2.9"
-larix-lending = { git = "https://github.com/ProjectLarix/larix-lending", features = [ "no-entrypoint" ], branch = "lp-v2" }
+larix-lending = { git = "https://github.com/ProjectLarix/larix-lending", features = [ "no-entrypoint" ] }
 borsh = "0.9.0"
 solend-program = { git = "https://github.com/everlend/solend-program", features = [ "no-entrypoint" ], branch = "mainnet" }
+
+[patch.'https://github.com/ProjectLarix/larix-lending']
+larix-lending = { git = 'https://github.com/vecheslav/larix-lending', branch = 'lp-v2' }
 
 [dev-dependencies]
 solana-sdk = "1.9.13"
