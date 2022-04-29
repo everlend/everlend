@@ -19,24 +19,27 @@ use solana_program::{
 use spl_token::state::{Account, Mint};
 use std::str::FromStr;
 
-use crate::state::{InitWithdrawalRequestParams, InitWithdrawalRequestsParams, WITHDRAW_DELAY};
+use crate::state::{
+    InitWithdrawalRequestParams, InitWithdrawalRequestsDeprecatedParams,
+    InitWithdrawalRequestsParams, WITHDRAW_DELAY,
+};
 use crate::{
     find_pool_borrow_authority_program_address, find_pool_program_address,
     find_transit_program_address, find_transit_sol_unwrap_address,
     find_withdrawal_request_program_address, find_withdrawal_requests_program_address,
+    find_withdrawal_requests_program_address_deprecated,
     instruction::LiquidityPoolsInstruction,
     state::{
         InitPoolBorrowAuthorityParams, InitPoolMarketParams, InitPoolParams, Pool,
         PoolBorrowAuthority, PoolMarket, WithdrawalRequest, WithdrawalRequests,
+        WithdrawalRequestsDeprecated,
     },
     utils::*,
+    withdrawal_requests_seed,
 };
 
 /// Program state handler.
 pub struct Processor {}
-
-/// Sol mint
-const SOL_MINT: &str = "So11111111111111111111111111111111111111112";
 
 impl Processor {
     /// Process InitPoolMarket instruction
@@ -160,11 +163,12 @@ impl Processor {
         )?;
 
         // Check withdraw requests account
-        let (withdrawal_requests_pubkey, bump_seed) = find_withdrawal_requests_program_address(
-            program_id,
-            pool_market_info.key,
-            token_mint_info.key,
-        );
+        let (withdrawal_requests_pubkey, bump_seed) =
+            find_withdrawal_requests_program_address_deprecated(
+                program_id,
+                pool_market_info.key,
+                token_mint_info.key,
+            );
         assert_account_key(withdrawal_requests_info, &withdrawal_requests_pubkey)?;
 
         let signers_seeds = &[
@@ -174,7 +178,7 @@ impl Processor {
             &[bump_seed],
         ];
 
-        cpi::system::create_account::<WithdrawalRequests>(
+        cpi::system::create_account::<WithdrawalRequestsDeprecated>(
             program_id,
             manager_info.clone(),
             withdrawal_requests_info.clone(),
@@ -182,16 +186,17 @@ impl Processor {
             rent,
         )?;
 
-        let mut withdrawal_requests =
-            WithdrawalRequests::unpack_unchecked(&withdrawal_requests_info.data.borrow())?;
+        let mut withdrawal_requests = WithdrawalRequestsDeprecated::unpack_unchecked(
+            &withdrawal_requests_info.data.borrow(),
+        )?;
         assert_uninitialized(&withdrawal_requests)?;
 
-        withdrawal_requests.init(InitWithdrawalRequestsParams {
+        withdrawal_requests.init(InitWithdrawalRequestsDeprecatedParams {
             pool: *pool_info.key,
             mint: *token_mint_info.key,
         });
 
-        WithdrawalRequests::pack(
+        WithdrawalRequestsDeprecated::pack(
             withdrawal_requests,
             *withdrawal_requests_info.data.borrow_mut(),
         )?;
@@ -427,6 +432,8 @@ impl Processor {
 
     /// Process Withdraw instruction
     pub fn withdraw(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+        return Err(EverlendError::TemporaryUnavailable.into());
+
         let account_info_iter = &mut accounts.iter();
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_market_authority_info = next_account_info(account_info_iter)?;
@@ -471,16 +478,14 @@ impl Processor {
             return Err(EverlendError::WithdrawRequestsInvalidTicket.into());
         }
 
-        if pool.token_mint == Pubkey::from_str(SOL_MINT).unwrap() {
+        if pool.token_mint == spl_token::native_mint::id() {
             let token_mint_info = next_account_info(account_info_iter)?;
             assert_account_key(token_mint_info, &pool.token_mint)?;
 
             let unwrap_sol_info = next_account_info(account_info_iter)?;
             // Check withdraw requests account
-            let (unwrap_sol_pubkey, bump_seed) = find_transit_sol_unwrap_address(
-                program_id,
-                withdrawal_request_info.key,
-            );
+            let (unwrap_sol_pubkey, bump_seed) =
+                find_transit_sol_unwrap_address(program_id, withdrawal_request_info.key);
 
             assert_account_key(unwrap_sol_info, &unwrap_sol_pubkey)?;
 
@@ -591,6 +596,8 @@ impl Processor {
         collateral_amount: u64,
         accounts: &[AccountInfo],
     ) -> ProgramResult {
+        return Err(EverlendError::TemporaryUnavailable.into());
+
         let account_info_iter = &mut accounts.iter();
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_info = next_account_info(account_info_iter)?;
@@ -621,7 +628,7 @@ impl Processor {
         assert_account_key(token_account_info, &pool.token_account)?;
         assert_account_key(pool_mint_info, &pool.pool_mint)?;
 
-        if pool.token_mint != Pubkey::from_str(SOL_MINT).unwrap() {
+        if pool.token_mint != spl_token::native_mint::id() {
             let destination_account = Account::unpack(&destination_info.data.borrow())?;
             if pool.token_mint != destination_account.mint {
                 return Err(ProgramError::InvalidArgument);
@@ -822,6 +829,103 @@ impl Processor {
         Ok(())
     }
 
+    /// Migrate withdraw request
+    pub fn withdraw_request_migrate(
+        program_id: &Pubkey,
+        accounts: &[AccountInfo],
+    ) -> ProgramResult {
+        // TODO check auth accounts
+        let account_info_iter = &mut accounts.iter();
+        let pool_market_info = next_account_info(account_info_iter)?;
+        let pool_info = next_account_info(account_info_iter)?;
+        let token_mint_info = next_account_info(account_info_iter)?;
+        let deprecated_withdrawal_requests_info = next_account_info(account_info_iter)?;
+        let withdrawal_requests_info = next_account_info(account_info_iter)?;
+        let manager_info = next_account_info(account_info_iter)?;
+        let rent_info = next_account_info(account_info_iter)?;
+        let rent = &Rent::from_account_info(rent_info)?;
+        let _system_program_info = next_account_info(account_info_iter)?;
+
+        assert_signer(manager_info)?;
+        assert_owned_by(pool_market_info, program_id)?;
+
+        // Get pool market state
+        let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+        assert_account_key(manager_info, &pool_market.manager)?;
+
+        // Get pool state
+        let pool = Pool::unpack(&pool_info.data.borrow())?;
+        assert_account_key(pool_market_info, &pool.pool_market)?;
+        assert_account_key(token_mint_info, &pool.token_mint)?;
+
+        // Check withdraw requests account
+        let (withdrawal_requests_pubkey_deprecated, _) =
+            find_withdrawal_requests_program_address_deprecated(
+                program_id,
+                pool_market_info.key,
+                token_mint_info.key,
+            );
+        assert_account_key(
+            deprecated_withdrawal_requests_info,
+            &withdrawal_requests_pubkey_deprecated,
+        )?;
+
+        let (withdrawal_requests_pubkey, bump_seed) = find_withdrawal_requests_program_address(
+            program_id,
+            pool_market_info.key,
+            token_mint_info.key,
+        );
+        assert_account_key(withdrawal_requests_info, &withdrawal_requests_pubkey)?;
+
+        let deprecated_withdrawal_requests = WithdrawalRequestsDeprecated::unpack_unchecked(
+            &deprecated_withdrawal_requests_info.data.borrow(),
+        )?;
+
+        let withdrawal_requests_seed = withdrawal_requests_seed();
+
+        let signers_seeds = &[
+            withdrawal_requests_seed.as_bytes(),
+            &pool_market_info.key.to_bytes()[..32],
+            &token_mint_info.key.to_bytes()[..32],
+            &[bump_seed],
+        ];
+
+        cpi::system::create_account::<WithdrawalRequests>(
+            program_id,
+            manager_info.clone(),
+            withdrawal_requests_info.clone(),
+            &[signers_seeds],
+            rent,
+        )?;
+
+        let mut withdrawal_requests =
+            WithdrawalRequests::unpack_unchecked(&withdrawal_requests_info.data.borrow())?;
+        assert_uninitialized(&withdrawal_requests)?;
+
+        withdrawal_requests.init(InitWithdrawalRequestsParams {
+            pool: deprecated_withdrawal_requests.pool,
+            mint: deprecated_withdrawal_requests.mint,
+        });
+
+        withdrawal_requests.liquidity_supply = deprecated_withdrawal_requests.liquidity_supply;
+
+        WithdrawalRequests::pack(
+            withdrawal_requests,
+            *withdrawal_requests_info.data.borrow_mut(),
+        )?;
+
+        // Close withdraw account and return rent
+        let from_starting_lamports = manager_info.lamports();
+        let deprecated_withdraw_request_lamports = deprecated_withdrawal_requests_info.lamports();
+
+        **deprecated_withdrawal_requests_info.lamports.borrow_mut() = 0;
+        **manager_info.lamports.borrow_mut() = from_starting_lamports
+            .checked_add(deprecated_withdraw_request_lamports)
+            .ok_or(EverlendError::MathOverflow)?;
+
+        Ok(())
+    }
+
     /// Instruction processing router
     pub fn process_instruction(
         program_id: &Pubkey,
@@ -882,6 +986,11 @@ impl Processor {
             } => {
                 msg!("LiquidityPoolsInstruction: Repay");
                 Self::repay(program_id, amount, interest_amount, accounts)
+            }
+
+            LiquidityPoolsInstruction::WithdrawRequestMigration => {
+                msg!("LiquidityPoolsInstruction: WithdrawRequestMigration");
+                Self::withdraw_request_migrate(program_id, accounts)
             }
         }
     }

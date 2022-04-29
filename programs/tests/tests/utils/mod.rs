@@ -42,7 +42,6 @@ pub use users::*;
 
 pub const EXP: u64 = 1_000_000_000;
 pub const REFRESH_INCOME_INTERVAL: u64 = 300; // About 2.5 min
-pub const SOL_MINT: &str = "So11111111111111111111111111111111111111112";
 
 pub type BanksClientResult<T> = transport::Result<T>;
 
