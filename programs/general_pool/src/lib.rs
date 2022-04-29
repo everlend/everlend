@@ -45,7 +45,7 @@ pub fn find_pool_borrow_authority_program_address(
     )
 }
 
-/// Generates withdrawal requests address deprecated
+/// Generates withdrawal requests address
 pub fn find_withdrawal_requests_program_address(
     program_id: &Pubkey,
     pool_market_pubkey: &Pubkey,
@@ -67,22 +67,6 @@ pub fn withdrawal_requests_seed() -> String {
     withdrawal_requests_seed.push_str(&ACTUAL_VERSION.to_string());
 
     return withdrawal_requests_seed;
-}
-
-/// Generates withdrawal requests address
-pub fn find_withdrawal_requests_program_address_deprecated(
-    program_id: &Pubkey,
-    pool_market_pubkey: &Pubkey,
-    token_mint: &Pubkey,
-) -> (Pubkey, u8) {
-    Pubkey::find_program_address(
-        &[
-            br"withdrawals",
-            &pool_market_pubkey.to_bytes(),
-            &token_mint.to_bytes(),
-        ],
-        program_id,
-    )
 }
 
 /// Generates user withdrawal request address
@@ -128,11 +112,8 @@ pub fn general_pool_withdraw_sol_accounts(
     token_mint: &Pubkey,
     from: &Pubkey,
 ) -> Vec<AccountMeta> {
-    let (withdrawal_requests, _) = find_withdrawal_requests_program_address_deprecated(
-        program_id,
-        general_pool_market,
-        token_mint,
-    );
+    let (withdrawal_requests, _) =
+        find_withdrawal_requests_program_address(program_id, general_pool_market, token_mint);
     let (withdrawal_request, _) =
         find_withdrawal_request_program_address(program_id, &withdrawal_requests, from);
     let (unwrap_sol_pubkey, _) = find_transit_sol_unwrap_address(program_id, &withdrawal_request);

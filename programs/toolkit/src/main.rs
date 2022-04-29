@@ -279,14 +279,10 @@ async fn command_run_migrate(
     }
 
     let token = initialiazed_accounts.token_accounts.get(&case.unwrap()).unwrap();
-    println!("Accounts {} {} {}",initialiazed_accounts.general_pool_market, token.general_pool,token.mint);
 
     println!("Migrate withdraw requests");
-    general_pool::migrate_withdraw_requests(
+    general_pool::migrate_general_pool_account(
         config,
-        &initialiazed_accounts.general_pool_market,
-        &token.general_pool,
-        &token.mint,
     )?;
     println!("Finished!");
 
