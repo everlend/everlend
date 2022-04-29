@@ -45,7 +45,7 @@ pub fn find_pool_borrow_authority_program_address(
     )
 }
 
-/// Generates withdrawal requests address deprecated
+/// Generates withdrawal requests address
 pub fn find_withdrawal_requests_program_address(
     program_id: &Pubkey,
     pool_market_pubkey: &Pubkey,
