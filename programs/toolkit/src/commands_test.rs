@@ -46,6 +46,7 @@ pub async fn command_run_test(
         find_config_program_address(&everlend_registry::id(), &registry);
     let registry_config_account = config.rpc_client.get_account(&registry_config_pubkey)?;
     let registry_config = RegistryConfig::unpack(&registry_config_account.data).unwrap();
+    println!("registry_config = {:#?}", registry_config);
 
     let sol = token_accounts.get("SOL").unwrap();
 

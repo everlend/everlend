@@ -127,6 +127,8 @@ pub fn start_rebalancing(
         Some(&config.fee_payer.pubkey()),
     );
 
+    println!("shiiiit");
+
     config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
     let (rebalancing_pubkey, _) =

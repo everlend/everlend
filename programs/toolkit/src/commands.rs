@@ -24,9 +24,6 @@ pub async fn command_create_registry(
     let default_accounts = config.get_default_accounts();
     let mut initialiazed_accounts = config.get_initialized_accounts();
 
-    let port_finance_program_id = default_accounts.port_finance_program_id;
-    let larix_program_id = default_accounts.larix_program_id;
-
     let registry_pubkey = registry::init(config, keypair)?;
     let mut registry_config = SetRegistryConfigParams {
         general_pool_program_id: everlend_general_pool::id(),
@@ -37,8 +34,10 @@ pub async fn command_create_registry(
         money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
         refresh_income_interval: REFRESH_INCOME_INTERVAL,
     };
-    registry_config.money_market_program_ids[0] = port_finance_program_id;
-    registry_config.money_market_program_ids[1] = larix_program_id;
+
+    registry_config.money_market_program_ids[0] = default_accounts.port_finance_program_id;
+    registry_config.money_market_program_ids[1] = default_accounts.larix_program_id;
+    registry_config.money_market_program_ids[2] = default_accounts.solend_program_id;
 
     println!("registry_config = {:#?}", registry_config);
 

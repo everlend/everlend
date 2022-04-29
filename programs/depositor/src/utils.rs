@@ -183,18 +183,9 @@ pub fn money_market_deposit<'a>(
     amount: u64,
     signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
-    let port_finance_program_id = registry_config
-        .money_market_program_ids
-        .get(0)
-        .ok_or(ProgramError::InvalidAccountData)?;
-    let larix_program_id = registry_config
-        .money_market_program_ids
-        .get(1)
-        .ok_or(ProgramError::InvalidAccountData)?;
-    let solend_program_id = registry_config
-        .money_market_program_ids
-        .get(2)
-        .ok_or(ProgramError::InvalidAccountData)?;
+    let port_finance_program_id = registry_config.money_market_program_ids[0];
+    let larix_program_id = registry_config.money_market_program_ids[1];
+    let solend_program_id = registry_config.money_market_program_ids[2];
 
     // Only for tests
     if money_market_program.key.to_string() == integrations::SPL_TOKEN_LENDING_PROGRAM_ID {
@@ -227,93 +218,89 @@ pub fn money_market_deposit<'a>(
         );
     }
 
-    match money_market_program.key {
-        id if id == port_finance_program_id => {
-            let reserve_info = next_account_info(money_market_account_info_iter)?;
-            let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
-            let lending_market_info = next_account_info(money_market_account_info_iter)?;
-            let lending_market_authority_info = next_account_info(money_market_account_info_iter)?;
-            let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
+    if *money_market_program.key == port_finance_program_id {
+        let reserve_info = next_account_info(money_market_account_info_iter)?;
+        let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
+        let lending_market_info = next_account_info(money_market_account_info_iter)?;
+        let lending_market_authority_info = next_account_info(money_market_account_info_iter)?;
+        let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
 
-            cpi::port_finance::refresh_reserve(
-                money_market_program.key,
-                reserve_info.clone(),
-                reserve_liquidity_oracle_info.clone(),
-                clock.clone(),
-            )?;
+        cpi::port_finance::refresh_reserve(
+            money_market_program.key,
+            reserve_info.clone(),
+            reserve_liquidity_oracle_info.clone(),
+            clock.clone(),
+        )?;
 
-            cpi::port_finance::deposit(
-                money_market_program.key,
-                source_liquidity.clone(),
-                destination_collateral.clone(),
-                reserve_info.clone(),
-                reserve_liquidity_supply_info.clone(),
-                collateral_mint.clone(),
-                lending_market_info.clone(),
-                lending_market_authority_info.clone(),
-                authority.clone(),
-                clock.clone(),
-                amount,
-                signers_seeds,
-            )
-        }
-        id if id == larix_program_id => {
-            let reserve_info = next_account_info(money_market_account_info_iter)?;
-            let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
-            let lending_market_info = next_account_info(money_market_account_info_iter)?;
-            let lending_market_authority_info = next_account_info(money_market_account_info_iter)?;
-            let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
+        cpi::port_finance::deposit(
+            money_market_program.key,
+            source_liquidity.clone(),
+            destination_collateral.clone(),
+            reserve_info.clone(),
+            reserve_liquidity_supply_info.clone(),
+            collateral_mint.clone(),
+            lending_market_info.clone(),
+            lending_market_authority_info.clone(),
+            authority.clone(),
+            clock.clone(),
+            amount,
+            signers_seeds,
+        )
+    } else if *money_market_program.key == larix_program_id {
+        let reserve_info = next_account_info(money_market_account_info_iter)?;
+        let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
+        let lending_market_info = next_account_info(money_market_account_info_iter)?;
+        let lending_market_authority_info = next_account_info(money_market_account_info_iter)?;
+        let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
 
-            cpi::larix::refresh_reserve(
-                money_market_program.key,
-                reserve_info.clone(),
-                reserve_liquidity_oracle_info.clone(),
-            )?;
+        cpi::larix::refresh_reserve(
+            money_market_program.key,
+            reserve_info.clone(),
+            reserve_liquidity_oracle_info.clone(),
+        )?;
 
-            cpi::larix::deposit(
-                money_market_program.key,
-                source_liquidity.clone(),
-                destination_collateral.clone(),
-                reserve_info.clone(),
-                reserve_liquidity_supply_info.clone(),
-                collateral_mint.clone(),
-                lending_market_info.clone(),
-                lending_market_authority_info.clone(),
-                authority.clone(),
-                amount,
-                signers_seeds,
-            )
-        }
-        id if id == solend_program_id => {
-            let reserve_info = next_account_info(money_market_account_info_iter)?;
-            let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
-            let lending_market_info = next_account_info(money_market_account_info_iter)?;
-            let reserve_liquidity_pyth_oracle_info =
-                next_account_info(money_market_account_info_iter)?;
-            let reserve_liquidity_switchboard_oracle_info =
-                next_account_info(money_market_account_info_iter)?;
+        cpi::larix::deposit(
+            money_market_program.key,
+            source_liquidity.clone(),
+            destination_collateral.clone(),
+            reserve_info.clone(),
+            reserve_liquidity_supply_info.clone(),
+            collateral_mint.clone(),
+            lending_market_info.clone(),
+            lending_market_authority_info.clone(),
+            authority.clone(),
+            amount,
+            signers_seeds,
+        )
+    } else if *money_market_program.key == solend_program_id {
+        let reserve_info = next_account_info(money_market_account_info_iter)?;
+        let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
+        let lending_market_info = next_account_info(money_market_account_info_iter)?;
+        let reserve_liquidity_pyth_oracle_info = next_account_info(money_market_account_info_iter)?;
+        let reserve_liquidity_switchboard_oracle_info =
+            next_account_info(money_market_account_info_iter)?;
 
-            cpi::solend::refresh_reserve(
-                money_market_program.key,
-                reserve_info.clone(),
-                reserve_liquidity_pyth_oracle_info.clone(),
-                reserve_liquidity_switchboard_oracle_info.clone(),
-            )?;
+        cpi::solend::refresh_reserve(
+            money_market_program.key,
+            reserve_info.clone(),
+            reserve_liquidity_pyth_oracle_info.clone(),
+            reserve_liquidity_switchboard_oracle_info.clone(),
+        )?;
 
-            cpi::solend::deposit(
-                money_market_program.key,
-                source_liquidity.clone(),
-                destination_collateral.clone(),
-                reserve_info.clone(),
-                reserve_liquidity_supply_info.clone(),
-                collateral_mint.clone(),
-                lending_market_info.clone(),
-                authority.clone(),
-                amount,
-                signers_seeds,
-            )
-        }
-        _ => Err(EverlendError::IncorrectInstructionProgramId.into()),
+        cpi::solend::deposit(
+            money_market_program.key,
+            source_liquidity.clone(),
+            destination_collateral.clone(),
+            reserve_info.clone(),
+            reserve_liquidity_supply_info.clone(),
+            collateral_mint.clone(),
+            lending_market_info.clone(),
+            authority.clone(),
+            amount,
+            signers_seeds,
+        )
+    } else {
+        Err(EverlendError::IncorrectInstructionProgramId.into())
     }
 }
 
@@ -332,18 +319,9 @@ pub fn money_market_redeem<'a>(
     amount: u64,
     signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
-    let port_finance_program_id = registry_config
-        .money_market_program_ids
-        .get(0)
-        .ok_or(ProgramError::InvalidAccountData)?;
-    let larix_program_id = registry_config
-        .money_market_program_ids
-        .get(1)
-        .ok_or(ProgramError::InvalidAccountData)?;
-    let solend_program_id = registry_config
-        .money_market_program_ids
-        .get(2)
-        .ok_or(ProgramError::InvalidAccountData)?;
+    let port_finance_program_id = registry_config.money_market_program_ids[0];
+    let larix_program_id = registry_config.money_market_program_ids[1];
+    let solend_program_id = registry_config.money_market_program_ids[2];
 
     // Only for tests
     if money_market_program.key.to_string() == integrations::SPL_TOKEN_LENDING_PROGRAM_ID {
@@ -376,92 +354,88 @@ pub fn money_market_redeem<'a>(
         );
     }
 
-    match money_market_program.key {
-        id if id == port_finance_program_id => {
-            let reserve_info = next_account_info(money_market_account_info_iter)?;
-            let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
-            let lending_market_info = next_account_info(money_market_account_info_iter)?;
-            let lending_market_authority_info = next_account_info(money_market_account_info_iter)?;
-            let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
+    if *money_market_program.key == port_finance_program_id {
+        let reserve_info = next_account_info(money_market_account_info_iter)?;
+        let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
+        let lending_market_info = next_account_info(money_market_account_info_iter)?;
+        let lending_market_authority_info = next_account_info(money_market_account_info_iter)?;
+        let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
 
-            cpi::port_finance::refresh_reserve(
-                money_market_program.key,
-                reserve_info.clone(),
-                reserve_liquidity_oracle_info.clone(),
-                clock.clone(),
-            )?;
+        cpi::port_finance::refresh_reserve(
+            money_market_program.key,
+            reserve_info.clone(),
+            reserve_liquidity_oracle_info.clone(),
+            clock.clone(),
+        )?;
 
-            cpi::port_finance::redeem(
-                money_market_program.key,
-                source_collateral.clone(),
-                destination_liquidity.clone(),
-                reserve_info.clone(),
-                collateral_mint.clone(),
-                reserve_liquidity_supply_info.clone(),
-                lending_market_info.clone(),
-                lending_market_authority_info.clone(),
-                authority.clone(),
-                clock.clone(),
-                amount,
-                signers_seeds,
-            )
-        }
-        id if id == larix_program_id => {
-            let reserve_info = next_account_info(money_market_account_info_iter)?;
-            let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
-            let lending_market_info = next_account_info(money_market_account_info_iter)?;
-            let lending_market_authority_info = next_account_info(money_market_account_info_iter)?;
-            let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
+        cpi::port_finance::redeem(
+            money_market_program.key,
+            source_collateral.clone(),
+            destination_liquidity.clone(),
+            reserve_info.clone(),
+            collateral_mint.clone(),
+            reserve_liquidity_supply_info.clone(),
+            lending_market_info.clone(),
+            lending_market_authority_info.clone(),
+            authority.clone(),
+            clock.clone(),
+            amount,
+            signers_seeds,
+        )
+    } else if *money_market_program.key == larix_program_id {
+        let reserve_info = next_account_info(money_market_account_info_iter)?;
+        let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
+        let lending_market_info = next_account_info(money_market_account_info_iter)?;
+        let lending_market_authority_info = next_account_info(money_market_account_info_iter)?;
+        let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
 
-            cpi::larix::refresh_reserve(
-                money_market_program.key,
-                reserve_info.clone(),
-                reserve_liquidity_oracle_info.clone(),
-            )?;
+        cpi::larix::refresh_reserve(
+            money_market_program.key,
+            reserve_info.clone(),
+            reserve_liquidity_oracle_info.clone(),
+        )?;
 
-            cpi::larix::redeem(
-                money_market_program.key,
-                source_collateral.clone(),
-                destination_liquidity.clone(),
-                reserve_info.clone(),
-                collateral_mint.clone(),
-                reserve_liquidity_supply_info.clone(),
-                lending_market_info.clone(),
-                lending_market_authority_info.clone(),
-                authority.clone(),
-                amount,
-                signers_seeds,
-            )
-        }
-        id if id == solend_program_id => {
-            let reserve_info = next_account_info(money_market_account_info_iter)?;
-            let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
-            let lending_market_info = next_account_info(money_market_account_info_iter)?;
-            let reserve_liquidity_pyth_oracle_info =
-                next_account_info(money_market_account_info_iter)?;
-            let reserve_liquidity_switchboard_oracle_info =
-                next_account_info(money_market_account_info_iter)?;
+        cpi::larix::redeem(
+            money_market_program.key,
+            source_collateral.clone(),
+            destination_liquidity.clone(),
+            reserve_info.clone(),
+            collateral_mint.clone(),
+            reserve_liquidity_supply_info.clone(),
+            lending_market_info.clone(),
+            lending_market_authority_info.clone(),
+            authority.clone(),
+            amount,
+            signers_seeds,
+        )
+    } else if *money_market_program.key == solend_program_id {
+        let reserve_info = next_account_info(money_market_account_info_iter)?;
+        let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
+        let lending_market_info = next_account_info(money_market_account_info_iter)?;
+        let reserve_liquidity_pyth_oracle_info = next_account_info(money_market_account_info_iter)?;
+        let reserve_liquidity_switchboard_oracle_info =
+            next_account_info(money_market_account_info_iter)?;
 
-            cpi::solend::refresh_reserve(
-                money_market_program.key,
-                reserve_info.clone(),
-                reserve_liquidity_pyth_oracle_info.clone(),
-                reserve_liquidity_switchboard_oracle_info.clone(),
-            )?;
+        cpi::solend::refresh_reserve(
+            money_market_program.key,
+            reserve_info.clone(),
+            reserve_liquidity_pyth_oracle_info.clone(),
+            reserve_liquidity_switchboard_oracle_info.clone(),
+        )?;
 
-            cpi::solend::redeem(
-                money_market_program.key,
-                source_collateral.clone(),
-                destination_liquidity.clone(),
-                reserve_info.clone(),
-                collateral_mint.clone(),
-                reserve_liquidity_supply_info.clone(),
-                lending_market_info.clone(),
-                authority.clone(),
-                amount,
-                signers_seeds,
-            )
-        }
-        _ => Err(EverlendError::IncorrectInstructionProgramId.into()),
+        cpi::solend::redeem(
+            money_market_program.key,
+            source_collateral.clone(),
+            destination_liquidity.clone(),
+            reserve_info.clone(),
+            collateral_mint.clone(),
+            reserve_liquidity_supply_info.clone(),
+            lending_market_info.clone(),
+            authority.clone(),
+            amount,
+            signers_seeds,
+        )
+    } else {
+        Err(EverlendError::IncorrectInstructionProgramId.into())
     }
 }
