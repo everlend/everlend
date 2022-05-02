@@ -34,3 +34,4 @@ everlend-liquidity-oracle = { path = "../liquidity_oracle", features = [ "no-ent
 everlend-utils = { path = "../utils" }
 port-variable-rate-lending-instructions = "0.2.9"
 serum-multisig = { git = "https://github.com/everlend/multisig", features = [ "no-entrypoint" ] }
+solend-program = { git = "https://github.com/everlend/solend-program", features = [ "no-entrypoint" ], branch = "mainnet" }
