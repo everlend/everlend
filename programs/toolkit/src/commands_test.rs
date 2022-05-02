@@ -300,7 +300,7 @@ pub async fn command_run_test(
 
             general_pool_deposit(10)?;
 
-            update_token_distribution(distribution!([0, 100000000, 900000000]))?;
+            update_token_distribution(distribution!([0, 300000000, 700000000]))?;
             let (_, rebalancing) = start_rebalancing()?;
             complete_rebalancing(Some(rebalancing))?;
         }

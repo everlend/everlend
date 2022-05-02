@@ -286,6 +286,7 @@ pub fn money_market_deposit<'a>(
             reserve_info.clone(),
             reserve_liquidity_pyth_oracle_info.clone(),
             reserve_liquidity_switchboard_oracle_info.clone(),
+            clock.clone(),
         )?;
 
         cpi::solend::deposit(
@@ -425,6 +426,7 @@ pub fn money_market_redeem<'a>(
             reserve_info.clone(),
             reserve_liquidity_pyth_oracle_info.clone(),
             reserve_liquidity_switchboard_oracle_info.clone(),
+            clock.clone(),
         )?;
 
         cpi::solend::redeem(

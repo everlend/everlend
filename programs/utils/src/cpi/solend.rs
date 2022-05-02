@@ -10,6 +10,7 @@ pub fn refresh_reserve<'a>(
     reserve: AccountInfo<'a>,
     reserve_liquidity_pyth_oracle: AccountInfo<'a>,
     reserve_liquidity_switchboard_oracle: AccountInfo<'a>,
+    clock: AccountInfo<'a>,
 ) -> Result<(), ProgramError> {
     let ix = solend_program::instruction::refresh_reserve(
         *program_id,
@@ -24,6 +25,7 @@ pub fn refresh_reserve<'a>(
             reserve,
             reserve_liquidity_pyth_oracle,
             reserve_liquidity_switchboard_oracle,
+            clock,
         ],
     )
 }
@@ -49,8 +51,8 @@ pub fn deposit<'a>(
         *source_liquidity.key,
         *destination_collateral.key,
         *reserve.key,
-        *reserve_collateral_mint.key,
         *reserve_liquidity_supply.key,
+        *reserve_collateral_mint.key,
         *lending_market.key,
         *authority.key,
     );
@@ -61,8 +63,8 @@ pub fn deposit<'a>(
             source_liquidity,
             destination_collateral,
             reserve,
-            reserve_collateral_mint,
             reserve_liquidity_supply,
+            reserve_collateral_mint,
             lending_market,
             lending_market_authority,
             authority,
