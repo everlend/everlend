@@ -30,8 +30,8 @@ pub mod accounts {
             AccountMeta::new(pubkeys.reserve, false),
             AccountMeta::new(pubkeys.reserve_liquidity_supply, false),
             AccountMeta::new_readonly(pubkeys.lending_market, false),
-            AccountMeta::new(pubkeys.reserve_liquidity_pyth_oracle, false),
-            AccountMeta::new(pubkeys.reserve_liquidity_switchboard_oracle, false),
+            AccountMeta::new_readonly(pubkeys.reserve_liquidity_pyth_oracle, false),
+            AccountMeta::new_readonly(pubkeys.reserve_liquidity_switchboard_oracle, false),
         ]
     }
 }

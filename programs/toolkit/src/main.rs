@@ -94,6 +94,7 @@ async fn command_create(
 
     let port_finance_mm_pool_market_pubkey = ulp::create_market(config, None)?;
     let larix_mm_pool_market_pubkey = ulp::create_market(config, None)?;
+    let solend_mm_pool_market_pubkey = ulp::create_market(config, None)?;
 
     println!("Liquidity oracle");
     let liquidity_oracle_pubkey = liquidity_oracle::init(config, None)?;
@@ -147,6 +148,10 @@ async fn command_create(
         let (larix_mm_pool_pubkey, larix_mm_pool_token_account, larix_mm_pool_mint) =
             ulp::create_pool(config, &larix_mm_pool_market_pubkey, &collateral_mints[1])?;
 
+        println!("MM Pool: Solend");
+        let (solend_mm_pool_pubkey, solend_mm_pool_token_account, solend_mm_pool_mint) =
+            ulp::create_pool(config, &solend_mm_pool_market_pubkey, &collateral_mints[2])?;
+
         liquidity_oracle::create_token_distribution(
             config,
             &liquidity_oracle_pubkey,
@@ -175,9 +180,11 @@ async fn command_create(
 
         depositor::create_transit(config, &depositor_pubkey, &collateral_mints[0], None)?;
         depositor::create_transit(config, &depositor_pubkey, &collateral_mints[1], None)?;
+        depositor::create_transit(config, &depositor_pubkey, &collateral_mints[2], None)?;
 
         depositor::create_transit(config, &depositor_pubkey, &port_finance_mm_pool_mint, None)?;
         depositor::create_transit(config, &depositor_pubkey, &larix_mm_pool_mint, None)?;
+        depositor::create_transit(config, &depositor_pubkey, &solend_mm_pool_mint, None)?;
 
         // Borrow authorities
         general_pool::create_pool_borrow_authority(
@@ -212,6 +219,12 @@ async fn command_create(
                         token_mint: collateral_mints[1],
                         pool_mint: larix_mm_pool_mint,
                     },
+                    MoneyMarketAccounts {
+                        pool: solend_mm_pool_pubkey,
+                        pool_token_account: solend_mm_pool_token_account,
+                        token_mint: collateral_mints[2],
+                        pool_mint: solend_mm_pool_mint,
+                    },
                 ],
                 liquidity_transit: liquidity_transit_pubkey,
             },
@@ -226,6 +239,7 @@ async fn command_create(
         mm_pool_markets: vec![
             port_finance_mm_pool_market_pubkey,
             larix_mm_pool_market_pubkey,
+            solend_mm_pool_market_pubkey,
         ],
         token_accounts,
         liquidity_oracle: liquidity_oracle_pubkey,

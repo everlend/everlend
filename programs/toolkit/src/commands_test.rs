@@ -46,6 +46,7 @@ pub async fn command_run_test(
         find_config_program_address(&everlend_registry::id(), &registry);
     let registry_config_account = config.rpc_client.get_account(&registry_config_pubkey)?;
     let registry_config = RegistryConfig::unpack(&registry_config_account.data).unwrap();
+
     println!("registry_config = {:#?}", registry_config);
 
     let sol = token_accounts.get("SOL").unwrap();
@@ -122,9 +123,10 @@ pub async fn command_run_test(
     let deposit = |i: usize| {
         println!("Rebalancing: Deposit: {}", i);
         let pubkeys = match i {
-            0 => MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
-            1 => MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
-            _ => MoneyMarketPubkeys::Solend(solend_pubkeys.clone()),
+            0 => MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
+            1 => MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
+            2 => MoneyMarketPubkeys::Solend(solend_pubkeys.clone()),
+            _ => panic!("wrong pubkey idx"),
         };
 
         depositor::deposit(
@@ -144,9 +146,10 @@ pub async fn command_run_test(
     let withdraw = |i| {
         println!("Rebalancing: Withdraw: {}", i);
         let pubkeys = match i {
-            0 => MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
-            1 => MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
-            _ => MoneyMarketPubkeys::Solend(solend_pubkeys.clone()),
+            0 => MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
+            1 => MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
+            2 => MoneyMarketPubkeys::Solend(solend_pubkeys.clone()),
+            _ => panic!("wrong pubkey idx"),
         };
 
         depositor::withdraw(
@@ -304,7 +307,7 @@ pub async fn command_run_test(
         Some("larix") => {
             general_pool_deposit(1000)?;
 
-            update_token_distribution(distribution!([0, 1000000000]))?;
+            update_token_distribution(distribution!([0, 0, 1000000000]))?;
             let (_, rebalancing) = start_rebalancing()?;
             complete_rebalancing(Some(rebalancing))?;
         }
