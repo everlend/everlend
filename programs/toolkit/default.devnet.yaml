@@ -25,7 +25,9 @@ sol_collateral:
 usdc_collateral:
   - HyxraiKfdajDbYTC6MVRToEUBdevBN5M5gfyR4LC3WSF
   - CLgRwCmZ49wbKxQjqEs5tHrNvx8ZoXjybN8hsiRwEVPm
+  -
 usdt_collateral:
   - 4xEXmSfLFPkZaxdL98XkoxKpXEvchPVs21GYqa8DvbAm
   - BQ4wqguD9D2dyzraCW7R4sV5fxUdXaVteT8bL2w4uPbV
+  -
 multisig_program_id: 3ktyhEXgbiUyDG7RXCzzXWzjXJpThpqqePhJb85eVqFa

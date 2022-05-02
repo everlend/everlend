@@ -1,10 +1,13 @@
-use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::{SetRegistryConfigParams, TOTAL_DISTRIBUTIONS};
-use everlend_utils::integrations::MoneyMarket;
+use std::collections::HashMap;
+
+use solana_client::client_error::ClientError;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::signature::Keypair;
 use spl_associated_token_account::get_associated_token_address;
-use std::collections::HashMap;
+
+use everlend_liquidity_oracle::state::DistributionArray;
+use everlend_registry::state::{SetRegistryConfigParams, TOTAL_DISTRIBUTIONS};
+use everlend_utils::integrations::MoneyMarket;
 
 use crate::{
     accounts_config::{MoneyMarketAccounts, TokenAccounts},
@@ -159,17 +162,34 @@ pub async fn command_create_token_accounts(
         ("SOL".to_string(), default_accounts.sol_mint),
         ("USDC".to_string(), default_accounts.usdc_mint),
         ("USDT".to_string(), default_accounts.usdt_mint),
+        ("mSOL".to_string(), default_accounts.msol_mint),
+        ("stSOL".to_string(), default_accounts.stsol_mint),
+        ("soBTC".to_string(), default_accounts.sobtc_mint),
+        ("ETHw".to_string(), default_accounts.ethw_mint),
+        ("USTw".to_string(), default_accounts.ustw_mint),
+        ("FTTw".to_string(), default_accounts.fttw_mint),
+        ("RAY".to_string(), default_accounts.ray_mint),
+        ("SRM".to_string(), default_accounts.srm_mint),
     ]);
 
     let collateral_mint_map = HashMap::from([
         ("SOL".to_string(), default_accounts.sol_collateral),
         ("USDC".to_string(), default_accounts.usdc_collateral),
         ("USDT".to_string(), default_accounts.usdt_collateral),
+        ("mSOL".to_string(), default_accounts.msol_collateral),
+        ("stSOL".to_string(), default_accounts.stsol_collateral),
+        ("soBTC".to_string(), default_accounts.sobtc_collateral),
+        ("ETHw".to_string(), default_accounts.ethw_collateral),
+        ("USTw".to_string(), default_accounts.ustw_collateral),
+        ("FTTw".to_string(), default_accounts.fttw_collateral),
+        ("RAY".to_string(), default_accounts.ray_collateral),
+        ("SRM".to_string(), default_accounts.srm_collateral),
     ]);
 
     let mut distribution = DistributionArray::default();
     distribution[0] = 0;
     distribution[1] = 0;
+    distribution[2] = 0;
 
     println!("Prepare borrow authority");
     let (depositor_authority, _) = &everlend_utils::find_program_address(
@@ -179,7 +199,15 @@ pub async fn command_create_token_accounts(
 
     for key in required_mints {
         let mint = mint_map.get(key).unwrap();
-        let collateral_mints = collateral_mint_map.get(key).unwrap();
+        let collateral_mints: Vec<(Pubkey, Pubkey)> = collateral_mint_map
+            .get(key)
+            .unwrap()
+            .iter()
+            .zip(initialiazed_accounts.mm_pool_markets.iter())
+            .filter_map(|(collateral_mint, mm_pool_market_pubkey)| {
+                collateral_mint.map(|coll_mint| (coll_mint, *mm_pool_market_pubkey))
+            })
+            .collect();
 
         println!("General pool");
         let (general_pool_pubkey, general_pool_token_account, general_pool_mint) =
@@ -197,24 +225,13 @@ pub async fn command_create_token_accounts(
             income_pools::create_pool(config, &initialiazed_accounts.income_pool_market, mint)?;
 
         // MM Pools
-        println!("MM Pool: Port Finance");
-        let (
-            port_finance_mm_pool_pubkey,
-            port_finance_mm_pool_token_account,
-            port_finance_mm_pool_mint,
-        ) = ulp::create_pool(
-            config,
-            &initialiazed_accounts.mm_pool_markets[0],
-            &collateral_mints[0],
-        )?;
-
-        println!("MM Pool: Larix");
-        let (larix_mm_pool_pubkey, larix_mm_pool_token_account, larix_mm_pool_mint) =
-            ulp::create_pool(
-                config,
-                &initialiazed_accounts.mm_pool_markets[1],
-                &collateral_mints[1],
-            )?;
+        let mm_pool_pubkeys = collateral_mints
+            .iter()
+            .map(|(collateral_mint, mm_pool_market_pubkey)| {
+                println!("MM Pool: {}", collateral_mint);
+                ulp::create_pool(config, mm_pool_market_pubkey, collateral_mint)
+            })
+            .collect::<Result<Vec<(Pubkey, Pubkey, Pubkey)>, ClientError>>()?;
 
         liquidity_oracle::create_token_distribution(
             config,
@@ -235,6 +252,7 @@ pub async fn command_create_token_accounts(
             mint,
             Some("reserve".to_string()),
         )?;
+        // todo spl_token_transfer itx should be disabled this?
         // spl_token_transfer(
         //     config,
         //     &token_account,
@@ -242,31 +260,47 @@ pub async fn command_create_token_accounts(
         //     10000,
         // )?;
 
-        depositor::create_transit(
-            config,
-            &initialiazed_accounts.depositor,
-            &collateral_mints[0],
-            None,
-        )?;
-        depositor::create_transit(
-            config,
-            &initialiazed_accounts.depositor,
-            &collateral_mints[1],
-            None,
-        )?;
+        collateral_mints
+            .iter()
+            .map(|(collateral_mint, _mm_pool_market_pubkey)| {
+                depositor::create_transit(
+                    config,
+                    &initialiazed_accounts.depositor,
+                    collateral_mint,
+                    None,
+                )
+            })
+            .collect::<Result<Vec<Pubkey>, ClientError>>()?;
 
-        depositor::create_transit(
-            config,
-            &initialiazed_accounts.depositor,
-            &port_finance_mm_pool_mint,
-            None,
-        )?;
-        depositor::create_transit(
-            config,
-            &initialiazed_accounts.depositor,
-            &larix_mm_pool_mint,
-            None,
-        )?;
+        mm_pool_pubkeys
+            .iter()
+            .map(|(_, _, mm_pool_miny)| {
+                depositor::create_transit(
+                    config,
+                    &initialiazed_accounts.depositor,
+                    mm_pool_miny,
+                    None,
+                )
+            })
+            .collect::<Result<Vec<Pubkey>, ClientError>>()?;
+
+        let mm_pools = collateral_mints
+            .iter()
+            .zip(mm_pool_pubkeys)
+            .map(
+                |(
+                    (collateral_mint, _mm_pool_market_pubkey),
+                    (mm_pool_pubkey, mm_pool_token_account, mm_pool_mint),
+                )| {
+                    MoneyMarketAccounts {
+                        pool: mm_pool_pubkey,
+                        pool_token_account: mm_pool_token_account,
+                        token_mint: *collateral_mint,
+                        pool_mint: mm_pool_mint,
+                    }
+                },
+            )
+            .collect();
 
         // Borrow authorities
         general_pool::create_pool_borrow_authority(
@@ -288,20 +322,7 @@ pub async fn command_create_token_accounts(
                 general_pool_mint,
                 income_pool: income_pool_pubkey,
                 income_pool_token_account,
-                mm_pools: vec![
-                    MoneyMarketAccounts {
-                        pool: port_finance_mm_pool_pubkey,
-                        pool_token_account: port_finance_mm_pool_token_account,
-                        token_mint: collateral_mints[0],
-                        pool_mint: port_finance_mm_pool_mint,
-                    },
-                    MoneyMarketAccounts {
-                        pool: larix_mm_pool_pubkey,
-                        pool_token_account: larix_mm_pool_token_account,
-                        token_mint: collateral_mints[1],
-                        pool_mint: larix_mm_pool_mint,
-                    },
-                ],
+                mm_pools,
                 liquidity_transit: liquidity_transit_pubkey,
             },
         );

@@ -1,4 +1,11 @@
 use core::time;
+use std::thread;
+
+use anyhow::Context;
+use solana_account_decoder::parse_token::UiTokenAmount;
+use solana_program::program_pack::Pack;
+use solana_program::pubkey::Pubkey;
+
 use everlend_depositor::{
     find_rebalancing_program_address,
     state::{Rebalancing, RebalancingOperation},
@@ -7,10 +14,6 @@ use everlend_general_pool::state::WITHDRAW_DELAY;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::{find_config_program_address, state::RegistryConfig};
 use everlend_utils::integrations::{self, MoneyMarketPubkeys};
-use solana_account_decoder::parse_token::UiTokenAmount;
-use solana_program::program_pack::Pack;
-use solana_program::pubkey::Pubkey;
-use std::thread;
 
 use crate::{
     accounts_config::InitializedAccounts,
@@ -68,9 +71,18 @@ pub async fn command_run_test(
 
     let solend_pubkeys = integrations::solend::AccountPubkeys {
         reserve: default_accounts.solend_reserve_sol,
-        reserve_liquidity_supply: default_accounts.solend_reserve_sol_supply,
-        reserve_liquidity_pyth_oracle: default_accounts.solend_reserve_pyth_oracle,
-        reserve_liquidity_switchboard_oracle: default_accounts.solend_reserve_switchboard_oracle,
+        reserve_liquidity_supply: default_accounts
+            .solend_reserve_sol_supply
+            .context("`solend_reserve_sol_supply` invalid value")
+            .unwrap(),
+        reserve_liquidity_pyth_oracle: default_accounts
+            .solend_reserve_pyth_oracle
+            .context("`solend_reserve_pyth_oracle` invalid value")
+            .unwrap(),
+        reserve_liquidity_switchboard_oracle: default_accounts
+            .solend_reserve_switchboard_oracle
+            .context("`solend_reserve_switchboard_oracle` invalid value")
+            .unwrap(),
         lending_market: default_accounts.solend_lending_market,
     };
 
