@@ -47,6 +47,8 @@ pub async fn command_run_test(
     let registry_config_account = config.rpc_client.get_account(&registry_config_pubkey)?;
     let registry_config = RegistryConfig::unpack(&registry_config_account.data).unwrap();
 
+    println!("registry_config = {:#?}", registry_config);
+
     let sol = token_accounts.get("SOL").unwrap();
 
     let sol_oracle = default_accounts.sol_oracle;
@@ -56,11 +58,20 @@ pub async fn command_run_test(
         reserve_liquidity_oracle: sol_oracle,
         lending_market: default_accounts.port_finance_lending_market,
     };
+
     let larix_pubkeys = integrations::larix::AccountPubkeys {
         reserve: default_accounts.larix_reserve_sol,
         reserve_liquidity_supply: default_accounts.larix_reserve_sol_supply,
         reserve_liquidity_oracle: sol_oracle,
         lending_market: default_accounts.larix_lending_market,
+    };
+
+    let solend_pubkeys = integrations::solend::AccountPubkeys {
+        reserve: default_accounts.solend_reserve_sol,
+        reserve_liquidity_supply: default_accounts.solend_reserve_sol_supply,
+        reserve_liquidity_pyth_oracle: default_accounts.solend_reserve_pyth_oracle,
+        reserve_liquidity_switchboard_oracle: default_accounts.solend_reserve_switchboard_oracle,
+        lending_market: default_accounts.solend_lending_market,
     };
 
     let get_balance = |pk: &Pubkey| config.rpc_client.get_token_account_balance(pk);
@@ -112,8 +123,10 @@ pub async fn command_run_test(
     let deposit = |i: usize| {
         println!("Rebalancing: Deposit: {}", i);
         let pubkeys = match i {
+            0 => MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
             1 => MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
-            _ => MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
+            2 => MoneyMarketPubkeys::Solend(solend_pubkeys.clone()),
+            _ => panic!("wrong pubkey idx"),
         };
 
         depositor::deposit(
@@ -133,8 +146,10 @@ pub async fn command_run_test(
     let withdraw = |i| {
         println!("Rebalancing: Withdraw: {}", i);
         let pubkeys = match i {
+            0 => MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
             1 => MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
-            _ => MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
+            2 => MoneyMarketPubkeys::Solend(solend_pubkeys.clone()),
+            _ => panic!("wrong pubkey idx"),
         };
 
         depositor::withdraw(
@@ -276,10 +291,30 @@ pub async fn command_run_test(
             let (_, rebalancing) = start_rebalancing()?;
             complete_rebalancing(Some(rebalancing))?;
         }
+        Some("third") => {
+            general_pool_deposit(1000)?;
+
+            update_token_distribution(distribution!([100000000, 100000000, 800000000]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            complete_rebalancing(Some(rebalancing))?;
+
+            general_pool_deposit(10)?;
+
+            update_token_distribution(distribution!([0, 300000000, 700000000]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            complete_rebalancing(Some(rebalancing))?;
+        }
         Some("larix") => {
             general_pool_deposit(1000)?;
 
-            update_token_distribution(distribution!([0, 1000000000]))?;
+            update_token_distribution(distribution!([0, 0, 1000000000]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            complete_rebalancing(Some(rebalancing))?;
+        }
+        Some("solend") => {
+            general_pool_deposit(1000)?;
+
+            update_token_distribution(distribution!([0, 0, 1000000000]))?;
             let (_, rebalancing) = start_rebalancing()?;
             complete_rebalancing(Some(rebalancing))?;
         }

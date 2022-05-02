@@ -50,6 +50,19 @@ pub struct DefaultAccounts {
     pub larix_reserve_sol_supply: Pubkey,
 
     #[serde_as(as = "PubkeyAsString")]
+    pub solend_program_id: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub solend_lending_market: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub solend_reserve_sol: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub solend_reserve_sol_supply: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub solend_reserve_pyth_oracle: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub solend_reserve_switchboard_oracle: Pubkey,
+
+    #[serde_as(as = "PubkeyAsString")]
     pub multisig_program_id: Pubkey,
 
     #[serde(default)]
