@@ -48,6 +48,7 @@ pub async fn command_info_multisig(
         println!("{:?}", pubkey);
         println!("Data: {:?}", tx.data);
         println!("Signers: {:?}", tx.signers);
+        println!("Set seqno: {:?}", tx.owner_set_seqno);
         println!("Executed: {:?}", tx.did_execute);
     }
 
