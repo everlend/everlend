@@ -2,6 +2,14 @@
 sol_mint: So11111111111111111111111111111111111111112
 usdc_mint: EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
 usdt_mint: Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB
+msol_mint: mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So
+stsol_mint: 7dHbWXmci3dT8UFYWYZweBLXgycu7Y3iL6trKn1Y7ARj
+sobtc_mint: 9n4nbM75f5Ui33ZbPYXn59EwSgE8CGsHtAeTH5YFeJ9E
+ethw_mint: 7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs
+ustw_mint: 9vMJfxuKxXBoEa7rM12mYLMwTacLMLDJqHozw96WQL8i
+fttw_mint: EzfgjvkSwthhgHaceR3LnKXUoRkP6NUhfghdaHAj1tUv
+ray_mint: 4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R
+srm_mint: SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt
 sol_oracle: H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG
 port_finance_program_id: Port7uDYB3wk6GJAw4KT1WpTeMtSu9bTcChBHkX2LfR
 port_finance_lending_market: 6T4XxKerq744sSuj3jaoV6QiZ8acirf4TrPwQzHAoSy5
@@ -20,3 +28,30 @@ usdc_collateral:
 usdt_collateral:
   - 3RudPTAkfcq9Q9Jk8SVeCoecCBmdKMj6q5smsWzxqtqZ
   - 68sovRJnn5EPdXNkQaj4F1qGP3NDpTrMDEXiKGEJgwBh
+msol_collateral:
+  - Dt1Cuau5m5CSmun8hZstjEh9RszxAmejnq7ZaHNcuXfA
+  - y6rnvwa2fTBynxGPNo6oH94WhmRxKE96cieCtyCwQBi
+stsol_collateral:
+  - ESzkdUN8jvJxMqBjWADUomRxHn2ECxLFeeEvrcteLMnY
+  - 2K7mMW4iFtU1RmZaCVg6MUUGWMBX4Z7rDbAhca42cXwL
+sobtc_collateral:
+  - QN2HkkBaWHfYSU5bybyups9z1UHu8Eu7QeeyMbjD2JA
+  - 8c5Fw4B9zmeesVx2WgGu6Yg1iE9P5SWTUormPPL8e8CV
+ethw_collateral:
+  - Fu8gTpPR6DAxzWK2jDW7axuK3MBZcr5hKfjALXDpY3Zw
+  - AeBswySyZBjmaQVLAxkLNmUKrB66gdhL6vezqdruVbsR
+ustw_collateral:
+  - 9dCmkTZNDWvtJWXZrJXUJyhM4U6YQX8kdaSzWr7g5Jrx
+  - 6CvSMhUFDyiYzYZLsLYMGPQxZ7QkuMEv7RqZSocZnT4A
+fttw_collateral:
+  -
+  - 8txpnwk6ruV5fjbGDS1Lx8aNaBP8RcWThXZsZRMGDrE4
+ray_collateral:
+  -
+  - C2Dp7WwPnT7ZgY6MNyg7g7hVguk31HPtRe9EgP2m9vpJ
+srm_collateral:
+  - 77TBgKmTNtMdGrt1ewNRb56F2Xw6fNLZZj33JZ3oGwXh
+  - 9yoGvCPSFqfgHCyyhb7iVQcNTscFbAqRTbn6XuGUi8xa
+
+
+
