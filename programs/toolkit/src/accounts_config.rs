@@ -1,6 +1,3 @@
-use serde_derive::{Deserialize, Serialize};
-use serde_with::{serde_as, serde_conv};
-use solana_program::pubkey::Pubkey;
 use std::{
     collections::HashMap,
     fs::{create_dir_all, File},
@@ -9,13 +6,15 @@ use std::{
     str::FromStr,
 };
 
+use serde_derive::{Deserialize, Serialize};
+use serde_with::{serde_as, serde_conv};
+use solana_program::pubkey::Pubkey;
+
 serde_conv!(
     PubkeyAsString,
     Pubkey,
     |pubkey: &Pubkey| pubkey.to_string(),
-    |string: String| -> Result<_, std::convert::Infallible> {
-        Ok(Pubkey::from_str(&string).unwrap())
-    }
+    |string: String| -> Result<_, std::convert::Infallible> { Ok(Pubkey::from_str(&string)?) }
 );
 
 #[serde_as]
@@ -27,6 +26,22 @@ pub struct DefaultAccounts {
     pub usdc_mint: Pubkey,
     #[serde_as(as = "PubkeyAsString")]
     pub usdt_mint: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub msol_mint: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub stsol_mint: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub sobtc_mint: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub ethw_mint: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub ustw_mint: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub fttw_mint: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub ray_mint: Pubkey,
+    #[serde_as(as = "PubkeyAsString")]
+    pub srm_mint: Pubkey,
 
     #[serde_as(as = "PubkeyAsString")]
     pub sol_oracle: Pubkey,
@@ -76,6 +91,38 @@ pub struct DefaultAccounts {
     #[serde(default)]
     #[serde_as(as = "Vec<PubkeyAsString>")]
     pub usdt_collateral: Vec<Pubkey>,
+
+    #[serde(default)]
+    #[serde_as(as = "Vec<PubkeyAsString>")]
+    pub msol_collateral: Vec<Pubkey>,
+
+    #[serde(default)]
+    #[serde_as(as = "Vec<PubkeyAsString>")]
+    pub stsol_collateral: Vec<Pubkey>,
+
+    #[serde(default)]
+    #[serde_as(as = "Vec<PubkeyAsString>")]
+    pub sobtc_collateral: Vec<Pubkey>,
+
+    #[serde(default)]
+    #[serde_as(as = "Vec<PubkeyAsString>")]
+    pub ethw_collateral: Vec<Pubkey>,
+
+    #[serde(default)]
+    #[serde_as(as = "Vec<PubkeyAsString>")]
+    pub ustw_collateral: Vec<Pubkey>,
+
+    #[serde(default)]
+    #[serde_as(as = "Vec<PubkeyAsString>")]
+    pub fttw_collateral: Vec<Pubkey>,
+
+    #[serde(default)]
+    #[serde_as(as = "Vec<PubkeyAsString>")]
+    pub ray_collateral: Vec<Pubkey>,
+
+    #[serde(default)]
+    #[serde_as(as = "Vec<PubkeyAsString>")]
+    pub srm_collateral: Vec<Pubkey>,
 }
 
 #[serde_as]
@@ -186,4 +233,14 @@ where
     file.write_all(&serialized.into_bytes())?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn default_accounts_load() {
+        DefaultAccounts::load("default.mainnet-beta.yaml").unwrap_or_default();
+    }
 }

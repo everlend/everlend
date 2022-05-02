@@ -1,3 +1,30 @@
+use std::{collections::HashMap, process::exit, str::FromStr};
+
+use clap::{
+    crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
+};
+use regex::Regex;
+use solana_clap_utils::{
+    fee_payer::fee_payer_arg,
+    input_parsers::{keypair_of, pubkey_of, value_of},
+    input_validators::{is_amount, is_keypair, is_pubkey},
+    keypair::signer_from_path,
+};
+use solana_client::rpc_client::RpcClient;
+use solana_program::pubkey::Pubkey;
+use solana_sdk::commitment_config::CommitmentConfig;
+use spl_associated_token_account::get_associated_token_address;
+
+use accounts_config::*;
+use commands::*;
+use everlend_liquidity_oracle::state::DistributionArray;
+use everlend_registry::state::{SetRegistryConfigParams, TOTAL_DISTRIBUTIONS};
+use everlend_utils::integrations::MoneyMarket;
+use general_pool::get_withdrawal_requests;
+use utils::*;
+
+use crate::general_pool::get_general_pool_market;
+
 mod accounts_config;
 mod commands;
 mod commands_multisig;
@@ -10,31 +37,6 @@ mod multisig;
 mod registry;
 mod ulp;
 mod utils;
-
-use accounts_config::*;
-use clap::{
-    crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
-};
-use commands::*;
-use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::{SetRegistryConfigParams, TOTAL_DISTRIBUTIONS};
-use everlend_utils::integrations::MoneyMarket;
-use general_pool::get_withdrawal_requests;
-use regex::Regex;
-use solana_clap_utils::{
-    fee_payer::fee_payer_arg,
-    input_parsers::{keypair_of, pubkey_of, value_of},
-    input_validators::{is_amount, is_keypair, is_pubkey},
-    keypair::signer_from_path,
-};
-use solana_client::rpc_client::RpcClient;
-use solana_program::pubkey::Pubkey;
-use solana_sdk::commitment_config::CommitmentConfig;
-use spl_associated_token_account::get_associated_token_address;
-use std::{collections::HashMap, process::exit, str::FromStr};
-use utils::*;
-
-use crate::general_pool::get_general_pool_market;
 
 pub fn url_to_moniker(url: &str) -> String {
     let re = Regex::new(r"devnet|mainnet|localhost|testnet").unwrap();
@@ -61,12 +63,28 @@ async fn command_create(
         ("SOL".to_string(), default_accounts.sol_mint),
         ("USDC".to_string(), default_accounts.usdc_mint),
         ("USDT".to_string(), default_accounts.usdt_mint),
+        ("mSOL".to_string(), default_accounts.msol_mint),
+        ("stSOL".to_string(), default_accounts.stsol_mint),
+        ("soBTC".to_string(), default_accounts.sobtc_mint),
+        ("ETHw".to_string(), default_accounts.ethw_mint),
+        ("USTw".to_string(), default_accounts.ustw_mint),
+        ("FTTw".to_string(), default_accounts.fttw_mint),
+        ("RAY".to_string(), default_accounts.ray_mint),
+        ("SRM".to_string(), default_accounts.srm_mint),
     ]);
 
     let collateral_mint_map = HashMap::from([
         ("SOL".to_string(), default_accounts.sol_collateral),
         ("USDC".to_string(), default_accounts.usdc_collateral),
         ("USDT".to_string(), default_accounts.usdt_collateral),
+        ("mSOL".to_string(), default_accounts.msol_collateral),
+        ("stSOL".to_string(), default_accounts.stsol_collateral),
+        ("soBTC".to_string(), default_accounts.sobtc_collateral),
+        ("ETHw".to_string(), default_accounts.ethw_collateral),
+        ("USTw".to_string(), default_accounts.ustw_collateral),
+        ("FTTw".to_string(), default_accounts.fttw_collateral),
+        ("RAY".to_string(), default_accounts.ray_collateral),
+        ("SRM".to_string(), default_accounts.srm_collateral),
     ]);
 
     println!("Registry");
