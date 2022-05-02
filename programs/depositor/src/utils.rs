@@ -276,6 +276,7 @@ pub fn money_market_deposit<'a>(
         let reserve_info = next_account_info(money_market_account_info_iter)?;
         let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
         let lending_market_info = next_account_info(money_market_account_info_iter)?;
+        let lending_market_authority_info = next_account_info(money_market_account_info_iter)?;
         let reserve_liquidity_pyth_oracle_info = next_account_info(money_market_account_info_iter)?;
         let reserve_liquidity_switchboard_oracle_info =
             next_account_info(money_market_account_info_iter)?;
@@ -295,7 +296,9 @@ pub fn money_market_deposit<'a>(
             reserve_liquidity_supply_info.clone(),
             collateral_mint.clone(),
             lending_market_info.clone(),
+            lending_market_authority_info.clone(),
             authority.clone(),
+            clock.clone(),
             amount,
             signers_seeds,
         )
@@ -412,6 +415,7 @@ pub fn money_market_redeem<'a>(
         let reserve_info = next_account_info(money_market_account_info_iter)?;
         let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
         let lending_market_info = next_account_info(money_market_account_info_iter)?;
+        let lending_market_authority_info = next_account_info(money_market_account_info_iter)?;
         let reserve_liquidity_pyth_oracle_info = next_account_info(money_market_account_info_iter)?;
         let reserve_liquidity_switchboard_oracle_info =
             next_account_info(money_market_account_info_iter)?;
@@ -431,7 +435,9 @@ pub fn money_market_redeem<'a>(
             collateral_mint.clone(),
             reserve_liquidity_supply_info.clone(),
             lending_market_info.clone(),
+            lending_market_authority_info.clone(),
             authority.clone(),
+            clock.clone(),
             amount,
             signers_seeds,
         )
