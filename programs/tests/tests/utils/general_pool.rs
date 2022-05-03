@@ -3,13 +3,11 @@ use super::{
     general_pool_borrow_authority::TestGeneralPoolBorrowAuthority, get_account, get_liquidity_mint,
     LiquidityProvider, TestGeneralPoolMarket, User,
 };
-use everlend_general_pool::state::{
-    WithdrawalRequest, WithdrawalRequests, WithdrawalRequestsDeprecated,
-};
+use everlend_general_pool::state::{WithdrawalRequest, WithdrawalRequests};
 use everlend_general_pool::{
     find_pool_program_address, find_transit_sol_unwrap_address,
-    find_withdrawal_request_program_address, find_withdrawal_requests_program_address,
-    find_withdrawal_requests_program_address_deprecated, instruction, state::Pool,
+    find_withdrawal_request_program_address, find_withdrawal_requests_program_address, instruction,
+    state::Pool,
 };
 
 use solana_program::{
@@ -21,7 +19,6 @@ use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
-use std::str::FromStr;
 
 #[derive(Debug)]
 pub struct TestGeneralPool {
@@ -55,24 +52,6 @@ impl TestGeneralPool {
     pub async fn get_data(&self, context: &mut ProgramTestContext) -> Pool {
         let account = get_account(context, &self.pool_pubkey).await;
         Pool::unpack_unchecked(&account.data).unwrap()
-    }
-
-    pub async fn get_withdrawal_requests_deprecated(
-        &self,
-        context: &mut ProgramTestContext,
-        test_pool_market: &TestGeneralPoolMarket,
-    ) -> (Pubkey, WithdrawalRequestsDeprecated) {
-        let (withdrawal_requests, _) = find_withdrawal_requests_program_address_deprecated(
-            &everlend_general_pool::id(),
-            &test_pool_market.keypair.pubkey(),
-            &self.token_mint_pubkey,
-        );
-
-        let account = get_account(context, &withdrawal_requests).await;
-        (
-            withdrawal_requests,
-            WithdrawalRequestsDeprecated::unpack_unchecked(&account.data).unwrap(),
-        )
     }
 
     pub async fn get_withdrawal_requests(
@@ -334,14 +313,9 @@ impl TestGeneralPool {
         context: &mut ProgramTestContext,
         test_pool_market: &TestGeneralPoolMarket,
     ) -> BanksClientResult<()> {
-
         let tx = Transaction::new_signed_with_payer(
-            &[instruction::migrate_withdraw_request_account(
+            &[instruction::migrate_instruction(
                 &everlend_general_pool::id(),
-                &test_pool_market.keypair.pubkey(),
-                &self.pool_pubkey,
-                &self.token_mint_pubkey,
-                &test_pool_market.manager.pubkey(),
             )],
             Some(&context.payer.pubkey()),
             &[&context.payer, &test_pool_market.manager],

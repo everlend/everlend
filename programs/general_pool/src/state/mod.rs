@@ -6,13 +6,11 @@ mod pool;
 mod pool_borrow_authority;
 mod pool_market;
 mod withdrawal_request;
-mod withdrawal_request_deprecated;
 
 pub use pool::*;
 pub use pool_borrow_authority::*;
 pub use pool_market::*;
 pub use withdrawal_request::*;
-pub use withdrawal_request_deprecated::*;
 
 /// Enum representing the account type managed by the program
 #[derive(Clone, Debug, PartialEq, BorshDeserialize, BorshSerialize, BorshSchema)]

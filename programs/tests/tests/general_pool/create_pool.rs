@@ -33,7 +33,7 @@ async fn success() {
     assert_eq!(pool.account_type, AccountType::Pool);
 
     let withdrawal_requests = test_pool
-        .get_withdrawal_requests_deprecated(&mut context, &test_pool_market)
+        .get_withdrawal_requests(&mut context, &test_pool_market)
         .await
         .1;
 
