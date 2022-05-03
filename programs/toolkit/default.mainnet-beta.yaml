@@ -21,10 +21,10 @@ larix_reserve_sol: 2RcrbkGNcfy9mbarLCCRYdW3hxph7pSbP38x35MR2Bjt
 larix_reserve_sol_supply: 5eSFSTPte1Hbqcvhe8H4DSgqNGuzSLjgA7ynpCucdGqg
 solend_program_id: So1endDq2YkqhipRh3WViPa8hdiSpxWy6z3Z6tMCpAo
 solend_lending_market: 4UpD2fh7xH3VP9QQaXtsS1YY3bxzWhtfpks7FatyKvdY
-solend_reserve_pyth_oracle:
-solend_reserve_switchboard_oracle:
+solend_reserve_pyth_oracle: H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG
+solend_reserve_switchboard_oracle: AdtRGGhmqvom3Jemp5YNrxd9q9unX36BZk1pujkkXijL
 solend_reserve_sol: 8PbodeaosQP19SjYFx855UMqWxH2HynZLdBXmsrbac36
-solend_reserve_sol_supply:
+solend_reserve_sol_supply: FR1tYTYEcMhBiuETNs1b5DZft2pT6oEJBixDZ1Qe1WHw
 sol_collateral:
   - 8ezDtNNhX91t1NbSLe8xV2PcCEfoQjEm2qDVGjt3rjhg
   - ArWoXQYvvERzuoeGTpyyvf7pNNVEPB3x7kQg5W6zQdaB
@@ -58,11 +58,11 @@ ustw_collateral:
   - 6CvSMhUFDyiYzYZLsLYMGPQxZ7QkuMEv7RqZSocZnT4A
   - nZtL8HKX3aQtk3VpdvtdwPpXF2uMia522Pnan2meqdf
 fttw_collateral:
-  -
+  - 11111111111111111111111111111111
   - 8txpnwk6ruV5fjbGDS1Lx8aNaBP8RcWThXZsZRMGDrE4
   - DiMx1n2dJmxqFtENRPhYWsqi8Mhg2p39MpTzsm6phzMP
 ray_collateral:
-  -
+  - 11111111111111111111111111111111
   - C2Dp7WwPnT7ZgY6MNyg7g7hVguk31HPtRe9EgP2m9vpJ
   - 2d95ZC8L5XP6xCnaKx8D5U5eX6rKbboBBAwuBLxaFmmJ
 srm_collateral:
