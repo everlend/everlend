@@ -1,11 +1,5 @@
-use core::time;
-use std::thread;
-
 use anyhow::Context;
-use solana_account_decoder::parse_token::UiTokenAmount;
-use solana_program::program_pack::Pack;
-use solana_program::pubkey::Pubkey;
-
+use core::time;
 use everlend_depositor::{
     find_rebalancing_program_address,
     state::{Rebalancing, RebalancingOperation},
@@ -14,6 +8,10 @@ use everlend_general_pool::state::WITHDRAW_DELAY;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::{find_config_program_address, state::RegistryConfig};
 use everlend_utils::integrations::{self, MoneyMarketPubkeys};
+use solana_account_decoder::parse_token::UiTokenAmount;
+use solana_program::program_pack::Pack;
+use solana_program::pubkey::Pubkey;
+use std::thread;
 
 use crate::{
     accounts_config::InitializedAccounts,
@@ -61,7 +59,6 @@ pub async fn command_run_test(
         reserve_liquidity_oracle: sol_oracle,
         lending_market: default_accounts.port_finance_lending_market,
     };
-
     let larix_pubkeys = integrations::larix::AccountPubkeys {
         reserve: default_accounts.larix_reserve_sol,
         reserve_liquidity_supply: default_accounts.larix_reserve_sol_supply,
