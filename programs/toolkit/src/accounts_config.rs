@@ -1,130 +1,176 @@
-use serde_derive::{Deserialize, Serialize};
-use serde_with::{serde_as, serde_conv};
-use solana_program::pubkey::Pubkey;
+use std::collections::BTreeMap;
 use std::{
-    collections::HashMap,
     fs::{create_dir_all, File},
     io::{self, Write},
     path::Path,
-    str::FromStr,
 };
 
-serde_conv!(
-    PubkeyAsString,
-    Pubkey,
-    |pubkey: &Pubkey| pubkey.to_string(),
-    |string: String| -> Result<_, std::convert::Infallible> {
-        Ok(Pubkey::from_str(&string).unwrap())
-    }
-);
+use serde_derive::{Deserialize, Serialize};
+use serde_with::{serde_as, DisplayFromStr};
+use solana_program::pubkey::Pubkey;
 
 #[serde_as]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Default)]
 pub struct DefaultAccounts {
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub sol_mint: Pubkey,
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub usdc_mint: Pubkey,
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub usdt_mint: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub msol_mint: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub stsol_mint: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub sobtc_mint: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub ethw_mint: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub ustw_mint: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub fttw_mint: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub ray_mint: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub srm_mint: Pubkey,
 
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub sol_oracle: Pubkey,
 
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub port_finance_program_id: Pubkey,
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub port_finance_lending_market: Pubkey,
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub port_finance_reserve_sol: Pubkey,
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub port_finance_reserve_sol_supply: Pubkey,
 
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub larix_program_id: Pubkey,
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub larix_lending_market: Pubkey,
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub larix_reserve_sol: Pubkey,
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub larix_reserve_sol_supply: Pubkey,
 
-    #[serde(default)]
-    #[serde_as(as = "Vec<PubkeyAsString>")]
-    pub sol_collateral: Vec<Pubkey>,
+    #[serde_as(as = "DisplayFromStr")]
+    pub solend_program_id: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub solend_lending_market: Pubkey,
+    // todo remove option after filling cfg file
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub solend_reserve_pyth_oracle: Option<Pubkey>,
+    // todo remove option after filling cfg file
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub solend_reserve_switchboard_oracle: Option<Pubkey>,
+    #[serde_as(as = "DisplayFromStr")]
+    pub solend_reserve_sol: Pubkey,
+    // todo remove option after filling cfg file
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub solend_reserve_sol_supply: Option<Pubkey>,
 
-    #[serde(default)]
-    #[serde_as(as = "Vec<PubkeyAsString>")]
-    pub usdc_collateral: Vec<Pubkey>,
+    #[serde_as(as = "DisplayFromStr")]
+    pub multisig_program_id: Pubkey,
 
-    #[serde(default)]
-    #[serde_as(as = "Vec<PubkeyAsString>")]
-    pub usdt_collateral: Vec<Pubkey>,
+    #[serde_as(as = "Vec<Option<DisplayFromStr>>")]
+    pub sol_collateral: Vec<Option<Pubkey>>,
+
+    #[serde_as(as = "Vec<Option<DisplayFromStr>>")]
+    pub usdc_collateral: Vec<Option<Pubkey>>,
+
+    #[serde_as(as = "Vec<Option<DisplayFromStr>>")]
+    pub usdt_collateral: Vec<Option<Pubkey>>,
+
+    #[serde_as(as = "Vec<Option<DisplayFromStr>>")]
+    pub msol_collateral: Vec<Option<Pubkey>>,
+
+    #[serde_as(as = "Vec<Option<DisplayFromStr>>")]
+    pub stsol_collateral: Vec<Option<Pubkey>>,
+
+    #[serde_as(as = "Vec<Option<DisplayFromStr>>")]
+    pub sobtc_collateral: Vec<Option<Pubkey>>,
+
+    #[serde_as(as = "Vec<Option<DisplayFromStr>>")]
+    pub ethw_collateral: Vec<Option<Pubkey>>,
+
+    #[serde_as(as = "Vec<Option<DisplayFromStr>>")]
+    pub ustw_collateral: Vec<Option<Pubkey>>,
+
+    #[serde_as(as = "Vec<Option<DisplayFromStr>>")]
+    pub fttw_collateral: Vec<Option<Pubkey>>,
+
+    #[serde_as(as = "Vec<Option<DisplayFromStr>>")]
+    pub ray_collateral: Vec<Option<Pubkey>>,
+
+    #[serde_as(as = "Vec<Option<DisplayFromStr>>")]
+    pub srm_collateral: Vec<Option<Pubkey>>,
 }
 
 #[serde_as]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Default)]
 pub struct InitializedAccounts {
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub payer: Pubkey,
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub registry: Pubkey,
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub general_pool_market: Pubkey,
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub income_pool_market: Pubkey,
 
-    #[serde_as(as = "Vec<PubkeyAsString>")]
+    #[serde_as(as = "Vec<DisplayFromStr>")]
     pub mm_pool_markets: Vec<Pubkey>,
 
-    #[serde(default)]
-    pub token_accounts: HashMap<String, TokenAccounts>,
+    pub token_accounts: BTreeMap<String, TokenAccounts>,
 
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub liquidity_oracle: Pubkey,
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub depositor: Pubkey,
 }
 
 #[serde_as]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Default)]
 pub struct TokenAccounts {
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub mint: Pubkey,
 
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub liquidity_token_account: Pubkey,
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub collateral_token_account: Pubkey,
 
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub general_pool: Pubkey,
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub general_pool_token_account: Pubkey,
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub general_pool_mint: Pubkey,
 
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub income_pool: Pubkey,
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub income_pool_token_account: Pubkey,
 
     pub mm_pools: Vec<MoneyMarketAccounts>,
 
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub liquidity_transit: Pubkey,
 }
 
 #[serde_as]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Default)]
 pub struct MoneyMarketAccounts {
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub pool: Pubkey,
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub pool_token_account: Pubkey,
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub token_mint: Pubkey,
-    #[serde_as(as = "PubkeyAsString")]
+    #[serde_as(as = "DisplayFromStr")]
     pub pool_mint: Pubkey,
 }
 
@@ -170,4 +216,23 @@ where
     file.write_all(&serialized.into_bytes())?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn default_accounts_load() {
+        DefaultAccounts::load("default.devnet.yaml").unwrap();
+    }
+
+    #[test]
+    fn default_accounts_load_save() {
+        let cfg_name = "accounts.devnet.yaml";
+        let a = InitializedAccounts::load(cfg_name).unwrap();
+        a.save(cfg_name).unwrap();
+        let b = InitializedAccounts::load(cfg_name).unwrap();
+        assert_eq!(a, b);
+    }
 }

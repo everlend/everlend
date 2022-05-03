@@ -1,8 +1,7 @@
-use super::{create_token_account, mint_tokens, transfer, BanksClientResult, SOL_MINT};
+use super::{create_token_account, mint_tokens, transfer, BanksClientResult};
 use solana_program::pubkey::Pubkey;
 use solana_program_test::ProgramTestContext;
 use solana_sdk::signature::{Keypair, Signer};
-use std::str::FromStr;
 
 pub trait User {
     fn pubkey(&self) -> Pubkey;
@@ -32,8 +31,7 @@ pub async fn add_liquidity_provider(
     let pool_account = Keypair::new();
 
     let mut lamports: u64 = 0;
-    let sol_mint = Pubkey::from_str(SOL_MINT).unwrap();
-    if *token_mint_pubkey == sol_mint {
+    if *token_mint_pubkey == spl_token::native_mint::id() {
         lamports = mint_amount;
     };
 
@@ -60,7 +58,7 @@ pub async fn add_liquidity_provider(
     // Fill user account by native token
     transfer(context, &token_account.pubkey(), mint_amount).await?;
 
-    if *token_mint_pubkey != sol_mint {
+    if *token_mint_pubkey != spl_token::native_mint::id() {
         mint_tokens(
             context,
             // &test_pool.token_mint_pubkey,

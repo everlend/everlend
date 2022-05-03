@@ -4,6 +4,7 @@ use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::*;
 use solana_program_test::{ProgramTest, ProgramTestContext};
 use solana_sdk::signature::read_keypair_file;
+use solana_sdk::transport;
 use solana_sdk::{
     account::Account,
     signature::{Keypair, Signer},
@@ -41,9 +42,8 @@ pub mod users;
 
 pub const EXP: u64 = 1_000_000_000;
 pub const REFRESH_INCOME_INTERVAL: u64 = 300; // About 2.5 min
-pub const SOL_MINT: &str = "So11111111111111111111111111111111111111112";
 
-pub type BanksClientResult<T> = Result<T, BanksClientError>;
+pub type BanksClientResult<T> = transport::Result<T>;
 
 pub fn program_test() -> ProgramTest {
     let mut program = ProgramTest::new(

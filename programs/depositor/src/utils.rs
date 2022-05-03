@@ -185,6 +185,7 @@ pub fn money_market_deposit<'a>(
 ) -> Result<(), ProgramError> {
     let port_finance_program_id = registry_config.money_market_program_ids[0];
     let larix_program_id = registry_config.money_market_program_ids[1];
+    let solend_program_id = registry_config.money_market_program_ids[2];
 
     // Only for tests
     if money_market_program.key.to_string() == integrations::SPL_TOKEN_LENDING_PROGRAM_ID {
@@ -271,6 +272,37 @@ pub fn money_market_deposit<'a>(
             amount,
             signers_seeds,
         )
+    } else if *money_market_program.key == solend_program_id {
+        let reserve_info = next_account_info(money_market_account_info_iter)?;
+        let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
+        let lending_market_info = next_account_info(money_market_account_info_iter)?;
+        let lending_market_authority_info = next_account_info(money_market_account_info_iter)?;
+        let reserve_liquidity_pyth_oracle_info = next_account_info(money_market_account_info_iter)?;
+        let reserve_liquidity_switchboard_oracle_info =
+            next_account_info(money_market_account_info_iter)?;
+
+        cpi::solend::refresh_reserve(
+            money_market_program.key,
+            reserve_info.clone(),
+            reserve_liquidity_pyth_oracle_info.clone(),
+            reserve_liquidity_switchboard_oracle_info.clone(),
+            clock.clone(),
+        )?;
+
+        cpi::solend::deposit(
+            money_market_program.key,
+            source_liquidity.clone(),
+            destination_collateral.clone(),
+            reserve_info.clone(),
+            reserve_liquidity_supply_info.clone(),
+            collateral_mint.clone(),
+            lending_market_info.clone(),
+            lending_market_authority_info.clone(),
+            authority.clone(),
+            clock.clone(),
+            amount,
+            signers_seeds,
+        )
     } else {
         Err(EverlendError::IncorrectInstructionProgramId.into())
     }
@@ -293,6 +325,7 @@ pub fn money_market_redeem<'a>(
 ) -> Result<(), ProgramError> {
     let port_finance_program_id = registry_config.money_market_program_ids[0];
     let larix_program_id = registry_config.money_market_program_ids[1];
+    let solend_program_id = registry_config.money_market_program_ids[2];
 
     // Only for tests
     if money_market_program.key.to_string() == integrations::SPL_TOKEN_LENDING_PROGRAM_ID {
@@ -376,6 +409,37 @@ pub fn money_market_redeem<'a>(
             lending_market_info.clone(),
             lending_market_authority_info.clone(),
             authority.clone(),
+            amount,
+            signers_seeds,
+        )
+    } else if *money_market_program.key == solend_program_id {
+        let reserve_info = next_account_info(money_market_account_info_iter)?;
+        let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
+        let lending_market_info = next_account_info(money_market_account_info_iter)?;
+        let lending_market_authority_info = next_account_info(money_market_account_info_iter)?;
+        let reserve_liquidity_pyth_oracle_info = next_account_info(money_market_account_info_iter)?;
+        let reserve_liquidity_switchboard_oracle_info =
+            next_account_info(money_market_account_info_iter)?;
+
+        cpi::solend::refresh_reserve(
+            money_market_program.key,
+            reserve_info.clone(),
+            reserve_liquidity_pyth_oracle_info.clone(),
+            reserve_liquidity_switchboard_oracle_info.clone(),
+            clock.clone(),
+        )?;
+
+        cpi::solend::redeem(
+            money_market_program.key,
+            source_collateral.clone(),
+            destination_liquidity.clone(),
+            reserve_info.clone(),
+            collateral_mint.clone(),
+            reserve_liquidity_supply_info.clone(),
+            lending_market_info.clone(),
+            lending_market_authority_info.clone(),
+            authority.clone(),
+            clock.clone(),
             amount,
             signers_seeds,
         )

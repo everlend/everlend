@@ -14,7 +14,6 @@ use std::str::FromStr;
 const INITIAL_USER_BALANCE: u64 = 5000000;
 const WITHDRAW_REQUEST_RENT: u64 = 1955760;
 const WITHDRAW_AMOUNT: u64 = 45;
-const SOL_MINT: &str = "So11111111111111111111111111111111111111112";
 
 async fn setup(
     token_mint: Option<Pubkey>,
@@ -79,7 +78,7 @@ async fn setup(
 #[tokio::test]
 async fn success_with_sol() {
     let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) =
-        setup(Some(Pubkey::from_str(SOL_MINT).unwrap())).await;
+        setup(Some(spl_token::native_mint::id())).await;
 
     test_pool
         .deposit(&mut context, &test_pool_market, &user, 100)

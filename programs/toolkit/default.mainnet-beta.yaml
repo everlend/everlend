@@ -2,6 +2,14 @@
 sol_mint: So11111111111111111111111111111111111111112
 usdc_mint: EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
 usdt_mint: Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB
+msol_mint: mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So
+stsol_mint: 7dHbWXmci3dT8UFYWYZweBLXgycu7Y3iL6trKn1Y7ARj
+sobtc_mint: 9n4nbM75f5Ui33ZbPYXn59EwSgE8CGsHtAeTH5YFeJ9E
+ethw_mint: 7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs
+ustw_mint: 9vMJfxuKxXBoEa7rM12mYLMwTacLMLDJqHozw96WQL8i
+fttw_mint: EzfgjvkSwthhgHaceR3LnKXUoRkP6NUhfghdaHAj1tUv
+ray_mint: 4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R
+srm_mint: SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt
 sol_oracle: H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG
 port_finance_program_id: Port7uDYB3wk6GJAw4KT1WpTeMtSu9bTcChBHkX2LfR
 port_finance_lending_market: 6T4XxKerq744sSuj3jaoV6QiZ8acirf4TrPwQzHAoSy5
@@ -11,12 +19,56 @@ larix_program_id: 7Zb1bGi32pfsrBkzWdqd4dFhUXwp5Nybr1zuaEwN34hy
 larix_lending_market: 5geyZJdffDBNoMqEbogbPvdgH9ue7NREobtW8M3C1qfe
 larix_reserve_sol: 2RcrbkGNcfy9mbarLCCRYdW3hxph7pSbP38x35MR2Bjt
 larix_reserve_sol_supply: 5eSFSTPte1Hbqcvhe8H4DSgqNGuzSLjgA7ynpCucdGqg
+solend_program_id: So1endDq2YkqhipRh3WViPa8hdiSpxWy6z3Z6tMCpAo
+solend_lending_market: 4UpD2fh7xH3VP9QQaXtsS1YY3bxzWhtfpks7FatyKvdY
+solend_reserve_pyth_oracle: H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG
+solend_reserve_switchboard_oracle: AdtRGGhmqvom3Jemp5YNrxd9q9unX36BZk1pujkkXijL
+solend_reserve_sol: 8PbodeaosQP19SjYFx855UMqWxH2HynZLdBXmsrbac36
+solend_reserve_sol_supply: FR1tYTYEcMhBiuETNs1b5DZft2pT6oEJBixDZ1Qe1WHw
 sol_collateral:
   - 8ezDtNNhX91t1NbSLe8xV2PcCEfoQjEm2qDVGjt3rjhg
   - ArWoXQYvvERzuoeGTpyyvf7pNNVEPB3x7kQg5W6zQdaB
+  - 5h6ssFpeDeRbzsEHDbTQNH7nVGgsKrZydxdSTnLm6QdV
 usdc_collateral:
   - FgSsGV8GByPaMERxeQJPvZRZHf7zCBhrdYtztKorJS58
   - DTXPsgtcHgbiHaZYm4q6SWJYLNT1zGbGbxN2ZbETxcB2
+  - 993dVFL2uXWYeoXuEBFXR4BijeXdTv4s6BzsCjJZuwqk
 usdt_collateral:
   - 3RudPTAkfcq9Q9Jk8SVeCoecCBmdKMj6q5smsWzxqtqZ
   - 68sovRJnn5EPdXNkQaj4F1qGP3NDpTrMDEXiKGEJgwBh
+  - BTsbZDV7aCMRJ3VNy9ygV4Q2UeEo9GpR8D6VvmMZzNr8
+msol_collateral:
+  - Dt1Cuau5m5CSmun8hZstjEh9RszxAmejnq7ZaHNcuXfA
+  - y6rnvwa2fTBynxGPNo6oH94WhmRxKE96cieCtyCwQBi
+  - 3JFC4cB56Er45nWVe29Bhnn5GnwQzSmHVf6eUq9ac91h
+stsol_collateral:
+  - ESzkdUN8jvJxMqBjWADUomRxHn2ECxLFeeEvrcteLMnY
+  - 2K7mMW4iFtU1RmZaCVg6MUUGWMBX4Z7rDbAhca42cXwL
+  - QQ6WK86aUCBvNPkGeYBKikk15sUg6aMUEi5PTL6eB4i
+sobtc_collateral:
+  - QN2HkkBaWHfYSU5bybyups9z1UHu8Eu7QeeyMbjD2JA
+  - 8c5Fw4B9zmeesVx2WgGu6Yg1iE9P5SWTUormPPL8e8CV
+  - Gqu3TFmJXfnfSX84kqbZ5u9JjSBVoesaHjfTsaPjRSnZ
+ethw_collateral:
+  - Fu8gTpPR6DAxzWK2jDW7axuK3MBZcr5hKfjALXDpY3Zw
+  - AeBswySyZBjmaQVLAxkLNmUKrB66gdhL6vezqdruVbsR
+  - FbKvdbx5h6F86h1pZuEqv7FxwmsVhJ88cDuSqHvLm6Xf
+ustw_collateral:
+  - 9dCmkTZNDWvtJWXZrJXUJyhM4U6YQX8kdaSzWr7g5Jrx
+  - 6CvSMhUFDyiYzYZLsLYMGPQxZ7QkuMEv7RqZSocZnT4A
+  - nZtL8HKX3aQtk3VpdvtdwPpXF2uMia522Pnan2meqdf
+fttw_collateral:
+  - 11111111111111111111111111111111
+  - 8txpnwk6ruV5fjbGDS1Lx8aNaBP8RcWThXZsZRMGDrE4
+  - DiMx1n2dJmxqFtENRPhYWsqi8Mhg2p39MpTzsm6phzMP
+ray_collateral:
+  - 11111111111111111111111111111111
+  - C2Dp7WwPnT7ZgY6MNyg7g7hVguk31HPtRe9EgP2m9vpJ
+  - 2d95ZC8L5XP6xCnaKx8D5U5eX6rKbboBBAwuBLxaFmmJ
+srm_collateral:
+  - 77TBgKmTNtMdGrt1ewNRb56F2Xw6fNLZZj33JZ3oGwXh
+  - 9yoGvCPSFqfgHCyyhb7iVQcNTscFbAqRTbn6XuGUi8xa
+  - 4CxGuD2NMr6zM8f18gr6kRhgd748pnmkAhkY1YJtkup1
+
+
+

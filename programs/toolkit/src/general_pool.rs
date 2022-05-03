@@ -47,8 +47,7 @@ pub fn create_market(
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(
-        config,
+    config.sign_and_send_and_confirm_transaction(
         tx,
         vec![config.fee_payer.as_ref(), &pool_market_keypair],
     )?;
@@ -121,8 +120,7 @@ pub fn create_pool(
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(
-        config,
+    config.sign_and_send_and_confirm_transaction(
         tx,
         vec![config.fee_payer.as_ref(), &token_account, &pool_mint],
     )?;
@@ -168,7 +166,7 @@ pub fn create_pool_borrow_authority(
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
     Ok(pool_borrow_authority_pubkey)
 }
@@ -199,7 +197,7 @@ pub fn deposit(
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
     Ok(())
 }
@@ -239,7 +237,7 @@ pub fn withdraw_request(
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
     Ok(())
 }
@@ -289,7 +287,22 @@ pub fn withdraw(
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+
+    Ok(())
+}
+
+pub fn migrate_general_pool_account(
+    config: &Config,
+) -> Result<(), ClientError> {
+    let tx = Transaction::new_with_payer(
+        &[instruction::migrate_instruction(
+            &everlend_general_pool::id(),
+        )],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
     Ok(())
 }
