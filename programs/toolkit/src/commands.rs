@@ -260,7 +260,12 @@ pub async fn command_create_token_accounts(
             .iter()
             .map(|(collateral_mint, mm_pool_market_pubkey)| {
                 println!("MM Pool: {}", collateral_mint);
-                ulp::create_pool(config, mm_pool_market_pubkey, collateral_mint)
+                if collateral_mint.eq(&Pubkey::default()) {
+                    // We can't skip cuz of mm pools is indexed
+                    Ok((Pubkey::default(), Pubkey::default(), Pubkey::default()))
+                } else {
+                    ulp::create_pool(config, mm_pool_market_pubkey, collateral_mint)
+                }
             })
             .collect::<Result<Vec<(Pubkey, Pubkey, Pubkey)>, ClientError>>()?;
 
@@ -287,6 +292,7 @@ pub async fn command_create_token_accounts(
         println!("Collateral transits");
         collateral_mints
             .iter()
+            .filter(|(pk, _)| !pk.eq(&Pubkey::default()))
             .map(|(collateral_mint, _mm_pool_market_pubkey)| {
                 depositor::create_transit(
                     config,
@@ -300,6 +306,7 @@ pub async fn command_create_token_accounts(
         println!("MM Collateral transits");
         mm_pool_pubkeys
             .iter()
+            .filter(|(_, _, pk)| !pk.eq(&Pubkey::default()))
             .map(|(_, _, mm_pool_mint)| {
                 depositor::create_transit(
                     config,
