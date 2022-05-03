@@ -1,5 +1,7 @@
 //! Registry config state definitions
 
+use std::iter::Iterator;
+
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use solana_program::{
     clock::Slot,
@@ -12,7 +14,7 @@ use solana_program::{
 use super::*;
 
 /// Total number of money market distributions
-pub const TOTAL_DISTRIBUTIONS: usize = 10;
+pub const TOTAL_DISTRIBUTIONS: usize = 5;
 
 /// Pool markets config
 #[repr(C)]
@@ -66,6 +68,8 @@ pub struct SetRegistryConfigParams {
 pub struct RegistryConfig {
     /// Account type - RegistryConfig
     pub account_type: AccountType,
+    /// Struct version
+    pub version: u8,
     /// Registry
     pub registry: Pubkey,
     /// General pool program
@@ -85,14 +89,18 @@ pub struct RegistryConfig {
     /// Pool markets config
     pub pool_markets_cfg: PoolMarketsConfig,
     // Space for future values
-    // 407
+    // 438
 }
 
 impl RegistryConfig {
+    /// Actual version of this struct
+    pub const ACTUAL_VERSION: u8 = 1;
+
     /// Init a registry config
     pub fn init(&mut self, params: InitRegistryConfigParams) {
         self.account_type = AccountType::RegistryConfig;
         self.registry = params.registry;
+        self.version = Self::ACTUAL_VERSION;
     }
 
     /// Set a registry config
@@ -110,7 +118,7 @@ impl RegistryConfig {
 
 impl Sealed for RegistryConfig {}
 impl Pack for RegistryConfig {
-    // 1 + 32 + 32 + 32 + 32 + 32 + 32 + (10 * 32) + 8 + (32 + 32 + 32) + 407 = 1024
+    // 1 + 1 + 32 + 32 + 32 + 32 + 32 + 32 + (5 * 32) + 8 + (32 + 32 + (5 * 32)) + 438= 1024
     const LEN: usize = 1024;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {

@@ -6,7 +6,7 @@ use solana_sdk::signature::Keypair;
 use spl_associated_token_account::get_associated_token_address;
 
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::{SetRegistryConfigParams, TOTAL_DISTRIBUTIONS};
+use everlend_registry::state::{PoolMarketsConfig, SetRegistryConfigParams, TOTAL_DISTRIBUTIONS};
 use everlend_utils::integrations::MoneyMarket;
 
 use crate::{
@@ -20,6 +20,7 @@ use crate::{
 pub async fn command_create_registry(
     config: &Config,
     keypair: Option<Keypair>,
+    pool_markets_cfg: PoolMarketsConfig,
 ) -> anyhow::Result<()> {
     let payer_pubkey = config.fee_payer.pubkey();
     println!("Fee payer: {}", payer_pubkey);
@@ -44,7 +45,7 @@ pub async fn command_create_registry(
 
     println!("registry_config = {:#?}", registry_config);
 
-    registry::set_registry_config(config, &registry_pubkey, registry_config)?;
+    registry::set_registry_config(config, &registry_pubkey, registry_config, pool_markets_cfg)?;
 
     initialiazed_accounts.payer = payer_pubkey;
     initialiazed_accounts.registry = registry_pubkey;

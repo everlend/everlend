@@ -16,6 +16,8 @@ use super::AccountType;
 pub struct Depositor {
     /// Account type - Depositor
     pub account_type: AccountType,
+    /// Struct version
+    pub version: u8,
     /// Liquidity oracle
     pub liquidity_oracle: Pubkey,
     /// Registry
@@ -23,11 +25,20 @@ pub struct Depositor {
 }
 
 impl Depositor {
-    /// Initialize a voting pool
-    pub fn init(&mut self, params: InitDepositorParams) {
-        self.account_type = AccountType::Depositor;
-        self.liquidity_oracle = params.liquidity_oracle;
-        self.registry_config = params.registry_config;
+    /// Actual version of this struct
+    pub const ACTUAL_VERSION: u8 = 1;
+
+    /// Index of account type byte
+    pub const ACCOUNT_TYPE_BYTE_INDEX: usize = 0;
+
+    /// Create a voting pool
+    pub fn new(params: InitDepositorParams) -> Self {
+        Self {
+            account_type: AccountType::Depositor,
+            version: Self::ACTUAL_VERSION,
+            liquidity_oracle: params.liquidity_oracle,
+            registry_config: params.registry_config,
+        }
     }
 }
 
@@ -41,8 +52,8 @@ pub struct InitDepositorParams {
 
 impl Sealed for Depositor {}
 impl Pack for Depositor {
-    // 1 + 32 + 32
-    const LEN: usize = 65;
+    // 1 + 1 + 32 + 32
+    const LEN: usize = 66;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;
@@ -61,5 +72,6 @@ impl IsInitialized for Depositor {
     fn is_initialized(&self) -> bool {
         self.account_type != AccountType::Uninitialized
             && self.account_type == AccountType::Depositor
+            && self.version == Self::ACTUAL_VERSION
     }
 }

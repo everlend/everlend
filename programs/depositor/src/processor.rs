@@ -25,10 +25,11 @@ use everlend_liquidity_oracle::{
 };
 use everlend_registry::state::RegistryConfig;
 use everlend_utils::{
-    assert_account_key, assert_owned_by, assert_rent_exempt, assert_uninitialized, cpi,
-    find_program_address, EverlendError,
+    assert_account_key, assert_owned_by, assert_rent_exempt, cpi, find_program_address,
+    EverlendError,
 };
 
+use crate::state::AccountType;
 use crate::{
     find_rebalancing_program_address, find_transit_program_address,
     instruction::DepositorInstruction,
@@ -73,11 +74,19 @@ impl Processor {
             &config.pool_markets_cfg.income_pool_market,
         )?;
 
-        // Get depositor state
-        let mut depositor = Depositor::unpack_unchecked(&depositor_info.data.borrow())?;
-        assert_uninitialized(&depositor)?;
+        // Check that account data uninitialized.
+        // todo need refactor fn assert_uninitialized(..)
+        if depositor_info
+            .data
+            .borrow()
+            .get(Depositor::ACCOUNT_TYPE_BYTE_INDEX)
+            .ok_or(ProgramError::InvalidAccountData)?
+            != &(AccountType::Uninitialized as u8)
+        {
+            return Err(ProgramError::AccountAlreadyInitialized);
+        }
 
-        depositor.init(InitDepositorParams {
+        let depositor = Depositor::new(InitDepositorParams {
             liquidity_oracle: *liquidity_oracle_info.key,
             registry_config: *registry_config_info.key,
         });

@@ -1,10 +1,13 @@
 use std::collections::BTreeMap;
+use std::convert::TryInto;
 use std::{collections::HashMap, process::exit, str::FromStr};
 
+use anyhow::bail;
 use clap::{
     crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
 };
 use regex::Regex;
+use solana_clap_utils::input_parsers::pubkeys_of;
 use solana_clap_utils::{
     fee_payer::fee_payer_arg,
     input_parsers::{keypair_of, pubkey_of, value_of},
@@ -20,7 +23,7 @@ use spl_associated_token_account::get_associated_token_address;
 use accounts_config::*;
 use commands::*;
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::{SetRegistryConfigParams, TOTAL_DISTRIBUTIONS};
+use everlend_registry::state::{PoolMarketsConfig, SetRegistryConfigParams, TOTAL_DISTRIBUTIONS};
 use everlend_utils::integrations::MoneyMarket;
 use general_pool::get_withdrawal_requests;
 use utils::*;
@@ -89,6 +92,16 @@ async fn command_create(
         ("SRM".to_string(), default_accounts.srm_collateral),
     ]);
 
+    let general_pool_market_pubkey = general_pool::create_market(config, None)?;
+    let income_pool_market_pubkey =
+        income_pools::create_market(config, None, &general_pool_market_pubkey)?;
+
+    let mm_pool_markets = vec![
+        ulp::create_market(config, None)?,
+        ulp::create_market(config, None)?,
+        ulp::create_market(config, None)?,
+    ];
+
     println!("Registry");
     let registry_pubkey = registry::init(config, None)?;
     let mut registry_config = SetRegistryConfigParams {
@@ -104,19 +117,19 @@ async fn command_create(
     registry_config.money_market_program_ids[1] = default_accounts.larix_program_id;
     registry_config.money_market_program_ids[2] = default_accounts.solend_program_id;
 
+    let mut ulp_pool_markets: [Pubkey; TOTAL_DISTRIBUTIONS] = Default::default();
+    ulp_pool_markets[..mm_pool_markets.len()].copy_from_slice(&mm_pool_markets);
+
+    let pool_markets_cfg = PoolMarketsConfig {
+        general_pool_market: general_pool_market_pubkey,
+        income_pool_market: income_pool_market_pubkey,
+        ulp_pool_markets,
+    };
+
     println!("registry_config = {:#?}", registry_config);
+    println!("pool_markets_cfg = {:#?}", pool_markets_cfg);
 
-    registry::set_registry_config(config, &registry_pubkey, registry_config)?;
-
-    let general_pool_market_pubkey = general_pool::create_market(config, None)?;
-    let income_pool_market_pubkey =
-        income_pools::create_market(config, None, &general_pool_market_pubkey)?;
-
-    let mm_pool_markets = vec![
-        ulp::create_market(config, None)?,
-        ulp::create_market(config, None)?,
-        ulp::create_market(config, None)?,
-    ];
+    registry::set_registry_config(config, &registry_pubkey, registry_config, pool_markets_cfg)?;
 
     println!("Liquidity oracle");
     let liquidity_oracle_pubkey = liquidity_oracle::init(config, None)?;
@@ -373,6 +386,36 @@ async fn main() -> anyhow::Result<()> {
                         .value_name("KEYPAIR")
                         .takes_value(true)
                         .help("Keypair [default: new keypair]"),
+                )
+                .arg(
+                    Arg::with_name("general-pool-market")
+                        .short("gpm")
+                        .required(true)
+                        .validator(is_pubkey)
+                        .value_name("PUBKEY")
+                        .takes_value(true)
+                        .help("General pool market pubkey"),
+                )
+                .arg(
+                    Arg::with_name("income-pool-market")
+                        .short("ipm")
+                        .required(true)
+                        .validator(is_pubkey)
+                        .value_name("PUBKEY")
+                        .takes_value(true)
+                        .help("Income pool market pubkey"),
+                )
+                .arg(
+                    Arg::with_name("ulp-pool-markets")
+                        .short("upm")
+                        .required(true)
+                        .multiple(true)
+                        .min_values(1)
+                        .max_values(TOTAL_DISTRIBUTIONS as u64)
+                        .validator(is_pubkey)
+                        .value_name("PUBKEY")
+                        .takes_value(true)
+                        .help("ULP pool market pubkey"),
                 ),
         )
         .subcommand(
@@ -726,7 +769,25 @@ async fn main() -> anyhow::Result<()> {
     let _ = match matches.subcommand() {
         ("create-registry", Some(arg_matches)) => {
             let keypair = keypair_of(arg_matches, "keypair");
-            command_create_registry(&config, keypair).await
+            let general_pool_market = pubkey_of(arg_matches, "general-pool-market").unwrap();
+            let income_pool_market = pubkey_of(arg_matches, "income-pool-market").unwrap();
+            let mut ulp_pool_markets = pubkeys_of(arg_matches, "ulp-pool-markets").unwrap();
+            if ulp_pool_markets.len() > TOTAL_DISTRIBUTIONS {
+                bail!(
+                    "Length of ulp-pool-markets must be <= {}",
+                    TOTAL_DISTRIBUTIONS
+                )
+            };
+            ulp_pool_markets.extend_from_slice(
+                vec![Pubkey::default(); TOTAL_DISTRIBUTIONS - ulp_pool_markets.len()].as_slice(),
+            );
+
+            let pool_market_cfg = PoolMarketsConfig {
+                general_pool_market,
+                income_pool_market,
+                ulp_pool_markets: ulp_pool_markets.try_into().unwrap(),
+            };
+            command_create_registry(&config, keypair, pool_market_cfg).await
         }
         ("create-general-pool-market", Some(arg_matches)) => {
             let keypair = keypair_of(arg_matches, "keypair");
