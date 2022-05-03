@@ -1,10 +1,32 @@
-use solana_client::{client_error::ClientError, rpc_client::RpcClient};
-use solana_program::pubkey::Pubkey;
-use solana_sdk::{signature::Signature, signer::Signer, transaction::Transaction};
+use anchor_lang::AccountDeserialize;
+use solana_account_decoder::UiAccountEncoding;
+use solana_client::{
+    client_error::ClientError,
+    rpc_client::RpcClient,
+    rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
+    rpc_filter::{Memcmp, MemcmpEncodedBytes, MemcmpEncoding, RpcFilterType},
+};
+use solana_program::{
+    program_pack::{IsInitialized, Pack},
+    pubkey::Pubkey,
+};
+use solana_sdk::{
+    account::Account, signature::Signature, signer::Signer, transaction::Transaction,
+};
 
 use crate::accounts_config::{DefaultAccounts, InitializedAccounts};
 
 pub const REFRESH_INCOME_INTERVAL: u64 = 300;
+
+/// Generates fixed distribution from slice
+#[macro_export]
+macro_rules! distribution {
+    ($distribuition:expr) => {{
+        let mut new_distribuition = DistributionArray::default();
+        new_distribuition[..$distribuition.len()].copy_from_slice(&$distribuition);
+        new_distribuition
+    }};
+}
 
 pub struct Config {
     pub rpc_client: RpcClient,
@@ -14,28 +36,83 @@ pub struct Config {
     pub network: String,
 }
 
-pub fn get_default_accounts(config: &Config) -> DefaultAccounts {
-    DefaultAccounts::load(&format!("default.{}.yaml", config.network)).unwrap_or_default()
+impl Config {
+    pub fn get_default_accounts(&self) -> DefaultAccounts {
+        DefaultAccounts::load(&format!("default.{}.yaml", self.network)).unwrap_or_default()
+    }
+
+    pub fn get_initialized_accounts(&self) -> InitializedAccounts {
+        InitializedAccounts::load(&format!("accounts.{}.yaml", self.network)).unwrap_or_default()
+    }
+
+    pub fn get_account_deserialize<T: AccountDeserialize>(
+        &self,
+        pubkey: &Pubkey,
+    ) -> Result<T, ClientError> {
+        let account = self.rpc_client.get_account(pubkey)?;
+        let mut data_ref = &account.data[..];
+        let res = T::try_deserialize(&mut data_ref).unwrap();
+
+        Ok(res)
+    }
+
+    pub fn get_account_unpack<T: Pack + IsInitialized>(
+        &self,
+        pubkey: &Pubkey,
+    ) -> Result<T, ClientError> {
+        let account = self.rpc_client.get_account(pubkey)?;
+        let res = T::unpack(&account.data).unwrap();
+
+        Ok(res)
+    }
+
+    pub fn sign_and_send_and_confirm_transaction(
+        &self,
+        mut tx: Transaction,
+        signers: Vec<&dyn Signer>,
+    ) -> Result<Signature, ClientError> {
+        let recent_blockhash = self.rpc_client.get_latest_blockhash()?;
+
+        tx.try_sign(&signers, recent_blockhash)?;
+
+        let signature = self
+            .rpc_client
+            .send_and_confirm_transaction_with_spinner(&tx)?;
+
+        Ok(signature)
+    }
 }
 
-pub fn get_initialized_accounts(config: &Config) -> InitializedAccounts {
-    InitializedAccounts::load(&format!("accounts.{}.yaml", config.network)).unwrap_or_default()
-}
-
-pub fn sign_and_send_and_confirm_transaction(
+pub fn get_program_accounts(
     config: &Config,
-    mut tx: Transaction,
-    signers: Vec<&dyn Signer>,
-) -> Result<Signature, ClientError> {
-    let recent_blockhash = config.rpc_client.get_latest_blockhash()?;
-
-    tx.try_sign(&signers, recent_blockhash)?;
-
-    let signature = config
-        .rpc_client
-        .send_and_confirm_transaction_with_spinner(&tx)?;
-
-    Ok(signature)
+    program_id: &Pubkey,
+    account_type: u8,
+    pubkey: &Pubkey,
+) -> Result<Vec<(Pubkey, Account)>, ClientError> {
+    config.rpc_client.get_program_accounts_with_config(
+        program_id,
+        RpcProgramAccountsConfig {
+            filters: Some(vec![
+                // Account type
+                RpcFilterType::Memcmp(Memcmp {
+                    offset: 0,
+                    bytes: MemcmpEncodedBytes::Base58(bs58::encode([account_type]).into_string()),
+                    encoding: Some(MemcmpEncoding::Binary),
+                }),
+                // Account parent
+                RpcFilterType::Memcmp(Memcmp {
+                    offset: 1,
+                    bytes: MemcmpEncodedBytes::Base58(pubkey.to_string()),
+                    encoding: Some(MemcmpEncoding::Binary),
+                }),
+            ]),
+            account_config: RpcAccountInfoConfig {
+                encoding: Some(UiAccountEncoding::Base64Zstd),
+                ..RpcAccountInfoConfig::default()
+            },
+            ..RpcProgramAccountsConfig::default()
+        },
+    )
 }
 
 pub fn spl_create_associated_token_account(
@@ -65,7 +142,7 @@ pub fn spl_create_associated_token_account(
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
     Ok(associated_token_address)
 }
@@ -89,7 +166,7 @@ pub fn spl_token_transfer(
         Some(&config.fee_payer.pubkey()),
     );
 
-    sign_and_send_and_confirm_transaction(config, tx, vec![config.fee_payer.as_ref()])?;
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
     Ok(())
 }

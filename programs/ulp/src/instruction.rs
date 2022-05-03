@@ -1,13 +1,15 @@
 //! Instruction types
 
-use crate::{find_pool_borrow_authority_program_address, find_pool_program_address};
 use borsh::{BorshDeserialize, BorshSerialize};
-use everlend_utils::find_program_address;
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
     system_program, sysvar,
 };
+
+use everlend_utils::find_program_address;
+
+use crate::{find_pool_borrow_authority_program_address, find_pool_program_address};
 
 /// Instructions supported by the program
 #[derive(Debug, BorshDeserialize, BorshSerialize, PartialEq)]
@@ -53,6 +55,8 @@ pub enum LiquidityPoolsInstruction {
     /// Update a pool borrow authority
     ///
     /// Accounts:
+    /// [R] Pool market
+    /// [R] Pool
     /// [W] Pool borrow authority
     /// [RS] Market manager
     UpdatePoolBorrowAuthority {
@@ -64,6 +68,7 @@ pub enum LiquidityPoolsInstruction {
     ///
     /// Accounts:
     /// [W] Pool borrow authority
+    /// [R] Pool
     /// [W] Receiver lamports
     /// [RS] Market manager
     DeletePoolBorrowAuthority,
@@ -234,6 +239,7 @@ pub fn update_pool_borrow_authority(
 
     let accounts = vec![
         AccountMeta::new_readonly(*pool_market, false),
+        AccountMeta::new_readonly(*pool, false),
         AccountMeta::new(pool_borrow_authority, false),
         AccountMeta::new_readonly(*manager, true),
     ];
@@ -260,6 +266,7 @@ pub fn delete_pool_borrow_authority(
 
     let accounts = vec![
         AccountMeta::new_readonly(*pool_market, false),
+        AccountMeta::new_readonly(*pool, false),
         AccountMeta::new(pool_borrow_authority, false),
         AccountMeta::new(*receiver, false),
         AccountMeta::new_readonly(*manager, true),

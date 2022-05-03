@@ -1,5 +1,6 @@
 use super::{
-    get_account, get_liquidity_mint, TestGeneralPool, TestIncomePoolMarket, TokenHolder, User,
+    get_account, get_liquidity_mint, BanksClientResult, TestGeneralPool, TestIncomePoolMarket,
+    TokenHolder, User,
 };
 use everlend_income_pools::{find_pool_program_address, instruction, state::IncomePool};
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
@@ -7,7 +8,6 @@ use solana_program_test::ProgramTestContext;
 use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::Transaction,
-    transport,
 };
 
 #[derive(Debug)]
@@ -46,7 +46,7 @@ impl TestIncomePool {
         &self,
         context: &mut ProgramTestContext,
         test_income_pool_market: &TestIncomePoolMarket,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let rent = context.banks_client.get_rent().await.unwrap();
         let tx = Transaction::new_signed_with_payer(
             &[
@@ -83,7 +83,7 @@ impl TestIncomePool {
         test_income_pool_market: &TestIncomePoolMarket,
         user: &TokenHolder,
         amount: u64,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::deposit(
                 &everlend_income_pools::id(),
@@ -107,7 +107,7 @@ impl TestIncomePool {
         context: &mut ProgramTestContext,
         test_income_pool_market: &TestIncomePoolMarket,
         general_pool: &TestGeneralPool,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::withdraw(
                 &everlend_income_pools::id(),

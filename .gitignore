@@ -41,6 +41,7 @@ target/
 
 # Cache
 .cache/
+.anchor/
 
 # Env
 *keypair.json

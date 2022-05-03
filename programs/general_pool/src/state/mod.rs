@@ -1,15 +1,18 @@
 //! State types
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+use std::fmt;
 
 mod pool;
 mod pool_borrow_authority;
 mod pool_market;
 mod withdrawal_request;
+mod withdrawal_request_deprecated;
 
 pub use pool::*;
 pub use pool_borrow_authority::*;
 pub use pool_market::*;
 pub use withdrawal_request::*;
+pub use withdrawal_request_deprecated::*;
 
 /// Enum representing the account type managed by the program
 #[derive(Clone, Debug, PartialEq, BorshDeserialize, BorshSerialize, BorshSchema)]
@@ -24,11 +27,34 @@ pub enum AccountType {
     PoolBorrowAuthority,
     /// Withdraw requests
     WithdrawRequests,
+    /// Withdraw request
+    WithdrawRequest,
 }
 
 impl Default for AccountType {
     fn default() -> Self {
         AccountType::Uninitialized
+    }
+}
+
+/// Enum representing the account version managed by the program
+#[derive(Clone, Debug, PartialEq, BorshDeserialize, BorshSerialize, BorshSchema)]
+pub enum AccountVersion {
+    /// Default version 0
+    V0,
+    /// Updated version
+    V1,
+}
+
+impl Default for AccountVersion {
+    fn default() -> Self {
+        AccountVersion::V0
+    }
+}
+
+impl fmt::Display for AccountVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
     }
 }
 

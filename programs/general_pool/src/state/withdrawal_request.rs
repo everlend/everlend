@@ -1,21 +1,30 @@
-use super::AccountType;
+use super::{AccountType, AccountVersion};
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+use everlend_utils::EverlendError;
 use solana_program::{
+    clock::Slot,
+    entrypoint::ProgramResult,
     msg,
     program_error::ProgramError,
     program_pack::{IsInitialized, Pack, Sealed},
     pubkey::Pubkey,
 };
 
-/// Total withdraw request for fixed state
-pub const TOTAL_WITHDRAW_REQUEST: usize = 20;
+/// How long after the request, you can execute a withdraw
+pub const WITHDRAW_DELAY: Slot = 200;
 
-/// Rebalancing
+/// Actual version of withdrawal requests struct
+pub const ACTUAL_VERSION: AccountVersion = AccountVersion::V0;
+
+/// Withdrawal requests
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
 pub struct WithdrawalRequests {
-    /// Account type - Rebalancing
+    /// Account type - WithdrawalRequests
     pub account_type: AccountType,
+
+    /// Account version
+    pub account_version: AccountVersion,
 
     /// Pool
     pub pool: Pubkey,
@@ -23,37 +32,11 @@ pub struct WithdrawalRequests {
     /// Mint
     pub mint: Pubkey,
 
-    /// Withdraw request id
-    pub last_request_id: u64,
-
-    /// Last processed request id
-    pub last_processed_request_id: u64,
-
     /// Total requests amount
     pub liquidity_supply: u64,
 }
 
-/// RebalancingStep
-#[repr(C)]
-#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize, BorshSchema, PartialEq, Default)]
-pub struct WithdrawalRequest {
-    /// Rent payer
-    pub rent_payer: Pubkey,
-
-    /// Withdraw source
-    pub source: Pubkey,
-
-    /// Withdraw destination
-    pub destination: Pubkey,
-
-    /// Withdraw liquidity amount
-    pub liquidity_amount: u64,
-
-    /// Withdraw collateral amount
-    pub collateral_amount: u64,
-}
-
-/// Initialize a Rebalancing params
+/// Initialize a withdrawal requests params
 pub struct InitWithdrawalRequestsParams {
     /// Pool
     pub pool: Pubkey,
@@ -65,15 +48,36 @@ impl WithdrawalRequests {
     /// Initialize a withdrawal requests
     pub fn init(&mut self, params: InitWithdrawalRequestsParams) {
         self.account_type = AccountType::WithdrawRequests;
+        self.account_version = ACTUAL_VERSION;
         self.pool = params.pool;
         self.mint = params.mint;
+    }
+
+    /// Add new withdrawal request
+    pub fn add(&mut self, liquidity_amount: u64) -> ProgramResult {
+        self.liquidity_supply = self
+            .liquidity_supply
+            .checked_add(liquidity_amount)
+            .ok_or(EverlendError::MathOverflow)?;
+
+        Ok(())
+    }
+
+    /// Remove first withdrawal request
+    pub fn process(&mut self, liquidity_amount: u64) -> ProgramResult {
+        self.liquidity_supply = self
+            .liquidity_supply
+            .checked_sub(liquidity_amount)
+            .ok_or(EverlendError::MathOverflow)?;
+
+        Ok(())
     }
 }
 
 impl Sealed for WithdrawalRequests {}
 impl Pack for WithdrawalRequests {
-    // 1 + 32 + 32 + 8 + 8 +8
-    const LEN: usize = 89;
+    // 1 + 1 + 32 + 32 + 8
+    const LEN: usize = 74;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;
@@ -94,13 +98,75 @@ impl IsInitialized for WithdrawalRequests {
     fn is_initialized(&self) -> bool {
         self.account_type != AccountType::Uninitialized
             && self.account_type == AccountType::WithdrawRequests
+            && self.account_version == ACTUAL_VERSION
     }
+}
+
+/// Withdrawal request
+#[repr(C)]
+#[derive(Debug, Clone, BorshDeserialize, BorshSerialize, BorshSchema, PartialEq, Default)]
+pub struct WithdrawalRequest {
+    /// Account type - WithdrawalRequest
+    pub account_type: AccountType,
+
+    /// Pool
+    pub pool: Pubkey,
+
+    /// From account
+    pub from: Pubkey,
+
+    /// Withdraw source
+    pub source: Pubkey,
+
+    /// Withdraw destination
+    pub destination: Pubkey,
+
+    /// Withdraw liquidity amount
+    pub liquidity_amount: u64,
+
+    /// Withdraw collateral amount
+    pub collateral_amount: u64,
+
+    /// Slot after which you can withdraw
+    pub ticket: Slot,
+}
+
+impl WithdrawalRequest {
+    /// Initialize a withdrawal request
+    pub fn init(&mut self, params: InitWithdrawalRequestParams) {
+        self.account_type = AccountType::WithdrawRequest;
+        self.pool = params.pool;
+        self.from = params.from;
+        self.source = params.source;
+        self.destination = params.destination;
+        self.liquidity_amount = params.liquidity_amount;
+        self.collateral_amount = params.collateral_amount;
+        self.ticket = params.ticket;
+    }
+}
+
+/// Initialize a withdrawal request params
+pub struct InitWithdrawalRequestParams {
+    /// Pool
+    pub pool: Pubkey,
+    /// From account
+    pub from: Pubkey,
+    /// Withdraw source
+    pub source: Pubkey,
+    /// Withdraw destination
+    pub destination: Pubkey,
+    /// Withdraw liquidity amount
+    pub liquidity_amount: u64,
+    /// Withdraw collateral amount
+    pub collateral_amount: u64,
+    /// Slot after which you can withdraw
+    pub ticket: Slot,
 }
 
 impl Sealed for WithdrawalRequest {}
 impl Pack for WithdrawalRequest {
-    // 32 + 32 + 8 + 8
-    const LEN: usize = 112;
+    // 1 + 32 + 32 + 32 + 32 + 8 + 8 + 8
+    const LEN: usize = 153;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;
@@ -117,6 +183,7 @@ impl Pack for WithdrawalRequest {
 }
 impl IsInitialized for WithdrawalRequest {
     fn is_initialized(&self) -> bool {
-        self.collateral_amount != 0
+        self.account_type != AccountType::Uninitialized
+            && self.account_type == AccountType::WithdrawRequest
     }
 }

@@ -1,4 +1,4 @@
-use super::get_account;
+use super::{get_account, BanksClientResult};
 use everlend_registry::{
     find_config_program_address,
     state::{Registry, RegistryConfig, SetRegistryConfigParams},
@@ -8,7 +8,6 @@ use solana_program_test::ProgramTestContext;
 use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::Transaction,
-    transport,
 };
 
 #[derive(Debug)]
@@ -38,7 +37,7 @@ impl TestRegistry {
         RegistryConfig::unpack_unchecked(&account.data).unwrap()
     }
 
-    pub async fn init(&self, context: &mut ProgramTestContext) -> transport::Result<()> {
+    pub async fn init(&self, context: &mut ProgramTestContext) -> BanksClientResult<()> {
         let rent = context.banks_client.get_rent().await.unwrap();
         let tx = Transaction::new_signed_with_payer(
             &[
@@ -72,7 +71,7 @@ impl TestRegistry {
         &self,
         context: &mut ProgramTestContext,
         params: SetRegistryConfigParams,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
             &[everlend_registry::instruction::set_registry_config(
                 &everlend_registry::id(),

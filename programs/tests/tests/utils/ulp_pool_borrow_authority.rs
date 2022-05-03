@@ -1,11 +1,11 @@
-use super::{get_account, get_token_balance, TestPool, TestPoolMarket};
+use super::{get_account, get_token_balance, BanksClientResult, TestPool, TestPoolMarket};
 use everlend_ulp::{
     find_pool_borrow_authority_program_address, instruction,
     state::{Pool, PoolBorrowAuthority},
 };
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::ProgramTestContext;
-use solana_sdk::{signature::Signer, transaction::Transaction, transport};
+use solana_sdk::{signature::Signer, transaction::Transaction};
 
 pub const ULP_SHARE_ALLOWED: u16 = 10_000; // 100% of the total pool
 
@@ -53,7 +53,7 @@ impl TestPoolBorrowAuthority {
         test_pool_market: &TestPoolMarket,
         test_pool: &TestPool,
         share_allowed: u16,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::create_pool_borrow_authority(
                 &everlend_ulp::id(),
@@ -77,7 +77,7 @@ impl TestPoolBorrowAuthority {
         test_pool_market: &TestPoolMarket,
         test_pool: &TestPool,
         share_allowed: u16,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::update_pool_borrow_authority(
                 &everlend_ulp::id(),
@@ -100,7 +100,7 @@ impl TestPoolBorrowAuthority {
         context: &mut ProgramTestContext,
         test_pool_market: &TestPoolMarket,
         test_pool: &TestPool,
-    ) -> transport::Result<()> {
+    ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::delete_pool_borrow_authority(
                 &everlend_ulp::id(),

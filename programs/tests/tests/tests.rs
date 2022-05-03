@@ -22,7 +22,6 @@ mod ulp {
 
 mod general_pool {
     mod borrow;
-    mod cancel_withdraw_request;
     mod create_pool;
     mod create_pool_borrow_authority;
     mod delete_pool_borrow_authority;

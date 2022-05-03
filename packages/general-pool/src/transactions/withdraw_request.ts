@@ -3,6 +3,7 @@ import {
   PublicKey,
   SystemProgram,
   SYSVAR_RENT_PUBKEY,
+  SYSVAR_CLOCK_PUBKEY,
   Transaction,
   TransactionCtorFields,
   TransactionInstruction,
@@ -11,10 +12,10 @@ import BN from 'bn.js'
 import { Borsh } from '@everlend/common'
 import { GeneralPoolsProgram } from '../program'
 
-export class WithdrawRequestArgs extends Borsh.Data<{ amount: BN }> {
+export class WithdrawRequestArgs extends Borsh.Data<{ collateralAmount: BN }> {
   static readonly SCHEMA = this.struct([
     ['instruction', 'u8'],
-    ['amount', 'u64'],
+    ['collateralAmount', 'u64'],
   ])
 
   instruction = 9
@@ -23,14 +24,14 @@ export class WithdrawRequestArgs extends Borsh.Data<{ amount: BN }> {
 type WithdrawRequestParams = {
   poolMarket: PublicKey
   pool: PublicKey
+  poolMint: PublicKey
   withdrawRequests: PublicKey
-  userWithdrawRequest: PublicKey
+  withdrawalRequest: PublicKey
   source: PublicKey
   destination: PublicKey
   tokenAccount: PublicKey
   collateralTransit: PublicKey
-  poolMint: PublicKey
-  amount: BN
+  collateralAmount: BN
 }
 
 export class WithdrawRequest extends Transaction {
@@ -41,31 +42,32 @@ export class WithdrawRequest extends Transaction {
       poolMarket,
       pool,
       withdrawRequests,
-      userWithdrawRequest,
+      withdrawalRequest,
       source,
       destination,
       tokenAccount,
       collateralTransit,
       poolMint,
-      amount,
+      collateralAmount,
     } = params
 
-    const data = WithdrawRequestArgs.serialize({ amount })
+    const data = WithdrawRequestArgs.serialize({ collateralAmount })
 
     this.add(
       new TransactionInstruction({
         keys: [
           { pubkey: poolMarket, isSigner: false, isWritable: false },
           { pubkey: pool, isSigner: false, isWritable: false },
+          { pubkey: poolMint, isSigner: false, isWritable: true },
           { pubkey: withdrawRequests, isSigner: false, isWritable: true },
-          { pubkey: userWithdrawRequest, isSigner: false, isWritable: true },
+          { pubkey: withdrawalRequest, isSigner: false, isWritable: true },
           { pubkey: source, isSigner: false, isWritable: true },
           { pubkey: destination, isSigner: false, isWritable: true },
           { pubkey: tokenAccount, isSigner: false, isWritable: true },
           { pubkey: collateralTransit, isSigner: false, isWritable: true },
-          { pubkey: poolMint, isSigner: false, isWritable: true },
           { pubkey: feePayer, isSigner: true, isWritable: false },
           { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
+          { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
           { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
           { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
         ],

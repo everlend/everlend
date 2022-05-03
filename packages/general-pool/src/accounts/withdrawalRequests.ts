@@ -8,31 +8,27 @@ type Args = {
   accountType: AccountType
   pool: PublicKey
   mint: PublicKey
-  lastRequestId: BN
-  lastProcessedRequestId: BN
   liquiditySupply: BN
 }
 
 export class WithdrawalRequestsData extends Borsh.Data<Args> {
   static readonly SCHEMA = this.struct([
     ['accountType', 'u8'],
+    ['accountVersion', 'u8'],
     ['pool', 'publicKey'],
     ['mint', 'publicKey'],
-    ['lastRequestId', 'u64'],
-    ['lastProcessedRequestId', 'u64'],
     ['liquiditySupply', 'u64'],
   ])
 
   accountType: AccountType
   pool: PublicKey
   mint: PublicKey
-  lastRequestId: BN
-  lastProcessedRequestId: BN
   liquiditySupply: BN
 }
 
 export class WithdrawalRequests extends Account<WithdrawalRequestsData> {
-  static readonly LEN = 89
+  static readonly LEN = 74
+  static readonly VERSION = 'V0'
 
   constructor(key: PublicKey, info: AccountInfo<Buffer>) {
     super(key, info)
@@ -46,7 +42,7 @@ export class WithdrawalRequests extends Account<WithdrawalRequestsData> {
 
   static getPDA(poolMarket: PublicKey, tokenMint: PublicKey) {
     return GeneralPoolsProgram.findProgramAddress([
-      Buffer.from('withdrawals'),
+      Buffer.from(`withdrawals${WithdrawalRequests.VERSION}`),
       new PublicKey(poolMarket).toBuffer(),
       new PublicKey(tokenMint).toBuffer(),
     ])

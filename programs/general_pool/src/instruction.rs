@@ -11,7 +11,8 @@ use everlend_utils::find_program_address;
 
 use crate::{
     find_pool_borrow_authority_program_address, find_pool_program_address,
-    find_transit_program_address, find_user_withdrawal_request_program_address,
+    find_transit_program_address, find_withdrawal_request_program_address,
+    find_withdrawal_requests_program_address_deprecated,
     find_withdrawal_requests_program_address,
 };
 
@@ -62,6 +63,7 @@ pub enum LiquidityPoolsInstruction {
     ///
     /// Accounts:
     /// [R] Pool market
+    /// [R] Pool
     /// [W] Pool borrow authority
     /// [RS] Market manager
     UpdatePoolBorrowAuthority {
@@ -101,14 +103,15 @@ pub enum LiquidityPoolsInstruction {
     /// Accounts:
     /// [R] Pool market
     /// [R] Pool
-    /// [W] Withdrawals requests account
-    /// [W] User withdraw request account
+    /// [R] Pool market authority
+    /// [W] Pool mint account
+    /// [W] Withdrawal requests account
+    /// [W] Withdrawal request account
     /// [W] Destination account
     /// [W] Pool token account
-    /// [W] Transit collateral account
-    /// [W] Pool mint account
-    /// [R] Pool market authority
-    /// [W] Rent payer
+    /// [W] Collateral transit account
+    /// [W] From account
+    /// [R] Clock sysvar
     /// [R] Token program id
     Withdraw,
 
@@ -151,37 +154,33 @@ pub enum LiquidityPoolsInstruction {
     /// Accounts:
     /// [R] Pool market
     /// [R] Pool
-    /// [W] Withdrawals requests account
-    /// [W] User withdraw request account
+    /// [W] Pool mint account
+    /// [W] Withdrawal requests account
+    /// [W] Withdrawal request account
     /// [W] Source account (for pool mint)
     /// [R] Destination account (for token mint)
-    /// [W] Token account
-    /// [W] Transit collateral account
-    /// [W] Pool mint account
+    /// [W] Pool token account
+    /// [W] Collateral transit account
     /// [RS] User transfer authority
     /// [R] Rent sysvar
+    /// [R] Clock sysvar
     /// [R] System program
     /// [R] Token program id
     WithdrawRequest {
-        /// Amount to withdraw
-        amount: u64,
+        /// Collateral amount
+        collateral_amount: u64,
     },
 
-    /// Cancel withdraw request and return collateral tokens to user
-    ///
-    /// Accounts:
+    /// Migrate withdraw request data
     /// [R] Pool market
     /// [R] Pool
-    /// [W] Withdrawals requests account
-    /// [W] User withdraw request account
-    /// [W] Withdrawal source collateral account
-    /// [W] Transit collateral account
-    /// [W] Pool mint account
-    /// [R] Pool market authority
-    /// [W] Rent payer
-    /// [RS] Market manager
-    /// [R] Token program id
-    CancelWithdrawRequest,
+    /// [R] Token mint
+    /// [W] Withdrawal requests deprecated account
+    /// [W] Withdrawal requests account
+    /// [S] Manager
+    /// [R] Rent sysvar
+    /// [R] System program
+    WithdrawRequestMigration,
 }
 
 /// Creates 'InitPoolMarket' instruction.
@@ -218,7 +217,7 @@ pub fn create_pool(
     let (pool, _) = find_pool_program_address(program_id, pool_market, token_mint);
     let (transit_collateral, _) = find_transit_program_address(program_id, pool_market, pool_mint);
     let (withdrawal_requests, _) =
-        find_withdrawal_requests_program_address(program_id, pool_market, token_mint);
+        find_withdrawal_requests_program_address_deprecated(program_id, pool_market, token_mint);
 
     let accounts = vec![
         AccountMeta::new_readonly(*pool_market, false),
@@ -287,6 +286,7 @@ pub fn update_pool_borrow_authority(
 
     let accounts = vec![
         AccountMeta::new_readonly(*pool_market, false),
+        AccountMeta::new_readonly(*pool, false),
         AccountMeta::new(pool_borrow_authority, false),
         AccountMeta::new_readonly(*manager, true),
     ];
@@ -370,30 +370,33 @@ pub fn withdraw(
     token_account: &Pubkey,
     token_mint: &Pubkey,
     pool_mint: &Pubkey,
-    rent_payer: &Pubkey,
-    index: u64,
+    from: &Pubkey,
+    addition_accounts: Vec<AccountMeta>,
 ) -> Instruction {
     let (pool_market_authority, _) = find_program_address(program_id, pool_market);
 
     let (withdrawal_requests, _) =
-        find_withdrawal_requests_program_address(program_id, pool_market, token_mint);
+        find_withdrawal_requests_program_address_deprecated(program_id, pool_market, token_mint);
+    let (withdrawal_request, _) =
+        find_withdrawal_request_program_address(program_id, &withdrawal_requests, from);
     let (collateral_transit, _) = find_transit_program_address(program_id, pool_market, pool_mint);
-    let (user_withdrawal_request, _) =
-        find_user_withdrawal_request_program_address(program_id, pool_market, token_mint, index);
 
-    let accounts = vec![
+    let mut accounts = vec![
         AccountMeta::new_readonly(*pool_market, false),
+        AccountMeta::new_readonly(pool_market_authority, false),
         AccountMeta::new_readonly(*pool, false),
+        AccountMeta::new(*pool_mint, false),
         AccountMeta::new(withdrawal_requests, false),
-        AccountMeta::new(user_withdrawal_request, false),
+        AccountMeta::new(withdrawal_request, false),
         AccountMeta::new(*destination, false),
         AccountMeta::new(*token_account, false),
         AccountMeta::new(collateral_transit, false),
-        AccountMeta::new(*pool_mint, false),
-        AccountMeta::new_readonly(pool_market_authority, false),
-        AccountMeta::new(*rent_payer, false),
+        AccountMeta::new(*from, false),
+        AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
     ];
+
+    accounts.extend(addition_accounts);
 
     Instruction::new_with_borsh(*program_id, &LiquidityPoolsInstruction::Withdraw, accounts)
 }
@@ -410,76 +413,37 @@ pub fn withdraw_request(
     token_mint: &Pubkey,
     pool_mint: &Pubkey,
     user_transfer_authority: &Pubkey,
-    amount: u64,
-    index: u64,
+    collateral_amount: u64,
 ) -> Instruction {
     let (withdrawal_requests, _) =
-        find_withdrawal_requests_program_address(program_id, pool_market, token_mint);
+        find_withdrawal_requests_program_address_deprecated(program_id, pool_market, token_mint);
     let (collateral_transit, _) = find_transit_program_address(program_id, pool_market, pool_mint);
-    let (user_withdrawal_request, _) =
-        find_user_withdrawal_request_program_address(program_id, pool_market, token_mint, index);
+    let (withdrawal_request, _) = find_withdrawal_request_program_address(
+        program_id,
+        &withdrawal_requests,
+        user_transfer_authority,
+    );
 
     let accounts = vec![
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new_readonly(*pool, false),
+        AccountMeta::new(*pool_mint, false),
         AccountMeta::new(withdrawal_requests, false),
-        AccountMeta::new(user_withdrawal_request, false),
+        AccountMeta::new(withdrawal_request, false),
         AccountMeta::new(*source, false),
         AccountMeta::new_readonly(*destination, false),
         AccountMeta::new(*token_account, false),
         AccountMeta::new(collateral_transit, false),
-        AccountMeta::new(*pool_mint, false),
         AccountMeta::new(*user_transfer_authority, true),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
+        AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
     ];
 
     Instruction::new_with_borsh(
         *program_id,
-        &LiquidityPoolsInstruction::WithdrawRequest { amount },
-        accounts,
-    )
-}
-
-/// Creates 'CancelWithdrawRequest' instruction.
-#[allow(clippy::too_many_arguments)]
-pub fn cancel_withdraw_request(
-    program_id: &Pubkey,
-    pool_market: &Pubkey,
-    pool: &Pubkey,
-    source: &Pubkey,
-    token_mint: &Pubkey,
-    pool_mint: &Pubkey,
-    manager_authority: &Pubkey,
-    rent_payer: &Pubkey,
-    index: u64,
-) -> Instruction {
-    let (pool_market_authority, _) = find_program_address(program_id, pool_market);
-
-    let (withdrawal_requests, _) =
-        find_withdrawal_requests_program_address(program_id, pool_market, token_mint);
-    let (collateral_transit, _) = find_transit_program_address(program_id, pool_market, pool_mint);
-    let (user_withdrawal_request, _) =
-        find_user_withdrawal_request_program_address(program_id, pool_market, token_mint, index);
-
-    let accounts = vec![
-        AccountMeta::new_readonly(*pool_market, false),
-        AccountMeta::new_readonly(*pool, false),
-        AccountMeta::new(withdrawal_requests, false),
-        AccountMeta::new(user_withdrawal_request, false),
-        AccountMeta::new(*source, false),
-        AccountMeta::new(collateral_transit, false),
-        AccountMeta::new(*pool_mint, false),
-        AccountMeta::new_readonly(pool_market_authority, false),
-        AccountMeta::new(*rent_payer, false),
-        AccountMeta::new_readonly(*manager_authority, true),
-        AccountMeta::new_readonly(spl_token::id(), false),
-    ];
-
-    Instruction::new_with_borsh(
-        *program_id,
-        &LiquidityPoolsInstruction::CancelWithdrawRequest,
+        &LiquidityPoolsInstruction::WithdrawRequest { collateral_amount },
         accounts,
     )
 }
@@ -545,6 +509,40 @@ pub fn repay(
             amount,
             interest_amount,
         },
+        accounts,
+    )
+}
+
+/// Creates 'Migration' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn migrate_withdraw_request_account(
+    program_id: &Pubkey,
+    pool_market: &Pubkey,
+    pool: &Pubkey,
+    token_mint: &Pubkey,
+    manager: &Pubkey,
+) -> Instruction {
+
+    let (withdrawal_requests_deprecated, _) =
+        find_withdrawal_requests_program_address_deprecated(program_id, pool_market, token_mint);
+
+    let (withdrawal_requests, _) =
+        find_withdrawal_requests_program_address(program_id, pool_market, token_mint);
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*pool_market, false),
+        AccountMeta::new_readonly(*pool, false),
+        AccountMeta::new_readonly(*token_mint, false),
+        AccountMeta::new(withdrawal_requests_deprecated, false),
+        AccountMeta::new(withdrawal_requests, false),
+        AccountMeta::new(*manager, true),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+        AccountMeta::new_readonly(system_program::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &LiquidityPoolsInstruction::WithdrawRequestMigration,
         accounts,
     )
 }
