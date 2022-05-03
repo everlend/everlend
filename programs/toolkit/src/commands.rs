@@ -245,7 +245,10 @@ pub async fn command_create_token_accounts(
         println!("Payer token account: {:?}", token_account);
         // let pool_account = get_associated_token_address(&payer_pubkey, &general_pool_mint);
         let pool_account =
-            spl_create_associated_token_account(config, &payer_pubkey, &general_pool_mint)?;
+            spl_create_associated_token_account(config, &payer_pubkey, &general_pool_mint)
+                .unwrap_or_else(|_| {
+                    get_associated_token_address(&payer_pubkey, &general_pool_mint)
+                });
         println!("Payer pool account: {:?}", pool_account);
 
         println!("Income pool");
