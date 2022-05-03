@@ -100,5 +100,28 @@ token_accounts:
         token_mint: 3JFC4cB56Er45nWVe29Bhnn5GnwQzSmHVf6eUq9ac91h
         pool_mint: 744Rgt9km6EiitAPKTJTwiskAUD8Xbi4WmFdnkKfoJqf
     liquidity_transit: 8D2Z4n9Y2984eTDSzovSD5ayZJt2KbEYrsiF6ZE1aZeb
+  stSOL:
+    mint: 7dHbWXmci3dT8UFYWYZweBLXgycu7Y3iL6trKn1Y7ARj
+    liquidity_token_account: 3TcfHLwZaA6SEUKDsZch5YxVHtMXtz2FoVXEVj54KyYj
+    collateral_token_account: GfSyTvEJMmgZkBaFdTYp8y4GGS4QVuJVLgA8VtLaz3PT
+    general_pool: 3iGgoHnC2b2eoZ3KrxjfP3j3SoZsb8szpDLVKmFdpTNR
+    general_pool_token_account: J3LMRh7PJzbFCF7ciMDph9T64eUjTaTKjDKKYw9iCUJt
+    general_pool_mint: BTsRNs63gLtvLqYi9g5gcYMveCELeRBb2FAFaJeBoAbm
+    income_pool: DnM3BkkHyquEHvQXoNMsHrh8kDmuiuGtK2nXpgXiALoW
+    income_pool_token_account: 4jQdAnbeM77Pkfiq6eCVRVFDsLHmir4AGPQwhyuXRdka
+    mm_pools:
+      - pool: GpZc5Upu8vN9CUA9ULe8tRTn2QiRhEu1aeAiU8FVjYoX
+        pool_token_account: 37FfSEXk4x1ojzh2XRXhp4mqmgcTbwi2CVTneRU55LA7
+        token_mint: ESzkdUN8jvJxMqBjWADUomRxHn2ECxLFeeEvrcteLMnY
+        pool_mint: 7qXBUzp16QnwPr77FjGpMWmnxNpoGvQwpNtpykXuSwJx
+      - pool: DXf52yXqPtUocV4yBNcBnK2DCzNUGoFnGrhTMB4V2Zv3
+        pool_token_account: CD9h5f1PcSpNr1zZ1HwyEZmBYPJBBzgmpRoc64uJTkLc
+        token_mint: 2K7mMW4iFtU1RmZaCVg6MUUGWMBX4Z7rDbAhca42cXwL
+        pool_mint: CighdLjhe2Q6RYkwaTM9CJx3X7z9e9RqCk5Fw3t3s3Ns
+      - pool: 2qDdvxQrMVMqApcFQU3AaDQ8qByZTq92J9XpEkGQG1Ca
+        pool_token_account: 24Gi9shFFFRqfjmDzY9YieJKNZc316niFQbswzLdHaxY
+        token_mint: QQ6WK86aUCBvNPkGeYBKikk15sUg6aMUEi5PTL6eB4i
+        pool_mint: BYzdP17P9SSoZwaMMCzNz8WBhNhJergF38sdmjFgCvTY
+    liquidity_transit: 16wXXYU9BBM8LVkgZ3gv4CWdepnfPheAWgAkkQLHu94
 liquidity_oracle: 7ow9UCNZZpyEyELAhshi5Ar27QgNkwf5aQXpHSW4ZEew
 depositor: AjuLiFJuDynJTZFvy1bhU4xPLt8aSVuXifUunJV1fW1J

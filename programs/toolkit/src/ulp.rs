@@ -1,5 +1,8 @@
 use crate::utils::*;
-use everlend_ulp::{find_pool_program_address, instruction, state::PoolMarket};
+use everlend_ulp::{
+    find_pool_program_address, instruction,
+    state::{Pool, PoolMarket},
+};
 use solana_client::client_error::ClientError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_sdk::{
@@ -59,24 +62,25 @@ pub fn create_pool(
     pool_market_pubkey: &Pubkey,
     token_mint: &Pubkey,
 ) -> Result<(Pubkey, Pubkey, Pubkey), ClientError> {
-    // Generate new accounts
-    let token_account = Keypair::new();
-    let pool_mint = Keypair::new();
-
     let (pool_pubkey, _) =
         find_pool_program_address(&everlend_ulp::id(), pool_market_pubkey, token_mint);
-
-    println!("Pool: {}", &pool_pubkey);
-    println!("Token account: {}", &token_account.pubkey());
-    println!("Pool mint: {}", &pool_mint.pubkey());
 
     let account_info = config
         .rpc_client
         .get_account_with_commitment(&pool_pubkey, config.rpc_client.commitment())?
         .value;
     if account_info.is_some() {
-        return Ok((pool_pubkey, token_account.pubkey(), pool_mint.pubkey()));
+        let pool = config.get_account_unpack::<Pool>(&pool_pubkey)?;
+        return Ok((pool_pubkey, pool.token_account, pool.pool_mint));
     }
+
+    // Generate new accounts
+    let token_account = Keypair::new();
+    let pool_mint = Keypair::new();
+
+    println!("Pool: {}", &pool_pubkey);
+    println!("Token account: {}", &token_account.pubkey());
+    println!("Pool mint: {}", &pool_mint.pubkey());
 
     let token_account_balance = config
         .rpc_client

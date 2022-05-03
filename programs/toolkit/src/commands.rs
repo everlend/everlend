@@ -241,12 +241,12 @@ pub async fn command_create_token_accounts(
         let (general_pool_pubkey, general_pool_token_account, general_pool_mint) =
             general_pool::create_pool(config, &initialiazed_accounts.general_pool_market, mint)?;
 
-        println!("Payer token account");
         let token_account = get_associated_token_address(&payer_pubkey, mint);
-        println!("Payer pool account");
+        println!("Payer token account: {:?}", token_account);
         // let pool_account = get_associated_token_address(&payer_pubkey, &general_pool_mint);
         let pool_account =
             spl_create_associated_token_account(config, &payer_pubkey, &general_pool_mint)?;
+        println!("Payer pool account: {:?}", pool_account);
 
         println!("Income pool");
         let (income_pool_pubkey, income_pool_token_account) =
@@ -281,6 +281,7 @@ pub async fn command_create_token_accounts(
             Some("reserve".to_string()),
         )?;
 
+        println!("Collateral transits");
         collateral_mints
             .iter()
             .map(|(collateral_mint, _mm_pool_market_pubkey)| {
@@ -293,13 +294,14 @@ pub async fn command_create_token_accounts(
             })
             .collect::<Result<Vec<Pubkey>, ClientError>>()?;
 
+        println!("MM Collateral transits");
         mm_pool_pubkeys
             .iter()
-            .map(|(_, _, mm_pool_miny)| {
+            .map(|(_, _, mm_pool_mint)| {
                 depositor::create_transit(
                     config,
                     &initialiazed_accounts.depositor,
-                    mm_pool_miny,
+                    mm_pool_mint,
                     None,
                 )
             })
