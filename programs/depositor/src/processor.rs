@@ -16,8 +16,8 @@ use solana_program::{
 use spl_token::state::Account;
 
 use everlend_general_pool::{
-    find_withdrawal_requests_program_address,
-    state::{Pool, WithdrawalRequests},
+    find_withdrawal_requests_program_address_deprecated,
+    state::{Pool, WithdrawalRequestsDeprecated},
 };
 use everlend_liquidity_oracle::{
     find_liquidity_oracle_token_distribution_program_address, state::TokenDistribution,
@@ -248,14 +248,14 @@ impl Processor {
         assert_account_key(general_pool_token_account_info, &general_pool.token_account)?;
         assert_account_key(mint_info, &general_pool.token_mint)?;
 
-        let (withdrawal_requests_pubkey, _) = find_withdrawal_requests_program_address(
+        let (withdrawal_requests_pubkey, _) = find_withdrawal_requests_program_address_deprecated(
             &config.general_pool_program_id,
             general_pool_market_info.key,
             &general_pool.token_mint,
         );
         assert_account_key(withdrawal_requests_info, &withdrawal_requests_pubkey)?;
         let withdrawal_requests =
-            WithdrawalRequests::unpack(&withdrawal_requests_info.data.borrow())?;
+            WithdrawalRequestsDeprecated::unpack(&withdrawal_requests_info.data.borrow())?;
 
         // Calculate total liquidity supply
         let general_pool_token_account =

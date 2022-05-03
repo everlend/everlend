@@ -12,6 +12,7 @@ pub mod utils;
 pub mod entrypoint;
 
 // Export current sdk types for downstream users building with a different sdk version
+use crate::state::ACTUAL_VERSION;
 pub use solana_program;
 use solana_program::{instruction::AccountMeta, pubkey::Pubkey, system_program, sysvar};
 
@@ -44,8 +45,32 @@ pub fn find_pool_borrow_authority_program_address(
     )
 }
 
-/// Generates withdrawal requests address
+/// Generates withdrawal requests address deprecated
 pub fn find_withdrawal_requests_program_address(
+    program_id: &Pubkey,
+    pool_market_pubkey: &Pubkey,
+    token_mint: &Pubkey,
+) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[
+            withdrawal_requests_seed().as_bytes(),
+            &pool_market_pubkey.to_bytes(),
+            &token_mint.to_bytes(),
+        ],
+        program_id,
+    )
+}
+
+/// Generates withdrawal requests seed
+pub fn withdrawal_requests_seed() -> String {
+    let mut withdrawal_requests_seed = "withdrawals".to_owned();
+    withdrawal_requests_seed.push_str(&ACTUAL_VERSION.to_string());
+
+    return withdrawal_requests_seed;
+}
+
+/// Generates withdrawal requests address
+pub fn find_withdrawal_requests_program_address_deprecated(
     program_id: &Pubkey,
     pool_market_pubkey: &Pubkey,
     token_mint: &Pubkey,
@@ -103,8 +128,11 @@ pub fn general_pool_withdraw_sol_accounts(
     token_mint: &Pubkey,
     from: &Pubkey,
 ) -> Vec<AccountMeta> {
-    let (withdrawal_requests, _) =
-        find_withdrawal_requests_program_address(program_id, general_pool_market, token_mint);
+    let (withdrawal_requests, _) = find_withdrawal_requests_program_address_deprecated(
+        program_id,
+        general_pool_market,
+        token_mint,
+    );
     let (withdrawal_request, _) =
         find_withdrawal_request_program_address(program_id, &withdrawal_requests, from);
     let (unwrap_sol_pubkey, _) = find_transit_sol_unwrap_address(program_id, &withdrawal_request);

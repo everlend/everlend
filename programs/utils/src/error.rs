@@ -73,6 +73,10 @@ pub enum EverlendError {
     /// Invalid ticket
     #[error("Withdraw requests: Invalid ticket")]
     WithdrawRequestsInvalidTicket,
+
+    /// Temporary unavailable for migration
+    #[error("Instruction temporary unavailable")]
+    TemporaryUnavailable,
 }
 
 impl PrintProgramError for EverlendError {
