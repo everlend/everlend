@@ -13,7 +13,8 @@ use crate::{
     accounts_config::{MoneyMarketAccounts, TokenAccounts},
     depositor, general_pool, income_pools, liquidity_oracle, registry, ulp,
     utils::{
-        spl_create_associated_token_account, spl_token_transfer, Config, REFRESH_INCOME_INTERVAL,
+        get_asset_maps, spl_create_associated_token_account, spl_token_transfer, Config,
+        REFRESH_INCOME_INTERVAL,
     },
 };
 
@@ -150,6 +151,59 @@ pub async fn command_create_depositor(
     Ok(())
 }
 
+pub async fn command_create_mm_pool(
+    config: &Config,
+    money_market: MoneyMarket,
+    required_mints: Vec<&str>,
+) -> anyhow::Result<()> {
+    let default_accounts = config.get_default_accounts();
+    let mut initialiazed_accounts = config.get_initialized_accounts();
+
+    let (_, collateral_mint_map) = get_asset_maps(default_accounts);
+    let money_market_index = money_market as usize;
+    let mm_pool_market_pubkey = initialiazed_accounts.mm_pool_markets[money_market_index];
+
+    for key in required_mints {
+        let collateral_mint = collateral_mint_map.get(key).unwrap()[money_market_index].unwrap();
+
+        let (mm_pool_pubkey, mm_pool_token_account, mm_pool_mint) =
+            ulp::create_pool(config, &mm_pool_market_pubkey, &collateral_mint)?;
+
+        depositor::create_transit(
+            config,
+            &initialiazed_accounts.depositor,
+            &collateral_mint,
+            None,
+        )?;
+
+        depositor::create_transit(
+            config,
+            &initialiazed_accounts.depositor,
+            &mm_pool_mint,
+            None,
+        )?;
+
+        let money_market_accounts = MoneyMarketAccounts {
+            pool: mm_pool_pubkey,
+            pool_token_account: mm_pool_token_account,
+            token_mint: collateral_mint,
+            pool_mint: mm_pool_mint,
+        };
+
+        initialiazed_accounts
+            .token_accounts
+            .get_mut(key)
+            .unwrap()
+            .mm_pools[money_market_index] = money_market_accounts;
+    }
+
+    initialiazed_accounts
+        .save(&format!("accounts.{}.yaml", config.network))
+        .unwrap();
+
+    Ok(())
+}
+
 pub async fn command_create_token_accounts(
     config: &Config,
     required_mints: Vec<&str>,
@@ -158,33 +212,7 @@ pub async fn command_create_token_accounts(
     let default_accounts = config.get_default_accounts();
     let mut initialiazed_accounts = config.get_initialized_accounts();
 
-    let mint_map = HashMap::from([
-        ("SOL".to_string(), default_accounts.sol_mint),
-        ("USDC".to_string(), default_accounts.usdc_mint),
-        ("USDT".to_string(), default_accounts.usdt_mint),
-        ("mSOL".to_string(), default_accounts.msol_mint),
-        ("stSOL".to_string(), default_accounts.stsol_mint),
-        ("soBTC".to_string(), default_accounts.sobtc_mint),
-        ("ETHw".to_string(), default_accounts.ethw_mint),
-        ("USTw".to_string(), default_accounts.ustw_mint),
-        ("FTTw".to_string(), default_accounts.fttw_mint),
-        ("RAY".to_string(), default_accounts.ray_mint),
-        ("SRM".to_string(), default_accounts.srm_mint),
-    ]);
-
-    let collateral_mint_map = HashMap::from([
-        ("SOL".to_string(), default_accounts.sol_collateral),
-        ("USDC".to_string(), default_accounts.usdc_collateral),
-        ("USDT".to_string(), default_accounts.usdt_collateral),
-        ("mSOL".to_string(), default_accounts.msol_collateral),
-        ("stSOL".to_string(), default_accounts.stsol_collateral),
-        ("soBTC".to_string(), default_accounts.sobtc_collateral),
-        ("ETHw".to_string(), default_accounts.ethw_collateral),
-        ("USTw".to_string(), default_accounts.ustw_collateral),
-        ("FTTw".to_string(), default_accounts.fttw_collateral),
-        ("RAY".to_string(), default_accounts.ray_collateral),
-        ("SRM".to_string(), default_accounts.srm_collateral),
-    ]);
+    let (mint_map, collateral_mint_map) = get_asset_maps(default_accounts);
 
     let mut distribution = DistributionArray::default();
     distribution[0] = 0;

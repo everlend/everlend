@@ -10,7 +10,7 @@ use serde_with::{serde_as, DisplayFromStr};
 use solana_program::pubkey::Pubkey;
 
 #[serde_as]
-#[derive(Serialize, Deserialize, Debug, PartialEq, Default)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default)]
 pub struct DefaultAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub sol_mint: Pubkey,
