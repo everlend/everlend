@@ -2,7 +2,6 @@ use super::{create_token_account, mint_tokens, transfer, BanksClientResult};
 use solana_program::pubkey::Pubkey;
 use solana_program_test::ProgramTestContext;
 use solana_sdk::signature::{Keypair, Signer};
-use std::str::FromStr;
 
 pub trait User {
     fn pubkey(&self) -> Pubkey;

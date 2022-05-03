@@ -19,7 +19,6 @@ use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
-use std::str::FromStr;
 
 #[derive(Debug)]
 pub struct TestGeneralPool {
