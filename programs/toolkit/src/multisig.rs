@@ -1,13 +1,77 @@
 use crate::utils::*;
+use anchor_lang::prelude::AccountMeta;
 use anchor_lang::{prelude::ToAccountMetas, Discriminator};
 use anchor_lang::{AnchorSerialize, InstructionData};
+use solana_account_decoder::UiAccountEncoding;
 use solana_client::client_error::ClientError;
+use solana_client::rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig};
+use solana_client::rpc_filter::{Memcmp, MemcmpEncodedBytes, MemcmpEncoding, RpcFilterType};
 use solana_program::{instruction::Instruction, pubkey::Pubkey, system_instruction};
+use solana_sdk::account::Account;
+use solana_sdk::signature::Signature;
 use solana_sdk::{
     signature::{write_keypair_file, Keypair},
     signer::Signer,
     transaction::Transaction,
 };
+
+/// Wrapper type needed to implement `ToAccountMetas`.
+struct TransactionAccounts {
+    accounts: Vec<serum_multisig::TransactionAccount>,
+    program_id: Pubkey,
+}
+
+impl anchor_lang::ToAccountMetas for TransactionAccounts {
+    fn to_account_metas(&self, is_signer: Option<bool>) -> Vec<AccountMeta> {
+        assert_eq!(
+            is_signer, None,
+            "Overriding the signer is not implemented, it is not used by RequestBuilder::accounts.",
+        );
+        let mut account_metas: Vec<_> = self
+            .accounts
+            .iter()
+            .map(|tx_account| {
+                let mut account_meta = AccountMeta::from(tx_account);
+                account_meta.is_signer = false;
+                account_meta
+            })
+            .collect();
+
+        let program_is_signer = false;
+        account_metas.push(AccountMeta::new_readonly(
+            self.program_id,
+            program_is_signer,
+        ));
+
+        account_metas
+    }
+}
+
+pub fn get_transaction_program_accounts(
+    config: &Config,
+    multisig_pubkey: &Pubkey,
+) -> Result<Vec<(Pubkey, Account)>, ClientError> {
+    let default_accounts = config.get_default_accounts();
+
+    config.rpc_client.get_program_accounts_with_config(
+        &default_accounts.multisig_program_id,
+        RpcProgramAccountsConfig {
+            filters: Some(vec![
+                // Account parent
+                RpcFilterType::Memcmp(Memcmp {
+                    offset: 8,
+                    bytes: MemcmpEncodedBytes::Base58(multisig_pubkey.to_string()),
+                    encoding: Some(MemcmpEncoding::Binary),
+                }),
+            ]),
+            account_config: RpcAccountInfoConfig {
+                encoding: Some(UiAccountEncoding::Base64Zstd),
+                ..RpcAccountInfoConfig::default()
+            },
+            ..RpcProgramAccountsConfig::default()
+        },
+    )
+}
 
 pub fn get_multisig_program_address(
     program_address: &Pubkey,
@@ -156,4 +220,72 @@ pub fn create_transaction(
     write_keypair_file(&keypair, &format!(".keypairs/{}.json", keypair.pubkey())).unwrap();
 
     Ok(keypair.pubkey())
+}
+
+pub fn approve(
+    config: &Config,
+    multisig_pubkey: &Pubkey,
+    transaction_pubkey: &Pubkey,
+) -> Result<Signature, ClientError> {
+    let default_accounts = config.get_default_accounts();
+
+    let tx = Transaction::new_with_payer(
+        &[Instruction {
+            program_id: default_accounts.multisig_program_id,
+            data: serum_multisig::instruction::Approve.data(),
+            accounts: serum_multisig::accounts::Approve {
+                multisig: *multisig_pubkey,
+                transaction: *transaction_pubkey,
+                owner: config.fee_payer.pubkey(),
+            }
+            .to_account_metas(None),
+        }],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    let signature =
+        config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+
+    Ok(signature)
+}
+
+pub fn execute_transaction(
+    config: &Config,
+    multisig_pubkey: &Pubkey,
+    transaction_pubkey: &Pubkey,
+) -> Result<Signature, ClientError> {
+    let default_accounts = config.get_default_accounts();
+
+    let (pda, _) =
+        get_multisig_program_address(&default_accounts.multisig_program_id, multisig_pubkey);
+
+    let transaction =
+        config.get_account_deserialize::<serum_multisig::Transaction>(transaction_pubkey)?;
+
+    let transaction_inner_accounts = TransactionAccounts {
+        accounts: transaction.accounts,
+        program_id: transaction.program_id,
+    };
+
+    let mut accounts = serum_multisig::accounts::ExecuteTransaction {
+        multisig: *multisig_pubkey,
+        multisig_signer: pda,
+        transaction: *transaction_pubkey,
+    }
+    .to_account_metas(None);
+    accounts.append(&mut transaction_inner_accounts.to_account_metas(None));
+
+    let tx = Transaction::new_with_payer(
+        &[Instruction {
+            program_id: default_accounts.multisig_program_id,
+            data: serum_multisig::instruction::ExecuteTransaction.data(),
+            accounts,
+        }],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    let signature =
+        config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+
+    Ok(signature)
 }

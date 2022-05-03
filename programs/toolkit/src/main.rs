@@ -592,6 +592,61 @@ async fn main() -> anyhow::Result<()> {
                                 .required(true)
                                 .help("Multisig pubkey"),
                         ),
+                )
+                .subcommand(
+                    SubCommand::with_name("approve")
+                        .about("Approve transaction")
+                        .arg(
+                            Arg::with_name("transaction")
+                                .long("transaction")
+                                .short("tx")
+                                .validator(is_pubkey)
+                                .value_name("ADDRESS")
+                                .takes_value(true)
+                                .required(true)
+                                .help("Transaction account pubkey"),
+                        )
+                        .arg(
+                            Arg::with_name("multisig")
+                                .long("multisig")
+                                .validator(is_pubkey)
+                                .value_name("ADDRESS")
+                                .takes_value(true)
+                                .required(true)
+                                .help("Multisig pubkey"),
+                        ),
+                )
+                .subcommand(
+                    SubCommand::with_name("execute")
+                        .about("Execute transaction")
+                        .arg(
+                            Arg::with_name("transaction")
+                                .long("transaction")
+                                .validator(is_pubkey)
+                                .value_name("ADDRESS")
+                                .takes_value(true)
+                                .required(true)
+                                .help("Transaction account pubkey"),
+                        )
+                        .arg(
+                            Arg::with_name("multisig")
+                                .long("multisig")
+                                .validator(is_pubkey)
+                                .value_name("ADDRESS")
+                                .takes_value(true)
+                                .required(true)
+                                .help("Multisig pubkey"),
+                        ),
+                )
+                .subcommand(
+                    SubCommand::with_name("info").about("Multisig info").arg(
+                        Arg::with_name("multisig")
+                            .validator(is_pubkey)
+                            .value_name("ADDRESS")
+                            .takes_value(true)
+                            .required(true)
+                            .help("Multisig pubkey"),
+                    ),
                 ),
         )
         .subcommand(
@@ -743,6 +798,33 @@ async fn main() -> anyhow::Result<()> {
                         &multisig_pubkey,
                     )
                     .await
+                }
+                ("approve", Some(arg_matches)) => {
+                    let transaction_pubkey = pubkey_of(arg_matches, "transaction").unwrap();
+                    let multisig_pubkey = pubkey_of(arg_matches, "multisig").unwrap();
+
+                    commands_multisig::command_approve(
+                        &config,
+                        &multisig_pubkey,
+                        &transaction_pubkey,
+                    )
+                    .await
+                }
+                ("execute", Some(arg_matches)) => {
+                    let transaction_pubkey = pubkey_of(arg_matches, "transaction").unwrap();
+                    let multisig_pubkey = pubkey_of(arg_matches, "multisig").unwrap();
+
+                    commands_multisig::command_execute_transaction(
+                        &config,
+                        &multisig_pubkey,
+                        &transaction_pubkey,
+                    )
+                    .await
+                }
+                ("info", Some(arg_matches)) => {
+                    let multisig_pubkey = pubkey_of(arg_matches, "multisig").unwrap();
+
+                    commands_multisig::command_info_multisig(&config, &multisig_pubkey).await
                 }
                 _ => unreachable!(),
             }
