@@ -274,19 +274,12 @@ pub async fn command_create_token_accounts(
 
         // Reserve
         println!("Reserve transit");
-        let liquidity_reserve_transit_pubkey = depositor::create_transit(
+        depositor::create_transit(
             config,
             &initialiazed_accounts.depositor,
             mint,
             Some("reserve".to_string()),
         )?;
-        // todo spl_token_transfer itx should be disabled this?
-        // spl_token_transfer(
-        //     config,
-        //     &token_account,
-        //     &liquidity_reserve_transit_pubkey,
-        //     10000,
-        // )?;
 
         collateral_mints
             .iter()
