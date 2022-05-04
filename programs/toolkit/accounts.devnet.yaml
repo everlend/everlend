@@ -6,6 +6,7 @@ income_pool_market: A6Xa98xDAGm3YNrbSgGvH2pUqiyTw1RtUn6boKcP1Vsu
 mm_pool_markets:
   - AVfwz3cvv2jATb62hLEPZWgEQ4nGnPrtDmH98Hae1C2g
   - ESXqBdrBYEznsV93kMkPew99rCQhVkxpZzA389BU8RY8
+  - ZsWG7cZnuAcxwR9fgJqRz1SjZx85YG36y3KvvaKv6dN
 token_accounts:
   SOL:
     mint: So11111111111111111111111111111111111111112
@@ -25,6 +26,10 @@ token_accounts:
         pool_token_account: 8FQ43qSeviBjL4JkN69P23dEnE9V682ALb1symaoKc4a
         token_mint: qy9PvM4J3ZdJJ7cyEFymotHrA1hTWspccA9RhDsQa24
         pool_mint: 6bhTPSJxZ8H7Q9dzaa1sb3Z9fPiPEP3tQj5U4afaWGju
+      - pool: 2oGWVHGx5U6E1LY4Ms6DXSxUFM66zgDt9nz9KWz66q7R
+        pool_token_account: abYtXfm5ANUYeDmfvhDeKNGyp6WLeyGL3pB6CQz9vHv
+        token_mint: FzwZWRMc3GCqjSrcpVX3ueJc6UpcV6iWWb7ZMsTXE3Gf
+        pool_mint: H9R1p5gzRWEyzwEpUW5Xj2akw2Rme8a1vgzGy6RH7EEH
     liquidity_transit: CW2xTsZHyqMxX8vNngMwHoz6uQtTZu6QJLQu3t1Btmw2
   USDC:
     mint: G6YKv19AeGZ6pUYUwY9D7n4Ry9ESNFa376YqwEkUkhbi

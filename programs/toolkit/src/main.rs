@@ -64,33 +64,7 @@ async fn command_create(
 
     let default_accounts = config.get_default_accounts();
 
-    let mint_map = HashMap::from([
-        ("SOL".to_string(), default_accounts.sol_mint),
-        ("USDC".to_string(), default_accounts.usdc_mint),
-        ("USDT".to_string(), default_accounts.usdt_mint),
-        ("mSOL".to_string(), default_accounts.msol_mint),
-        ("stSOL".to_string(), default_accounts.stsol_mint),
-        ("soBTC".to_string(), default_accounts.sobtc_mint),
-        ("ETHw".to_string(), default_accounts.ethw_mint),
-        ("USTw".to_string(), default_accounts.ustw_mint),
-        ("FTTw".to_string(), default_accounts.fttw_mint),
-        ("RAY".to_string(), default_accounts.ray_mint),
-        ("SRM".to_string(), default_accounts.srm_mint),
-    ]);
-
-    let collateral_mint_map = HashMap::from([
-        ("SOL".to_string(), default_accounts.sol_collateral),
-        ("USDC".to_string(), default_accounts.usdc_collateral),
-        ("USDT".to_string(), default_accounts.usdt_collateral),
-        ("mSOL".to_string(), default_accounts.msol_collateral),
-        ("stSOL".to_string(), default_accounts.stsol_collateral),
-        ("soBTC".to_string(), default_accounts.sobtc_collateral),
-        ("ETHw".to_string(), default_accounts.ethw_collateral),
-        ("USTw".to_string(), default_accounts.ustw_collateral),
-        ("FTTw".to_string(), default_accounts.fttw_collateral),
-        ("RAY".to_string(), default_accounts.ray_collateral),
-        ("SRM".to_string(), default_accounts.srm_collateral),
-    ]);
+    let (mint_map, collateral_mint_map) = get_asset_maps(default_accounts.clone());
 
     let general_pool_market_pubkey = general_pool::create_market(config, None)?;
     let income_pool_market_pubkey =
@@ -447,7 +421,6 @@ async fn main() -> anyhow::Result<()> {
                 .about("Create a new MM pool market")
                 .arg(
                     Arg::with_name("money-market")
-                        .short("mm")
                         .long("money-market")
                         .value_name("NUMBER")
                         .takes_value(true)
@@ -485,6 +458,27 @@ async fn main() -> anyhow::Result<()> {
                         .value_name("KEYPAIR")
                         .takes_value(true)
                         .help("Keypair [default: new keypair]"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("create-mm-pool")
+                .about("Create a new MM pool")
+                .arg(
+                    Arg::with_name("money-market")
+                        .long("money-market")
+                        .value_name("NUMBER")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Money market index"),
+                )
+                .arg(
+                    Arg::with_name("mints")
+                        .multiple(true)
+                        .long("mints")
+                        .short("m")
+                        .required(true)
+                        .min_values(1)
+                        .takes_value(true),
                 ),
         )
         .subcommand(
@@ -809,6 +803,11 @@ async fn main() -> anyhow::Result<()> {
         ("create-depositor", Some(arg_matches)) => {
             let keypair = keypair_of(arg_matches, "keypair");
             command_create_depositor(&config, keypair).await
+        }
+        ("create-mm-pool", Some(arg_matches)) => {
+            let money_market = value_of::<usize>(arg_matches, "money-market").unwrap();
+            let mints: Vec<_> = arg_matches.values_of("mints").unwrap().collect();
+            command_create_mm_pool(&config, MoneyMarket::from(money_market), mints).await
         }
         ("create-token-accounts", Some(arg_matches)) => {
             let mints: Vec<_> = arg_matches.values_of("mints").unwrap().collect();

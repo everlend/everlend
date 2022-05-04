@@ -16,6 +16,7 @@ pub enum MoneyMarket {
     #[num_enum(default)]
     PortFinance,
     Larix,
+    Solend,
 }
 
 #[derive(Debug)]
