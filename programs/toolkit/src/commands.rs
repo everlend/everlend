@@ -6,7 +6,10 @@ use solana_sdk::signature::Keypair;
 use spl_associated_token_account::get_associated_token_address;
 
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::{SetRegistryConfigParams, TOTAL_DISTRIBUTIONS};
+use everlend_registry::{
+    find_config_program_address,
+    state::{RegistryConfig, SetRegistryConfigParams, TOTAL_DISTRIBUTIONS},
+};
 use everlend_utils::integrations::MoneyMarket;
 
 use crate::{
@@ -53,6 +56,38 @@ pub async fn command_create_registry(
     initialiazed_accounts
         .save(&format!("accounts.{}.yaml", config.network))
         .unwrap();
+
+    Ok(())
+}
+
+pub async fn command_set_registry_config(
+    config: &Config,
+    registry_pubkey: Pubkey,
+) -> anyhow::Result<()> {
+    let default_accounts = config.get_default_accounts();
+
+    let (registry_config_pubkey, _) =
+        find_config_program_address(&everlend_registry::id(), &registry_pubkey);
+    let registry_config = config.get_account_unpack::<RegistryConfig>(&registry_config_pubkey);
+    println!("registry_config = {:#?}", registry_config);
+
+    let mut registry_config_params = SetRegistryConfigParams {
+        general_pool_program_id: everlend_general_pool::id(),
+        ulp_program_id: everlend_ulp::id(),
+        liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
+        depositor_program_id: everlend_depositor::id(),
+        income_pools_program_id: everlend_income_pools::id(),
+        money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
+        refresh_income_interval: REFRESH_INCOME_INTERVAL,
+    };
+
+    registry_config_params.money_market_program_ids[0] = default_accounts.port_finance_program_id;
+    registry_config_params.money_market_program_ids[1] = default_accounts.larix_program_id;
+    registry_config_params.money_market_program_ids[2] = default_accounts.solend_program_id;
+
+    println!("registry_config_params = {:#?}", registry_config_params);
+
+    registry::set_registry_config(config, &registry_pubkey, registry_config_params)?;
 
     Ok(())
 }

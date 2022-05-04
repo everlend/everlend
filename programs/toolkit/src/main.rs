@@ -350,6 +350,19 @@ async fn main() -> anyhow::Result<()> {
                 ),
         )
         .subcommand(
+            SubCommand::with_name("set-registry-config")
+                .about("Set a new registry config")
+                .arg(
+                    Arg::with_name("registry")
+                        .long("registry")
+                        .validator(is_pubkey)
+                        .value_name("ADDRESS")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Registry pubkey"),
+                ),
+        )
+        .subcommand(
             SubCommand::with_name("create-general-pool-market")
                 .about("Create a new general pool market")
                 .arg(
@@ -721,6 +734,10 @@ async fn main() -> anyhow::Result<()> {
         ("create-registry", Some(arg_matches)) => {
             let keypair = keypair_of(arg_matches, "keypair");
             command_create_registry(&config, keypair).await
+        }
+        ("set-registry-config", Some(arg_matches)) => {
+            let registry_pubkey = pubkey_of(arg_matches, "registry").unwrap();
+            command_set_registry_config(&config, registry_pubkey).await
         }
         ("create-general-pool-market", Some(arg_matches)) => {
             let keypair = keypair_of(arg_matches, "keypair");
