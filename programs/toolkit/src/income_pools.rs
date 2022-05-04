@@ -1,5 +1,8 @@
 use crate::utils::*;
-use everlend_income_pools::{instruction, state::IncomePoolMarket};
+use everlend_income_pools::{
+    instruction,
+    state::{IncomePool, IncomePoolMarket},
+};
 use solana_client::client_error::ClientError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_sdk::{
@@ -64,25 +67,26 @@ pub fn create_pool(
     income_pool_market_pubkey: &Pubkey,
     token_mint: &Pubkey,
 ) -> Result<(Pubkey, Pubkey), ClientError> {
-    // Generate new accounts
-    let token_account = Keypair::new();
-
     let (income_pool_pubkey, _) = everlend_income_pools::find_pool_program_address(
         &everlend_income_pools::id(),
         income_pool_market_pubkey,
         token_mint,
     );
 
-    println!("Income pool: {}", &income_pool_pubkey);
-    println!("Token account: {}", &token_account.pubkey());
-
     let account_info = config
         .rpc_client
         .get_account_with_commitment(&income_pool_pubkey, config.rpc_client.commitment())?
         .value;
     if account_info.is_some() {
-        return Ok((income_pool_pubkey, token_account.pubkey()));
+        let income_pool = config.get_account_unpack::<IncomePool>(&income_pool_pubkey)?;
+        return Ok((income_pool_pubkey, income_pool.token_account));
     }
+
+    // Generate new accounts
+    let token_account = Keypair::new();
+
+    println!("Income pool: {}", &income_pool_pubkey);
+    println!("Token account: {}", &token_account.pubkey());
 
     let token_account_balance = config
         .rpc_client

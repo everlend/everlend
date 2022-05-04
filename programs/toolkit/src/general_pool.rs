@@ -3,7 +3,7 @@ use everlend_general_pool::{
     find_pool_borrow_authority_program_address, find_pool_program_address,
     find_withdrawal_request_program_address, find_withdrawal_requests_program_address,
     general_pool_withdraw_sol_accounts, instruction,
-    state::{AccountType, PoolMarket, WithdrawalRequest, WithdrawalRequests},
+    state::{AccountType, Pool, PoolMarket, WithdrawalRequest, WithdrawalRequests},
 };
 use solana_client::client_error::ClientError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
@@ -64,24 +64,25 @@ pub fn create_pool(
     pool_market_pubkey: &Pubkey,
     token_mint: &Pubkey,
 ) -> Result<(Pubkey, Pubkey, Pubkey), ClientError> {
-    // Generate new accounts
-    let token_account = Keypair::new();
-    let pool_mint = Keypair::new();
-
     let (pool_pubkey, _) =
         find_pool_program_address(&everlend_general_pool::id(), pool_market_pubkey, token_mint);
-
-    println!("Pool: {}", &pool_pubkey);
-    println!("Token account: {}", &token_account.pubkey());
-    println!("Pool mint: {}", &pool_mint.pubkey());
 
     let account_info = config
         .rpc_client
         .get_account_with_commitment(&pool_pubkey, config.rpc_client.commitment())?
         .value;
     if account_info.is_some() {
-        return Ok((pool_pubkey, token_account.pubkey(), pool_mint.pubkey()));
+        let pool = config.get_account_unpack::<Pool>(&pool_pubkey)?;
+        return Ok((pool_pubkey, pool.token_account, pool.pool_mint));
     }
+
+    // Generate new accounts
+    let token_account = Keypair::new();
+    let pool_mint = Keypair::new();
+
+    println!("Pool: {}", &pool_pubkey);
+    println!("Token account: {}", &token_account.pubkey());
+    println!("Pool mint: {}", &pool_mint.pubkey());
 
     let token_account_balance = config
         .rpc_client
@@ -290,9 +291,7 @@ pub fn withdraw(
     Ok(())
 }
 
-pub fn migrate_general_pool_account(
-    config: &Config,
-) -> Result<(), ClientError> {
+pub fn migrate_general_pool_account(config: &Config) -> Result<(), ClientError> {
     let tx = Transaction::new_with_payer(
         &[instruction::migrate_instruction(
             &everlend_general_pool::id(),
