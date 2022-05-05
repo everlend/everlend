@@ -6,6 +6,7 @@ import { Buffer } from 'buffer'
 import { Account, Borsh, Errors } from '@everlend/common'
 
 type Args = {
+  accountType: AccountType
   pool: PublicKey
   from: PublicKey
   source: PublicKey
@@ -17,6 +18,7 @@ type Args = {
 
 export class WithdrawalRequestData extends Borsh.Data<Args> {
   static readonly SCHEMA = this.struct([
+    ['accountType', 'u8'],
     ['pool', 'publicKey'],
     ['from', 'publicKey'],
     ['source', 'publicKey'],
@@ -26,6 +28,7 @@ export class WithdrawalRequestData extends Borsh.Data<Args> {
     ['ticket', 'u64'],
   ])
 
+  accountType: AccountType
   pool: PublicKey
   from: PublicKey
   source: PublicKey
