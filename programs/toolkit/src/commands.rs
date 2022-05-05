@@ -412,11 +412,7 @@ pub async fn command_add_reserve_liquidity(
     let default_accounts = config.get_default_accounts();
     let initialiazed_accounts = config.get_initialized_accounts();
 
-    let mint_map = HashMap::from([
-        ("SOL".to_string(), default_accounts.sol_mint),
-        ("USDC".to_string(), default_accounts.usdc_mint),
-        ("USDT".to_string(), default_accounts.usdt_mint),
-    ]);
+    let (mint_map, _) = get_asset_maps(default_accounts);
     let mint = mint_map.get(mint_key).unwrap();
 
     let (liquidity_reserve_transit_pubkey, _) = everlend_depositor::find_transit_program_address(
@@ -424,6 +420,11 @@ pub async fn command_add_reserve_liquidity(
         &initialiazed_accounts.depositor,
         mint,
         "reserve",
+    );
+
+    println!(
+        "liquidity_reserve_transit_pubkey = {:?}",
+        liquidity_reserve_transit_pubkey
     );
 
     let token_account = get_associated_token_address(&payer_pubkey, mint);
@@ -439,6 +440,33 @@ pub async fn command_add_reserve_liquidity(
         &liquidity_reserve_transit_pubkey,
         amount,
     )?;
+
+    Ok(())
+}
+
+pub async fn command_info_reserve_liquidity(config: &Config) -> anyhow::Result<()> {
+    let default_accounts = config.get_default_accounts();
+    let initialiazed_accounts = config.get_initialized_accounts();
+
+    let (mint_map, _) = get_asset_maps(default_accounts);
+
+    for (_, mint) in mint_map.iter() {
+        let (liquidity_reserve_transit_pubkey, _) =
+            everlend_depositor::find_transit_program_address(
+                &everlend_depositor::id(),
+                &initialiazed_accounts.depositor,
+                mint,
+                "reserve",
+            );
+
+        let liquidity_reserve_transit = config
+            .get_account_unpack::<spl_token::state::Account>(&liquidity_reserve_transit_pubkey)?;
+
+        println!(
+            "{:?}: {:?}",
+            liquidity_reserve_transit_pubkey, liquidity_reserve_transit.amount
+        );
+    }
 
     Ok(())
 }

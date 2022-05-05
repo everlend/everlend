@@ -484,6 +484,7 @@ async fn main() -> anyhow::Result<()> {
                         .help("Liquidity amount"),
                 ),
         )
+        .subcommand(SubCommand::with_name("info-reserve-liquidity").about("Info reserve accounts"))
         .subcommand(
             SubCommand::with_name("create")
                 .about("Create a new accounts")
@@ -774,6 +775,7 @@ async fn main() -> anyhow::Result<()> {
             let amount = value_of::<u64>(arg_matches, "amount").unwrap();
             command_add_reserve_liquidity(&config, mint, amount).await
         }
+        ("info-reserve-liquidity", Some(_)) => command_info_reserve_liquidity(&config).await,
         ("create", Some(arg_matches)) => {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
             let mints: Vec<_> = arg_matches.values_of("mints").unwrap().collect();
