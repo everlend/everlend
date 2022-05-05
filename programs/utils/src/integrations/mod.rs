@@ -2,6 +2,7 @@ use num_enum::{FromPrimitive, IntoPrimitive};
 use solana_program::{instruction::AccountMeta, pubkey::Pubkey};
 
 pub mod larix;
+pub mod solend;
 pub mod spl_token_lending;
 
 // Program IDs
@@ -15,6 +16,7 @@ pub enum MoneyMarket {
     #[num_enum(default)]
     PortFinance,
     Larix,
+    Solend,
 }
 
 #[derive(Debug)]
@@ -22,6 +24,7 @@ pub enum MoneyMarketPubkeys {
     SPL(spl_token_lending::AccountPubkeys),
     PortFinance(spl_token_lending::AccountPubkeys),
     Larix(larix::AccountPubkeys),
+    Solend(solend::AccountPubkeys),
 }
 
 pub fn deposit_accounts(program_id: &Pubkey, pubkeys: &MoneyMarketPubkeys) -> Vec<AccountMeta> {
@@ -30,6 +33,7 @@ pub fn deposit_accounts(program_id: &Pubkey, pubkeys: &MoneyMarketPubkeys) -> Ve
             spl_token_lending::accounts::deposit(program_id, pubkeys)
         }
         MoneyMarketPubkeys::Larix(pubkeys) => larix::accounts::deposit(program_id, pubkeys),
+        MoneyMarketPubkeys::Solend(pubkeys) => solend::accounts::deposit(program_id, pubkeys),
         _ => vec![],
     }
 }
@@ -40,6 +44,7 @@ pub fn withdraw_accounts(program_id: &Pubkey, pubkeys: &MoneyMarketPubkeys) -> V
             spl_token_lending::accounts::withdraw(program_id, pubkeys)
         }
         MoneyMarketPubkeys::Larix(pubkeys) => larix::accounts::withdraw(program_id, pubkeys),
+        MoneyMarketPubkeys::Solend(pubkeys) => solend::accounts::withdraw(program_id, pubkeys),
         _ => vec![],
     }
 }

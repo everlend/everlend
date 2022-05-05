@@ -1,3 +1,32 @@
+use std::collections::BTreeMap;
+use std::{process::exit, str::FromStr};
+
+use clap::{
+    crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
+};
+use regex::Regex;
+use solana_clap_utils::{
+    fee_payer::fee_payer_arg,
+    input_parsers::{keypair_of, pubkey_of, value_of},
+    input_validators::{is_amount, is_keypair, is_pubkey},
+    keypair::signer_from_path,
+};
+use solana_client::client_error::ClientError;
+use solana_client::rpc_client::RpcClient;
+use solana_program::pubkey::Pubkey;
+use solana_sdk::commitment_config::CommitmentConfig;
+use spl_associated_token_account::get_associated_token_address;
+
+use accounts_config::*;
+use commands::*;
+use everlend_liquidity_oracle::state::DistributionArray;
+use everlend_registry::state::{SetRegistryConfigParams, TOTAL_DISTRIBUTIONS};
+use everlend_utils::integrations::MoneyMarket;
+use general_pool::get_withdrawal_requests;
+use utils::*;
+
+use crate::general_pool::get_general_pool_market;
+
 mod accounts_config;
 mod commands;
 mod commands_multisig;
@@ -10,31 +39,6 @@ mod multisig;
 mod registry;
 mod ulp;
 mod utils;
-
-use accounts_config::*;
-use clap::{
-    crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
-};
-use commands::*;
-use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::{SetRegistryConfigParams, TOTAL_DISTRIBUTIONS};
-use everlend_utils::integrations::MoneyMarket;
-use general_pool::get_withdrawal_requests;
-use regex::Regex;
-use solana_clap_utils::{
-    fee_payer::fee_payer_arg,
-    input_parsers::{keypair_of, pubkey_of, value_of},
-    input_validators::{is_amount, is_keypair, is_pubkey},
-    keypair::signer_from_path,
-};
-use solana_client::rpc_client::RpcClient;
-use solana_program::pubkey::Pubkey;
-use solana_sdk::commitment_config::CommitmentConfig;
-use spl_associated_token_account::get_associated_token_address;
-use std::{collections::HashMap, process::exit, str::FromStr};
-use utils::*;
-
-use crate::general_pool::get_general_pool_market;
 
 pub fn url_to_moniker(url: &str) -> String {
     let re = Regex::new(r"devnet|mainnet|localhost|testnet").unwrap();
@@ -57,20 +61,7 @@ async fn command_create(
 
     let default_accounts = config.get_default_accounts();
 
-    let mint_map = HashMap::from([
-        ("SOL".to_string(), default_accounts.sol_mint),
-        ("USDC".to_string(), default_accounts.usdc_mint),
-        ("USDT".to_string(), default_accounts.usdt_mint),
-    ]);
-
-    let collateral_mint_map = HashMap::from([
-        ("SOL".to_string(), default_accounts.sol_collateral),
-        ("USDC".to_string(), default_accounts.usdc_collateral),
-        ("USDT".to_string(), default_accounts.usdt_collateral),
-    ]);
-
-    let port_finance_program_id = default_accounts.port_finance_program_id;
-    let larix_program_id = default_accounts.larix_program_id;
+    let (mint_map, collateral_mint_map) = get_asset_maps(default_accounts.clone());
 
     println!("Registry");
     let registry_pubkey = registry::init(config, None)?;
@@ -83,8 +74,9 @@ async fn command_create(
         money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
         refresh_income_interval: REFRESH_INCOME_INTERVAL,
     };
-    registry_config.money_market_program_ids[0] = port_finance_program_id;
-    registry_config.money_market_program_ids[1] = larix_program_id;
+    registry_config.money_market_program_ids[0] = default_accounts.port_finance_program_id;
+    registry_config.money_market_program_ids[1] = default_accounts.larix_program_id;
+    registry_config.money_market_program_ids[2] = default_accounts.solend_program_id;
 
     println!("registry_config = {:#?}", registry_config);
 
@@ -94,8 +86,11 @@ async fn command_create(
     let income_pool_market_pubkey =
         income_pools::create_market(config, None, &general_pool_market_pubkey)?;
 
-    let port_finance_mm_pool_market_pubkey = ulp::create_market(config, None)?;
-    let larix_mm_pool_market_pubkey = ulp::create_market(config, None)?;
+    let mm_pool_markets = vec![
+        ulp::create_market(config, None)?,
+        ulp::create_market(config, None)?,
+        ulp::create_market(config, None)?,
+    ];
 
     println!("Liquidity oracle");
     let liquidity_oracle_pubkey = liquidity_oracle::init(config, None)?;
@@ -117,11 +112,19 @@ async fn command_create(
     let (depositor_authority, _) =
         &everlend_utils::find_program_address(&everlend_depositor::id(), &depositor_pubkey);
 
-    let mut token_accounts = HashMap::new();
+    let mut token_accounts = BTreeMap::new();
 
     for key in required_mints {
         let mint = mint_map.get(key).unwrap();
-        let collateral_mints = collateral_mint_map.get(key).unwrap();
+        let collateral_mints: Vec<(Pubkey, Pubkey)> = collateral_mint_map
+            .get(key)
+            .unwrap()
+            .iter()
+            .zip(mm_pool_markets.iter())
+            .filter_map(|(collateral_mint, mm_pool_market_pubkey)| {
+                collateral_mint.map(|coll_mint| (coll_mint, *mm_pool_market_pubkey))
+            })
+            .collect();
 
         let (general_pool_pubkey, general_pool_token_account, general_pool_mint) =
             general_pool::create_pool(config, &general_pool_market_pubkey, mint)?;
@@ -134,20 +137,13 @@ async fn command_create(
             income_pools::create_pool(config, &income_pool_market_pubkey, mint)?;
 
         // MM Pools
-        println!("MM Pool: Port Finance");
-        let (
-            port_finance_mm_pool_pubkey,
-            port_finance_mm_pool_token_account,
-            port_finance_mm_pool_mint,
-        ) = ulp::create_pool(
-            config,
-            &port_finance_mm_pool_market_pubkey,
-            &collateral_mints[0],
-        )?;
-
-        println!("MM Pool: Larix");
-        let (larix_mm_pool_pubkey, larix_mm_pool_token_account, larix_mm_pool_mint) =
-            ulp::create_pool(config, &larix_mm_pool_market_pubkey, &collateral_mints[1])?;
+        let mm_pool_pubkeys = collateral_mints
+            .iter()
+            .map(|(collateral_mint, mm_pool_market_pubkey)| {
+                println!("MM Pool: {}", collateral_mint);
+                ulp::create_pool(config, mm_pool_market_pubkey, collateral_mint)
+            })
+            .collect::<Result<Vec<(Pubkey, Pubkey, Pubkey)>, ClientError>>()?;
 
         liquidity_oracle::create_token_distribution(
             config,
@@ -175,11 +171,37 @@ async fn command_create(
             10000,
         )?;
 
-        depositor::create_transit(config, &depositor_pubkey, &collateral_mints[0], None)?;
-        depositor::create_transit(config, &depositor_pubkey, &collateral_mints[1], None)?;
+        collateral_mints
+            .iter()
+            .map(|(collateral_mint, _mm_pool_market_pubkey)| {
+                depositor::create_transit(config, &depositor_pubkey, collateral_mint, None)
+            })
+            .collect::<Result<Vec<Pubkey>, ClientError>>()?;
 
-        depositor::create_transit(config, &depositor_pubkey, &port_finance_mm_pool_mint, None)?;
-        depositor::create_transit(config, &depositor_pubkey, &larix_mm_pool_mint, None)?;
+        mm_pool_pubkeys
+            .iter()
+            .map(|(_, _, mm_pool_miny)| {
+                depositor::create_transit(config, &depositor_pubkey, mm_pool_miny, None)
+            })
+            .collect::<Result<Vec<Pubkey>, ClientError>>()?;
+
+        let mm_pools = collateral_mints
+            .iter()
+            .zip(mm_pool_pubkeys)
+            .map(
+                |(
+                    (collateral_mint, _mm_pool_market_pubkey),
+                    (mm_pool_pubkey, mm_pool_token_account, mm_pool_mint),
+                )| {
+                    MoneyMarketAccounts {
+                        pool: mm_pool_pubkey,
+                        pool_token_account: mm_pool_token_account,
+                        token_mint: *collateral_mint,
+                        pool_mint: mm_pool_mint,
+                    }
+                },
+            )
+            .collect();
 
         // Borrow authorities
         general_pool::create_pool_borrow_authority(
@@ -201,40 +223,24 @@ async fn command_create(
                 general_pool_mint,
                 income_pool: income_pool_pubkey,
                 income_pool_token_account,
-                mm_pools: vec![
-                    MoneyMarketAccounts {
-                        pool: port_finance_mm_pool_pubkey,
-                        pool_token_account: port_finance_mm_pool_token_account,
-                        token_mint: collateral_mints[0],
-                        pool_mint: port_finance_mm_pool_mint,
-                    },
-                    MoneyMarketAccounts {
-                        pool: larix_mm_pool_pubkey,
-                        pool_token_account: larix_mm_pool_token_account,
-                        token_mint: collateral_mints[1],
-                        pool_mint: larix_mm_pool_mint,
-                    },
-                ],
+                mm_pools,
                 liquidity_transit: liquidity_transit_pubkey,
             },
         );
     }
 
-    let initialiazed_accounts = InitializedAccounts {
+    let initialized_accounts = InitializedAccounts {
         payer: payer_pubkey,
         registry: registry_pubkey,
         general_pool_market: general_pool_market_pubkey,
         income_pool_market: income_pool_market_pubkey,
-        mm_pool_markets: vec![
-            port_finance_mm_pool_market_pubkey,
-            larix_mm_pool_market_pubkey,
-        ],
+        mm_pool_markets,
         token_accounts,
         liquidity_oracle: liquidity_oracle_pubkey,
         depositor: depositor_pubkey,
     };
 
-    initialiazed_accounts.save(accounts_path).unwrap();
+    initialized_accounts.save(accounts_path).unwrap();
 
     Ok(())
 }
@@ -270,20 +276,20 @@ async fn command_run_migrate(
     accounts_path: &str,
     case: Option<String>,
 ) -> anyhow::Result<()> {
-
     let initialiazed_accounts = InitializedAccounts::load(accounts_path).unwrap_or_default();
 
-    if case.is_none(){
+    if case.is_none() {
         println!("Migrate token mint not presented");
-        return Ok(())
+        return Ok(());
     }
 
-    let token = initialiazed_accounts.token_accounts.get(&case.unwrap()).unwrap();
+    let token = initialiazed_accounts
+        .token_accounts
+        .get(&case.unwrap())
+        .unwrap();
 
     println!("Migrate withdraw requests");
-    general_pool::migrate_general_pool_account(
-        config,
-    )?;
+    general_pool::migrate_general_pool_account(config)?;
     println!("Finished!");
 
     Ok(())
@@ -344,6 +350,19 @@ async fn main() -> anyhow::Result<()> {
                 ),
         )
         .subcommand(
+            SubCommand::with_name("set-registry-config")
+                .about("Set a new registry config")
+                .arg(
+                    Arg::with_name("registry")
+                        .long("registry")
+                        .validator(is_pubkey)
+                        .value_name("ADDRESS")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Registry pubkey"),
+                ),
+        )
+        .subcommand(
             SubCommand::with_name("create-general-pool-market")
                 .about("Create a new general pool market")
                 .arg(
@@ -372,7 +391,6 @@ async fn main() -> anyhow::Result<()> {
                 .about("Create a new MM pool market")
                 .arg(
                     Arg::with_name("money-market")
-                        .short("mm")
                         .long("money-market")
                         .value_name("NUMBER")
                         .takes_value(true)
@@ -410,6 +428,27 @@ async fn main() -> anyhow::Result<()> {
                         .value_name("KEYPAIR")
                         .takes_value(true)
                         .help("Keypair [default: new keypair]"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("create-mm-pool")
+                .about("Create a new MM pool")
+                .arg(
+                    Arg::with_name("money-market")
+                        .long("money-market")
+                        .value_name("NUMBER")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Money market index"),
+                )
+                .arg(
+                    Arg::with_name("mints")
+                        .multiple(true)
+                        .long("mints")
+                        .short("m")
+                        .required(true)
+                        .min_values(1)
+                        .takes_value(true),
                 ),
         )
         .subcommand(
@@ -560,6 +599,61 @@ async fn main() -> anyhow::Result<()> {
                                 .required(true)
                                 .help("Multisig pubkey"),
                         ),
+                )
+                .subcommand(
+                    SubCommand::with_name("approve")
+                        .about("Approve transaction")
+                        .arg(
+                            Arg::with_name("transaction")
+                                .long("transaction")
+                                .short("tx")
+                                .validator(is_pubkey)
+                                .value_name("ADDRESS")
+                                .takes_value(true)
+                                .required(true)
+                                .help("Transaction account pubkey"),
+                        )
+                        .arg(
+                            Arg::with_name("multisig")
+                                .long("multisig")
+                                .validator(is_pubkey)
+                                .value_name("ADDRESS")
+                                .takes_value(true)
+                                .required(true)
+                                .help("Multisig pubkey"),
+                        ),
+                )
+                .subcommand(
+                    SubCommand::with_name("execute")
+                        .about("Execute transaction")
+                        .arg(
+                            Arg::with_name("transaction")
+                                .long("transaction")
+                                .validator(is_pubkey)
+                                .value_name("ADDRESS")
+                                .takes_value(true)
+                                .required(true)
+                                .help("Transaction account pubkey"),
+                        )
+                        .arg(
+                            Arg::with_name("multisig")
+                                .long("multisig")
+                                .validator(is_pubkey)
+                                .value_name("ADDRESS")
+                                .takes_value(true)
+                                .required(true)
+                                .help("Multisig pubkey"),
+                        ),
+                )
+                .subcommand(
+                    SubCommand::with_name("info").about("Multisig info").arg(
+                        Arg::with_name("multisig")
+                            .validator(is_pubkey)
+                            .value_name("ADDRESS")
+                            .takes_value(true)
+                            .required(true)
+                            .help("Multisig pubkey"),
+                    ),
                 ),
         )
         .subcommand(
@@ -641,6 +735,10 @@ async fn main() -> anyhow::Result<()> {
             let keypair = keypair_of(arg_matches, "keypair");
             command_create_registry(&config, keypair).await
         }
+        ("set-registry-config", Some(arg_matches)) => {
+            let registry_pubkey = pubkey_of(arg_matches, "registry").unwrap();
+            command_set_registry_config(&config, registry_pubkey).await
+        }
         ("create-general-pool-market", Some(arg_matches)) => {
             let keypair = keypair_of(arg_matches, "keypair");
             command_create_general_pool_market(&config, keypair).await
@@ -661,6 +759,11 @@ async fn main() -> anyhow::Result<()> {
         ("create-depositor", Some(arg_matches)) => {
             let keypair = keypair_of(arg_matches, "keypair");
             command_create_depositor(&config, keypair).await
+        }
+        ("create-mm-pool", Some(arg_matches)) => {
+            let money_market = value_of::<usize>(arg_matches, "money-market").unwrap();
+            let mints: Vec<_> = arg_matches.values_of("mints").unwrap().collect();
+            command_create_mm_pool(&config, MoneyMarket::from(money_market), mints).await
         }
         ("create-token-accounts", Some(arg_matches)) => {
             let mints: Vec<_> = arg_matches.values_of("mints").unwrap().collect();
@@ -711,6 +814,33 @@ async fn main() -> anyhow::Result<()> {
                         &multisig_pubkey,
                     )
                     .await
+                }
+                ("approve", Some(arg_matches)) => {
+                    let transaction_pubkey = pubkey_of(arg_matches, "transaction").unwrap();
+                    let multisig_pubkey = pubkey_of(arg_matches, "multisig").unwrap();
+
+                    commands_multisig::command_approve(
+                        &config,
+                        &multisig_pubkey,
+                        &transaction_pubkey,
+                    )
+                    .await
+                }
+                ("execute", Some(arg_matches)) => {
+                    let transaction_pubkey = pubkey_of(arg_matches, "transaction").unwrap();
+                    let multisig_pubkey = pubkey_of(arg_matches, "multisig").unwrap();
+
+                    commands_multisig::command_execute_transaction(
+                        &config,
+                        &multisig_pubkey,
+                        &transaction_pubkey,
+                    )
+                    .await
+                }
+                ("info", Some(arg_matches)) => {
+                    let multisig_pubkey = pubkey_of(arg_matches, "multisig").unwrap();
+
+                    commands_multisig::command_info_multisig(&config, &multisig_pubkey).await
                 }
                 _ => unreachable!(),
             }

@@ -9,6 +9,7 @@ use solana_program::pubkey::Pubkey;
 use solana_program_test::*;
 use solana_sdk::signer::Signer;
 use solana_sdk::transaction::{Transaction, TransactionError};
+use std::str::FromStr;
 
 const INITIAL_USER_BALANCE: u64 = 5000000;
 const WITHDRAW_REQUEST_RENT: u64 = 1955760;

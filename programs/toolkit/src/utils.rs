@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use anchor_lang::AccountDeserialize;
 use solana_account_decoder::UiAccountEncoding;
 use solana_client::{
@@ -38,7 +40,7 @@ pub struct Config {
 
 impl Config {
     pub fn get_default_accounts(&self) -> DefaultAccounts {
-        DefaultAccounts::load(&format!("default.{}.yaml", self.network)).unwrap_or_default()
+        DefaultAccounts::load(&format!("default.{}.yaml", self.network)).unwrap()
     }
 
     pub fn get_initialized_accounts(&self) -> InitializedAccounts {
@@ -169,4 +171,42 @@ pub fn spl_token_transfer(
     config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
     Ok(())
+}
+
+#[allow(clippy::type_complexity)]
+pub fn get_asset_maps(
+    default_accounts: DefaultAccounts,
+) -> (
+    HashMap<String, Pubkey>,
+    HashMap<String, Vec<Option<Pubkey>>>,
+) {
+    let mint_map = HashMap::from([
+        ("SOL".to_string(), default_accounts.sol_mint),
+        ("USDC".to_string(), default_accounts.usdc_mint),
+        ("USDT".to_string(), default_accounts.usdt_mint),
+        ("mSOL".to_string(), default_accounts.msol_mint),
+        ("stSOL".to_string(), default_accounts.stsol_mint),
+        ("soBTC".to_string(), default_accounts.sobtc_mint),
+        ("ETHw".to_string(), default_accounts.ethw_mint),
+        ("USTw".to_string(), default_accounts.ustw_mint),
+        ("FTTw".to_string(), default_accounts.fttw_mint),
+        ("RAY".to_string(), default_accounts.ray_mint),
+        ("SRM".to_string(), default_accounts.srm_mint),
+    ]);
+
+    let collateral_mint_map = HashMap::from([
+        ("SOL".to_string(), default_accounts.sol_collateral),
+        ("USDC".to_string(), default_accounts.usdc_collateral),
+        ("USDT".to_string(), default_accounts.usdt_collateral),
+        ("mSOL".to_string(), default_accounts.msol_collateral),
+        ("stSOL".to_string(), default_accounts.stsol_collateral),
+        ("soBTC".to_string(), default_accounts.sobtc_collateral),
+        ("ETHw".to_string(), default_accounts.ethw_collateral),
+        ("USTw".to_string(), default_accounts.ustw_collateral),
+        ("FTTw".to_string(), default_accounts.fttw_collateral),
+        ("RAY".to_string(), default_accounts.ray_collateral),
+        ("SRM".to_string(), default_accounts.srm_collateral),
+    ]);
+
+    (mint_map, collateral_mint_map)
 }
