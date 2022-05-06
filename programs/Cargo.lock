@@ -1034,6 +1034,7 @@ name = "everlend-general-pool"
 version = "0.1.0"
 dependencies = [
  "borsh",
+ "everlend-registry",
  "everlend-utils",
  "num-derive",
  "num-traits",

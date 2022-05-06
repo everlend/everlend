@@ -83,6 +83,9 @@ pub enum LiquidityPoolsInstruction {
     /// Deposit funds in the pool
     ///
     /// Accounts:
+    /// [R] Registry
+    /// [R] Registry config
+    /// [R] Pool config
     /// [R] Pool market
     /// [R] Pool
     /// [W] Source account (for token mint)
@@ -151,6 +154,9 @@ pub enum LiquidityPoolsInstruction {
     /// Move pool tokens to transit account and create withdraw request
     ///
     /// Accounts:
+    /// [R] Registry
+    /// [R] Registry config
+    /// [R] Pool config
     /// [R] Pool market
     /// [R] Pool
     /// [W] Pool mint account

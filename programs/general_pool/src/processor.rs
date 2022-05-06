@@ -1,6 +1,7 @@
 //! Program state processor
 
 use borsh::BorshDeserialize;
+use everlend_registry::{find_pool_config_program_address, state::{PoolConfig, RegistryConfig}};
 use everlend_utils::{
     assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
     cpi, find_program_address, EverlendError,
@@ -363,6 +364,9 @@ impl Processor {
     /// Process Deposit instruction
     pub fn deposit(program_id: &Pubkey, amount: u64, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
+        let registry_info = next_account_info(account_info_iter)?;
+        let registry_config_info = next_account_info(account_info_iter)?;
+        let pool_config_info = next_account_info(account_info_iter)?;
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_info = next_account_info(account_info_iter)?;
         let source_info = next_account_info(account_info_iter)?;
@@ -385,6 +389,9 @@ impl Processor {
         assert_account_key(token_account_info, &pool.token_account)?;
         assert_account_key(pool_mint_info, &pool.pool_mint)?;
 
+        let registry_config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
+        assert_account_key(registry_info, &registry_config.registry)?;
+
         let total_incoming =
             total_pool_amount(token_account_info.clone(), pool.total_amount_borrowed)?;
         let total_minted = Mint::unpack_unchecked(&pool_mint_info.data.borrow())?.supply;
@@ -398,6 +405,16 @@ impl Processor {
                 .checked_div(total_incoming as u128)
                 .ok_or(ProgramError::InvalidArgument)? as u64
         };
+        let (pool_config_pubkey, _) = find_pool_config_program_address(
+                &everlend_registry::id(),
+                registry_info.key,
+                pool_info.key,
+            );
+        assert_account_key(pool_config_info, &pool_config_pubkey)?;
+        let pool_config = PoolConfig::unpack(&pool_config_info.data.borrow())?;
+        if mint_amount < pool_config.deposit_minimum {
+            return Err(EverlendError::DepositAmountTooSmall.into());
+        }
 
         // Transfer token from source to token account
         cpi::spl_token::transfer(
@@ -588,6 +605,9 @@ impl Processor {
         accounts: &[AccountInfo],
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
+        let registry_info = next_account_info(account_info_iter)?;
+        let registry_config_info = next_account_info(account_info_iter)?;
+        let pool_config_info = next_account_info(account_info_iter)?;
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_info = next_account_info(account_info_iter)?;
         let pool_mint_info = next_account_info(account_info_iter)?;
@@ -616,6 +636,9 @@ impl Processor {
         assert_account_key(pool_market_info, &pool.pool_market)?;
         assert_account_key(token_account_info, &pool.token_account)?;
         assert_account_key(pool_mint_info, &pool.pool_mint)?;
+
+        let registry_config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
+        assert_account_key(registry_info, &registry_config.registry)?;
 
         if pool.token_mint != spl_token::native_mint::id() {
             let destination_account = Account::unpack(&destination_info.data.borrow())?;
@@ -656,6 +679,11 @@ impl Processor {
             .ok_or(EverlendError::MathOverflow)?
             .checked_div(total_minted as u128)
             .ok_or(EverlendError::MathOverflow)? as u64;
+
+        let pool_config = PoolConfig::unpack(&pool_config_info.data.borrow())?;
+        if liquidity_amount < pool_config.withdraw_minimum {
+            return Err(EverlendError::WithdrawAmountTooSmall.into());
+        }
 
         // Transfer
         cpi::spl_token::transfer(
