@@ -1,6 +1,6 @@
 //! Instruction types
 
-use crate::{find_config_program_address, state::SetRegistryConfigParams};
+use crate::{find_config_program_address, state::{SetRegistryConfigParams, SetPoolConfigParams}};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
     instruction::{AccountMeta, Instruction},
@@ -31,6 +31,20 @@ pub enum RegistryInstruction {
     SetRegistryConfig {
         /// Set registry config params
         params: SetRegistryConfigParams,
+    },
+
+    /// Set pool config
+    ///
+    /// Accounts:
+    /// [R] Registry
+    /// [R] General Pool
+    /// [W] Pool config
+    /// [WS] Manager
+    /// [R] Rent sysvar
+    /// [R] Sytem program
+    SetPoolConfig {
+        /// Set pool config params
+        params: SetPoolConfigParams,
     },
 }
 
