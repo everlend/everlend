@@ -70,6 +70,7 @@ async fn setup() -> (
     general_pool
         .deposit(
             &mut context,
+            &registry,
             &general_pool_market,
             &liquidity_provider,
             100 * EXP,

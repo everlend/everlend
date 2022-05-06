@@ -1,6 +1,7 @@
 //! Instruction types
 
 use borsh::{BorshDeserialize, BorshSerialize};
+use everlend_registry::find_pool_config_program_address;
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
@@ -326,6 +327,7 @@ pub fn delete_pool_borrow_authority(
 #[allow(clippy::too_many_arguments)]
 pub fn deposit(
     program_id: &Pubkey,
+    registry: &Pubkey,
     pool_market: &Pubkey,
     pool: &Pubkey,
     source: &Pubkey,
@@ -336,8 +338,11 @@ pub fn deposit(
     amount: u64,
 ) -> Instruction {
     let (pool_market_authority, _) = find_program_address(program_id, pool_market);
+    let (pool_config, _) = find_pool_config_program_address(program_id, registry, pool);
 
     let accounts = vec![
+        AccountMeta::new_readonly(*registry, false),
+        AccountMeta::new_readonly(pool_config, false),
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new_readonly(*pool, false),
         AccountMeta::new(*source, false),
@@ -401,6 +406,7 @@ pub fn withdraw(
 #[allow(clippy::too_many_arguments)]
 pub fn withdraw_request(
     program_id: &Pubkey,
+    registry: &Pubkey,
     pool_market: &Pubkey,
     pool: &Pubkey,
     source: &Pubkey,
@@ -419,8 +425,11 @@ pub fn withdraw_request(
         &withdrawal_requests,
         user_transfer_authority,
     );
+    let (pool_config, _) = find_pool_config_program_address(program_id, registry, pool);
 
     let accounts = vec![
+        AccountMeta::new_readonly(*registry, false),
+        AccountMeta::new_readonly(pool_config, false),
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new_readonly(*pool, false),
         AccountMeta::new(*pool_mint, false),

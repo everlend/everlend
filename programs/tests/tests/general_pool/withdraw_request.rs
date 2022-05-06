@@ -15,12 +15,13 @@ const WARP_SLOT: Slot = 3;
 
 async fn setup() -> (
     ProgramTestContext,
+    TestRegistry,
     TestGeneralPoolMarket,
     TestGeneralPool,
     TestGeneralPoolBorrowAuthority,
     LiquidityProvider,
 ) {
-    let mut context = presetup().await.0;
+    let (mut context, _, _, registry) = presetup().await;
 
     let test_pool_market = TestGeneralPoolMarket::new();
     test_pool_market.init(&mut context).await.unwrap();
@@ -57,12 +58,13 @@ async fn setup() -> (
         .unwrap();
 
     test_pool
-        .deposit(&mut context, &test_pool_market, &user, 100)
+        .deposit(&mut context, &registry, &test_pool_market, &user, 100)
         .await
         .unwrap();
 
     (
         context,
+        registry,
         test_pool_market,
         test_pool,
         test_pool_borrow_authority,
@@ -72,17 +74,17 @@ async fn setup() -> (
 
 #[tokio::test]
 async fn success() {
-    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
+    let (mut context, test_registry, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
 
     test_pool
-        .deposit(&mut context, &test_pool_market, &user, 100)
+        .deposit(&mut context, &test_registry, &test_pool_market, &user, 100)
         .await
         .unwrap();
 
     context.warp_to_slot(WARP_SLOT + 5).unwrap();
 
     test_pool
-        .withdraw_request(&mut context, &test_pool_market, &user, 50)
+        .withdraw_request(&mut context, &test_registry, &test_pool_market, &user, 50)
         .await
         .unwrap();
 
@@ -109,10 +111,10 @@ async fn success() {
 
 #[tokio::test]
 async fn fail_with_invalid_pool_market() {
-    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
+    let (mut context, test_registry, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
 
     test_pool
-        .deposit(&mut context, &test_pool_market, &user, 100)
+        .deposit(&mut context, &test_registry, &test_pool_market, &user, 100)
         .await
         .unwrap();
 
@@ -123,6 +125,7 @@ async fn fail_with_invalid_pool_market() {
     let tx = Transaction::new_signed_with_payer(
         &[instruction::withdraw_request(
             &everlend_general_pool::id(),
+            &test_registry.keypair.pubkey(),
             &Pubkey::new_unique(),
             &test_pool.pool_pubkey,
             &user.pool_account,
@@ -154,10 +157,10 @@ async fn fail_with_invalid_pool_market() {
 
 #[tokio::test]
 async fn fail_with_invalid_pool() {
-    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
+    let (mut context, test_registry, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
 
     test_pool
-        .deposit(&mut context, &test_pool_market, &user, 100)
+        .deposit(&mut context, &test_registry, &test_pool_market, &user, 100)
         .await
         .unwrap();
 
@@ -168,6 +171,7 @@ async fn fail_with_invalid_pool() {
     let tx = Transaction::new_signed_with_payer(
         &[instruction::withdraw_request(
             &everlend_general_pool::id(),
+            &test_registry.keypair.pubkey(),
             &test_pool_market.keypair.pubkey(),
             &Pubkey::new_unique(),
             &user.pool_account,
@@ -199,10 +203,10 @@ async fn fail_with_invalid_pool() {
 
 #[tokio::test]
 async fn fail_with_invalid_destination() {
-    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
+    let (mut context, test_registry, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
 
     test_pool
-        .deposit(&mut context, &test_pool_market, &user, 100)
+        .deposit(&mut context, &test_registry, &test_pool_market, &user, 100)
         .await
         .unwrap();
 
@@ -213,6 +217,7 @@ async fn fail_with_invalid_destination() {
     let tx = Transaction::new_signed_with_payer(
         &[instruction::withdraw_request(
             &everlend_general_pool::id(),
+            &test_registry.keypair.pubkey(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &user.pool_account,
@@ -241,10 +246,10 @@ async fn fail_with_invalid_destination() {
 
 #[tokio::test]
 async fn fail_with_invalid_token_account() {
-    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
+    let (mut context, test_registry, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
 
     test_pool
-        .deposit(&mut context, &test_pool_market, &user, 100)
+        .deposit(&mut context, &test_registry, &test_pool_market, &user, 100)
         .await
         .unwrap();
 
@@ -255,6 +260,7 @@ async fn fail_with_invalid_token_account() {
     let tx = Transaction::new_signed_with_payer(
         &[instruction::withdraw_request(
             &everlend_general_pool::id(),
+            &test_registry.keypair.pubkey(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &user.pool_account,
@@ -283,10 +289,10 @@ async fn fail_with_invalid_token_account() {
 
 #[tokio::test]
 async fn fail_with_invalid_token_mint() {
-    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
+    let (mut context, test_registry, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
 
     test_pool
-        .deposit(&mut context, &test_pool_market, &user, 100)
+        .deposit(&mut context, &test_registry, &test_pool_market, &user, 100)
         .await
         .unwrap();
 
@@ -297,6 +303,7 @@ async fn fail_with_invalid_token_mint() {
     let tx = Transaction::new_signed_with_payer(
         &[instruction::withdraw_request(
             &everlend_general_pool::id(),
+            &test_registry.keypair.pubkey(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &user.pool_account,
@@ -328,10 +335,10 @@ async fn fail_with_invalid_token_mint() {
 
 #[tokio::test]
 async fn fail_with_invalid_pool_mint() {
-    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
+    let (mut context, test_registry, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
 
     test_pool
-        .deposit(&mut context, &test_pool_market, &user, 100)
+        .deposit(&mut context, &test_registry, &test_pool_market, &user, 100)
         .await
         .unwrap();
 
@@ -342,6 +349,7 @@ async fn fail_with_invalid_pool_mint() {
     let tx = Transaction::new_signed_with_payer(
         &[instruction::withdraw_request(
             &everlend_general_pool::id(),
+            &test_registry.keypair.pubkey(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &user.pool_account,
@@ -370,10 +378,10 @@ async fn fail_with_invalid_pool_mint() {
 
 #[tokio::test]
 async fn fail_with_wrong_user_transfer_authority() {
-    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
+    let (mut context, test_registry, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
 
     test_pool
-        .deposit(&mut context, &test_pool_market, &user, 100)
+        .deposit(&mut context, &test_registry, &test_pool_market, &user, 100)
         .await
         .unwrap();
 
@@ -386,6 +394,7 @@ async fn fail_with_wrong_user_transfer_authority() {
     let tx = Transaction::new_signed_with_payer(
         &[instruction::withdraw_request(
             &everlend_general_pool::id(),
+            &test_registry.keypair.pubkey(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &user.pool_account,
@@ -417,10 +426,10 @@ async fn fail_with_wrong_user_transfer_authority() {
 
 #[tokio::test]
 async fn fail_with_invalid_withdraw_amount() {
-    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
+    let (mut context, test_registry, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
 
     test_pool
-        .deposit(&mut context, &test_pool_market, &user, 100)
+        .deposit(&mut context, &test_registry, &test_pool_market, &user, 100)
         .await
         .unwrap();
 
@@ -431,6 +440,7 @@ async fn fail_with_invalid_withdraw_amount() {
     let tx = Transaction::new_signed_with_payer(
         &[instruction::withdraw_request(
             &everlend_general_pool::id(),
+            &test_registry.keypair.pubkey(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &user.pool_account,

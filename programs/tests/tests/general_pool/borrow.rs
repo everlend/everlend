@@ -18,7 +18,7 @@ async fn setup() -> (
     TestGeneralPoolBorrowAuthority,
     LiquidityProvider,
 ) {
-    let mut context = presetup().await.0;
+    let (mut context, _, _, registry) = presetup().await;
 
     let test_pool_market = TestGeneralPoolMarket::new();
     test_pool_market.init(&mut context).await.unwrap();
@@ -51,7 +51,7 @@ async fn setup() -> (
     .unwrap();
 
     test_pool
-        .deposit(&mut context, &test_pool_market, &user, 100)
+        .deposit(&mut context, &registry, &test_pool_market, &user, 100)
         .await
         .unwrap();
 
