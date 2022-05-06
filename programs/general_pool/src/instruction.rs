@@ -84,7 +84,6 @@ pub enum LiquidityPoolsInstruction {
     ///
     /// Accounts:
     /// [R] Registry
-    /// [R] Registry config
     /// [R] Pool config
     /// [R] Pool market
     /// [R] Pool
@@ -155,7 +154,6 @@ pub enum LiquidityPoolsInstruction {
     ///
     /// Accounts:
     /// [R] Registry
-    /// [R] Registry config
     /// [R] Pool config
     /// [R] Pool market
     /// [R] Pool

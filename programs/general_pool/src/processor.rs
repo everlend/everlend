@@ -365,7 +365,6 @@ impl Processor {
     pub fn deposit(program_id: &Pubkey, amount: u64, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let registry_info = next_account_info(account_info_iter)?;
-        let registry_config_info = next_account_info(account_info_iter)?;
         let pool_config_info = next_account_info(account_info_iter)?;
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_info = next_account_info(account_info_iter)?;
@@ -379,6 +378,7 @@ impl Processor {
 
         assert_signer(user_transfer_authority_info)?;
 
+        assert_owned_by(pool_config_info, &everlend_registry::id())?;
         assert_owned_by(pool_market_info, program_id)?;
         assert_owned_by(pool_info, program_id)?;
 
@@ -388,9 +388,6 @@ impl Processor {
         assert_account_key(pool_market_info, &pool.pool_market)?;
         assert_account_key(token_account_info, &pool.token_account)?;
         assert_account_key(pool_mint_info, &pool.pool_mint)?;
-
-        let registry_config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
-        assert_account_key(registry_info, &registry_config.registry)?;
 
         let total_incoming =
             total_pool_amount(token_account_info.clone(), pool.total_amount_borrowed)?;
@@ -606,7 +603,6 @@ impl Processor {
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let registry_info = next_account_info(account_info_iter)?;
-        let registry_config_info = next_account_info(account_info_iter)?;
         let pool_config_info = next_account_info(account_info_iter)?;
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_info = next_account_info(account_info_iter)?;
@@ -627,6 +623,7 @@ impl Processor {
 
         assert_signer(user_transfer_authority_info)?;
 
+        assert_owned_by(pool_config_info, &everlend_registry::id())?;
         assert_owned_by(pool_market_info, program_id)?;
         assert_owned_by(pool_info, program_id)?;
         assert_owned_by(withdrawal_requests_info, program_id)?;
@@ -636,9 +633,6 @@ impl Processor {
         assert_account_key(pool_market_info, &pool.pool_market)?;
         assert_account_key(token_account_info, &pool.token_account)?;
         assert_account_key(pool_mint_info, &pool.pool_mint)?;
-
-        let registry_config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
-        assert_account_key(registry_info, &registry_config.registry)?;
 
         if pool.token_mint != spl_token::native_mint::id() {
             let destination_account = Account::unpack(&destination_info.data.borrow())?;
@@ -680,6 +674,12 @@ impl Processor {
             .checked_div(total_minted as u128)
             .ok_or(EverlendError::MathOverflow)? as u64;
 
+        let (pool_config_pubkey, _) = find_pool_config_program_address(
+                &everlend_registry::id(),
+                registry_info.key,
+                pool_info.key,
+            );
+        assert_account_key(pool_config_info, &pool_config_pubkey)?;
         let pool_config = PoolConfig::unpack(&pool_config_info.data.borrow())?;
         if liquidity_amount < pool_config.withdraw_minimum {
             return Err(EverlendError::WithdrawAmountTooSmall.into());
