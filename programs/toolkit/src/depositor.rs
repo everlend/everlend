@@ -17,9 +17,6 @@ pub fn init(
     config: &Config,
     registry_pubkey: &Pubkey,
     depositor_keypair: Option<Keypair>,
-    general_pool_market_pubkey: &Pubkey,
-    income_pool_market_pubkey: &Pubkey,
-    liquidity_oracle_pubkey: &Pubkey,
 ) -> Result<Pubkey, ClientError> {
     let depositor_keypair = depositor_keypair.unwrap_or_else(Keypair::new);
 
@@ -42,9 +39,6 @@ pub fn init(
                 &everlend_depositor::id(),
                 registry_pubkey,
                 &depositor_keypair.pubkey(),
-                general_pool_market_pubkey,
-                income_pool_market_pubkey,
-                liquidity_oracle_pubkey,
             ),
         ],
         Some(&config.fee_payer.pubkey()),

@@ -1,6 +1,9 @@
 //! Instruction types
 
-use crate::{find_config_program_address, state::SetRegistryConfigParams};
+use crate::{
+    find_config_program_address,
+    state::{RegistryPrograms, RegistryRootAccounts, RegistrySettings},
+};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
     instruction::{AccountMeta, Instruction},
@@ -29,8 +32,24 @@ pub enum RegistryInstruction {
     /// [R] Rent sysvar
     /// [R] Sytem program
     SetRegistryConfig {
-        /// Set registry config params
-        params: SetRegistryConfigParams,
+        /// Programs
+        programs: RegistryPrograms,
+        /// Root accounts
+        roots: RegistryRootAccounts,
+        /// Settings
+        settings: RegistrySettings,
+    },
+
+    /// Set a registry root accounts
+    ///
+    /// Accounts:
+    /// [R] Registry
+    /// [W] Registry config
+    /// [WS] Manager
+    /// [R] Sytem program
+    SetRegistryRootAccounts {
+        /// Root accounts
+        roots: RegistryRootAccounts,
     },
 }
 
@@ -50,7 +69,9 @@ pub fn set_registry_config(
     program_id: &Pubkey,
     registry: &Pubkey,
     manager: &Pubkey,
-    params: SetRegistryConfigParams,
+    programs: RegistryPrograms,
+    roots: RegistryRootAccounts,
+    settings: RegistrySettings,
 ) -> Instruction {
     let (registry_config, _) = find_config_program_address(program_id, registry);
 
@@ -64,7 +85,34 @@ pub fn set_registry_config(
 
     Instruction::new_with_borsh(
         *program_id,
-        &RegistryInstruction::SetRegistryConfig { params },
+        &RegistryInstruction::SetRegistryConfig {
+            programs,
+            roots,
+            settings,
+        },
+        accounts,
+    )
+}
+
+/// Creates 'SetRegistryRootAccounts' instruction.
+pub fn set_registry_root_accounts(
+    program_id: &Pubkey,
+    registry: &Pubkey,
+    manager: &Pubkey,
+    roots: RegistryRootAccounts,
+) -> Instruction {
+    let (registry_config, _) = find_config_program_address(program_id, registry);
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*registry, false),
+        AccountMeta::new(registry_config, false),
+        AccountMeta::new(*manager, true),
+        AccountMeta::new_readonly(system_program::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &RegistryInstruction::SetRegistryRootAccounts { roots },
         accounts,
     )
 }

@@ -1,16 +1,16 @@
-use std::collections::HashMap;
-
+use everlend_liquidity_oracle::state::DistributionArray;
+use everlend_registry::{
+    find_config_program_address,
+    state::{
+        RegistryConfig, RegistryPrograms, RegistryRootAccounts, RegistrySettings,
+        TOTAL_DISTRIBUTIONS,
+    },
+};
+use everlend_utils::integrations::MoneyMarket;
 use solana_client::client_error::ClientError;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::signature::Keypair;
 use spl_associated_token_account::get_associated_token_address;
-
-use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::{
-    find_config_program_address,
-    state::{RegistryConfig, SetRegistryConfigParams, TOTAL_DISTRIBUTIONS},
-};
-use everlend_utils::integrations::MoneyMarket;
 
 use crate::{
     accounts_config::{MoneyMarketAccounts, TokenAccounts},
@@ -32,23 +32,29 @@ pub async fn command_create_registry(
     let mut initialiazed_accounts = config.get_initialized_accounts();
 
     let registry_pubkey = registry::init(config, keypair)?;
-    let mut registry_config = SetRegistryConfigParams {
+    let mut programs = RegistryPrograms {
         general_pool_program_id: everlend_general_pool::id(),
         ulp_program_id: everlend_ulp::id(),
         liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
         depositor_program_id: everlend_depositor::id(),
         income_pools_program_id: everlend_income_pools::id(),
         money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
-        refresh_income_interval: REFRESH_INCOME_INTERVAL,
     };
+    programs.money_market_program_ids[0] = default_accounts.port_finance_program_id;
+    programs.money_market_program_ids[1] = default_accounts.larix_program_id;
+    programs.money_market_program_ids[2] = default_accounts.solend_program_id;
 
-    registry_config.money_market_program_ids[0] = default_accounts.port_finance_program_id;
-    registry_config.money_market_program_ids[1] = default_accounts.larix_program_id;
-    registry_config.money_market_program_ids[2] = default_accounts.solend_program_id;
+    println!("programs = {:#?}", programs);
 
-    println!("registry_config = {:#?}", registry_config);
-
-    registry::set_registry_config(config, &registry_pubkey, registry_config)?;
+    registry::set_registry_config(
+        config,
+        &registry_pubkey,
+        programs,
+        RegistryRootAccounts::default(),
+        RegistrySettings {
+            refresh_income_interval: REFRESH_INCOME_INTERVAL,
+        },
+    )?;
 
     initialiazed_accounts.payer = payer_pubkey;
     initialiazed_accounts.registry = registry_pubkey;
@@ -71,23 +77,31 @@ pub async fn command_set_registry_config(
     let registry_config = config.get_account_unpack::<RegistryConfig>(&registry_config_pubkey);
     println!("registry_config = {:#?}", registry_config);
 
-    let mut registry_config_params = SetRegistryConfigParams {
+    let mut programs = RegistryPrograms {
         general_pool_program_id: everlend_general_pool::id(),
         ulp_program_id: everlend_ulp::id(),
         liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
         depositor_program_id: everlend_depositor::id(),
         income_pools_program_id: everlend_income_pools::id(),
         money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
-        refresh_income_interval: REFRESH_INCOME_INTERVAL,
+        // refresh_income_interval: REFRESH_INCOME_INTERVAL,
     };
 
-    registry_config_params.money_market_program_ids[0] = default_accounts.port_finance_program_id;
-    registry_config_params.money_market_program_ids[1] = default_accounts.larix_program_id;
-    registry_config_params.money_market_program_ids[2] = default_accounts.solend_program_id;
+    programs.money_market_program_ids[0] = default_accounts.port_finance_program_id;
+    programs.money_market_program_ids[1] = default_accounts.larix_program_id;
+    programs.money_market_program_ids[2] = default_accounts.solend_program_id;
 
-    println!("registry_config_params = {:#?}", registry_config_params);
+    println!("programs = {:#?}", programs);
 
-    registry::set_registry_config(config, &registry_pubkey, registry_config_params)?;
+    registry::set_registry_config(
+        config,
+        &registry_pubkey,
+        programs,
+        RegistryRootAccounts::default(),
+        RegistrySettings {
+            refresh_income_interval: REFRESH_INCOME_INTERVAL,
+        },
+    )?;
 
     Ok(())
 }
@@ -172,9 +186,9 @@ pub async fn command_create_depositor(
         config,
         &initialiazed_accounts.registry,
         keypair,
-        &initialiazed_accounts.general_pool_market,
-        &initialiazed_accounts.income_pool_market,
-        &initialiazed_accounts.liquidity_oracle,
+        // &initialiazed_accounts.general_pool_market,
+        // &initialiazed_accounts.income_pool_market,
+        // &initialiazed_accounts.liquidity_oracle,
     )?;
 
     initialiazed_accounts.depositor = depositor_pubkey;

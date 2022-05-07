@@ -1,7 +1,7 @@
 use crate::utils::*;
 use everlend_registry::{
     find_config_program_address,
-    state::{Registry, SetRegistryConfigParams},
+    state::{Registry, RegistryPrograms, RegistryRootAccounts, RegistrySettings},
 };
 use solana_client::client_error::ClientError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
@@ -55,14 +55,18 @@ pub fn init(config: &Config, registry_keypair: Option<Keypair>) -> Result<Pubkey
 pub fn set_registry_config(
     config: &Config,
     registry_pubkey: &Pubkey,
-    params: SetRegistryConfigParams,
+    programs: RegistryPrograms,
+    roots: RegistryRootAccounts,
+    settings: RegistrySettings,
 ) -> Result<Pubkey, ClientError> {
     let tx = Transaction::new_with_payer(
         &[everlend_registry::instruction::set_registry_config(
             &everlend_registry::id(),
             registry_pubkey,
             &config.fee_payer.pubkey(),
-            params,
+            programs,
+            roots,
+            settings,
         )],
         Some(&config.fee_payer.pubkey()),
     );

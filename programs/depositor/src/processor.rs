@@ -22,7 +22,10 @@ use everlend_general_pool::{
 use everlend_liquidity_oracle::{
     find_liquidity_oracle_token_distribution_program_address, state::TokenDistribution,
 };
-use everlend_registry::state::RegistryConfig;
+use everlend_registry::{
+    find_config_program_address,
+    state::{RegistryPrograms, RegistryRootAccounts, RegistrySettings},
+};
 use everlend_utils::{
     assert_account_key, assert_owned_by, assert_rent_exempt, assert_uninitialized, cpi,
     find_program_address, EverlendError,
@@ -45,32 +48,22 @@ impl Processor {
     pub fn init(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
 
-        let registry_config_info = next_account_info(account_info_iter)?;
-        let config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
-
         let depositor_info = next_account_info(account_info_iter)?;
-        let general_pool_market_info = next_account_info(account_info_iter)?;
-        let income_pool_market_info = next_account_info(account_info_iter)?;
-        let liquidity_oracle_info = next_account_info(account_info_iter)?;
+        let registry_info = next_account_info(account_info_iter)?;
         let rent_info = next_account_info(account_info_iter)?;
         let rent = &Rent::from_account_info(rent_info)?;
 
         assert_rent_exempt(rent, depositor_info)?;
 
-        assert_owned_by(registry_config_info, &everlend_registry::id())?;
         assert_owned_by(depositor_info, program_id)?;
-        assert_owned_by(general_pool_market_info, &config.general_pool_program_id)?;
-        assert_owned_by(income_pool_market_info, &config.income_pools_program_id)?;
-        assert_owned_by(liquidity_oracle_info, &config.liquidity_oracle_program_id)?;
+        assert_owned_by(registry_info, &everlend_registry::id())?;
 
         // Get depositor state
         let mut depositor = Depositor::unpack_unchecked(&depositor_info.data.borrow())?;
         assert_uninitialized(&depositor)?;
 
         depositor.init(InitDepositorParams {
-            general_pool_market: *general_pool_market_info.key,
-            income_pool_market: *income_pool_market_info.key,
-            liquidity_oracle: *liquidity_oracle_info.key,
+            registry: *registry_info.key,
         });
 
         Depositor::pack(depositor, *depositor_info.data.borrow_mut())?;
@@ -142,7 +135,6 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
 
         let registry_config_info = next_account_info(account_info_iter)?;
-        let config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
 
         let depositor_info = next_account_info(account_info_iter)?;
         let depositor_authority_info = next_account_info(account_info_iter)?;
@@ -172,17 +164,28 @@ impl Processor {
         let _liquidity_oracle_program_info = next_account_info(account_info_iter)?;
         let _general_pool_program_info = next_account_info(account_info_iter)?;
 
-        assert_owned_by(registry_config_info, &everlend_registry::id())?;
-        assert_owned_by(depositor_info, program_id)?;
-        assert_owned_by(token_distribution_info, &config.liquidity_oracle_program_id)?;
-        assert_owned_by(general_pool_info, &config.general_pool_program_id)?;
-        assert_owned_by(withdrawal_requests_info, &config.general_pool_program_id)?;
-
         // Get depositor state
         let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
+        let (registry_config_pubkey, _) =
+            find_config_program_address(&everlend_registry::id(), &depositor.registry);
+        assert_account_key(registry_config_info, &registry_config_pubkey)?;
 
-        assert_account_key(general_pool_market_info, &depositor.general_pool_market)?;
-        assert_account_key(liquidity_oracle_info, &depositor.liquidity_oracle)?;
+        // TODO: We can check registry config as well for initialized
+        let programs = RegistryPrograms::unpack_from_slice(&registry_config_info.data.borrow())?;
+        let roots = RegistryRootAccounts::unpack_from_slice(&registry_config_info.data.borrow())?;
+        let settings = RegistrySettings::unpack_from_slice(&registry_config_info.data.borrow())?;
+
+        assert_owned_by(registry_config_info, &everlend_registry::id())?;
+        assert_owned_by(depositor_info, program_id)?;
+        assert_owned_by(
+            token_distribution_info,
+            &programs.liquidity_oracle_program_id,
+        )?;
+        assert_owned_by(general_pool_info, &programs.general_pool_program_id)?;
+        assert_owned_by(withdrawal_requests_info, &programs.general_pool_program_id)?;
+
+        assert_account_key(general_pool_market_info, &roots.general_pool_market)?;
+        assert_account_key(liquidity_oracle_info, &roots.liquidity_oracle)?;
 
         let (rebalancing_pubkey, bump_seed) =
             find_rebalancing_program_address(program_id, depositor_info.key, mint_info.key);
@@ -235,7 +238,7 @@ impl Processor {
         // Check token distribution pubkey
         let (token_distribution_pubkey, _) =
             find_liquidity_oracle_token_distribution_program_address(
-                &config.liquidity_oracle_program_id,
+                &programs.liquidity_oracle_program_id,
                 liquidity_oracle_info.key,
                 mint_info.key,
             );
@@ -249,7 +252,7 @@ impl Processor {
         assert_account_key(mint_info, &general_pool.token_mint)?;
 
         let (withdrawal_requests_pubkey, _) = find_withdrawal_requests_program_address(
-            &config.general_pool_program_id,
+            &programs.general_pool_program_id,
             general_pool_market_info.key,
             &general_pool.token_mint,
         );
@@ -327,12 +330,17 @@ impl Processor {
         msg!("Computing");
         if refresh_income {
             rebalancing.compute_with_refresh_income(
-                &config,
+                &programs.money_market_program_ids,
+                &settings,
                 clock.slot,
                 new_distributed_liquidity,
             )?;
         } else {
-            rebalancing.compute(&config, new_token_distribution, new_distributed_liquidity)?;
+            rebalancing.compute(
+                &programs.money_market_program_ids,
+                new_token_distribution,
+                new_distributed_liquidity,
+            )?;
         }
 
         // msg!("Steps = {:?}", rebalancing.steps);
@@ -375,7 +383,12 @@ impl Processor {
         assert_owned_by(depositor_info, program_id)?;
         assert_owned_by(rebalancing_info, program_id)?;
 
-        let registry_config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
+        let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
+        let (registry_config_pubkey, _) =
+            find_config_program_address(&everlend_registry::id(), &depositor.registry);
+        assert_account_key(registry_config_info, &registry_config_pubkey)?;
+
+        let programs = RegistryPrograms::unpack_from_slice(&registry_config_info.data.borrow())?;
 
         let mut rebalancing = Rebalancing::unpack(&rebalancing_info.data.borrow())?;
         assert_account_key(depositor_info, &rebalancing.depositor)?;
@@ -393,7 +406,7 @@ impl Processor {
 
         let step = rebalancing.next_step();
 
-        if registry_config.money_market_program_ids[usize::from(step.money_market_index)]
+        if programs.money_market_program_ids[usize::from(step.money_market_index)]
             != *money_market_program_info.key
         {
             return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
@@ -401,7 +414,7 @@ impl Processor {
 
         msg!("Deposit");
         let collateral_amount = deposit(
-            &registry_config,
+            &programs,
             mm_pool_market_info.clone(),
             mm_pool_market_authority_info.clone(),
             mm_pool_info.clone(),
@@ -470,7 +483,12 @@ impl Processor {
         assert_owned_by(depositor_info, program_id)?;
         assert_owned_by(rebalancing_info, program_id)?;
 
-        let registry_config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
+        let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
+        let (registry_config_pubkey, _) =
+            find_config_program_address(&everlend_registry::id(), &depositor.registry);
+        assert_account_key(registry_config_info, &registry_config_pubkey)?;
+
+        let programs = RegistryPrograms::unpack_from_slice(&registry_config_info.data.borrow())?;
 
         let mut rebalancing = Rebalancing::unpack(&rebalancing_info.data.borrow())?;
         assert_account_key(depositor_info, &rebalancing.depositor)?;
@@ -488,7 +506,7 @@ impl Processor {
 
         let step = rebalancing.next_step();
 
-        if registry_config.money_market_program_ids[usize::from(step.money_market_index)]
+        if programs.money_market_program_ids[usize::from(step.money_market_index)]
             != *money_market_program_info.key
         {
             return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
@@ -496,7 +514,7 @@ impl Processor {
 
         msg!("Withdraw");
         withdraw(
-            &registry_config,
+            &programs,
             income_pool_market_info.clone(),
             income_pool_info.clone(),
             income_pool_token_account_info.clone(),

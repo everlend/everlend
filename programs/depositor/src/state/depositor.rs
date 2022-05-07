@@ -9,6 +9,9 @@ use solana_program::{
     pubkey::Pubkey,
 };
 
+// 1 + 32
+const DEPOSITOR_LEN: usize = 33;
+
 /// Depositor
 #[repr(C)]
 #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
@@ -16,48 +19,37 @@ pub struct Depositor {
     /// Account type - Depositor
     pub account_type: AccountType,
 
-    /// General pool market
-    pub general_pool_market: Pubkey,
-
-    /// Income pool market
-    pub income_pool_market: Pubkey,
-
-    /// Liquidity oracle
-    pub liquidity_oracle: Pubkey,
+    /// Registry
+    pub registry: Pubkey,
 }
 
 impl Depositor {
     /// Initialize a voting pool
     pub fn init(&mut self, params: InitDepositorParams) {
         self.account_type = AccountType::Depositor;
-        self.general_pool_market = params.general_pool_market;
-        self.income_pool_market = params.income_pool_market;
-        self.liquidity_oracle = params.liquidity_oracle;
+        self.registry = params.registry;
     }
 }
 
 /// Initialize a depositor params
 pub struct InitDepositorParams {
-    /// General pool market
-    pub general_pool_market: Pubkey,
-    /// Income pool market
-    pub income_pool_market: Pubkey,
-    /// Liquidity oracle
-    pub liquidity_oracle: Pubkey,
+    /// Registry
+    pub registry: Pubkey,
 }
 
 impl Sealed for Depositor {}
 impl Pack for Depositor {
-    // 1 + 32 + 32 + 32
+    // 1 + 32 + 64
     const LEN: usize = 97;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
-        let mut slice = dst;
-        self.serialize(&mut slice).unwrap()
+        let mut slice = Vec::with_capacity(DEPOSITOR_LEN);
+        self.serialize(&mut slice).unwrap();
+        dst[0..DEPOSITOR_LEN].copy_from_slice(&slice)
     }
 
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
-        Self::try_from_slice(src).map_err(|_| {
+        Self::try_from_slice(&src[0..DEPOSITOR_LEN]).map_err(|_| {
             msg!("Failed to deserialize");
             ProgramError::InvalidAccountData
         })

@@ -1,5 +1,6 @@
 #![cfg(feature = "test-bpf")]
 
+use everlend_registry::state::{DistributionPubkeys, RegistryRootAccounts};
 use solana_program::instruction::InstructionError;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::*;
@@ -127,16 +128,7 @@ async fn setup() -> (
         .unwrap();
 
     let test_depositor = TestDepositor::new();
-    test_depositor
-        .init(
-            &mut context,
-            &registry,
-            &general_pool_market,
-            &income_pool_market,
-            &test_liquidity_oracle,
-        )
-        .await
-        .unwrap();
+    test_depositor.init(&mut context, &registry).await.unwrap();
 
     // 4.2 Create transit account for liquidity token
     test_depositor
@@ -195,6 +187,18 @@ async fn setup() -> (
             &general_pool,
             ULP_SHARE_ALLOWED,
         )
+        .await
+        .unwrap();
+
+    let mut roots = RegistryRootAccounts {
+        general_pool_market: general_pool_market.keypair.pubkey(),
+        income_pool_market: income_pool_market.keypair.pubkey(),
+        collateral_pool_markets: DistributionPubkeys::default(),
+        liquidity_oracle: test_liquidity_oracle.keypair.pubkey(),
+    };
+    roots.collateral_pool_markets[0] = mm_pool_market.keypair.pubkey();
+    registry
+        .set_registry_root_accounts(&mut context, roots)
         .await
         .unwrap();
 
@@ -531,7 +535,7 @@ async fn fail_with_invalid_registry() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(0, InstructionError::InvalidAccountData)
+        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
     );
 }
 
@@ -582,10 +586,7 @@ async fn fail_with_invalid_depositor() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(
-            0,
-            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
-        )
+        TransactionError::InstructionError(0, InstructionError::InvalidAccountData)
     );
 }
 

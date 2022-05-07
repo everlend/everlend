@@ -1,6 +1,6 @@
 //! Utils
 
-use everlend_registry::state::RegistryConfig;
+use everlend_registry::state::RegistryPrograms;
 use everlend_utils::{cpi, integrations, EverlendError};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -15,7 +15,7 @@ use std::{cmp::Ordering, slice::Iter};
 /// Deposit
 #[allow(clippy::too_many_arguments)]
 pub fn deposit<'a>(
-    registry_config: &RegistryConfig,
+    registry_programs: &RegistryPrograms,
     mm_pool_market: AccountInfo<'a>,
     mm_pool_market_authority: AccountInfo<'a>,
     mm_pool: AccountInfo<'a>,
@@ -35,7 +35,7 @@ pub fn deposit<'a>(
 ) -> Result<u64, ProgramError> {
     msg!("Deposit to Money market");
     money_market_deposit(
-        registry_config,
+        registry_programs,
         money_market_program.clone(),
         liquidity_transit.clone(),
         liquidity_mint.clone(),
@@ -70,7 +70,7 @@ pub fn deposit<'a>(
 /// Withdraw
 #[allow(clippy::too_many_arguments)]
 pub fn withdraw<'a>(
-    registry_config: &RegistryConfig,
+    registry_programs: &RegistryPrograms,
     income_pool_market: AccountInfo<'a>,
     income_pool: AccountInfo<'a>,
     income_pool_token_account: AccountInfo<'a>,
@@ -111,7 +111,7 @@ pub fn withdraw<'a>(
 
     msg!("Redeem from Money market");
     money_market_redeem(
-        registry_config,
+        registry_programs,
         money_market_program.clone(),
         collateral_transit.clone(),
         collateral_mint.clone(),
@@ -171,7 +171,7 @@ pub fn withdraw<'a>(
 /// Money market deposit
 #[allow(clippy::too_many_arguments)]
 pub fn money_market_deposit<'a>(
-    registry_config: &RegistryConfig,
+    registry_programs: &RegistryPrograms,
     money_market_program: AccountInfo<'a>,
     source_liquidity: AccountInfo<'a>,
     _liquidity_mint: AccountInfo<'a>,
@@ -183,9 +183,9 @@ pub fn money_market_deposit<'a>(
     amount: u64,
     signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
-    let port_finance_program_id = registry_config.money_market_program_ids[0];
-    let larix_program_id = registry_config.money_market_program_ids[1];
-    let solend_program_id = registry_config.money_market_program_ids[2];
+    let port_finance_program_id = registry_programs.money_market_program_ids[0];
+    let larix_program_id = registry_programs.money_market_program_ids[1];
+    let solend_program_id = registry_programs.money_market_program_ids[2];
 
     // Only for tests
     if money_market_program.key.to_string() == integrations::SPL_TOKEN_LENDING_PROGRAM_ID {
@@ -311,7 +311,7 @@ pub fn money_market_deposit<'a>(
 /// Money market redeem
 #[allow(clippy::too_many_arguments)]
 pub fn money_market_redeem<'a>(
-    registry_config: &RegistryConfig,
+    registry_programs: &RegistryPrograms,
     money_market_program: AccountInfo<'a>,
     source_collateral: AccountInfo<'a>,
     collateral_mint: AccountInfo<'a>,
@@ -323,9 +323,9 @@ pub fn money_market_redeem<'a>(
     amount: u64,
     signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
-    let port_finance_program_id = registry_config.money_market_program_ids[0];
-    let larix_program_id = registry_config.money_market_program_ids[1];
-    let solend_program_id = registry_config.money_market_program_ids[2];
+    let port_finance_program_id = registry_programs.money_market_program_ids[0];
+    let larix_program_id = registry_programs.money_market_program_ids[1];
+    let solend_program_id = registry_programs.money_market_program_ids[2];
 
     // Only for tests
     if money_market_program.key.to_string() == integrations::SPL_TOKEN_LENDING_PROGRAM_ID {
