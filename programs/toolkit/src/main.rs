@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::path::PathBuf;
 use std::{process::exit, str::FromStr};
 
 use clap::{
@@ -692,7 +693,18 @@ async fn main() -> anyhow::Result<()> {
     let config = {
         let cli_config = if let Some(config_file) = matches.value_of("config_file") {
             println!("config_file = {:?}", config_file);
-            solana_cli_config::Config::load(config_file).unwrap_or_default()
+            solana_cli_config::Config::load(config_file)
+                .map(|mut cfg| {
+                    let path = PathBuf::from(cfg.keypair_path.clone());
+                    if !path.is_absolute() {
+                        let mut keypair_path = dirs_next::home_dir().expect("home directory");
+                        keypair_path.push(path);
+                        cfg.keypair_path = keypair_path.to_str().unwrap().to_string();
+                    }
+
+                    cfg
+                })
+                .unwrap_or_default()
         } else {
             solana_cli_config::Config::default()
         };

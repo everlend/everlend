@@ -1,7 +1,7 @@
 #![cfg(feature = "test-bpf")]
 
-use everlend_registry::state::{RegistryRootAccounts, DistributionPubkeys};
 use solana_program::instruction::InstructionError;
+use solana_program::instruction::InstructionError::InvalidAccountData;
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::*;
 use solana_sdk::signer::Signer;
@@ -9,6 +9,7 @@ use solana_sdk::transaction::{Transaction, TransactionError};
 
 use everlend_depositor::find_transit_program_address;
 use everlend_liquidity_oracle::state::DistributionArray;
+use everlend_registry::state::{DistributionPubkeys, RegistryRootAccounts};
 use everlend_utils::{
     find_program_address,
     integrations::{self, MoneyMarketPubkeys},
@@ -1041,10 +1042,7 @@ async fn fail_with_invalid_collateral_mint() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(
-            0,
-            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
-        )
+        TransactionError::InstructionError(0, InvalidAccountData)
     );
 }
 

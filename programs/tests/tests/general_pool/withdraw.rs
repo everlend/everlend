@@ -1,15 +1,16 @@
 #![cfg(feature = "test-bpf")]
 
-use crate::utils::*;
-use everlend_general_pool::state::WITHDRAW_DELAY;
-use everlend_general_pool::{find_transit_program_address, instruction};
-use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::*;
 use solana_sdk::signer::Signer;
 use solana_sdk::transaction::{Transaction, TransactionError};
-use std::str::FromStr;
+
+use everlend_general_pool::state::WITHDRAW_DELAY;
+use everlend_general_pool::{find_transit_program_address, instruction};
+use everlend_utils::EverlendError;
+
+use crate::utils::*;
 
 const INITIAL_USER_BALANCE: u64 = 5000000;
 const WITHDRAW_REQUEST_RENT: u64 = 1955760;

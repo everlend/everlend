@@ -3,6 +3,7 @@
 use std::cmp::Ordering;
 
 use borsh::BorshDeserialize;
+use solana_program::program_error::ProgramError;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     clock::Clock,
@@ -389,6 +390,29 @@ impl Processor {
         assert_account_key(registry_config_info, &registry_config_pubkey)?;
 
         let programs = RegistryPrograms::unpack_from_slice(&registry_config_info.data.borrow())?;
+        let root_accounts =
+            RegistryRootAccounts::unpack_from_slice(&registry_config_info.data.borrow())?;
+
+        let ulp_program_id = &programs.ulp_program_id;
+        assert_owned_by(mm_pool_market_info, ulp_program_id)?;
+
+        root_accounts
+            .iter_filtered_ulp_pool_markets()
+            .find(|collateral_pool_markets| {
+                let (collateral_pool_pubkey, _) = everlend_ulp::find_pool_program_address(
+                    ulp_program_id,
+                    collateral_pool_markets,
+                    &collateral_mint_info.key,
+                );
+
+                mm_pool_info.key == &collateral_pool_pubkey
+            })
+            .ok_or_else(|| ProgramError::InvalidArgument)?;
+
+        let mm_pool = everlend_ulp::state::Pool::unpack(&mm_pool_info.data.borrow())?;
+        assert_account_key(collateral_mint_info, &mm_pool.token_mint)?;
+        assert_account_key(mm_pool_token_account_info, &mm_pool.token_account)?;
+        assert_account_key(mm_pool_collateral_mint_info, &mm_pool.pool_mint)?;
 
         let mut rebalancing = Rebalancing::unpack(&rebalancing_info.data.borrow())?;
         assert_account_key(depositor_info, &rebalancing.depositor)?;
@@ -489,6 +513,30 @@ impl Processor {
         assert_account_key(registry_config_info, &registry_config_pubkey)?;
 
         let programs = RegistryPrograms::unpack_from_slice(&registry_config_info.data.borrow())?;
+
+        let root_accounts =
+            RegistryRootAccounts::unpack_from_slice(&registry_config_info.data.borrow())?;
+
+        let ulp_program_id = &programs.ulp_program_id;
+        assert_owned_by(mm_pool_market_info, ulp_program_id)?;
+
+        root_accounts
+            .iter_filtered_ulp_pool_markets()
+            .find(|collateral_pool_markets| {
+                let (collateral_pool_pubkey, _) = everlend_ulp::find_pool_program_address(
+                    ulp_program_id,
+                    collateral_pool_markets,
+                    &collateral_mint_info.key,
+                );
+
+                mm_pool_info.key == &collateral_pool_pubkey
+            })
+            .ok_or_else(|| ProgramError::InvalidArgument)?;
+
+        let mm_pool = everlend_ulp::state::Pool::unpack(&mm_pool_info.data.borrow())?;
+        assert_account_key(collateral_mint_info, &mm_pool.token_mint)?;
+        assert_account_key(mm_pool_token_account_info, &mm_pool.token_account)?;
+        assert_account_key(mm_pool_collateral_mint_info, &mm_pool.pool_mint)?;
 
         let mut rebalancing = Rebalancing::unpack(&rebalancing_info.data.borrow())?;
         assert_account_key(depositor_info, &rebalancing.depositor)?;
