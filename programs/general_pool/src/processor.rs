@@ -377,7 +377,6 @@ impl Processor {
         let _token_program_info = next_account_info(account_info_iter)?;
 
         assert_signer(user_transfer_authority_info)?;
-
         assert_owned_by(pool_config_info, &everlend_registry::id())?;
         assert_owned_by(pool_market_info, program_id)?;
         assert_owned_by(pool_info, program_id)?;

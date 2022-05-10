@@ -13,6 +13,7 @@ use everlend_utils::{
     integrations::{self, MoneyMarketPubkeys},
     EverlendError,
 };
+use everlend_registry::state::SetPoolConfigParams;
 
 use crate::utils::*;
 
@@ -52,10 +53,7 @@ async fn setup() -> (
     let lending_market_authority_pubkey =
         Pubkey::create_program_address(authority_signer_seeds, &spl_token_lending::id()).unwrap();
 
-    println!("{:#?}", lending_market_authority_pubkey);
-
     let collateral_mint = get_mint_data(&mut context, &reserve.collateral.mint_pubkey).await;
-    println!("{:#?}", collateral_mint);
 
     // 1. Prepare general pool
 
@@ -65,6 +63,14 @@ async fn setup() -> (
     let general_pool = TestGeneralPool::new(&general_pool_market, None);
     general_pool
         .create(&mut context, &general_pool_market)
+        .await
+        .unwrap();
+    registry
+        .set_pool_config(
+            &mut context,
+            &general_pool.pool_pubkey,
+            SetPoolConfigParams { deposit_minimum: 0, withdraw_minimum: 0 }
+        )
         .await
         .unwrap();
 

@@ -4,6 +4,7 @@ use crate::utils::*;
 use everlend_general_pool::state::WITHDRAW_DELAY;
 use everlend_general_pool::{find_transit_program_address, instruction};
 use everlend_utils::EverlendError;
+use everlend_registry::state::SetPoolConfigParams;
 use solana_program::instruction::InstructionError;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::*;
@@ -33,6 +34,14 @@ async fn setup(
     let test_pool = TestGeneralPool::new(&test_pool_market, token_mint);
     test_pool
         .create(&mut context, &test_pool_market)
+        .await
+        .unwrap();
+    registry
+        .set_pool_config(
+            &mut context,
+            &test_pool.pool_pubkey,
+            SetPoolConfigParams { deposit_minimum: 0, withdraw_minimum: 0 }
+        )
         .await
         .unwrap();
 

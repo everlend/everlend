@@ -338,7 +338,7 @@ pub fn deposit(
     amount: u64,
 ) -> Instruction {
     let (pool_market_authority, _) = find_program_address(program_id, pool_market);
-    let (pool_config, _) = find_pool_config_program_address(program_id, registry, pool);
+    let (pool_config, _) = find_pool_config_program_address(&everlend_registry::id(), registry, pool);
 
     let accounts = vec![
         AccountMeta::new_readonly(*registry, false),
@@ -425,7 +425,7 @@ pub fn withdraw_request(
         &withdrawal_requests,
         user_transfer_authority,
     );
-    let (pool_config, _) = find_pool_config_program_address(program_id, registry, pool);
+    let (pool_config, _) = find_pool_config_program_address(&everlend_registry::id(), registry, pool);
 
     let accounts = vec![
         AccountMeta::new_readonly(*registry, false),

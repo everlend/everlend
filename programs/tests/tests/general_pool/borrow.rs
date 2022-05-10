@@ -9,6 +9,7 @@ use solana_sdk::{
     pubkey::Pubkey, signature::Keypair, signer::Signer, transaction::Transaction,
     transaction::TransactionError,
 };
+use everlend_registry::state::SetPoolConfigParams;
 use spl_token::error::TokenError;
 
 async fn setup() -> (
@@ -37,6 +38,14 @@ async fn setup() -> (
             &test_pool_market,
             &test_pool,
             GENERAL_POOL_SHARE_ALLOWED,
+        )
+        .await
+        .unwrap();
+    registry
+        .set_pool_config(
+            &mut context,
+            &test_pool.pool_pubkey,
+            SetPoolConfigParams { deposit_minimum: 0, withdraw_minimum: 0 }
         )
         .await
         .unwrap();

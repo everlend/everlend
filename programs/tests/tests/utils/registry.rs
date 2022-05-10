@@ -1,9 +1,9 @@
 use super::{get_account, BanksClientResult};
 use everlend_registry::{
     find_config_program_address,
-    state::{Registry, RegistryConfig, SetRegistryConfigParams},
+    state::{Registry, RegistryConfig, SetRegistryConfigParams, SetPoolConfigParams},
 };
-use solana_program::{program_pack::Pack, system_instruction};
+use solana_program::{program_pack::Pack, system_instruction, pubkey::Pubkey};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{
     signature::{Keypair, Signer},
@@ -77,6 +77,28 @@ impl TestRegistry {
                 &everlend_registry::id(),
                 &self.keypair.pubkey(),
                 &self.manager.pubkey(),
+                params,
+            )],
+            Some(&context.payer.pubkey()),
+            &[&context.payer, &self.manager],
+            context.last_blockhash,
+        );
+
+        context.banks_client.process_transaction(tx).await
+    }
+
+    pub async fn set_pool_config(
+        &self,
+        context: &mut ProgramTestContext,
+        pool: &Pubkey,
+        params: SetPoolConfigParams,
+    ) -> BanksClientResult<()> {
+        let tx = Transaction::new_signed_with_payer(
+            &[everlend_registry::instruction::set_pool_config(
+                &everlend_registry::id(),
+                &self.keypair.pubkey(),
+                &self.manager.pubkey(),
+                pool,
                 params,
             )],
             Some(&context.payer.pubkey()),

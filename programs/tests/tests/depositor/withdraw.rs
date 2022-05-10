@@ -6,6 +6,7 @@ use solana_program_test::*;
 use solana_sdk::signer::Signer;
 use solana_sdk::transaction::{Transaction, TransactionError};
 
+use everlend_registry::state::SetPoolConfigParams;
 use everlend_depositor::find_transit_program_address;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_utils::{
@@ -64,6 +65,14 @@ async fn setup() -> (
     let general_pool = TestGeneralPool::new(&general_pool_market, None);
     general_pool
         .create(&mut context, &general_pool_market)
+        .await
+        .unwrap();
+    registry
+        .set_pool_config(
+            &mut context,
+            &general_pool.pool_pubkey,
+            SetPoolConfigParams { deposit_minimum: 0, withdraw_minimum: 0 }
+        )
         .await
         .unwrap();
 
