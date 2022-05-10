@@ -167,6 +167,8 @@ impl Processor {
 
         // Get depositor state
         let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
+
+        // Check registry
         let (registry_config_pubkey, _) =
             find_config_program_address(&everlend_registry::id(), &depositor.registry);
         assert_account_key(registry_config_info, &registry_config_pubkey)?;
@@ -176,6 +178,7 @@ impl Processor {
         let roots = RegistryRootAccounts::unpack_from_slice(&registry_config_info.data.borrow())?;
         let settings = RegistrySettings::unpack_from_slice(&registry_config_info.data.borrow())?;
 
+        // Check programs
         assert_owned_by(registry_config_info, &everlend_registry::id())?;
         assert_owned_by(depositor_info, program_id)?;
         assert_owned_by(
@@ -185,9 +188,11 @@ impl Processor {
         assert_owned_by(general_pool_info, &programs.general_pool_program_id)?;
         assert_owned_by(withdrawal_requests_info, &programs.general_pool_program_id)?;
 
+        // Check root accounts
         assert_account_key(general_pool_market_info, &roots.general_pool_market)?;
         assert_account_key(liquidity_oracle_info, &roots.liquidity_oracle)?;
 
+        // Check rebalancing
         let (rebalancing_pubkey, bump_seed) =
             find_rebalancing_program_address(program_id, depositor_info.key, mint_info.key);
         assert_account_key(rebalancing_info, &rebalancing_pubkey)?;
@@ -236,7 +241,7 @@ impl Processor {
             return Err(EverlendError::IncompleteRebalancing.into());
         }
 
-        // Check token distribution pubkey
+        // Check token distribution
         let (token_distribution_pubkey, _) =
             find_liquidity_oracle_token_distribution_program_address(
                 &programs.liquidity_oracle_program_id,
@@ -247,11 +252,22 @@ impl Processor {
         let new_token_distribution =
             TokenDistribution::unpack(&token_distribution_info.data.borrow())?;
 
+        // Check general pool
+        let (general_pool_pubkey, _) = everlend_general_pool::find_pool_program_address(
+            program_id,
+            general_pool_market_info.key,
+            mint_info.key,
+        );
+        assert_account_key(general_pool_info, &general_pool_pubkey)?;
+
         let general_pool = Pool::unpack(&general_pool_info.data.borrow())?;
+
+        // Check general pool accounts
         assert_account_key(general_pool_market_info, &general_pool.pool_market)?;
         assert_account_key(general_pool_token_account_info, &general_pool.token_account)?;
         assert_account_key(mint_info, &general_pool.token_mint)?;
 
+        // Check withtdrawal requests
         let (withdrawal_requests_pubkey, _) = find_withdrawal_requests_program_address(
             &programs.general_pool_program_id,
             general_pool_market_info.key,
@@ -260,6 +276,11 @@ impl Processor {
         assert_account_key(withdrawal_requests_info, &withdrawal_requests_pubkey)?;
         let withdrawal_requests =
             WithdrawalRequests::unpack(&withdrawal_requests_info.data.borrow())?;
+
+        // Check transit: liquidity
+        let (liquidity_transit_pubkey, _) =
+            find_transit_program_address(program_id, depositor_info.key, mint_info.key, "");
+        assert_account_key(liquidity_transit_info, &liquidity_transit_pubkey)?;
 
         // Calculate total liquidity supply
         let general_pool_token_account =
@@ -361,12 +382,12 @@ impl Processor {
         let depositor_authority_info = next_account_info(account_info_iter)?;
         let rebalancing_info = next_account_info(account_info_iter)?;
 
-        let mm_pool_market_info = next_account_info(account_info_iter)?;
-        let mm_pool_market_authority_info = next_account_info(account_info_iter)?;
-        let mm_pool_info = next_account_info(account_info_iter)?;
-        let mm_pool_token_account_info = next_account_info(account_info_iter)?;
-        let mm_pool_collateral_transit_info = next_account_info(account_info_iter)?;
-        let mm_pool_collateral_mint_info = next_account_info(account_info_iter)?;
+        let collateral_pool_market_info = next_account_info(account_info_iter)?;
+        let collateral_pool_market_authority_info = next_account_info(account_info_iter)?;
+        let collateral_pool_info = next_account_info(account_info_iter)?;
+        let collateral_pool_token_account_info = next_account_info(account_info_iter)?;
+        let collateral_pool_collateral_transit_info = next_account_info(account_info_iter)?;
+        let collateral_pool_collateral_mint_info = next_account_info(account_info_iter)?;
 
         let liquidity_transit_info = next_account_info(account_info_iter)?;
         let liquidity_mint_info = next_account_info(account_info_iter)?;
@@ -385,6 +406,8 @@ impl Processor {
         assert_owned_by(rebalancing_info, program_id)?;
 
         let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
+
+        // Check registry config
         let (registry_config_pubkey, _) =
             find_config_program_address(&everlend_registry::id(), &depositor.registry);
         assert_account_key(registry_config_info, &registry_config_pubkey)?;
@@ -393,26 +416,45 @@ impl Processor {
         let root_accounts =
             RegistryRootAccounts::unpack_from_slice(&registry_config_info.data.borrow())?;
 
-        let ulp_program_id = &programs.ulp_program_id;
-        assert_owned_by(mm_pool_market_info, ulp_program_id)?;
+        assert_owned_by(collateral_pool_market_info, &programs.ulp_program_id)?;
 
-        root_accounts
-            .iter_filtered_ulp_pool_markets()
-            .find(|collateral_pool_markets| {
-                let (collateral_pool_pubkey, _) = everlend_ulp::find_pool_program_address(
-                    ulp_program_id,
-                    collateral_pool_markets,
-                    &collateral_mint_info.key,
-                );
+        // Check collateral pool market
+        if !root_accounts
+            .collateral_pool_markets
+            .contains(collateral_pool_market_info.key)
+        {
+            return Err(ProgramError::InvalidArgument);
+        }
 
-                mm_pool_info.key == &collateral_pool_pubkey
-            })
-            .ok_or_else(|| ProgramError::InvalidArgument)?;
+        // Check collateral pool
+        let (collateral_pool_pubkey, _) = everlend_ulp::find_pool_program_address(
+            program_id,
+            collateral_pool_market_info.key,
+            collateral_mint_info.key,
+        );
+        assert_account_key(collateral_pool_info, &collateral_pool_pubkey)?;
 
-        let mm_pool = everlend_ulp::state::Pool::unpack(&mm_pool_info.data.borrow())?;
-        assert_account_key(collateral_mint_info, &mm_pool.token_mint)?;
-        assert_account_key(mm_pool_token_account_info, &mm_pool.token_account)?;
-        assert_account_key(mm_pool_collateral_mint_info, &mm_pool.pool_mint)?;
+        let collateral_pool =
+            everlend_ulp::state::Pool::unpack(&collateral_pool_info.data.borrow())?;
+
+        // Check collateral pool accounts
+        assert_account_key(collateral_mint_info, &collateral_pool.token_mint)?;
+        assert_account_key(
+            collateral_pool_token_account_info,
+            &collateral_pool.token_account,
+        )?;
+        assert_account_key(
+            collateral_pool_collateral_mint_info,
+            &collateral_pool.pool_mint,
+        )?;
+
+        // Check rebalancing
+        let (rebalancing_pubkey, _) = find_rebalancing_program_address(
+            program_id,
+            depositor_info.key,
+            liquidity_mint_info.key,
+        );
+        assert_account_key(rebalancing_info, &rebalancing_pubkey)?;
 
         let mut rebalancing = Rebalancing::unpack(&rebalancing_info.data.borrow())?;
         assert_account_key(depositor_info, &rebalancing.depositor)?;
@@ -421,6 +463,24 @@ impl Processor {
         if rebalancing.is_completed() {
             return Err(EverlendError::RebalancingIsCompleted.into());
         }
+
+        // Check transit: liquidity
+        let (liquidity_transit_pubkey, _) = find_transit_program_address(
+            program_id,
+            depositor_info.key,
+            liquidity_mint_info.key,
+            "",
+        );
+        assert_account_key(liquidity_transit_info, &liquidity_transit_pubkey)?;
+
+        // Check transit: collateral
+        let (collateral_transit_pubkey, _) = find_transit_program_address(
+            program_id,
+            depositor_info.key,
+            collateral_mint_info.key,
+            "",
+        );
+        assert_account_key(collateral_transit_info, &collateral_transit_pubkey)?;
 
         // Create depositor authority account
         let (depositor_authority_pubkey, bump_seed) =
@@ -439,12 +499,12 @@ impl Processor {
         msg!("Deposit");
         let collateral_amount = deposit(
             &programs,
-            mm_pool_market_info.clone(),
-            mm_pool_market_authority_info.clone(),
-            mm_pool_info.clone(),
-            mm_pool_token_account_info.clone(),
-            mm_pool_collateral_transit_info.clone(),
-            mm_pool_collateral_mint_info.clone(),
+            collateral_pool_market_info.clone(),
+            collateral_pool_market_authority_info.clone(),
+            collateral_pool_info.clone(),
+            collateral_pool_token_account_info.clone(),
+            collateral_pool_collateral_transit_info.clone(),
+            collateral_pool_collateral_mint_info.clone(),
             collateral_transit_info.clone(),
             collateral_mint_info.clone(),
             liquidity_transit_info.clone(),
@@ -482,12 +542,12 @@ impl Processor {
         let income_pool_info = next_account_info(account_info_iter)?;
         let income_pool_token_account_info = next_account_info(account_info_iter)?;
 
-        let mm_pool_market_info = next_account_info(account_info_iter)?;
-        let mm_pool_market_authority_info = next_account_info(account_info_iter)?;
-        let mm_pool_info = next_account_info(account_info_iter)?;
-        let mm_pool_token_account_info = next_account_info(account_info_iter)?;
-        let mm_pool_collateral_transit_info = next_account_info(account_info_iter)?;
-        let mm_pool_collateral_mint_info = next_account_info(account_info_iter)?;
+        let collateral_pool_market_info = next_account_info(account_info_iter)?;
+        let collateral_pool_market_authority_info = next_account_info(account_info_iter)?;
+        let collateral_pool_info = next_account_info(account_info_iter)?;
+        let collateral_pool_token_account_info = next_account_info(account_info_iter)?;
+        let collateral_pool_collateral_transit_info = next_account_info(account_info_iter)?;
+        let collateral_pool_collateral_mint_info = next_account_info(account_info_iter)?;
 
         let collateral_transit_info = next_account_info(account_info_iter)?;
         let collateral_mint_info = next_account_info(account_info_iter)?;
@@ -508,6 +568,8 @@ impl Processor {
         assert_owned_by(rebalancing_info, program_id)?;
 
         let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
+
+        // Check registry config
         let (registry_config_pubkey, _) =
             find_config_program_address(&everlend_registry::id(), &depositor.registry);
         assert_account_key(registry_config_info, &registry_config_pubkey)?;
@@ -517,26 +579,45 @@ impl Processor {
         let root_accounts =
             RegistryRootAccounts::unpack_from_slice(&registry_config_info.data.borrow())?;
 
-        let ulp_program_id = &programs.ulp_program_id;
-        assert_owned_by(mm_pool_market_info, ulp_program_id)?;
+        assert_owned_by(collateral_pool_market_info, &programs.ulp_program_id)?;
 
-        root_accounts
-            .iter_filtered_ulp_pool_markets()
-            .find(|collateral_pool_markets| {
-                let (collateral_pool_pubkey, _) = everlend_ulp::find_pool_program_address(
-                    ulp_program_id,
-                    collateral_pool_markets,
-                    &collateral_mint_info.key,
-                );
+        // Check collateral pool market
+        if !root_accounts
+            .collateral_pool_markets
+            .contains(collateral_pool_market_info.key)
+        {
+            return Err(ProgramError::InvalidArgument);
+        }
 
-                mm_pool_info.key == &collateral_pool_pubkey
-            })
-            .ok_or_else(|| ProgramError::InvalidArgument)?;
+        // Check collateral pool
+        let (collateral_pool_pubkey, _) = everlend_ulp::find_pool_program_address(
+            program_id,
+            collateral_pool_market_info.key,
+            collateral_mint_info.key,
+        );
+        assert_account_key(collateral_pool_info, &collateral_pool_pubkey)?;
 
-        let mm_pool = everlend_ulp::state::Pool::unpack(&mm_pool_info.data.borrow())?;
-        assert_account_key(collateral_mint_info, &mm_pool.token_mint)?;
-        assert_account_key(mm_pool_token_account_info, &mm_pool.token_account)?;
-        assert_account_key(mm_pool_collateral_mint_info, &mm_pool.pool_mint)?;
+        let collateral_pool =
+            everlend_ulp::state::Pool::unpack(&collateral_pool_info.data.borrow())?;
+
+        // Check collateral pool accounts
+        assert_account_key(collateral_mint_info, &collateral_pool.token_mint)?;
+        assert_account_key(
+            collateral_pool_token_account_info,
+            &collateral_pool.token_account,
+        )?;
+        assert_account_key(
+            collateral_pool_collateral_mint_info,
+            &collateral_pool.pool_mint,
+        )?;
+
+        // Check rebalancing
+        let (rebalancing_pubkey, _) = find_rebalancing_program_address(
+            program_id,
+            depositor_info.key,
+            liquidity_mint_info.key,
+        );
+        assert_account_key(rebalancing_info, &rebalancing_pubkey)?;
 
         let mut rebalancing = Rebalancing::unpack(&rebalancing_info.data.borrow())?;
         assert_account_key(depositor_info, &rebalancing.depositor)?;
@@ -545,6 +626,36 @@ impl Processor {
         if rebalancing.is_completed() {
             return Err(EverlendError::RebalancingIsCompleted.into());
         }
+
+        // Check transit: liquidity
+        let (liquidity_transit_pubkey, _) = find_transit_program_address(
+            program_id,
+            depositor_info.key,
+            liquidity_mint_info.key,
+            "",
+        );
+        assert_account_key(liquidity_transit_info, &liquidity_transit_pubkey)?;
+
+        // Check transit: liquidity reserve
+        let (liquidity_reserve_transit_pubkey, _) = find_transit_program_address(
+            program_id,
+            depositor_info.key,
+            liquidity_mint_info.key,
+            "reserve",
+        );
+        assert_account_key(
+            liquidity_reserve_transit_info,
+            &liquidity_reserve_transit_pubkey,
+        )?;
+
+        // Check transit: collateral
+        let (collateral_transit_pubkey, _) = find_transit_program_address(
+            program_id,
+            depositor_info.key,
+            collateral_mint_info.key,
+            "",
+        );
+        assert_account_key(collateral_transit_info, &collateral_transit_pubkey)?;
 
         // Create depositor authority account
         let (depositor_authority_pubkey, bump_seed) =
@@ -566,12 +677,12 @@ impl Processor {
             income_pool_market_info.clone(),
             income_pool_info.clone(),
             income_pool_token_account_info.clone(),
-            mm_pool_market_info.clone(),
-            mm_pool_market_authority_info.clone(),
-            mm_pool_info.clone(),
-            mm_pool_token_account_info.clone(),
-            mm_pool_collateral_transit_info.clone(),
-            mm_pool_collateral_mint_info.clone(),
+            collateral_pool_market_info.clone(),
+            collateral_pool_market_authority_info.clone(),
+            collateral_pool_info.clone(),
+            collateral_pool_token_account_info.clone(),
+            collateral_pool_collateral_transit_info.clone(),
+            collateral_pool_collateral_mint_info.clone(),
             collateral_transit_info.clone(),
             collateral_mint_info.clone(),
             liquidity_transit_info.clone(),
