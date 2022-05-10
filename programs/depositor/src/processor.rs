@@ -254,13 +254,14 @@ impl Processor {
 
         // Check general pool
         let (general_pool_pubkey, _) = everlend_general_pool::find_pool_program_address(
-            program_id,
+            &programs.general_pool_program_id,
             general_pool_market_info.key,
             mint_info.key,
         );
         assert_account_key(general_pool_info, &general_pool_pubkey)?;
 
-        let general_pool = Pool::unpack(&general_pool_info.data.borrow())?;
+        let general_pool =
+            everlend_general_pool::state::Pool::unpack(&general_pool_info.data.borrow())?;
 
         // Check general pool accounts
         assert_account_key(general_pool_market_info, &general_pool.pool_market)?;
@@ -428,7 +429,7 @@ impl Processor {
 
         // Check collateral pool
         let (collateral_pool_pubkey, _) = everlend_ulp::find_pool_program_address(
-            program_id,
+            &programs.ulp_program_id,
             collateral_pool_market_info.key,
             collateral_mint_info.key,
         );
@@ -591,7 +592,7 @@ impl Processor {
 
         // Check collateral pool
         let (collateral_pool_pubkey, _) = everlend_ulp::find_pool_program_address(
-            program_id,
+            &programs.ulp_program_id,
             collateral_pool_market_info.key,
             collateral_mint_info.key,
         );
