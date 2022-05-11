@@ -1,6 +1,7 @@
 mod utils;
 
 mod depositor {
+    mod cancel_rebalancing;
     mod create_transit;
     mod deposit;
     mod init;

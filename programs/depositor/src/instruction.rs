@@ -69,6 +69,17 @@ pub enum DepositorInstruction {
         refresh_income: bool,
     },
 
+    /// Cancel current rebalancing
+    ///
+    /// Accounts:
+    /// [R] Registry
+    /// [R] Depositor
+    /// [W] Rebalancing account
+    /// [R] Token mint
+    /// [WS] Manager
+    /// [R] Sytem program
+    CancelRebalancing,
+
     /// Deposit funds from liquidity transit account to money market.
     /// Collect collateral token to MM pool.
     ///
@@ -237,6 +248,33 @@ pub fn start_rebalancing(
     Instruction::new_with_borsh(
         *program_id,
         &DepositorInstruction::StartRebalancing { refresh_income },
+        accounts,
+    )
+}
+
+/// Creates 'CancelRebalancing' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn cancel_rebalancing(
+    program_id: &Pubkey,
+    registry: &Pubkey,
+    depositor: &Pubkey,
+    liquidity_mint: &Pubkey,
+    manager: &Pubkey,
+) -> Instruction {
+    let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*registry, false),
+        AccountMeta::new_readonly(*depositor, false),
+        AccountMeta::new(rebalancing, false),
+        AccountMeta::new_readonly(*liquidity_mint, false),
+        AccountMeta::new_readonly(*manager, true),
+        AccountMeta::new_readonly(system_program::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &DepositorInstruction::CancelRebalancing,
         accounts,
     )
 }

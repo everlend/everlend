@@ -3,6 +3,7 @@
 use std::cmp::Ordering;
 
 use borsh::BorshDeserialize;
+use everlend_registry::state::Registry;
 use solana_program::program_error::ProgramError;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -28,8 +29,8 @@ use everlend_registry::{
     state::{RegistryPrograms, RegistryRootAccounts, RegistrySettings},
 };
 use everlend_utils::{
-    assert_account_key, assert_owned_by, assert_rent_exempt, assert_uninitialized, cpi,
-    find_program_address, EverlendError,
+    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
+    cpi, find_program_address, EverlendError,
 };
 
 use crate::{
@@ -367,6 +368,65 @@ impl Processor {
         }
 
         // msg!("Steps = {:?}", rebalancing.steps);
+
+        Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
+
+        Ok(())
+    }
+
+    /// Process CancelRebalancing instruction
+    pub fn cancel_rebalancing(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+
+        let registry_info = next_account_info(account_info_iter)?;
+
+        let depositor_info = next_account_info(account_info_iter)?;
+        let rebalancing_info = next_account_info(account_info_iter)?;
+        let liquidity_mint_info = next_account_info(account_info_iter)?;
+        let manager_info = next_account_info(account_info_iter)?;
+
+        let _system_program_info = next_account_info(account_info_iter)?;
+
+        assert_signer(manager_info)?;
+
+        // Check programs
+        assert_owned_by(registry_info, &everlend_registry::id())?;
+        assert_owned_by(depositor_info, program_id)?;
+        assert_owned_by(rebalancing_info, program_id)?;
+
+        // Get depositor state
+        let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
+
+        // Check registry
+        assert_account_key(registry_info, &depositor.registry)?;
+
+        let registry = Registry::unpack(&registry_info.data.borrow())?;
+
+        // Check manager
+        assert_account_key(manager_info, &registry.manager)?;
+
+        // Check rebalancing
+        let (rebalancing_pubkey, _) = find_rebalancing_program_address(
+            program_id,
+            depositor_info.key,
+            liquidity_mint_info.key,
+        );
+        assert_account_key(rebalancing_info, &rebalancing_pubkey)?;
+
+        let mut rebalancing = Rebalancing::unpack(&rebalancing_info.data.borrow())?;
+
+        // Check rebalancing accounts
+        assert_account_key(depositor_info, &rebalancing.depositor)?;
+        assert_account_key(liquidity_mint_info, &rebalancing.mint)?;
+
+        // Check rebalancing is not completed
+        if rebalancing.is_completed() {
+            return Err(EverlendError::RebalancingIsCompleted.into());
+        }
+
+        rebalancing.cancel()?;
+
+        msg!("Steps = {:#?}", rebalancing.steps);
 
         Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
 
@@ -727,6 +787,11 @@ impl Processor {
             DepositorInstruction::StartRebalancing { refresh_income } => {
                 msg!("DepositorInstruction: StartRebalancing");
                 Self::start_rebalancing(program_id, accounts, refresh_income)
+            }
+
+            DepositorInstruction::CancelRebalancing => {
+                msg!("DepositorInstruction: CancelRebalancing");
+                Self::cancel_rebalancing(program_id, accounts)
             }
 
             DepositorInstruction::Deposit => {
