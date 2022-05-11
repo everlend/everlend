@@ -1,7 +1,7 @@
 //! Instruction types
 
 use borsh::{BorshDeserialize, BorshSerialize};
-use everlend_registry::find_pool_config_program_address;
+use everlend_registry::find_registry_pool_config_program_address;
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
@@ -341,11 +341,11 @@ pub fn deposit(
     amount: u64,
 ) -> Instruction {
     let (pool_market_authority, _) = find_program_address(program_id, pool_market);
-    let (pool_config, _) = find_pool_config_program_address(&everlend_registry::id(), registry, pool);
+    let (registry_pool_config, _) = find_registry_pool_config_program_address(&everlend_registry::id(), registry, pool);
 
     let accounts = vec![
         AccountMeta::new_readonly(*registry, false),
-        AccountMeta::new_readonly(pool_config, false),
+        AccountMeta::new_readonly(registry_pool_config, false),
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new_readonly(*pool, false),
         AccountMeta::new(*source, false),
@@ -428,11 +428,11 @@ pub fn withdraw_request(
         &withdrawal_requests,
         user_transfer_authority,
     );
-    let (pool_config, _) = find_pool_config_program_address(&everlend_registry::id(), registry, pool);
+    let (registry_pool_config, _) = find_registry_pool_config_program_address(&everlend_registry::id(), registry, pool);
 
     let accounts = vec![
         AccountMeta::new_readonly(*registry, false),
-        AccountMeta::new_readonly(pool_config, false),
+        AccountMeta::new_readonly(registry_pool_config, false),
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new_readonly(*pool, false),
         AccountMeta::new(*pool_mint, false),

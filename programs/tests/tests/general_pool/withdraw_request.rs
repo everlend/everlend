@@ -3,7 +3,7 @@
 use crate::utils::*;
 use everlend_general_pool::{find_transit_program_address, instruction};
 use everlend_utils::EverlendError;
-use everlend_registry::state::SetPoolConfigParams;
+use everlend_registry::state::SetRegistryPoolConfigParams;
 use solana_program::clock::Slot;
 use solana_program::instruction::InstructionError;
 use solana_program::pubkey::Pubkey;
@@ -33,10 +33,10 @@ async fn setup() -> (
         .await
         .unwrap();
     registry
-        .set_pool_config(
+        .set_registry_pool_config(
             &mut context,
             &test_pool.pool_pubkey,
-            SetPoolConfigParams { deposit_minimum: 0, withdraw_minimum: 0 }
+            SetRegistryPoolConfigParams { deposit_minimum: 0, withdraw_minimum: 0 }
         )
         .await
         .unwrap();

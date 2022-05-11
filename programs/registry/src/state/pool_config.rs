@@ -12,8 +12,8 @@ use super::*;
 /// Pool config
 #[repr(C)]
 #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
-pub struct PoolConfig {
-    /// Account type - PoolConfig
+pub struct RegistryPoolConfig {
+    /// Account type - RegistryPoolConfig
     pub account_type: AccountType,
     /// Registry
     pub registry: Pubkey,
@@ -25,24 +25,24 @@ pub struct PoolConfig {
     pub withdraw_minimum: u64,
 }
 
-impl PoolConfig {
+impl RegistryPoolConfig {
     /// Init pool config
     pub fn init(&mut self, registry: Pubkey, general_pool: Pubkey) {
         self.registry = registry;
         self.general_pool = general_pool;
-        self.account_type = AccountType::PoolConfig;
+        self.account_type = AccountType::RegistryPoolConfig;
     }
 
     /// Set pool config
-    pub fn set(&mut self, params: SetPoolConfigParams) {
+    pub fn set(&mut self, params: SetRegistryPoolConfigParams) {
         self.deposit_minimum = params.deposit_minimum;
         self.withdraw_minimum = params.withdraw_minimum;
     }
 }
 
 
-impl Sealed for PoolConfig {}
-impl Pack for PoolConfig {
+impl Sealed for RegistryPoolConfig {}
+impl Pack for RegistryPoolConfig {
     // 1 + 32 + 32 + 8 + 8 = 81
     const LEN: usize = 81;
 
@@ -61,15 +61,15 @@ impl Pack for PoolConfig {
     }
 }
 
-impl IsInitialized for PoolConfig {
+impl IsInitialized for RegistryPoolConfig {
     fn is_initialized(&self) -> bool {
-        self.account_type == AccountType::PoolConfig
+        self.account_type == AccountType::RegistryPoolConfig
     }
 }
 
 /// Set pool config params
 #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, PartialEq, Clone, Copy)]
-pub struct SetPoolConfigParams {
+pub struct SetRegistryPoolConfigParams {
     /// Minimum amount for deposit
     pub deposit_minimum: u64,
     /// Minimum amount for withdraw request

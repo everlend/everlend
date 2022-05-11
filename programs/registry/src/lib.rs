@@ -21,7 +21,7 @@ pub fn find_config_program_address(program_id: &Pubkey, registry: &Pubkey) -> (P
 }
 
 /// Calculates address of pool config
-pub fn find_pool_config_program_address(
+pub fn find_registry_pool_config_program_address(
     program_id: &Pubkey,
     registry: &Pubkey,
     general_pool: &Pubkey,

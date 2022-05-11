@@ -5,7 +5,7 @@ use solana_program::pubkey::Pubkey;
 use solana_sdk::signature::Signer;
 use solana_sdk::signature::Keypair;
 use solana_program_test::*;
-use everlend_registry::state::SetPoolConfigParams;
+use everlend_registry::state::SetRegistryPoolConfigParams;
 use everlend_registry::state::{AccountType};
 use solana_sdk::transaction::{Transaction, TransactionError};
 use everlend_utils::EverlendError;
@@ -34,52 +34,52 @@ async fn setup() -> (
 #[tokio::test]
 async fn success() {
     let (mut context, test_registry, test_pool) = setup().await;
-    let pool_config_params = SetPoolConfigParams { deposit_minimum: 100, withdraw_minimum: 100 };
+    let registry_pool_config_params = SetRegistryPoolConfigParams { deposit_minimum: 100, withdraw_minimum: 100 };
     test_registry
-        .set_pool_config(
+        .set_registry_pool_config(
             &mut context,
             &test_pool.pool_pubkey,
-            pool_config_params,
+            registry_pool_config_params,
         )
         .await
         .unwrap();
 
-    let pool_config = test_registry.get_pool_config(&mut context, &test_pool.pool_pubkey).await;
-    assert_eq!(pool_config.account_type, AccountType::PoolConfig);
-    assert_eq!(pool_config.deposit_minimum, pool_config_params.deposit_minimum);
-    assert_eq!(pool_config.withdraw_minimum, pool_config_params.withdraw_minimum);
+    let registry_pool_config = test_registry.get_registry_pool_config(&mut context, &test_pool.pool_pubkey).await;
+    assert_eq!(registry_pool_config.account_type, AccountType::RegistryPoolConfig);
+    assert_eq!(registry_pool_config.deposit_minimum, registry_pool_config_params.deposit_minimum);
+    assert_eq!(registry_pool_config.withdraw_minimum, registry_pool_config_params.withdraw_minimum);
 }
 
 #[tokio::test]
-async fn success_change_pool_config() {
+async fn success_change_registry_pool_config() {
     let (mut context, test_registry, test_pool) = setup().await;
 
-    let pool_config_params = SetPoolConfigParams { deposit_minimum: 100, withdraw_minimum: 100 };
-    test_registry.set_pool_config(&mut context, &test_pool.pool_pubkey, pool_config_params).await.unwrap();
-    let pool_config = test_registry.get_pool_config(&mut context, &test_pool.pool_pubkey).await;
-    assert_eq!(pool_config.account_type, AccountType::PoolConfig);
-    assert_eq!(pool_config.deposit_minimum, pool_config_params.deposit_minimum);
-    assert_eq!(pool_config.withdraw_minimum, pool_config_params.withdraw_minimum);
+    let registry_pool_config_params = SetRegistryPoolConfigParams { deposit_minimum: 100, withdraw_minimum: 100 };
+    test_registry.set_registry_pool_config(&mut context, &test_pool.pool_pubkey, registry_pool_config_params).await.unwrap();
+    let registry_pool_config = test_registry.get_registry_pool_config(&mut context, &test_pool.pool_pubkey).await;
+    assert_eq!(registry_pool_config.account_type, AccountType::RegistryPoolConfig);
+    assert_eq!(registry_pool_config.deposit_minimum, registry_pool_config_params.deposit_minimum);
+    assert_eq!(registry_pool_config.withdraw_minimum, registry_pool_config_params.withdraw_minimum);
 
     context.warp_to_slot(3).unwrap();
-    let changed_pool_config = SetPoolConfigParams { deposit_minimum: 200, withdraw_minimum: 200 };
-    test_registry.set_pool_config(&mut context, &test_pool.pool_pubkey, changed_pool_config).await.unwrap();
-    let pool_config = test_registry.get_pool_config(&mut context, &test_pool.pool_pubkey).await;
-    assert_eq!(pool_config.deposit_minimum, changed_pool_config.deposit_minimum);
-    assert_eq!(pool_config.withdraw_minimum, changed_pool_config.withdraw_minimum);
+    let changed_registry_pool_config = SetRegistryPoolConfigParams { deposit_minimum: 200, withdraw_minimum: 200 };
+    test_registry.set_registry_pool_config(&mut context, &test_pool.pool_pubkey, changed_registry_pool_config).await.unwrap();
+    let registry_pool_config = test_registry.get_registry_pool_config(&mut context, &test_pool.pool_pubkey).await;
+    assert_eq!(registry_pool_config.deposit_minimum, changed_registry_pool_config.deposit_minimum);
+    assert_eq!(registry_pool_config.withdraw_minimum, changed_registry_pool_config.withdraw_minimum);
 }
 
 #[tokio::test]
 async fn fail_with_invalid_registry() {
     let (mut context, test_registry, test_pool) = setup().await;
 
-    let config = SetPoolConfigParams {
+    let config = SetRegistryPoolConfigParams {
         deposit_minimum: 100,
         withdraw_minimum: 100,
     };
 
     let tx = Transaction::new_signed_with_payer(
-        &[everlend_registry::instruction::set_pool_config(
+        &[everlend_registry::instruction::set_registry_pool_config(
             &everlend_registry::id(),
             &Pubkey::new_unique(),
             &test_registry.manager.pubkey(),
@@ -109,14 +109,14 @@ async fn fail_with_invalid_registry() {
 async fn fail_with_wrong_manager() {
     let (mut context, test_registry, test_pool) = setup().await;
 
-    let config = SetPoolConfigParams {
+    let config = SetRegistryPoolConfigParams {
         deposit_minimum: 100,
         withdraw_minimum: 100,
     };
 
     let wrong_manager = Keypair::new();
     let tx = Transaction::new_signed_with_payer(
-        &[everlend_registry::instruction::set_pool_config(
+        &[everlend_registry::instruction::set_registry_pool_config(
             &everlend_registry::id(),
             &test_registry.keypair.pubkey(),
             &wrong_manager.pubkey(),

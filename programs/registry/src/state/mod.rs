@@ -18,8 +18,8 @@ pub enum AccountType {
     Registry,
     /// RegistryConfig
     RegistryConfig,
-    /// PoolConfig
-    PoolConfig,
+    /// RegistryPoolConfig
+    RegistryPoolConfig,
 }
 
 impl Default for AccountType {
