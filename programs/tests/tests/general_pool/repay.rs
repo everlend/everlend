@@ -13,6 +13,7 @@ use spl_token::error::TokenError;
 
 async fn setup() -> (
     ProgramTestContext,
+    TestRegistry,
     TestGeneralPoolMarket,
     TestGeneralPool,
     TestGeneralPoolBorrowAuthority,
@@ -21,7 +22,7 @@ async fn setup() -> (
     let (mut context, _, _, registry) = presetup().await;
 
     let test_pool_market = TestGeneralPoolMarket::new();
-    test_pool_market.init(&mut context).await.unwrap();
+    test_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let test_pool = TestGeneralPool::new(&test_pool_market, None);
     test_pool
@@ -65,6 +66,7 @@ async fn setup() -> (
 
     (
         context,
+        registry,
         test_pool_market,
         test_pool,
         test_pool_borrow_authority,
@@ -74,7 +76,7 @@ async fn setup() -> (
 
 #[tokio::test]
 async fn success() {
-    let (mut context, test_pool_market, test_pool, test_pool_borrow_authority, user) =
+    let (mut context, _, test_pool_market, test_pool, test_pool_borrow_authority, user) =
         setup().await;
     let amount_allowed = test_pool_borrow_authority
         .get_amount_allowed(&mut context)
@@ -116,7 +118,7 @@ async fn success() {
 
 #[tokio::test]
 async fn fail_with_invalid_pool_market_pubkey_argument() {
-    let (mut context, _test_pool_market, test_pool, test_pool_borrow_authority, user) =
+    let (mut context, _, _test_pool_market, test_pool, test_pool_borrow_authority, user) =
         setup().await;
 
     let amount = 1;
@@ -156,7 +158,7 @@ async fn fail_with_invalid_pool_market_pubkey_argument() {
 
 #[tokio::test]
 async fn fail_with_invalid_pool_pubkey_argument() {
-    let (mut context, test_pool_market, test_pool, test_pool_borrow_authority, user) =
+    let (mut context, _, test_pool_market, test_pool, test_pool_borrow_authority, user) =
         setup().await;
 
     let amount = 1;
@@ -196,7 +198,7 @@ async fn fail_with_invalid_pool_pubkey_argument() {
 
 #[tokio::test]
 async fn fail_with_invalid_pool_borrow_authority_argument() {
-    let (mut context, test_pool_market, test_pool, _test_pool_borrow_authority, user) =
+    let (mut context, _, test_pool_market, test_pool, _test_pool_borrow_authority, user) =
         setup().await;
 
     let amount = 1;
@@ -236,14 +238,14 @@ async fn fail_with_invalid_pool_borrow_authority_argument() {
 
 #[tokio::test]
 async fn fail_with_invalid_pool_market() {
-    let (mut context, _test_pool_market, test_pool, test_pool_borrow_authority, user) =
+    let (mut context, registry, _test_pool_market, test_pool, test_pool_borrow_authority, user) =
         setup().await;
 
     let amount = 1;
     let interest_amount = 1;
 
     let test_pool_market = TestGeneralPoolMarket::new();
-    test_pool_market.init(&mut context).await.unwrap();
+    test_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::repay(
@@ -275,7 +277,7 @@ async fn fail_with_invalid_pool_market() {
 
 #[tokio::test]
 async fn fail_with_invalid_pool_token_account() {
-    let (mut context, test_pool_market, test_pool, test_pool_borrow_authority, user) =
+    let (mut context, _, test_pool_market, test_pool, test_pool_borrow_authority, user) =
         setup().await;
 
     let amount = 1;
@@ -311,7 +313,7 @@ async fn fail_with_invalid_pool_token_account() {
 
 #[tokio::test]
 async fn fail_with_invalid_repay_amount() {
-    let (mut context, test_pool_market, test_pool, test_pool_borrow_authority, user) =
+    let (mut context, _, test_pool_market, test_pool, test_pool_borrow_authority, user) =
         setup().await;
 
     let amount = 1;
@@ -341,7 +343,7 @@ async fn fail_with_invalid_repay_amount() {
 
 #[tokio::test]
 async fn fail_with_invalid_source() {
-    let (mut context, test_pool_market, test_pool, test_pool_borrow_authority, user) =
+    let (mut context, _, test_pool_market, test_pool, test_pool_borrow_authority, user) =
         setup().await;
 
     let amount = 1;

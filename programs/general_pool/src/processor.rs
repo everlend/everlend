@@ -42,6 +42,7 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
         let pool_market_info = next_account_info(account_info_iter)?;
         let manager_info = next_account_info(account_info_iter)?;
+        let registry_info = next_account_info(account_info_iter)?;
         let rent_info = next_account_info(account_info_iter)?;
         let rent = &Rent::from_account_info(rent_info)?;
 
@@ -55,6 +56,7 @@ impl Processor {
 
         pool_market.init(InitPoolMarketParams {
             manager: *manager_info.key,
+            registry: *registry_info.key,
         });
 
         PoolMarket::pack(pool_market, *pool_market_info.data.borrow_mut())?;
@@ -407,8 +409,8 @@ impl Processor {
                 pool_info.key,
             );
         assert_account_key(pool_config_info, &pool_config_pubkey)?;
-        // let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
-        // assert_account_key(registry_info, &pool_market.registry)?;
+        let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+        assert_account_key(registry_info, &pool_market.registry)?;
         let pool_config = PoolConfig::unpack(&pool_config_info.data.borrow())?;
         if mint_amount < pool_config.deposit_minimum {
             return Err(EverlendError::DepositAmountTooSmall.into());
@@ -681,8 +683,8 @@ impl Processor {
                 pool_info.key,
             );
         assert_account_key(pool_config_info, &pool_config_pubkey)?;
-        // let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
-        // assert_account_key(registry_info, &pool_market.registry)?;
+        let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+        assert_account_key(registry_info, &pool_market.registry)?;
         let pool_config = PoolConfig::unpack(&pool_config_info.data.borrow())?;
         if liquidity_amount < pool_config.withdraw_minimum {
             return Err(EverlendError::WithdrawAmountTooSmall.into());

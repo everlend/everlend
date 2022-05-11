@@ -21,7 +21,7 @@ async fn success() {
     test_liquidity_oracle.init(&mut context).await.unwrap();
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context).await.unwrap();
+    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let income_pool_market = TestIncomePoolMarket::new();
     income_pool_market
@@ -54,7 +54,7 @@ async fn fail_second_time_init() {
     test_liquidity_oracle.init(&mut context).await.unwrap();
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context).await.unwrap();
+    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let income_pool_market = TestIncomePoolMarket::new();
     income_pool_market
@@ -105,13 +105,13 @@ async fn fail_second_time_init() {
 
 #[tokio::test]
 async fn fail_with_invalid_registry() {
-    let (mut context, _, _, _) = presetup().await;
+    let (mut context, _, _, registry) = presetup().await;
 
     let test_liquidity_oracle = TestLiquidityOracle::new();
     test_liquidity_oracle.init(&mut context).await.unwrap();
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context).await.unwrap();
+    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let income_pool_market = TestIncomePoolMarket::new();
     income_pool_market
@@ -165,7 +165,7 @@ async fn fail_with_invalid_general_pool_market() {
     test_liquidity_oracle.init(&mut context).await.unwrap();
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context).await.unwrap();
+    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let income_pool_market = TestIncomePoolMarket::new();
     income_pool_market
@@ -222,7 +222,7 @@ async fn fail_with_invalid_income_pool_market() {
     test_liquidity_oracle.init(&mut context).await.unwrap();
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context).await.unwrap();
+    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let income_pool_market = TestIncomePoolMarket::new();
     income_pool_market
@@ -279,7 +279,7 @@ async fn fail_with_invalid_liquidity_oracle() {
     test_liquidity_oracle.init(&mut context).await.unwrap();
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context).await.unwrap();
+    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let income_pool_market = TestIncomePoolMarket::new();
     income_pool_market
@@ -336,7 +336,7 @@ async fn fail_with_invalid_uncreated_depositor_account() {
     test_liquidity_oracle.init(&mut context).await.unwrap();
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context).await.unwrap();
+    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let income_pool_market = TestIncomePoolMarket::new();
     income_pool_market

@@ -22,7 +22,7 @@ async fn setup() -> (
     test_registry.init(&mut context).await.unwrap();
 
     let test_pool_market = TestGeneralPoolMarket::new();
-    test_pool_market.init(&mut context).await.unwrap();
+    test_pool_market.init(&mut context, &test_registry.keypair.pubkey()).await.unwrap();
     let test_pool = TestGeneralPool::new(&test_pool_market, Some(spl_token::native_mint::id()));
     test_pool
         .create(&mut context, &test_pool_market)

@@ -5,7 +5,7 @@ use everlend_ulp::state::AccountType;
 use solana_program_test::*;
 
 async fn setup() -> (ProgramTestContext, TestPoolMarket) {
-    let mut context = presetup().await.0;
+    let (mut context, _, _, _) = presetup().await;
 
     let test_pool_market = TestPoolMarket::new();
     test_pool_market.init(&mut context).await.unwrap();

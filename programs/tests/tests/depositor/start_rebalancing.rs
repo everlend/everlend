@@ -49,7 +49,7 @@ async fn setup() -> (
     // 1. Prepare general pool
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context).await.unwrap();
+    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let general_pool = TestGeneralPool::new(&general_pool_market, None);
     general_pool

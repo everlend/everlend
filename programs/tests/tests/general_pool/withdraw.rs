@@ -28,7 +28,7 @@ async fn setup(
     let (mut context, _, _, registry) = presetup().await;
 
     let test_pool_market = TestGeneralPoolMarket::new();
-    test_pool_market.init(&mut context).await.unwrap();
+    test_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let test_pool = TestGeneralPool::new(&test_pool_market, token_mint);
     test_pool
@@ -573,7 +573,7 @@ async fn success_with_random_tx_signer() {
     context.warp_to_slot(3 + WITHDRAW_DELAY).unwrap();
 
     let random_tx_signer = TestGeneralPoolMarket::new();
-    random_tx_signer.init(&mut context).await.unwrap();
+    random_tx_signer.init(&mut context, &test_registry.keypair.pubkey()).await.unwrap();
 
     context.warp_to_slot(3 + WITHDRAW_DELAY + 3).unwrap();
 
