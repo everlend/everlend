@@ -16,6 +16,7 @@ use solana_sdk::{
 pub fn create_market(
     config: &Config,
     pool_market_keypair: Option<Keypair>,
+    registry: &Pubkey,
 ) -> Result<Pubkey, ClientError> {
     let pool_market_keypair = pool_market_keypair.unwrap_or_else(Keypair::new);
 
@@ -40,6 +41,7 @@ pub fn create_market(
                 &everlend_general_pool::id(),
                 &pool_market_keypair.pubkey(),
                 &config.fee_payer.pubkey(),
+                registry,
             ),
         ],
         Some(&config.fee_payer.pubkey()),
@@ -173,6 +175,7 @@ pub fn create_pool_borrow_authority(
 #[allow(clippy::too_many_arguments)]
 pub fn deposit(
     config: &Config,
+    registry_pubkey: &Pubkey,
     pool_market_pubkey: &Pubkey,
     pool_pubkey: &Pubkey,
     source: &Pubkey,
@@ -184,6 +187,7 @@ pub fn deposit(
     let tx = Transaction::new_with_payer(
         &[instruction::deposit(
             &everlend_general_pool::id(),
+            registry_pubkey,
             pool_market_pubkey,
             pool_pubkey,
             source,
@@ -204,6 +208,7 @@ pub fn deposit(
 #[allow(clippy::too_many_arguments)]
 pub fn withdraw_request(
     config: &Config,
+    registry_pubkey: &Pubkey,
     pool_market_pubkey: &Pubkey,
     pool_pubkey: &Pubkey,
     source: &Pubkey,
@@ -223,6 +228,7 @@ pub fn withdraw_request(
     let tx = Transaction::new_with_payer(
         &[instruction::withdraw_request(
             &everlend_general_pool::id(),
+            registry_pubkey,
             pool_market_pubkey,
             pool_pubkey,
             source,

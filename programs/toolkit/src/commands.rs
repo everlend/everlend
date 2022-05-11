@@ -95,10 +95,11 @@ pub async fn command_set_registry_config(
 pub async fn command_create_general_pool_market(
     config: &Config,
     keypair: Option<Keypair>,
+    registry: Pubkey,
 ) -> anyhow::Result<()> {
     let mut initialiazed_accounts = config.get_initialized_accounts();
 
-    let general_pool_market_pubkey = general_pool::create_market(config, keypair)?;
+    let general_pool_market_pubkey = general_pool::create_market(config, keypair, &registry)?;
 
     initialiazed_accounts.general_pool_market = general_pool_market_pubkey;
 

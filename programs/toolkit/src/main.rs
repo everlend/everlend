@@ -82,7 +82,7 @@ async fn command_create(
 
     registry::set_registry_config(config, &registry_pubkey, registry_config)?;
 
-    let general_pool_market_pubkey = general_pool::create_market(config, None)?;
+    let general_pool_market_pubkey = general_pool::create_market(config, None, &registry_pubkey)?;
     let income_pool_market_pubkey =
         income_pools::create_market(config, None, &general_pool_market_pubkey)?;
 
@@ -742,7 +742,8 @@ async fn main() -> anyhow::Result<()> {
         }
         ("create-general-pool-market", Some(arg_matches)) => {
             let keypair = keypair_of(arg_matches, "keypair");
-            command_create_general_pool_market(&config, keypair).await
+            let registry_pubkey = pubkey_of(arg_matches, "registry").unwrap();
+            command_create_general_pool_market(&config, keypair, registry_pubkey).await
         }
         ("create-income-pool-market", Some(arg_matches)) => {
             let keypair = keypair_of(arg_matches, "keypair");
