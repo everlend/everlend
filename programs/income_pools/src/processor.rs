@@ -1,7 +1,7 @@
 //! Program state processor
 
 use crate::{
-    find_pool_program_address,
+    find_pool_program_address, find_safety_fund_token_account_address,
     instruction::IncomePoolsInstruction,
     state::{IncomePool, IncomePoolMarket, InitIncomePoolMarketParams, InitIncomePoolParams},
 };
@@ -23,6 +23,8 @@ use solana_program::{
     sysvar::Sysvar,
 };
 use spl_token::state::Account;
+
+const INCOME_FEE: u64 = 2;
 
 /// Program state handler.
 pub struct Processor {}
@@ -161,6 +163,7 @@ impl Processor {
         let income_pool_info = next_account_info(account_info_iter)?;
         let income_pool_token_account_info = next_account_info(account_info_iter)?;
         let income_pool_market_authority_info = next_account_info(account_info_iter)?;
+        let safety_fund_token_account_info = next_account_info(account_info_iter)?;
         let general_pool_info = next_account_info(account_info_iter)?;
         let general_pool_token_account_info = next_account_info(account_info_iter)?;
         let _everlend_general_pool_info = next_account_info(account_info_iter)?;
@@ -182,8 +185,16 @@ impl Processor {
         }
         assert_account_key(general_pool_token_account_info, &general_pool.token_account)?;
 
-        let token_amount =
+        let mut token_amount =
             Account::unpack_unchecked(&income_pool_token_account_info.data.borrow())?.amount;
+
+        let safety_fund_amount = (token_amount as u128)
+            .checked_mul(INCOME_FEE as u128)
+            .ok_or(ProgramError::InvalidArgument)?
+            .checked_div(100)
+            .ok_or(ProgramError::InvalidArgument)? as u64;
+
+        token_amount -= safety_fund_amount;
 
         let (income_pool_market_authority, bump_seed) =
             find_program_address(program_id, income_pool_market_info.key);
@@ -194,6 +205,17 @@ impl Processor {
 
         let signers_seeds = &[&income_pool_market_info.key.to_bytes()[..32], &[bump_seed]];
 
+        if safety_fund_amount > 0 {
+            // Transfer from token account to safety fund
+            cpi::spl_token::transfer(
+                income_pool_token_account_info.clone(),
+                safety_fund_token_account_info.clone(),
+                income_pool_market_authority_info.clone(),
+                safety_fund_amount,
+                &[signers_seeds],
+            )?;
+        };
+
         // Transfer from token account to destination
         cpi::spl_token::transfer(
             income_pool_token_account_info.clone(),
@@ -201,6 +223,71 @@ impl Processor {
             income_pool_market_authority_info.clone(),
             token_amount,
             &[signers_seeds],
+        )?;
+
+        Ok(())
+    }
+
+    /// Process CreateSafetyFundTokenAccount instruction
+    pub fn safety_fund_token_account(
+        program_id: &Pubkey,
+        accounts: &[AccountInfo],
+    ) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let income_pool_market_info = next_account_info(account_info_iter)?;
+        let income_pool_info = next_account_info(account_info_iter)?;
+        let pool_market_authority_info = next_account_info(account_info_iter)?;
+        let token_mint_info = next_account_info(account_info_iter)?;
+        let token_account_info = next_account_info(account_info_iter)?;
+        let manager_info = next_account_info(account_info_iter)?;
+        let rent_info = next_account_info(account_info_iter)?;
+        let rent = &Rent::from_account_info(rent_info)?;
+        let _system_program_info = next_account_info(account_info_iter)?;
+        let _token_program_info = next_account_info(account_info_iter)?;
+
+        assert_signer(manager_info)?;
+
+        assert_owned_by(income_pool_info, program_id)?;
+
+        // Get pool market state
+        let income_pool_market = IncomePoolMarket::unpack(&income_pool_market_info.data.borrow())?;
+
+        assert_account_key(manager_info, &income_pool_market.manager)?;
+
+        // Check pool account
+        let (income_pool_pubkey, _) =
+            find_pool_program_address(program_id, income_pool_market_info.key, token_mint_info.key);
+        assert_account_key(income_pool_info, &income_pool_pubkey)?;
+
+        let (token_account_pubkey, bump_seed) = find_safety_fund_token_account_address(
+            program_id,
+            income_pool_market_info.key,
+            token_mint_info.key,
+        );
+
+        assert_account_key(token_account_info, &token_account_pubkey)?;
+
+        let signers_seeds = &[
+            br"safety_fund",
+            &income_pool_market_info.key.to_bytes()[..32],
+            &token_mint_info.key.to_bytes()[..32],
+            &[bump_seed],
+        ];
+
+        cpi::system::create_account::<spl_token::state::Account>(
+            &spl_token::id(),
+            manager_info.clone(),
+            token_account_info.clone(),
+            &[signers_seeds],
+            rent,
+        )?;
+
+        // Initialize transit token account for spl token
+        cpi::spl_token::initialize_account(
+            token_account_info.clone(),
+            token_mint_info.clone(),
+            pool_market_authority_info.clone(),
+            rent_info.clone(),
         )?;
 
         Ok(())
@@ -233,6 +320,11 @@ impl Processor {
             IncomePoolsInstruction::Withdraw => {
                 msg!("IncomePoolsInstruction: Withdraw");
                 Self::withdraw(program_id, accounts)
+            }
+
+            IncomePoolsInstruction::CreateSafetyPoolTokenAccount => {
+                msg!("IncomePoolsInstruction: CreateSafetyPoolTokenAccount");
+                Self::safety_fund_token_account(program_id, accounts)
             }
         }
     }

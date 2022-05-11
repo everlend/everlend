@@ -1,6 +1,6 @@
 //! Instruction types
 
-use crate::find_pool_program_address;
+use crate::{find_pool_program_address, find_safety_fund_token_account_address};
 use borsh::{BorshDeserialize, BorshSerialize};
 use everlend_utils::find_program_address;
 use solana_program::{
@@ -30,7 +30,7 @@ pub enum IncomePoolsInstruction {
     /// [WS] Market manager
     /// [R] Income pool market authority
     /// [R] Rent sysvar
-    /// [R] Sytem program
+    /// [R] System program
     /// [R] Token program id
     CreatePool,
 
@@ -55,11 +55,26 @@ pub enum IncomePoolsInstruction {
     /// [R] Income pool
     /// [W] Token account
     /// [R] Income pool market authority
+    /// [R] Safety fund token account
     /// [R] General pool
     /// [W] General pool token account
     /// [R] Everlend ULP program id
     /// [R] Token program id
     Withdraw,
+
+    /// Creates safety pool token account
+    ///
+    /// Accounts:
+    /// [R] Income pool market
+    /// [R] Income pool
+    /// [R] Income pool market authority
+    /// [R] Token mint
+    /// [W] Safety fund token account
+    /// [WS] From account
+    /// [R] Rent sysvar
+    /// [R] System program
+    /// [R] Token program id
+    CreateSafetyPoolTokenAccount,
 }
 
 /// Creates 'InitPoolMarket' instruction.
@@ -142,6 +157,7 @@ pub fn deposit(
 #[allow(clippy::too_many_arguments)]
 pub fn withdraw(
     program_id: &Pubkey,
+    token_mint: &Pubkey,
     income_pool_market: &Pubkey,
     income_pool: &Pubkey,
     income_token_account: &Pubkey,
@@ -149,12 +165,15 @@ pub fn withdraw(
     general_pool_token_account: &Pubkey,
 ) -> Instruction {
     let (pool_market_authority, _) = find_program_address(program_id, income_pool_market);
+    let (safety_fund_token_account, _) =
+        find_safety_fund_token_account_address(program_id, income_pool_market, token_mint);
 
     let accounts = vec![
         AccountMeta::new_readonly(*income_pool_market, false),
         AccountMeta::new_readonly(*income_pool, false),
         AccountMeta::new(*income_token_account, false),
         AccountMeta::new_readonly(pool_market_authority, false),
+        AccountMeta::new(safety_fund_token_account, false),
         AccountMeta::new_readonly(*general_pool, false),
         AccountMeta::new(*general_pool_token_account, false),
         AccountMeta::new_readonly(everlend_general_pool::id(), false),
@@ -162,4 +181,36 @@ pub fn withdraw(
     ];
 
     Instruction::new_with_borsh(*program_id, &IncomePoolsInstruction::Withdraw, accounts)
+}
+
+/// Creates 'CreateSafetyPoolTokenAccount' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn safety_pool_token_account(
+    program_id: &Pubkey,
+    token_mint: &Pubkey,
+    income_pool_market: &Pubkey,
+    income_pool: &Pubkey,
+    manager: &Pubkey,
+) -> Instruction {
+    let (pool_market_authority, _) = find_program_address(program_id, income_pool_market);
+    let (safety_fund_token_account, _) =
+        find_safety_fund_token_account_address(program_id, income_pool_market, token_mint);
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*income_pool_market, false),
+        AccountMeta::new_readonly(*income_pool, false),
+        AccountMeta::new_readonly(pool_market_authority, false),
+        AccountMeta::new_readonly(*token_mint, false),
+        AccountMeta::new(safety_fund_token_account, false),
+        AccountMeta::new(*manager, true),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+        AccountMeta::new_readonly(system_program::id(), false),
+        AccountMeta::new_readonly(spl_token::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &IncomePoolsInstruction::CreateSafetyPoolTokenAccount,
+        accounts,
+    )
 }

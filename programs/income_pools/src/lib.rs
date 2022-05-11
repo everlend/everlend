@@ -30,3 +30,19 @@ pub fn find_pool_program_address(
         program_id,
     )
 }
+
+/// Generates safety fund token account address
+pub fn find_safety_fund_token_account_address(
+    program_id: &Pubkey,
+    pool_market_pubkey: &Pubkey,
+    token_mint_pubkey: &Pubkey,
+) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[
+            br"safety_fund",
+            &pool_market_pubkey.to_bytes(),
+            &token_mint_pubkey.to_bytes(),
+        ],
+        program_id,
+    )
+}

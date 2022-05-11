@@ -2,7 +2,10 @@ use super::{
     get_account, get_liquidity_mint, BanksClientResult, TestGeneralPool, TestIncomePoolMarket,
     TokenHolder, User,
 };
-use everlend_income_pools::{find_pool_program_address, instruction, state::IncomePool};
+use everlend_income_pools::{
+    find_pool_program_address, find_safety_fund_token_account_address, instruction,
+    state::IncomePool,
+};
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{
@@ -40,6 +43,18 @@ impl TestIncomePool {
     pub async fn get_data(&self, context: &mut ProgramTestContext) -> IncomePool {
         let account = get_account(context, &self.pool_pubkey).await;
         IncomePool::unpack_unchecked(&account.data).unwrap()
+    }
+
+    pub fn get_safety_fund_token_account(
+        &self,
+        test_income_pool_market: &TestIncomePoolMarket,
+    ) -> Pubkey {
+        let (safety_fund_token_account, _) = find_safety_fund_token_account_address(
+            &everlend_income_pools::id(),
+            &test_income_pool_market.keypair.pubkey(),
+            &self.token_mint_pubkey,
+        );
+        safety_fund_token_account
     }
 
     pub async fn create(
@@ -111,6 +126,7 @@ impl TestIncomePool {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::withdraw(
                 &everlend_income_pools::id(),
+                &general_pool.token_mint_pubkey,
                 &test_income_pool_market.keypair.pubkey(),
                 &self.pool_pubkey,
                 &self.token_account.pubkey(),
@@ -119,6 +135,28 @@ impl TestIncomePool {
             )],
             Some(&context.payer.pubkey()),
             &[&context.payer],
+            context.last_blockhash,
+        );
+
+        context.banks_client.process_transaction(tx).await
+    }
+
+    pub async fn create_safety_fund_token_account(
+        &self,
+        context: &mut ProgramTestContext,
+        test_income_pool_market: &TestIncomePoolMarket,
+        general_pool: &TestGeneralPool,
+    ) -> BanksClientResult<()> {
+        let tx = Transaction::new_signed_with_payer(
+            &[instruction::safety_pool_token_account(
+                &everlend_income_pools::id(),
+                &general_pool.token_mint_pubkey,
+                &test_income_pool_market.keypair.pubkey(),
+                &self.pool_pubkey,
+                &test_income_pool_market.manager.pubkey(),
+            )],
+            Some(&context.payer.pubkey()),
+            &[&context.payer, &test_income_pool_market.manager],
             context.last_blockhash,
         );
 
