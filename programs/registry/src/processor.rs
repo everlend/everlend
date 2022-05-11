@@ -174,6 +174,7 @@ impl Processor {
             _ => {
                 let pool_config = PoolConfig::unpack(&pool_config_info.data.borrow())?;
                 assert_account_key(registry_info, &pool_config.registry)?;
+                assert_account_key(general_pool_info, &pool_config.general_pool)?;
 
                 pool_config
             }

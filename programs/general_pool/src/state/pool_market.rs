@@ -16,6 +16,8 @@ pub struct PoolMarket {
     pub account_type: AccountType,
     /// Market manager
     pub manager: Pubkey,
+    // Registry
+    // pub registry: Pubkey,
 }
 
 impl PoolMarket {

@@ -50,10 +50,10 @@ async fn setup() -> (
         &money_market.market_pubkey.to_bytes()[..32],
         &[lending_market.bump_seed],
     ];
-    let lending_market_authority_pubkey =
+    let _lending_market_authority_pubkey =
         Pubkey::create_program_address(authority_signer_seeds, &spl_token_lending::id()).unwrap();
 
-    let collateral_mint = get_mint_data(&mut context, &reserve.collateral.mint_pubkey).await;
+    let _collateral_mint = get_mint_data(&mut context, &reserve.collateral.mint_pubkey).await;
 
     // 1. Prepare general pool
 

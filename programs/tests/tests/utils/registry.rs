@@ -1,7 +1,7 @@
 use super::{get_account, BanksClientResult};
 use everlend_registry::{
     find_config_program_address,
-    state::{Registry, RegistryConfig, SetRegistryConfigParams, SetPoolConfigParams},
+    state::{Registry, RegistryConfig, SetRegistryConfigParams, SetPoolConfigParams, PoolConfig}, find_pool_config_program_address,
 };
 use solana_program::{program_pack::Pack, system_instruction, pubkey::Pubkey};
 use solana_program_test::ProgramTestContext;
@@ -107,5 +107,12 @@ impl TestRegistry {
         );
 
         context.banks_client.process_transaction(tx).await
+    }
+
+    pub async fn get_pool_config(&self, context: &mut ProgramTestContext, pool: &Pubkey) -> PoolConfig {
+        let (pool_config, _) =
+            find_pool_config_program_address(&everlend_registry::id(), &self.keypair.pubkey(), pool);
+        let account = get_account(context, &pool_config).await;
+        PoolConfig::unpack_unchecked(&account.data).unwrap()
     }
 }

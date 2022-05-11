@@ -1,7 +1,7 @@
 //! Program state processor
 
 use borsh::BorshDeserialize;
-use everlend_registry::{find_pool_config_program_address, state::{PoolConfig, RegistryConfig}};
+use everlend_registry::{find_pool_config_program_address, state::PoolConfig};
 use everlend_utils::{
     assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
     cpi, find_program_address, EverlendError,
@@ -407,6 +407,8 @@ impl Processor {
                 pool_info.key,
             );
         assert_account_key(pool_config_info, &pool_config_pubkey)?;
+        // let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+        // assert_account_key(registry_info, &pool_market.registry)?;
         let pool_config = PoolConfig::unpack(&pool_config_info.data.borrow())?;
         if mint_amount < pool_config.deposit_minimum {
             return Err(EverlendError::DepositAmountTooSmall.into());
@@ -679,6 +681,8 @@ impl Processor {
                 pool_info.key,
             );
         assert_account_key(pool_config_info, &pool_config_pubkey)?;
+        // let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+        // assert_account_key(registry_info, &pool_market.registry)?;
         let pool_config = PoolConfig::unpack(&pool_config_info.data.borrow())?;
         if liquidity_amount < pool_config.withdraw_minimum {
             return Err(EverlendError::WithdrawAmountTooSmall.into());
