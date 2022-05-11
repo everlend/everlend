@@ -669,22 +669,40 @@ async fn main() -> anyhow::Result<()> {
                 ),
         )
         .subcommand(
-            SubCommand::with_name("migrate-general-pool")
-                .about("Migrate general pool account")
-                .arg(
-                    Arg::with_name("case")
-                        .value_name("TOKEN")
-                        .takes_value(true)
-                        .index(1)
-                        .help("Case"),
+            SubCommand::with_name("migration")
+                .about("Migrations")
+                .subcommand(
+                    SubCommand::with_name("migrate-general-pool")
+                        .about("Migrate general pool account")
+                        .arg(
+                            Arg::with_name("case")
+                                .value_name("TOKEN")
+                                .takes_value(true)
+                                .index(1)
+                                .help("Case"),
+                        )
+                        .arg(
+                            Arg::with_name("accounts")
+                                .short("A")
+                                .long("accounts")
+                                .value_name("PATH")
+                                .takes_value(true)
+                                .help("Accounts file"),
+                        ),
                 )
-                .arg(
-                    Arg::with_name("accounts")
-                        .short("A")
-                        .long("accounts")
-                        .value_name("PATH")
-                        .takes_value(true)
-                        .help("Accounts file"),
+                .subcommand(
+                    SubCommand::with_name("migrate-depositor")
+                        .about("Migrate Depositor account")
+                        .arg(
+                            Arg::with_name("depositor")
+                                .validator(is_pubkey)
+                                .required(true)
+                                .short("D")
+                                .long("depositor")
+                                .value_name("DEPOSITOR")
+                                .takes_value(true)
+                                .help("Pubkey of depositor account"),
+                        ),
                 ),
         )
         .get_matches();
@@ -875,10 +893,26 @@ async fn main() -> anyhow::Result<()> {
 
             Ok(())
         }
-        ("migrate-general-pool", Some(arg_matches)) => {
-            let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
-            let case = value_of::<String>(arg_matches, "case");
-            command_run_migrate(&config, accounts_path, case).await
+        ("migration", Some(arg_matches)) => {
+            let _ = match arg_matches.subcommand() {
+                ("migrate-general-pool", Some(arg_matches)) => {
+                    let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
+                    let case = value_of::<String>(arg_matches, "case");
+                    command_run_migrate(&config, accounts_path, case).await
+                }
+                ("migrate-depositor", Some(arg_matches)) => {
+                    let depositor_pubkey =
+                        pubkey_of(arg_matches, "depositor").expect("Pubkey unrepresented");
+                    println!("Started Depositor migration");
+                    command_migrate_depositor(&config, &depositor_pubkey).await
+                }
+                _ => unreachable!(),
+            }
+            .map_err(|err| {
+                eprintln!("{}", err);
+                exit(1);
+            });
+            Ok(())
         }
         _ => unreachable!(),
     }

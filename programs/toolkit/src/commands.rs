@@ -1,3 +1,8 @@
+use solana_client::client_error::ClientError;
+use solana_program::pubkey::Pubkey;
+use solana_sdk::signature::Keypair;
+use spl_associated_token_account::get_associated_token_address;
+
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::{
     find_config_program_address,
@@ -7,10 +12,6 @@ use everlend_registry::{
     },
 };
 use everlend_utils::integrations::MoneyMarket;
-use solana_client::client_error::ClientError;
-use solana_program::pubkey::Pubkey;
-use solana_sdk::signature::Keypair;
-use spl_associated_token_account::get_associated_token_address;
 
 use crate::{
     accounts_config::{MoneyMarketAccounts, TokenAccounts},
@@ -482,5 +483,12 @@ pub async fn command_info_reserve_liquidity(config: &Config) -> anyhow::Result<(
         );
     }
 
+    Ok(())
+}
+
+pub async fn command_migrate_depositor(config: &Config, depositor: &Pubkey) -> anyhow::Result<()> {
+    let initialized_accounts = config.get_initialized_accounts();
+
+    depositor::migrate_depositor(config, depositor, &initialized_accounts.registry)?;
     Ok(())
 }

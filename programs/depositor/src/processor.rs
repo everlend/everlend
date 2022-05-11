@@ -4,6 +4,7 @@ use std::cmp::Ordering;
 
 use borsh::BorshDeserialize;
 use solana_program::program_error::ProgramError;
+use solana_program::program_memory::sol_memset;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     clock::Clock,
@@ -29,6 +30,7 @@ use everlend_utils::{
     find_program_address, EverlendError,
 };
 
+use crate::state::DeprecatedDepositor;
 use crate::{
     find_rebalancing_program_address, find_transit_program_address,
     instruction::DepositorInstruction,
@@ -704,6 +706,51 @@ impl Processor {
         Ok(())
     }
 
+    /// Process MigrateDepositor instruction
+    pub fn migrate_depositor(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+
+        let depositor_info = next_account_info(account_info_iter)?;
+        let registry_info = next_account_info(account_info_iter)?;
+        let registry_config_info = next_account_info(account_info_iter)?;
+
+        assert_owned_by(registry_config_info, &everlend_registry::id())?;
+        assert_owned_by(registry_info, &everlend_registry::id())?;
+        assert_owned_by(depositor_info, program_id)?;
+
+        let (registry_config, _) =
+            find_config_program_address(&everlend_registry::id(), registry_info.key);
+        assert_account_key(registry_config_info, &registry_config)?;
+
+        // Get deprecated depositor state
+        let deprecated_depositor = DeprecatedDepositor::unpack(&depositor_info.data.borrow())?;
+
+        let root_accounts =
+            RegistryRootAccounts::unpack_from_slice(&registry_config_info.data.borrow())?;
+        if &deprecated_depositor.general_pool_market != &root_accounts.general_pool_market {
+            Err(ProgramError::InvalidArgument)?;
+        }
+
+        if &deprecated_depositor.income_pool_market != &root_accounts.income_pool_market {
+            Err(ProgramError::InvalidArgument)?;
+        }
+
+        if &deprecated_depositor.income_pool_market != &root_accounts.income_pool_market {
+            Err(ProgramError::InvalidArgument)?;
+        }
+
+        let mut actual_depositor = Depositor::default();
+
+        actual_depositor.init(InitDepositorParams {
+            registry: *registry_info.key,
+        });
+
+        sol_memset(*depositor_info.data.borrow_mut(), 0, Depositor::LEN);
+        Depositor::pack(actual_depositor, *depositor_info.data.borrow_mut())?;
+
+        Ok(())
+    }
+
     /// Instruction processing router
     pub fn process_instruction(
         program_id: &Pubkey,
@@ -736,6 +783,11 @@ impl Processor {
             DepositorInstruction::Withdraw => {
                 msg!("DepositorInstruction: Withdraw");
                 Self::withdraw(program_id, accounts)
+            }
+
+            DepositorInstruction::MigrateDepositor => {
+                msg!("DepositorInstruction: MigrateDepositor");
+                Self::migrate_depositor(program_id, accounts)
             }
         }
     }

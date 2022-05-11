@@ -119,6 +119,14 @@ pub enum DepositorInstruction {
     /// [R] Everlend ULP program id
     /// [R] Money market program id
     Withdraw,
+
+    /// Migrate depositor to v1
+    ///
+    /// Accounts
+    /// [W] Depositor
+    /// [R] Registry
+    /// [R] Registry config
+    MigrateDepositor,
 }
 
 /// Creates 'Init' instruction.
@@ -385,4 +393,27 @@ pub fn withdraw(
     accounts.extend(money_market_accounts);
 
     Instruction::new_with_borsh(*program_id, &DepositorInstruction::Withdraw, accounts)
+}
+
+/// Creates 'MigrateDepositor' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn migrate_depositor(
+    program_id: &Pubkey,
+    depositor: &Pubkey,
+    registry: &Pubkey,
+) -> Instruction {
+    let (registry_config, _) =
+        everlend_registry::find_config_program_address(&everlend_registry::id(), registry);
+
+    let accounts = vec![
+        AccountMeta::new(*depositor, false),
+        AccountMeta::new_readonly(*registry, false),
+        AccountMeta::new_readonly(registry_config, false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &DepositorInstruction::MigrateDepositor,
+        accounts,
+    )
 }

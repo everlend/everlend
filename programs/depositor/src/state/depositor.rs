@@ -1,6 +1,5 @@
 //! Program state definitions
 
-use super::AccountType;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use solana_program::{
     msg,
@@ -8,6 +7,11 @@ use solana_program::{
     program_pack::{IsInitialized, Pack, Sealed},
     pubkey::Pubkey,
 };
+
+pub use deprecated::DeprecatedDepositor;
+use everlend_utils::EverlendError;
+
+use super::AccountType;
 
 // 1 + 32
 const DEPOSITOR_LEN: usize = 33;
@@ -49,6 +53,9 @@ impl Pack for Depositor {
     }
 
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
+        if !src[DEPOSITOR_LEN..].iter().all(|byte| byte == &0) {
+            Err(EverlendError::TemporaryUnavailable)?
+        }
         Self::try_from_slice(&src[0..DEPOSITOR_LEN]).map_err(|_| {
             msg!("Failed to deserialize");
             ProgramError::InvalidAccountData
@@ -60,5 +67,55 @@ impl IsInitialized for Depositor {
     fn is_initialized(&self) -> bool {
         self.account_type != AccountType::Uninitialized
             && self.account_type == AccountType::Depositor
+    }
+}
+
+mod deprecated {
+    use super::*;
+
+    ///
+    #[repr(C)]
+    #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
+    pub struct DeprecatedDepositor {
+        /// Account type - Depositor
+        pub account_type: AccountType,
+
+        /// General pool market
+        pub general_pool_market: Pubkey,
+
+        /// Income pool market
+        pub income_pool_market: Pubkey,
+
+        /// Liquidity oracle
+        pub liquidity_oracle: Pubkey,
+    }
+
+    impl Sealed for DeprecatedDepositor {}
+
+    impl Pack for DeprecatedDepositor {
+        // 1 + 32 + 32 + 32
+        const LEN: usize = 97;
+
+        fn pack_into_slice(&self, dst: &mut [u8]) {
+            let mut slice = dst;
+            self.serialize(&mut slice).unwrap()
+        }
+
+        fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
+            if src[DEPOSITOR_LEN..].iter().all(|byte| byte == &0) {
+                Err(EverlendError::TemporaryUnavailable)?
+            }
+            Self::try_from_slice(src).map_err(|_| {
+                msg!("Failed to deserialize");
+                ProgramError::InvalidAccountData
+            })
+        }
+    }
+
+    impl IsInitialized for DeprecatedDepositor {
+        fn is_initialized(&self) -> bool {
+            self.account_type != AccountType::Uninitialized
+                && self.account_type == AccountType::Depositor
+        }
     }
 }
