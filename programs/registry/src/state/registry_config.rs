@@ -14,16 +14,16 @@ use everlend_utils::AccountVersion;
 use super::*;
 
 /// Total number of money market distributions
-pub const TOTAL_DISTRIBUTIONS: usize = 7;
+pub const TOTAL_DISTRIBUTIONS: usize = 10;
 
 /// Distribution pubkeys
 pub type DistributionPubkeys = [Pubkey; TOTAL_DISTRIBUTIONS];
 
 const CONFIG_LEN: usize = 34;
 const PROGRAMS_OFFSET: usize = CONFIG_LEN;
-const PROGRAMS_LEN: usize = 384;
+const PROGRAMS_LEN: usize = 480;
 const ROOTS_OFFSET: usize = PROGRAMS_OFFSET + PROGRAMS_LEN;
-const ROOTS_LEN: usize = 320;
+const ROOTS_LEN: usize = 416;
 const SETTINGS_OFFSET: usize = ROOTS_OFFSET + ROOTS_LEN;
 const SETTINGS_LEN: usize = 8;
 
@@ -47,7 +47,7 @@ pub struct RegistryPrograms {
 
 impl Sealed for RegistryPrograms {}
 impl Pack for RegistryPrograms {
-    // 32 + 32 + 32 + 32 + 32 + (7 * 32) = 384
+    // 32 + 32 + 32 + 32 + 32 + (10 * 32) = 480
     const LEN: usize = PROGRAMS_LEN;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {

@@ -16,10 +16,7 @@ use solana_program::{
 };
 use spl_token::state::Account;
 
-use everlend_general_pool::{
-    find_withdrawal_requests_program_address,
-    state::{Pool, WithdrawalRequests},
-};
+use everlend_general_pool::{find_withdrawal_requests_program_address, state::WithdrawalRequests};
 use everlend_liquidity_oracle::{
     find_liquidity_oracle_token_distribution_program_address, state::TokenDistribution,
 };
@@ -575,10 +572,12 @@ impl Processor {
             find_config_program_address(&everlend_registry::id(), &depositor.registry);
         assert_account_key(registry_config_info, &registry_config_pubkey)?;
 
-        let programs = RegistryPrograms::unpack_from_slice(&registry_config_info.data.borrow())?;
+        let programs = RegistryPrograms::unpack_from_slice(&registry_config_info.data.borrow())
+            .map(Box::new)?;
 
         let root_accounts =
-            RegistryRootAccounts::unpack_from_slice(&registry_config_info.data.borrow())?;
+            RegistryRootAccounts::unpack_from_slice(&registry_config_info.data.borrow())
+                .map(Box::new)?;
 
         assert_owned_by(collateral_pool_market_info, &programs.ulp_program_id)?;
 
