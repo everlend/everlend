@@ -72,7 +72,7 @@ pub fn create_pool(
         income_pool_market_pubkey,
         token_mint,
     );
-
+    
     let account_info = config
         .rpc_client
         .get_account_with_commitment(&income_pool_pubkey, config.rpc_client.commitment())?
@@ -108,6 +108,13 @@ pub fn create_pool(
                 &token_account.pubkey(),
                 &config.fee_payer.pubkey(),
             ),
+            instruction::safety_pool_token_account(
+                &everlend_income_pools::id(),
+                token_mint,
+                income_pool_market_pubkey,
+                &income_pool_pubkey,
+                &config.fee_payer.pubkey(),
+            ),
         ],
         Some(&config.fee_payer.pubkey()),
     );
@@ -118,4 +125,33 @@ pub fn create_pool(
     )?;
 
     Ok((income_pool_pubkey, token_account.pubkey()))
+}
+
+pub fn create_income_pool_safety_fund_token_account(
+    config: &Config,
+    income_pool_market_pubkey: &Pubkey,
+    token_mint: &Pubkey,
+) -> Result<(), ClientError> {
+    let (income_pool_pubkey, _) = everlend_income_pools::find_pool_program_address(
+        &everlend_income_pools::id(),
+        income_pool_market_pubkey,
+        token_mint,
+    );
+
+    let tx = Transaction::new_with_payer(
+        &[
+            instruction::safety_pool_token_account(
+                &everlend_income_pools::id(),
+                token_mint,
+                income_pool_market_pubkey,
+                &income_pool_pubkey,
+                &config.fee_payer.pubkey(),
+            ),
+        ],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+
+    Ok(())
 }
