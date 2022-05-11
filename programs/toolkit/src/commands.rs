@@ -1,4 +1,5 @@
 use solana_client::client_error::ClientError;
+use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::signature::Keypair;
 use spl_associated_token_account::get_associated_token_address;
@@ -13,6 +14,7 @@ use everlend_registry::{
 };
 use everlend_utils::integrations::MoneyMarket;
 
+use crate::registry::close_registry_config;
 use crate::{
     accounts_config::{MoneyMarketAccounts, TokenAccounts},
     depositor, general_pool, income_pools, liquidity_oracle, registry, ulp,
@@ -490,5 +492,30 @@ pub async fn command_migrate_depositor(config: &Config, depositor: &Pubkey) -> a
     let initialized_accounts = config.get_initialized_accounts();
 
     depositor::migrate_depositor(config, depositor, &initialized_accounts.registry)?;
+    Ok(())
+}
+
+pub async fn command_migrate_registry_config(config: &Config) -> anyhow::Result<()> {
+    let accounts = config.get_initialized_accounts();
+
+    close_registry_config(config, &accounts.registry)?;
+    command_set_registry_config(config, accounts.registry).await?;
+
+    let (new_registry_config, _) =
+        find_config_program_address(&everlend_registry::id(), &accounts.registry);
+
+    let account = config.rpc_client.get_account(&new_registry_config)?;
+
+    let reg_conf = RegistryConfig::unpack_from_slice(&account.data)?;
+    let reg_prog = RegistryPrograms::unpack_from_slice(&account.data)?;
+    let reg_roots = RegistryRootAccounts::unpack_from_slice(&account.data)?;
+    let reg_sett = RegistrySettings::unpack_from_slice(&account.data)?;
+
+    println!("RegistryConfig:\n{:?}", reg_conf);
+    println!("RegistryPrograms:\n{:?}", reg_prog);
+    println!("RegistryRootAccounts:\n{:?}", reg_roots);
+    println!("RegistrySettings:\n{:?}", reg_sett);
+    println!("Migration of RgistryConfig finished");
+
     Ok(())
 }

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::{thread, time};
 
 use anchor_lang::AccountDeserialize;
 use solana_account_decoder::UiAccountEncoding;
@@ -209,4 +210,9 @@ pub fn get_asset_maps(
     ]);
 
     (mint_map, collateral_mint_map)
+}
+
+pub fn delay(milis: u64) {
+    println!("Waiting {} milliseconds...", milis);
+    thread::sleep(time::Duration::from_millis(milis))
 }

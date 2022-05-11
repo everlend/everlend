@@ -703,6 +703,11 @@ async fn main() -> anyhow::Result<()> {
                                 .takes_value(true)
                                 .help("Pubkey of depositor account"),
                         ),
+                )
+                .subcommand(
+                    SubCommand::with_name("migrate-registry-config").about(
+                        "Migrate RegistryConfig account. Must be invoke by registry manager.",
+                    ),
                 ),
         )
         .get_matches();
@@ -905,6 +910,10 @@ async fn main() -> anyhow::Result<()> {
                         pubkey_of(arg_matches, "depositor").expect("Pubkey unrepresented");
                     println!("Started Depositor migration");
                     command_migrate_depositor(&config, &depositor_pubkey).await
+                }
+                ("migrate-registry-config", Some(_)) => {
+                    println!("Started RegistryConfig migration");
+                    command_migrate_registry_config(&config).await
                 }
                 _ => unreachable!(),
             }

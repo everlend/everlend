@@ -1,14 +1,15 @@
 //! Instruction types
 
-use crate::{
-    find_config_program_address,
-    state::{RegistryPrograms, RegistryRootAccounts, RegistrySettings},
-};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
     system_program, sysvar,
+};
+
+use crate::{
+    find_config_program_address,
+    state::{RegistryPrograms, RegistryRootAccounts, RegistrySettings},
 };
 
 /// Instructions supported by the program
@@ -51,6 +52,14 @@ pub enum RegistryInstruction {
         /// Root accounts
         roots: RegistryRootAccounts,
     },
+
+    /// Set a registry root accounts
+    ///
+    /// Accounts:
+    /// [R] Registry
+    /// [W] Registry config
+    /// [WS] Manager
+    CloseRegistryConfig,
 }
 
 /// Creates 'Init' instruction.
@@ -113,6 +122,27 @@ pub fn set_registry_root_accounts(
     Instruction::new_with_borsh(
         *program_id,
         &RegistryInstruction::SetRegistryRootAccounts { roots },
+        accounts,
+    )
+}
+
+/// Creates 'CloseRegistryConfig' instruction.
+pub fn close_registry_config(
+    program_id: &Pubkey,
+    registry: &Pubkey,
+    manager: &Pubkey,
+) -> Instruction {
+    let (registry_config, _) = find_config_program_address(program_id, registry);
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*registry, false),
+        AccountMeta::new(registry_config, false),
+        AccountMeta::new(*manager, true),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &RegistryInstruction::CloseRegistryConfig,
         accounts,
     )
 }

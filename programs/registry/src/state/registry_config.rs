@@ -9,6 +9,7 @@ use solana_program::{
     pubkey::Pubkey,
 };
 
+pub use deprecated::DeprecatedRegistryConfig;
 use everlend_utils::AccountVersion;
 
 use super::*;
@@ -156,10 +157,13 @@ pub struct RegistryConfig {
 }
 
 impl RegistryConfig {
+    /// Account actual version
+    const ACTUAL_VERSION: AccountVersion = AccountVersion::V0;
+
     /// Init a registry config
     pub fn init(&mut self, params: InitRegistryConfigParams) {
         self.account_type = AccountType::RegistryConfig;
-        self.account_version = AccountVersion::default();
+        self.account_version = Self::ACTUAL_VERSION;
         self.registry = params.registry;
     }
 }
@@ -194,5 +198,61 @@ impl IsInitialized for RegistryConfig {
     fn is_initialized(&self) -> bool {
         self.account_type != AccountType::Uninitialized
             && self.account_type == AccountType::RegistryConfig
+            && self.account_version == Self::ACTUAL_VERSION
+    }
+}
+
+mod deprecated {
+    use super::*;
+
+    ///
+    #[repr(C)]
+    #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
+    pub struct DeprecatedRegistryConfig {
+        /// Account type - RegistryConfig
+        pub account_type: AccountType,
+        /// Registry
+        pub registry: Pubkey,
+        /// General pool program
+        pub general_pool_program_id: Pubkey,
+        /// ULP program
+        pub ulp_program_id: Pubkey,
+        /// Liquidity oracle program
+        pub liquidity_oracle_program_id: Pubkey,
+        /// Depositor program
+        pub depositor_program_id: Pubkey,
+        /// Income pools program
+        pub income_pools_program_id: Pubkey,
+        /// Money market programs
+        pub money_market_program_ids: [Pubkey; 10],
+        /// Refresh income interval
+        pub refresh_income_interval: Slot,
+    }
+
+    impl Sealed for DeprecatedRegistryConfig {}
+
+    impl Pack for DeprecatedRegistryConfig {
+        const LEN: usize = 1024;
+
+        fn pack_into_slice(&self, dst: &mut [u8]) {
+            let mut slice = dst;
+            self.serialize(&mut slice).unwrap()
+        }
+
+        fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
+            let mut src_mut = src;
+            Self::deserialize(&mut src_mut).map_err(|err| {
+                msg!("Failed to deserialize");
+                msg!(&err.to_string());
+                ProgramError::InvalidAccountData
+            })
+        }
+    }
+
+    impl IsInitialized for DeprecatedRegistryConfig {
+        fn is_initialized(&self) -> bool {
+            self.account_type != AccountType::Uninitialized
+                && self.account_type == AccountType::RegistryConfig
+        }
     }
 }

@@ -1,18 +1,6 @@
 //! Program state processor
 
-use crate::{
-    find_config_program_address,
-    instruction::RegistryInstruction,
-    state::{
-        InitRegistryConfigParams, InitRegistryParams, Registry, RegistryConfig, RegistryPrograms,
-        RegistryRootAccounts, RegistrySettings,
-    },
-};
 use borsh::BorshDeserialize;
-use everlend_utils::{
-    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
-    cpi,
-};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
@@ -23,8 +11,24 @@ use solana_program::{
     sysvar::Sysvar,
 };
 
+use everlend_utils::{
+    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
+    cpi, EverlendError,
+};
+
+use crate::state::DeprecatedRegistryConfig;
+use crate::{
+    find_config_program_address,
+    instruction::RegistryInstruction,
+    state::{
+        InitRegistryConfigParams, InitRegistryParams, Registry, RegistryConfig, RegistryPrograms,
+        RegistryRootAccounts, RegistrySettings,
+    },
+};
+
 /// Program state handler.
 pub struct Processor {}
+
 impl Processor {
     /// Process Init instruction
     pub fn init(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
@@ -157,6 +161,42 @@ impl Processor {
         Ok(())
     }
 
+    /// Process CloseRegistryConfig instruction
+    pub fn close_registry_config(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let registry_info = next_account_info(account_info_iter)?;
+        let registry_config_info = next_account_info(account_info_iter)?;
+        let manager_info = next_account_info(account_info_iter)?;
+
+        assert_signer(manager_info)?;
+
+        assert_owned_by(registry_info, program_id)?;
+        assert_owned_by(registry_config_info, program_id)?;
+
+        // Get registry state
+        let registry = Registry::unpack(&registry_info.data.borrow())?;
+        assert_account_key(manager_info, &registry.manager)?;
+
+        let (registry_config_pubkey, _) =
+            find_config_program_address(program_id, registry_info.key);
+        assert_account_key(registry_config_info, &registry_config_pubkey)?;
+
+        let registry_config =
+            DeprecatedRegistryConfig::unpack(&registry_config_info.data.borrow())?;
+        assert_account_key(registry_info, &registry_config.registry)?;
+
+        // Close registry config account and return rent
+        let from_starting_lamports = manager_info.lamports();
+        let deprecated_account_lamports = registry_config_info.lamports();
+
+        **registry_config_info.lamports.borrow_mut() = 0;
+        **manager_info.lamports.borrow_mut() = from_starting_lamports
+            .checked_add(deprecated_account_lamports)
+            .ok_or(EverlendError::MathOverflow)?;
+
+        Ok(())
+    }
+
     /// Instruction processing router
     pub fn process_instruction(
         program_id: &Pubkey,
@@ -183,6 +223,11 @@ impl Processor {
             RegistryInstruction::SetRegistryRootAccounts { roots } => {
                 msg!("RegistryInstruction: SetRegistryRootAccounts");
                 Self::set_registry_root_accounts(program_id, roots, accounts)
+            }
+
+            RegistryInstruction::CloseRegistryConfig => {
+                msg!("RegistryInstruction: CloseRegistryConfig");
+                Self::close_registry_config(program_id, accounts)
             }
         }
     }
