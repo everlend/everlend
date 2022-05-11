@@ -478,3 +478,32 @@ async fn fail_with_invalid_withdraw_amount() {
         )
     )
 }
+
+#[tokio::test]
+async fn fail_with_amount_too_small() {
+    let (mut context, test_registry, test_pool_market, test_pool, _pool_borrow_authority, user) = setup().await;
+    let pool_config_params = SetRegistryPoolConfigParams {
+        deposit_minimum: 90,
+        withdraw_minimum: 90,
+    };
+    test_registry.set_registry_pool_config(&mut context, &test_pool.pool_pubkey, pool_config_params)
+        .await
+        .unwrap();
+
+    context.warp_to_slot(WARP_SLOT + 5).unwrap();
+
+    let withdraw_amount = 80;
+
+    assert_eq!(
+        test_pool
+            .withdraw_request(&mut context, &test_registry, &test_pool_market, &user, withdraw_amount)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::WithdrawAmountTooSmall as u32)
+        )
+    )
+}
+

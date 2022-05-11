@@ -363,3 +363,48 @@ async fn fail_with_invalid_pool_argument() {
         )
     );
 }
+
+#[tokio::test]
+async fn fail_with_amount_too_small() {
+    let (mut context, test_registry, test_pool_market, test_pool, user) = setup().await;
+    let deposit_amount = 1000;
+    let pool_config_params = SetRegistryPoolConfigParams {
+        deposit_minimum: 1100,
+        withdraw_minimum: 1100,
+    };
+    test_registry
+        .set_registry_pool_config(&mut context, &test_pool.pool_pubkey, pool_config_params)
+        .await
+        .unwrap();
+
+    let tx = Transaction::new_signed_with_payer(
+        &[instruction::deposit(
+            &everlend_general_pool::id(),
+            &test_registry.keypair.pubkey(),
+            &test_pool_market.keypair.pubkey(),
+            &test_pool.pool_pubkey,
+            &user.token_account,
+            &user.pool_account,
+            &test_pool.token_account.pubkey(),
+            &test_pool.pool_mint.pubkey(),
+            &user.pubkey(),
+            deposit_amount,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer, &user.owner],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::DepositAmountTooSmall as u32)
+        )
+    );
+}
