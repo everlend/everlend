@@ -59,7 +59,7 @@ impl Pack for Depositor {
 
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
         if !src[DEPOSITOR_LEN..].iter().all(|byte| byte == &0) {
-            Err(EverlendError::TemporaryUnavailable)?
+            return Err(EverlendError::TemporaryUnavailable.into());
         }
         Self::try_from_slice(&src[0..DEPOSITOR_LEN]).map_err(|_| {
             msg!("Failed to deserialize");
@@ -109,7 +109,7 @@ mod deprecated {
 
         fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
             if src[DEPOSITOR_LEN..].iter().all(|byte| byte == &0) {
-                Err(EverlendError::TemporaryUnavailable)?
+                return Err(EverlendError::TemporaryUnavailable.into());
             }
             Self::try_from_slice(src).map_err(|_| {
                 msg!("Failed to deserialize");
