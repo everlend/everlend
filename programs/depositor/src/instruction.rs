@@ -69,17 +69,6 @@ pub enum DepositorInstruction {
         refresh_income: bool,
     },
 
-    /// Cancel current rebalancing
-    ///
-    /// Accounts:
-    /// [R] Registry
-    /// [R] Depositor
-    /// [W] Rebalancing account
-    /// [R] Token mint
-    /// [WS] Manager
-    /// [R] Sytem program
-    CancelRebalancing,
-
     /// Deposit funds from liquidity transit account to money market.
     /// Collect collateral token to MM pool.
     ///
@@ -138,6 +127,17 @@ pub enum DepositorInstruction {
     /// [R] Registry
     /// [R] Registry config
     MigrateDepositor,
+
+    /// Cancel current rebalancing
+    ///
+    /// Accounts:
+    /// [R] Registry
+    /// [R] Depositor
+    /// [W] Rebalancing account
+    /// [R] Token mint
+    /// [WS] Manager
+    /// [R] Sytem program
+    CancelRebalancing,
 }
 
 /// Creates 'Init' instruction.
