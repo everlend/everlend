@@ -426,8 +426,6 @@ impl Processor {
 
         rebalancing.cancel()?;
 
-        msg!("Steps = {:#?}", rebalancing.steps);
-
         Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
 
         Ok(())

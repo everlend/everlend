@@ -3,7 +3,10 @@
 use everlend_depositor::find_transit_program_address;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::state::{DistributionPubkeys, RegistryRootAccounts};
-use everlend_utils::find_program_address;
+use everlend_utils::{
+    find_program_address,
+    integrations::{self, MoneyMarketPubkeys},
+};
 use solana_program_test::*;
 use solana_sdk::signer::Signer;
 
@@ -235,4 +238,113 @@ async fn success() {
         .cancel_rebalancing(&mut context, &registry, &general_pool.token_mint_pubkey)
         .await
         .unwrap();
+}
+
+#[tokio::test]
+async fn success_halfway() {
+    let (
+        mut context,
+        money_market,
+        pyth_oracle,
+        registry,
+        general_pool_market,
+        general_pool,
+        _,
+        income_pool_market,
+        income_pool,
+        mm_pool_market,
+        mm_pool,
+        _,
+        test_depositor,
+        test_liquidity_oracle,
+        _,
+        _,
+    ) = setup().await;
+
+    let reserve = money_market.get_reserve_data(&mut context).await;
+    println!("{:#?}", reserve);
+
+    // Deposit
+    // Rates should be refreshed
+    context.warp_to_slot(3).unwrap();
+    pyth_oracle.update(&mut context, 3).await;
+
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
+
+    test_depositor
+        .deposit(
+            &mut context,
+            &registry,
+            &mm_pool_market,
+            &mm_pool,
+            &spl_token_lending::id(),
+            &money_market_pubkeys,
+        )
+        .await
+        .unwrap();
+
+    context.warp_to_slot(REFRESH_INCOME_INTERVAL + 4).unwrap();
+    pyth_oracle
+        .update(&mut context, REFRESH_INCOME_INTERVAL + 4)
+        .await;
+
+    let rebalancing = test_depositor
+        .get_rebalancing_data(&mut context, &general_pool.token_mint_pubkey)
+        .await;
+
+    println!("rebalancing 1 = {:#?}", rebalancing);
+
+    test_depositor
+        .start_rebalancing(
+            &mut context,
+            &registry,
+            &general_pool_market,
+            &general_pool,
+            &test_liquidity_oracle,
+            true,
+        )
+        .await
+        .unwrap();
+
+    let rebalancing = test_depositor
+        .get_rebalancing_data(&mut context, &general_pool.token_mint_pubkey)
+        .await;
+
+    println!("rebalancing 2 = {:#?}", rebalancing);
+
+    context.warp_to_slot(REFRESH_INCOME_INTERVAL + 6).unwrap();
+    pyth_oracle
+        .update(&mut context, REFRESH_INCOME_INTERVAL + 6)
+        .await;
+
+    test_depositor
+        .withdraw(
+            &mut context,
+            &registry,
+            &income_pool_market,
+            &income_pool,
+            &mm_pool_market,
+            &mm_pool,
+            &spl_token_lending::id(),
+            &money_market_pubkeys,
+        )
+        .await
+        .unwrap();
+
+    test_depositor
+        .cancel_rebalancing(&mut context, &registry, &general_pool.token_mint_pubkey)
+        .await
+        .unwrap();
+
+    let rebalancing = test_depositor
+        .get_rebalancing_data(&mut context, &general_pool.token_mint_pubkey)
+        .await;
+
+    println!("rebalancing 3 = {:#?}", rebalancing);
 }

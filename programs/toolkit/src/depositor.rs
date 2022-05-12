@@ -132,6 +132,34 @@ pub fn start_rebalancing(
     Ok((rebalancing_pubkey, rebalancing))
 }
 
+pub fn cancel_rebalancing(
+    config: &Config,
+    registry_pubkey: &Pubkey,
+    depositor_pubkey: &Pubkey,
+    token_mint: &Pubkey,
+) -> Result<(Pubkey, Rebalancing), ClientError> {
+    let tx = Transaction::new_with_payer(
+        &[everlend_depositor::instruction::cancel_rebalancing(
+            &everlend_depositor::id(),
+            registry_pubkey,
+            depositor_pubkey,
+            token_mint,
+            &config.fee_payer.pubkey(),
+        )],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+
+    let (rebalancing_pubkey, _) =
+        find_rebalancing_program_address(&everlend_depositor::id(), depositor_pubkey, token_mint);
+
+    let rebalancing_account = config.rpc_client.get_account(&rebalancing_pubkey)?;
+    let rebalancing = Rebalancing::unpack(&rebalancing_account.data).unwrap();
+
+    Ok((rebalancing_pubkey, rebalancing))
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn deposit(
     config: &Config,

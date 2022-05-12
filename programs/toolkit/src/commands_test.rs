@@ -120,6 +120,11 @@ pub async fn command_run_test(
         )
     };
 
+    let cancel_rebalancing = || {
+        println!("Cancel");
+        depositor::cancel_rebalancing(config, &registry, &depositor, &sol.mint)
+    };
+
     let refresh_income = || {
         println!("Rebalancing (Refresh income)");
         depositor::start_rebalancing(
@@ -317,6 +322,16 @@ pub async fn command_run_test(
             update_token_distribution(distribution!([0, 300000000, 700000000]))?;
             let (_, rebalancing) = start_rebalancing()?;
             complete_rebalancing(Some(rebalancing))?;
+        }
+        Some("cancel") => {
+            general_pool_deposit(1000)?;
+
+            update_token_distribution(distribution!([700000000, 0, 300000000]))?;
+            start_rebalancing()?;
+            deposit(1)?;
+
+            let (_, rebalancing) = cancel_rebalancing()?;
+            println!("rebalancing = {:?}", rebalancing);
         }
         Some("larix") => {
             general_pool_deposit(1000)?;

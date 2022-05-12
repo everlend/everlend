@@ -191,10 +191,8 @@ impl Rebalancing {
     /// Cancel current rebalancing by applying executed steps
     pub fn cancel(&mut self) -> Result<(), ProgramError> {
         // Reset steps
-        // let mut updated_token_distribution = TokenDistribution::default();
         let TokenDistribution { distribution, .. } = self.token_distribution;
         let mut updated_distribution = distribution;
-        let updated_distribution_liquidity = self.distributed_liquidity;
 
         for step in self.steps.iter().filter(|&s| s.executed_at.is_none()) {
             let money_market_index = usize::from(step.money_market_index);
@@ -208,10 +206,6 @@ impl Rebalancing {
                         .checked_sub(step.liquidity_amount)
                         .ok_or(EverlendError::MathOverflow)?;
 
-                    updated_distribution_liquidity
-                        .checked_sub(step.liquidity_amount)
-                        .ok_or(EverlendError::MathOverflow)?;
-
                     math::percent_ratio(
                         step_distribution_liquidity,
                         updated_step_distribution_liquidity,
@@ -219,10 +213,6 @@ impl Rebalancing {
                 }
                 RebalancingOperation::Withdraw => {
                     let updated_step_distribution_liquidity = step_distribution_liquidity
-                        .checked_add(step.liquidity_amount)
-                        .ok_or(EverlendError::MathOverflow)?;
-
-                    updated_distribution_liquidity
                         .checked_add(step.liquidity_amount)
                         .ok_or(EverlendError::MathOverflow)?;
 
@@ -236,11 +226,8 @@ impl Rebalancing {
         }
         self.steps.retain(|&s| s.executed_at.is_some());
 
-        msg!("updated_distribution = {:?}", updated_distribution);
-
         self.token_distribution = self.token_distribution.clone();
         self.token_distribution.distribution = updated_distribution;
-        self.distributed_liquidity = updated_distribution_liquidity;
 
         Ok(())
     }
