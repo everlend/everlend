@@ -45,7 +45,7 @@ impl Config {
     }
 
     pub fn get_initialized_accounts(&self) -> InitializedAccounts {
-        InitializedAccounts::load(&format!("accounts.{}.yaml", self.network)).unwrap_or_default()
+        InitializedAccounts::load(&format!("accounts.{}.yaml", self.network)).unwrap()
     }
 
     pub fn get_account_deserialize<T: AccountDeserialize>(

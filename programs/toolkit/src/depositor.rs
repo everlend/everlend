@@ -212,6 +212,7 @@ pub fn migrate_depositor(
     depositor: &Pubkey,
     registry: &Pubkey,
 ) -> Result<(), ClientError> {
+    println!("Depositor: {}", depositor);
     let deprecated_depositor: DeprecatedDepositor = config.get_account_unpack(&depositor)?;
     println!("Deprecated depositor struct:\n{:?}", &deprecated_depositor);
 

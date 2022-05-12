@@ -80,15 +80,6 @@ pub struct RegistryRootAccounts {
     pub liquidity_oracle: Pubkey,
 }
 
-impl RegistryRootAccounts {
-    /// Return filtered from zero pubkeys iterator over ulp_pool_markets
-    pub fn iter_filtered_ulp_pool_markets(&self) -> impl Iterator<Item = &Pubkey> {
-        self.collateral_pool_markets
-            .iter()
-            .filter(|collateral_pool_markets| collateral_pool_markets != &&Pubkey::default())
-    }
-}
-
 impl Sealed for RegistryRootAccounts {}
 
 impl Pack for RegistryRootAccounts {
