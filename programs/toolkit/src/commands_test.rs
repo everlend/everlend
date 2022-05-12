@@ -50,7 +50,7 @@ pub async fn command_run_test(
         find_config_program_address(&everlend_registry::id(), &registry);
     let registry_config_account = config.rpc_client.get_account(&registry_config_pubkey)?;
     let registry_config = RegistryConfig::unpack(&registry_config_account.data).unwrap();
-    let programs = RegistryPrograms::unpack_unchecked(&registry_config_account.data).unwrap();
+    let programs = RegistryPrograms::unpack_from_slice(&registry_config_account.data).unwrap();
 
     println!("registry_config = {:#?}", registry_config);
     println!("programs = {:#?}", programs);
@@ -326,12 +326,15 @@ pub async fn command_run_test(
         Some("cancel") => {
             general_pool_deposit(1000)?;
 
-            update_token_distribution(distribution!([700000000, 0, 300000000]))?;
-            start_rebalancing()?;
-            deposit(1)?;
+            update_token_distribution(distribution!([0, 0, 1000000000]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            complete_rebalancing(Some(rebalancing))?;
+
+            refresh_income()?;
+            withdraw(2)?;
 
             let (_, rebalancing) = cancel_rebalancing()?;
-            println!("rebalancing = {:?}", rebalancing);
+            println!("rebalancing = {:#?}", rebalancing);
         }
         Some("larix") => {
             general_pool_deposit(1000)?;

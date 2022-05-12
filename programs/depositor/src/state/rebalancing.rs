@@ -3,7 +3,7 @@
 use super::{AccountType, RebalancingStep, TOTAL_REBALANCING_STEP};
 use crate::state::RebalancingOperation;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-use everlend_liquidity_oracle::state::TokenDistribution;
+use everlend_liquidity_oracle::state::{DistributionArray, TokenDistribution};
 use everlend_registry::state::{DistributionPubkeys, RegistrySettings, TOTAL_DISTRIBUTIONS};
 use everlend_utils::{math, EverlendError, PRECISION_SCALER};
 use solana_program::{
@@ -191,43 +191,42 @@ impl Rebalancing {
     /// Cancel current rebalancing by applying executed steps
     pub fn cancel(&mut self) -> Result<(), ProgramError> {
         // Reset steps
-        let TokenDistribution { distribution, .. } = self.token_distribution;
-        let mut updated_distribution = distribution;
+        // let TokenDistribution { distribution, .. } = self.token_distribution;
+        // let mut updated_distribution = distribution;
 
-        for step in self.steps.iter().filter(|&s| s.executed_at.is_none()) {
-            let money_market_index = usize::from(step.money_market_index);
-            let step_distribution_liquidity =
-                math::share(self.distributed_liquidity, distribution[money_market_index])?;
+        // for step in self.steps.iter().filter(|&s| s.executed_at.is_none()) {
+        //     let money_market_index = usize::from(step.money_market_index);
+        //     let step_distribution_liquidity =
+        //         math::share(self.distributed_liquidity, distribution[money_market_index])?;
 
-            // Compute percent with apply reverted operation
-            let percent = match step.operation {
-                RebalancingOperation::Deposit => {
-                    let updated_step_distribution_liquidity = step_distribution_liquidity
-                        .checked_sub(step.liquidity_amount)
-                        .ok_or(EverlendError::MathOverflow)?;
+        //     // Compute percent with apply reverted operation
+        //     let percent = match step.operation {
+        //         RebalancingOperation::Deposit => {
+        //             let updated_step_distribution_liquidity = step_distribution_liquidity
+        //                 .checked_sub(step.liquidity_amount)
+        //                 .ok_or(EverlendError::MathOverflow)?;
 
-                    math::percent_ratio(
-                        step_distribution_liquidity,
-                        updated_step_distribution_liquidity,
-                    )?
-                }
-                RebalancingOperation::Withdraw => {
-                    let updated_step_distribution_liquidity = step_distribution_liquidity
-                        .checked_add(step.liquidity_amount)
-                        .ok_or(EverlendError::MathOverflow)?;
+        //             math::percent_ratio(
+        //                 step_distribution_liquidity,
+        //                 updated_step_distribution_liquidity,
+        //             )?
+        //         }
+        //         RebalancingOperation::Withdraw => {
+        //             let updated_step_distribution_liquidity = step_distribution_liquidity
+        //                 .checked_add(step.liquidity_amount)
+        //                 .ok_or(EverlendError::MathOverflow)?;
 
-                    math::percent_ratio(
-                        step_distribution_liquidity,
-                        updated_step_distribution_liquidity,
-                    )?
-                }
-            };
-            updated_distribution[money_market_index] = percent;
-        }
+        //             math::percent_ratio(
+        //                 step_distribution_liquidity,
+        //                 updated_step_distribution_liquidity,
+        //             )?
+        //         }
+        //     };
+        //     updated_distribution[money_market_index] = percent;
+        // }
         self.steps.retain(|&s| s.executed_at.is_some());
 
-        self.token_distribution = self.token_distribution.clone();
-        self.token_distribution.distribution = updated_distribution;
+        self.token_distribution.distribution = DistributionArray::default();
 
         Ok(())
     }

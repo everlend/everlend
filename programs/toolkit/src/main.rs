@@ -5,6 +5,8 @@ use std::{process::exit, str::FromStr};
 use clap::{
     crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
 };
+use everlend_depositor::find_rebalancing_program_address;
+use everlend_depositor::state::Rebalancing;
 use regex::Regex;
 use solana_clap_utils::{
     fee_payer::fee_payer_arg,
@@ -290,6 +292,15 @@ async fn command_info(config: &Config, accounts_path: &str) -> anyhow::Result<()
             &token_accounts.mint,
         )?;
         println!("{:#?}", (withdraw_requests_pubkey, &withdraw_requests));
+
+        let (rebalancing_pubkey, _) = find_rebalancing_program_address(
+            &everlend_depositor::id(),
+            &initialiazed_accounts.depositor,
+            &token_accounts.mint,
+        );
+
+        let rebalancing = config.get_account_unpack::<Rebalancing>(&rebalancing_pubkey)?;
+        println!("{:#?}", (rebalancing_pubkey, rebalancing));
     }
 
     Ok(())
@@ -452,6 +463,18 @@ async fn main() -> anyhow::Result<()> {
                         .value_name("KEYPAIR")
                         .takes_value(true)
                         .help("Keypair [default: new keypair]"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("cancel-rebalancing")
+                .about("Cancel rebalancing")
+                .arg(
+                    Arg::with_name("rebalancing")
+                        .validator(is_pubkey)
+                        .value_name("ADDRESS")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Rebalancing pubkey"),
                 ),
         )
         .subcommand(
@@ -807,6 +830,10 @@ async fn main() -> anyhow::Result<()> {
         ("create-depositor", Some(arg_matches)) => {
             let keypair = keypair_of(arg_matches, "keypair");
             command_create_depositor(&config, keypair).await
+        }
+        ("cancel-rebalancing", Some(arg_matches)) => {
+            let rebalancing_pubkey = pubkey_of(arg_matches, "rebalancing").unwrap();
+            command_cancel_rebalancing(&config, &rebalancing_pubkey).await
         }
         ("create-mm-pool", Some(arg_matches)) => {
             let money_market = value_of::<usize>(arg_matches, "money-market").unwrap();

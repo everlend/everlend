@@ -1,4 +1,5 @@
 use anyhow::bail;
+use everlend_depositor::state::Rebalancing;
 use solana_client::client_error::ClientError;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
@@ -229,6 +230,24 @@ pub async fn command_create_depositor(
     initialiazed_accounts
         .save(&format!("accounts.{}.yaml", config.network))
         .unwrap();
+
+    Ok(())
+}
+
+pub async fn command_cancel_rebalancing(
+    config: &Config,
+    rebalancing_pubkey: &Pubkey,
+) -> anyhow::Result<()> {
+    let initialiazed_accounts = config.get_initialized_accounts();
+
+    let rebalancing = config.get_account_unpack::<Rebalancing>(rebalancing_pubkey)?;
+
+    depositor::cancel_rebalancing(
+        config,
+        &initialiazed_accounts.registry,
+        &rebalancing.depositor,
+        &rebalancing.mint,
+    )?;
 
     Ok(())
 }
