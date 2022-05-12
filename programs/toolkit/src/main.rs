@@ -66,6 +66,23 @@ async fn command_create(
 
     let (mint_map, collateral_mint_map) = get_asset_maps(default_accounts.clone());
 
+    let general_pool_market_pubkey = general_pool::create_market(config, None)?;
+    let income_pool_market_pubkey =
+        income_pools::create_market(config, None, &general_pool_market_pubkey)?;
+
+    let mm_pool_markets = vec![
+        ulp::create_market(config, None)?,
+        ulp::create_market(config, None)?,
+        ulp::create_market(config, None)?,
+    ];
+
+    println!("Liquidity oracle");
+    let liquidity_oracle_pubkey = liquidity_oracle::init(config, None)?;
+    let mut distribution = DistributionArray::default();
+    distribution[0] = 0;
+    distribution[1] = 0;
+    distribution[2] = 0;
+
     println!("Registry");
     let registry_pubkey = registry::init(config, None)?;
     let mut programs = RegistryPrograms {
@@ -83,31 +100,27 @@ async fn command_create(
 
     println!("programs = {:#?}", programs);
 
+    let mut collateral_pool_markets: [Pubkey; TOTAL_DISTRIBUTIONS] = Default::default();
+    collateral_pool_markets[..mm_pool_markets.len()].copy_from_slice(&mm_pool_markets);
+
+    let roots = RegistryRootAccounts {
+        general_pool_market: general_pool_market_pubkey,
+        income_pool_market: income_pool_market_pubkey,
+        collateral_pool_markets,
+        liquidity_oracle: liquidity_oracle_pubkey,
+    };
+
+    println!("roots = {:#?}", &roots);
+
     registry::set_registry_config(
         config,
         &registry_pubkey,
         programs,
-        RegistryRootAccounts::default(),
+        roots,
         RegistrySettings {
             refresh_income_interval: REFRESH_INCOME_INTERVAL,
         },
     )?;
-
-    let general_pool_market_pubkey = general_pool::create_market(config, None)?;
-    let income_pool_market_pubkey =
-        income_pools::create_market(config, None, &general_pool_market_pubkey)?;
-
-    let mm_pool_markets = vec![
-        ulp::create_market(config, None)?,
-        ulp::create_market(config, None)?,
-        ulp::create_market(config, None)?,
-    ];
-
-    println!("Liquidity oracle");
-    let liquidity_oracle_pubkey = liquidity_oracle::init(config, None)?;
-    let mut distribution = DistributionArray::default();
-    distribution[0] = 0;
-    distribution[1] = 0;
 
     println!("Depositor");
     let depositor_pubkey = depositor::init(
@@ -669,22 +682,34 @@ async fn main() -> anyhow::Result<()> {
                 ),
         )
         .subcommand(
-            SubCommand::with_name("migrate-general-pool")
-                .about("Migrate general pool account")
-                .arg(
-                    Arg::with_name("case")
-                        .value_name("TOKEN")
-                        .takes_value(true)
-                        .index(1)
-                        .help("Case"),
+            SubCommand::with_name("migration")
+                .about("Migrations")
+                .subcommand(
+                    SubCommand::with_name("migrate-general-pool")
+                        .about("Migrate general pool account")
+                        .arg(
+                            Arg::with_name("case")
+                                .value_name("TOKEN")
+                                .takes_value(true)
+                                .index(1)
+                                .help("Case"),
+                        )
+                        .arg(
+                            Arg::with_name("accounts")
+                                .short("A")
+                                .long("accounts")
+                                .value_name("PATH")
+                                .takes_value(true)
+                                .help("Accounts file"),
+                        ),
                 )
-                .arg(
-                    Arg::with_name("accounts")
-                        .short("A")
-                        .long("accounts")
-                        .value_name("PATH")
-                        .takes_value(true)
-                        .help("Accounts file"),
+                .subcommand(SubCommand::with_name("migrate-depositor").about(
+                    "Migrate Depositor account. Must be invoke after migrate-registry-config.",
+                ))
+                .subcommand(
+                    SubCommand::with_name("migrate-registry-config").about(
+                        "Migrate RegistryConfig account. Must be invoke by registry manager.",
+                    ),
                 ),
         )
         .get_matches();
@@ -875,10 +900,29 @@ async fn main() -> anyhow::Result<()> {
 
             Ok(())
         }
-        ("migrate-general-pool", Some(arg_matches)) => {
-            let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
-            let case = value_of::<String>(arg_matches, "case");
-            command_run_migrate(&config, accounts_path, case).await
+        ("migration", Some(arg_matches)) => {
+            let _ = match arg_matches.subcommand() {
+                ("migrate-general-pool", Some(arg_matches)) => {
+                    let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
+                    let case = value_of::<String>(arg_matches, "case");
+                    command_run_migrate(&config, accounts_path, case).await
+                }
+                ("migrate-depositor", Some(_)) => {
+                    println!("WARN! This migration must be invoke after migrate-registry-config.");
+                    println!("Started Depositor migration");
+                    command_migrate_depositor(&config).await
+                }
+                ("migrate-registry-config", Some(_)) => {
+                    println!("Started RegistryConfig migration");
+                    command_migrate_registry_config(&config).await
+                }
+                _ => unreachable!(),
+            }
+            .map_err(|err| {
+                eprintln!("{}", err);
+                exit(1);
+            });
+            Ok(())
         }
         _ => unreachable!(),
     }

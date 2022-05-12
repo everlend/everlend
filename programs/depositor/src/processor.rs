@@ -5,6 +5,7 @@ use std::cmp::Ordering;
 use borsh::BorshDeserialize;
 use everlend_registry::state::Registry;
 use solana_program::program_error::ProgramError;
+use solana_program::program_memory::sol_memset;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     clock::Clock,
@@ -17,10 +18,7 @@ use solana_program::{
 };
 use spl_token::state::Account;
 
-use everlend_general_pool::{
-    find_withdrawal_requests_program_address,
-    state::{Pool, WithdrawalRequests},
-};
+use everlend_general_pool::{find_withdrawal_requests_program_address, state::WithdrawalRequests};
 use everlend_liquidity_oracle::{
     find_liquidity_oracle_token_distribution_program_address, state::TokenDistribution,
 };
@@ -33,6 +31,7 @@ use everlend_utils::{
     cpi, find_program_address, EverlendError,
 };
 
+use crate::state::DeprecatedDepositor;
 use crate::{
     find_rebalancing_program_address, find_transit_program_address,
     instruction::DepositorInstruction,
@@ -633,10 +632,12 @@ impl Processor {
             find_config_program_address(&everlend_registry::id(), &depositor.registry);
         assert_account_key(registry_config_info, &registry_config_pubkey)?;
 
-        let programs = RegistryPrograms::unpack_from_slice(&registry_config_info.data.borrow())?;
+        let programs = RegistryPrograms::unpack_from_slice(&registry_config_info.data.borrow())
+            .map(Box::new)?;
 
         let root_accounts =
-            RegistryRootAccounts::unpack_from_slice(&registry_config_info.data.borrow())?;
+            RegistryRootAccounts::unpack_from_slice(&registry_config_info.data.borrow())
+                .map(Box::new)?;
 
         assert_owned_by(collateral_pool_market_info, &programs.ulp_program_id)?;
 
@@ -763,6 +764,51 @@ impl Processor {
         Ok(())
     }
 
+    /// Process MigrateDepositor instruction
+    pub fn migrate_depositor(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+
+        let depositor_info = next_account_info(account_info_iter)?;
+        let registry_info = next_account_info(account_info_iter)?;
+        let registry_config_info = next_account_info(account_info_iter)?;
+
+        assert_owned_by(registry_config_info, &everlend_registry::id())?;
+        assert_owned_by(registry_info, &everlend_registry::id())?;
+        assert_owned_by(depositor_info, program_id)?;
+
+        let (registry_config, _) =
+            find_config_program_address(&everlend_registry::id(), registry_info.key);
+        assert_account_key(registry_config_info, &registry_config)?;
+
+        // Get deprecated depositor state
+        let deprecated_depositor = DeprecatedDepositor::unpack(&depositor_info.data.borrow())?;
+
+        let root_accounts =
+            RegistryRootAccounts::unpack_from_slice(&registry_config_info.data.borrow())?;
+        if &deprecated_depositor.general_pool_market != &root_accounts.general_pool_market {
+            Err(ProgramError::InvalidArgument)?;
+        }
+
+        if &deprecated_depositor.income_pool_market != &root_accounts.income_pool_market {
+            Err(ProgramError::InvalidArgument)?;
+        }
+
+        if &deprecated_depositor.income_pool_market != &root_accounts.income_pool_market {
+            Err(ProgramError::InvalidArgument)?;
+        }
+
+        let mut actual_depositor = Depositor::default();
+
+        actual_depositor.init(InitDepositorParams {
+            registry: *registry_info.key,
+        });
+
+        sol_memset(*depositor_info.data.borrow_mut(), 0, Depositor::LEN);
+        Depositor::pack(actual_depositor, *depositor_info.data.borrow_mut())?;
+
+        Ok(())
+    }
+
     /// Instruction processing router
     pub fn process_instruction(
         program_id: &Pubkey,
@@ -800,6 +846,11 @@ impl Processor {
             DepositorInstruction::Withdraw => {
                 msg!("DepositorInstruction: Withdraw");
                 Self::withdraw(program_id, accounts)
+            }
+
+            DepositorInstruction::MigrateDepositor => {
+                msg!("DepositorInstruction: MigrateDepositor");
+                Self::migrate_depositor(program_id, accounts)
             }
         }
     }

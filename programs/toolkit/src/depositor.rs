@@ -1,8 +1,3 @@
-use crate::utils::*;
-use everlend_depositor::{
-    find_rebalancing_program_address, find_transit_program_address,
-    state::{Depositor, Rebalancing},
-};
 use solana_client::client_error::ClientError;
 use solana_program::{
     instruction::AccountMeta, program_pack::Pack, pubkey::Pubkey, system_instruction,
@@ -12,6 +7,14 @@ use solana_sdk::{
     signer::Signer,
     transaction::Transaction,
 };
+
+use everlend_depositor::state::DeprecatedDepositor;
+use everlend_depositor::{
+    find_rebalancing_program_address, find_transit_program_address,
+    state::{Depositor, Rebalancing},
+};
+
+use crate::utils::*;
 
 pub fn init(
     config: &Config,
@@ -228,6 +231,33 @@ pub fn withdraw(
     );
 
     config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+
+    Ok(())
+}
+
+pub fn migrate_depositor(
+    config: &Config,
+    depositor: &Pubkey,
+    registry: &Pubkey,
+) -> Result<(), ClientError> {
+    println!("Depositor: {}", depositor);
+    let deprecated_depositor: DeprecatedDepositor = config.get_account_unpack(&depositor)?;
+    println!("Deprecated depositor struct:\n{:?}", &deprecated_depositor);
+
+    println!("Sending MigrateDepositor itx ...");
+    let tx = Transaction::new_with_payer(
+        &[everlend_depositor::instruction::migrate_depositor(
+            &everlend_depositor::id(),
+            depositor,
+            registry,
+        )],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+
+    let depositor: Depositor = config.get_account_unpack(&depositor)?;
+    println!("Migration of Depositor finished: \n{:?}", &depositor);
 
     Ok(())
 }

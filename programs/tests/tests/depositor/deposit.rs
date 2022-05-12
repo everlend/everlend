@@ -6,7 +6,6 @@ use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::*;
 use solana_sdk::signer::Signer;
 use solana_sdk::transaction::{Transaction, TransactionError};
-use spl_token_lending::error::LendingError;
 
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::state::{DistributionPubkeys, RegistryRootAccounts};

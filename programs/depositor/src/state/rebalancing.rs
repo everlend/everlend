@@ -386,7 +386,6 @@ pub mod tests {
         });
 
         let mut money_market_program_ids = DistributionPubkeys::default();
-        let mut money_market_program_ids = DistributionPubkeys::default();
         money_market_program_ids[0] = pk;
         money_market_program_ids[1] = pk;
 
