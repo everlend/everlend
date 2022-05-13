@@ -19,7 +19,7 @@ use solana_program::{
 };
 use spl_token::state::{Account, Mint};
 
-use crate::state::{InitWithdrawalRequestParams, InitWithdrawalRequestsParams, WITHDRAW_DELAY, deprecated::DeprecatedPoolMarket};
+use crate::state::{InitWithdrawalRequestParams, InitWithdrawalRequestsParams, WITHDRAW_DELAY };
 use crate::{
     find_pool_borrow_authority_program_address, find_pool_program_address,
     find_transit_program_address, find_transit_sol_unwrap_address,
@@ -863,6 +863,8 @@ impl Processor {
         let manager_info = next_account_info(account_info_iter)?;
 
         assert_signer(manager_info)?;
+        msg!("real owner: {}", pool_market_info.owner);
+        msg!("program_id: {}", program_id);
         assert_owned_by(pool_market_info, program_id)?;
 
         let pool_market = PoolMarket::unpack_unchecked(&pool_market_info.data.borrow())?;

@@ -1,8 +1,7 @@
 use super::{get_account, BanksClientResult};
 use everlend_registry::{
     find_config_program_address,
-    state::{Registry, RegistryConfig, SetRegistryConfigParams, SetRegistryPoolConfigParams, RegistryPoolConfig}, find_registry_pool_config_program_address,
-    state::{Registry, RegistryConfig, RegistryPrograms, RegistryRootAccounts, RegistrySettings},
+    state::{Registry, RegistryConfig, RegistryPrograms, RegistryRootAccounts, RegistrySettings, SetRegistryPoolConfigParams, RegistryPoolConfig}, find_registry_pool_config_program_address,
 };
 use solana_program::{program_pack::Pack, system_instruction, pubkey::Pubkey};
 use solana_program_test::ProgramTestContext;

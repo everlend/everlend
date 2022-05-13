@@ -22,7 +22,7 @@ use accounts_config::*;
 use commands::*;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::state::{
-    RegistryPrograms, RegistryRootAccounts, RegistrySettings, TOTAL_DISTRIBUTIONS,
+    RegistryPrograms, DistributionPubkeys, RegistryRootAccounts, RegistrySettings, TOTAL_DISTRIBUTIONS,
 };
 use everlend_utils::integrations::MoneyMarket;
 use general_pool::get_withdrawal_requests;
@@ -68,22 +68,25 @@ async fn command_create(
 
     println!("Registry");
     let registry_pubkey = registry::init(config, None)?;
-    let mut registry_config = SetRegistryConfigParams {
+    let mut programs = RegistryPrograms {
         general_pool_program_id: everlend_general_pool::id(),
         ulp_program_id: everlend_ulp::id(),
         liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
         depositor_program_id: everlend_depositor::id(),
         income_pools_program_id: everlend_income_pools::id(),
-        money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
-        refresh_income_interval: REFRESH_INCOME_INTERVAL,
+        money_market_program_ids: DistributionPubkeys::default(),
     };
-    registry_config.money_market_program_ids[0] = default_accounts.port_finance_program_id;
-    registry_config.money_market_program_ids[1] = default_accounts.larix_program_id;
-    registry_config.money_market_program_ids[2] = default_accounts.solend_program_id;
+    programs.money_market_program_ids[0] = spl_token_lending::id();
 
-    println!("registry_config = {:#?}", registry_config);
-
-    registry::set_registry_config(config, &registry_pubkey, registry_config)?;
+    registry::set_registry_config(
+            config,
+            &registry_pubkey,
+            programs,
+            RegistryRootAccounts::default(),
+            RegistrySettings {
+                refresh_income_interval: REFRESH_INCOME_INTERVAL,
+            }
+        )?;
 
     let general_pool_market_pubkey = general_pool::create_market(config, None, &registry_pubkey)?;
     let income_pool_market_pubkey =

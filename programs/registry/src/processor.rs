@@ -4,8 +4,8 @@ use crate::{
     find_config_program_address,
     instruction::RegistryInstruction,
     state::{
-        InitRegistryConfigParams, InitRegistryParams, Registry, RegistryConfig,
-        SetRegistryConfigParams, SetRegistryPoolConfigParams, RegistryPoolConfig,
+        InitRegistryConfigParams, Registry, RegistryConfig,
+        SetRegistryPoolConfigParams, RegistryPoolConfig,
     }, find_registry_pool_config_program_address,
 };
 use borsh::BorshDeserialize;
@@ -26,10 +26,8 @@ use everlend_utils::{
 
 use crate::state::DeprecatedRegistryConfig;
 use crate::{
-    find_config_program_address,
-    instruction::RegistryInstruction,
     state::{
-        InitRegistryConfigParams, InitRegistryParams, Registry, RegistryConfig, RegistryPrograms,
+        InitRegistryParams, RegistryPrograms,
         RegistryRootAccounts, RegistrySettings,
     },
 };

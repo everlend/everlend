@@ -1,6 +1,6 @@
 //! Instruction types
 
-use crate::{find_config_program_address, state::{SetRegistryConfigParams, SetRegistryPoolConfigParams}, find_registry_pool_config_program_address};
+use crate::{find_config_program_address, state::{SetRegistryPoolConfigParams}, find_registry_pool_config_program_address};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
     instruction::{AccountMeta, Instruction},
@@ -9,7 +9,6 @@ use solana_program::{
 };
 
 use crate::{
-    find_config_program_address,
     state::{RegistryPrograms, RegistryRootAccounts, RegistrySettings},
 };
 
