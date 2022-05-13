@@ -4,7 +4,7 @@ use super::{AccountType, RebalancingStep, TOTAL_REBALANCING_STEP};
 use crate::state::RebalancingOperation;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use everlend_liquidity_oracle::state::TokenDistribution;
-use everlend_registry::state::{RegistryConfig, TOTAL_DISTRIBUTIONS};
+use everlend_registry::state::{DistributionPubkeys, RegistrySettings, TOTAL_DISTRIBUTIONS};
 use everlend_utils::{math, EverlendError, PRECISION_SCALER};
 use solana_program::{
     clock::Slot,
@@ -57,7 +57,7 @@ impl Rebalancing {
     /// Generate new steps from new and latest distribuition arrays
     pub fn compute(
         &mut self,
-        registry_config: &RegistryConfig,
+        money_market_program_ids: &DistributionPubkeys,
         token_distribution: TokenDistribution,
         distributed_liquidity: u64,
     ) -> Result<(), ProgramError> {
@@ -69,8 +69,7 @@ impl Rebalancing {
         self.steps = Vec::new();
 
         // Compute steps
-        for (index, _) in registry_config
-            .money_market_program_ids
+        for (index, _) in money_market_program_ids
             .iter()
             .enumerate()
             // Keeping index order
@@ -134,12 +133,12 @@ impl Rebalancing {
     /// Generate new steps for withdraw all funds and deposit them back in MM pools
     pub fn compute_with_refresh_income(
         &mut self,
-        registry_config: &RegistryConfig,
+        money_market_program_ids: &DistributionPubkeys,
+        settings: &RegistrySettings,
         income_refreshed_at: Slot,
         distributed_liquidity: u64,
     ) -> Result<(), ProgramError> {
-        if self.income_refreshed_at + registry_config.refresh_income_interval > income_refreshed_at
-        {
+        if self.income_refreshed_at + settings.refresh_income_interval > income_refreshed_at {
             return Err(EverlendError::IncomeRefreshed.into());
         }
 
@@ -147,8 +146,7 @@ impl Rebalancing {
         self.steps = Vec::new();
 
         // Compute steps
-        for (index, _) in registry_config
-            .money_market_program_ids
+        for (index, _) in money_market_program_ids
             .iter()
             .enumerate()
             // Keeping index order
@@ -343,9 +341,9 @@ pub mod tests {
             mint: pk,
         });
 
-        let mut registry_config = RegistryConfig::default();
-        registry_config.money_market_program_ids[0] = pk;
-        registry_config.money_market_program_ids[1] = pk;
+        let mut money_market_program_ids = DistributionPubkeys::default();
+        money_market_program_ids[0] = pk;
+        money_market_program_ids[1] = pk;
 
         let mut token_distribution: TokenDistribution = Default::default();
         let mut distribution = DistributionArray::default();
@@ -355,7 +353,11 @@ pub mod tests {
         token_distribution.update(2, distribution);
 
         rebalancing
-            .compute(&registry_config, token_distribution.clone(), 100_000_000)
+            .compute(
+                &money_market_program_ids,
+                token_distribution.clone(),
+                100_000_000,
+            )
             .unwrap();
 
         assert_eq!(rebalancing.steps.len(), 2);
@@ -374,9 +376,9 @@ pub mod tests {
             mint: pk,
         });
 
-        let mut registry_config = RegistryConfig::default();
-        registry_config.money_market_program_ids[0] = pk;
-        registry_config.money_market_program_ids[1] = pk;
+        let mut money_market_program_ids = DistributionPubkeys::default();
+        money_market_program_ids[0] = pk;
+        money_market_program_ids[1] = pk;
 
         let mut token_distribution: TokenDistribution = Default::default();
         let mut distribution = DistributionArray::default();
@@ -386,7 +388,7 @@ pub mod tests {
         token_distribution.update(2, distribution);
 
         rebalancing
-            .compute(&registry_config, token_distribution.clone(), 1)
+            .compute(&money_market_program_ids, token_distribution.clone(), 1)
             .unwrap();
 
         rebalancing
@@ -396,7 +398,7 @@ pub mod tests {
         distribution[0] = 0;
         token_distribution.update(4, distribution);
         rebalancing
-            .compute(&registry_config, token_distribution.clone(), 1)
+            .compute(&money_market_program_ids, token_distribution.clone(), 1)
             .unwrap();
 
         println!("rebalancing = {:#?}", rebalancing);
@@ -411,9 +413,9 @@ pub mod tests {
             mint: pk,
         });
 
-        let mut registry_config = RegistryConfig::default();
-        registry_config.money_market_program_ids[0] = pk;
-        registry_config.money_market_program_ids[1] = pk;
+        let mut money_market_program_ids = DistributionPubkeys::default();
+        money_market_program_ids[0] = pk;
+        money_market_program_ids[1] = pk;
 
         let mut token_distribution: TokenDistribution = Default::default();
         let mut distribution = DistributionArray::default();
@@ -423,7 +425,11 @@ pub mod tests {
         token_distribution.update(2, distribution);
 
         rebalancing
-            .compute(&registry_config, token_distribution.clone(), 2100000)
+            .compute(
+                &money_market_program_ids,
+                token_distribution.clone(),
+                2100000,
+            )
             .unwrap();
 
         rebalancing
@@ -433,7 +439,11 @@ pub mod tests {
         distribution[0] = 999999999;
         token_distribution.update(4, distribution);
         rebalancing
-            .compute(&registry_config, token_distribution.clone(), 2100000)
+            .compute(
+                &money_market_program_ids,
+                token_distribution.clone(),
+                2100000,
+            )
             .unwrap();
 
         println!("rebalancing = {:#?}", rebalancing);
@@ -445,7 +455,11 @@ pub mod tests {
         distribution[0] = 999999998;
         token_distribution.update(7, distribution);
         rebalancing
-            .compute(&registry_config, token_distribution.clone(), 2100000)
+            .compute(
+                &money_market_program_ids,
+                token_distribution.clone(),
+                2100000,
+            )
             .unwrap();
 
         println!("rebalancing = {:#?}", rebalancing);

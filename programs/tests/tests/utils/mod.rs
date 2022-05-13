@@ -1,6 +1,8 @@
 #![allow(dead_code)]
 
-use everlend_registry::state::{SetRegistryConfigParams, TOTAL_DISTRIBUTIONS};
+use everlend_registry::state::{
+    DistributionPubkeys, RegistryPrograms, RegistryRootAccounts, RegistrySettings,
+};
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::*;
 use solana_program_test::{ProgramTest, ProgramTestContext};
@@ -141,19 +143,25 @@ pub async fn presetup() -> (
     let registry = TestRegistry::new();
     registry.init(&mut context).await.unwrap();
 
-    let mut config = SetRegistryConfigParams {
+    let mut programs = RegistryPrograms {
         general_pool_program_id: everlend_general_pool::id(),
         ulp_program_id: everlend_ulp::id(),
         liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
         depositor_program_id: everlend_depositor::id(),
         income_pools_program_id: everlend_income_pools::id(),
-        money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
-        refresh_income_interval: REFRESH_INCOME_INTERVAL,
+        money_market_program_ids: DistributionPubkeys::default(),
     };
-    config.money_market_program_ids[0] = spl_token_lending::id();
+    programs.money_market_program_ids[0] = spl_token_lending::id();
 
     registry
-        .set_registry_config(&mut context, config)
+        .set_registry_config(
+            &mut context,
+            programs,
+            RegistryRootAccounts::default(),
+            RegistrySettings {
+                refresh_income_interval: REFRESH_INCOME_INTERVAL,
+            },
+        )
         .await
         .unwrap();
 

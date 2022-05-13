@@ -49,9 +49,6 @@ impl TestDepositor {
         &self,
         context: &mut ProgramTestContext,
         registry: &TestRegistry,
-        general_pool_market: &TestGeneralPoolMarket,
-        income_pool_market: &TestIncomePoolMarket,
-        liquidity_oracle: &TestLiquidityOracle,
     ) -> BanksClientResult<()> {
         let rent = context.banks_client.get_rent().await.unwrap();
         let tx = Transaction::new_signed_with_payer(
@@ -67,9 +64,6 @@ impl TestDepositor {
                     &everlend_depositor::id(),
                     &registry.keypair.pubkey(),
                     &self.depositor.pubkey(),
-                    &general_pool_market.keypair.pubkey(),
-                    &income_pool_market.keypair.pubkey(),
-                    &liquidity_oracle.keypair.pubkey(),
                 ),
             ],
             Some(&context.payer.pubkey()),

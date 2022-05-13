@@ -27,16 +27,7 @@ async fn setup() -> (ProgramTestContext, TestDepositor) {
         .unwrap();
 
     let test_depositor = TestDepositor::new();
-    test_depositor
-        .init(
-            &mut context,
-            &registry,
-            &general_pool_market,
-            &income_pool_market,
-            &test_liquidity_oracle,
-        )
-        .await
-        .unwrap();
+    test_depositor.init(&mut context, &registry).await.unwrap();
 
     (context, test_depositor)
 }

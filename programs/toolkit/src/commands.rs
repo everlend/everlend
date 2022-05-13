@@ -1,15 +1,22 @@
+use anyhow::bail;
 use solana_client::client_error::ClientError;
+use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::signature::Keypair;
 use spl_associated_token_account::get_associated_token_address;
 
 use everlend_liquidity_oracle::state::DistributionArray;
+use everlend_registry::state::{DeprecatedRegistryConfig, Registry};
 use everlend_registry::{
     find_config_program_address,
-    state::{RegistryConfig, SetRegistryConfigParams, TOTAL_DISTRIBUTIONS},
+    state::{
+        RegistryConfig, RegistryPrograms, RegistryRootAccounts, RegistrySettings,
+        TOTAL_DISTRIBUTIONS,
+    },
 };
 use everlend_utils::integrations::MoneyMarket;
 
+use crate::registry::close_registry_config;
 use crate::{
     accounts_config::{MoneyMarketAccounts, TokenAccounts},
     depositor, general_pool, income_pools, liquidity_oracle, registry, ulp,
@@ -27,31 +34,51 @@ pub async fn command_create_registry(
     println!("Fee payer: {}", payer_pubkey);
 
     let default_accounts = config.get_default_accounts();
-    let mut initialiazed_accounts = config.get_initialized_accounts();
+    let mut initialized_accounts = config.get_initialized_accounts();
+
+    let mm_pool_markets = &initialized_accounts.mm_pool_markets;
 
     let registry_pubkey = registry::init(config, keypair)?;
-    let mut registry_config = SetRegistryConfigParams {
+    let mut programs = RegistryPrograms {
         general_pool_program_id: everlend_general_pool::id(),
         ulp_program_id: everlend_ulp::id(),
         liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
         depositor_program_id: everlend_depositor::id(),
         income_pools_program_id: everlend_income_pools::id(),
         money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
-        refresh_income_interval: REFRESH_INCOME_INTERVAL,
+    };
+    programs.money_market_program_ids[0] = default_accounts.port_finance_program_id;
+    programs.money_market_program_ids[1] = default_accounts.larix_program_id;
+    programs.money_market_program_ids[2] = default_accounts.solend_program_id;
+
+    println!("programs = {:#?}", programs);
+
+    let mut collateral_pool_markets: [Pubkey; TOTAL_DISTRIBUTIONS] = Default::default();
+    collateral_pool_markets[..mm_pool_markets.len()].copy_from_slice(&mm_pool_markets);
+
+    let roots = RegistryRootAccounts {
+        general_pool_market: initialized_accounts.general_pool_market,
+        income_pool_market: initialized_accounts.income_pool_market,
+        collateral_pool_markets,
+        liquidity_oracle: initialized_accounts.liquidity_oracle,
     };
 
-    registry_config.money_market_program_ids[0] = default_accounts.port_finance_program_id;
-    registry_config.money_market_program_ids[1] = default_accounts.larix_program_id;
-    registry_config.money_market_program_ids[2] = default_accounts.solend_program_id;
+    println!("roots = {:#?}", &roots);
 
-    println!("registry_config = {:#?}", registry_config);
+    registry::set_registry_config(
+        config,
+        &registry_pubkey,
+        programs,
+        roots,
+        RegistrySettings {
+            refresh_income_interval: REFRESH_INCOME_INTERVAL,
+        },
+    )?;
 
-    registry::set_registry_config(config, &registry_pubkey, registry_config)?;
+    initialized_accounts.payer = payer_pubkey;
+    initialized_accounts.registry = registry_pubkey;
 
-    initialiazed_accounts.payer = payer_pubkey;
-    initialiazed_accounts.registry = registry_pubkey;
-
-    initialiazed_accounts
+    initialized_accounts
         .save(&format!("accounts.{}.yaml", config.network))
         .unwrap();
 
@@ -63,29 +90,51 @@ pub async fn command_set_registry_config(
     registry_pubkey: Pubkey,
 ) -> anyhow::Result<()> {
     let default_accounts = config.get_default_accounts();
+    let initialized_accounts = config.get_initialized_accounts();
+    let mm_pool_markets = initialized_accounts.mm_pool_markets;
 
     let (registry_config_pubkey, _) =
         find_config_program_address(&everlend_registry::id(), &registry_pubkey);
     let registry_config = config.get_account_unpack::<RegistryConfig>(&registry_config_pubkey);
     println!("registry_config = {:#?}", registry_config);
 
-    let mut registry_config_params = SetRegistryConfigParams {
+    let mut programs = RegistryPrograms {
         general_pool_program_id: everlend_general_pool::id(),
         ulp_program_id: everlend_ulp::id(),
         liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
         depositor_program_id: everlend_depositor::id(),
         income_pools_program_id: everlend_income_pools::id(),
         money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
-        refresh_income_interval: REFRESH_INCOME_INTERVAL,
+        // refresh_income_interval: REFRESH_INCOME_INTERVAL,
     };
 
-    registry_config_params.money_market_program_ids[0] = default_accounts.port_finance_program_id;
-    registry_config_params.money_market_program_ids[1] = default_accounts.larix_program_id;
-    registry_config_params.money_market_program_ids[2] = default_accounts.solend_program_id;
+    programs.money_market_program_ids[0] = default_accounts.port_finance_program_id;
+    programs.money_market_program_ids[1] = default_accounts.larix_program_id;
+    programs.money_market_program_ids[2] = default_accounts.solend_program_id;
 
-    println!("registry_config_params = {:#?}", registry_config_params);
+    println!("programs = {:#?}", programs);
 
-    registry::set_registry_config(config, &registry_pubkey, registry_config_params)?;
+    let mut collateral_pool_markets: [Pubkey; TOTAL_DISTRIBUTIONS] = Default::default();
+    collateral_pool_markets[..mm_pool_markets.len()].copy_from_slice(&mm_pool_markets);
+
+    let roots = RegistryRootAccounts {
+        general_pool_market: initialized_accounts.general_pool_market,
+        income_pool_market: initialized_accounts.income_pool_market,
+        collateral_pool_markets,
+        liquidity_oracle: initialized_accounts.liquidity_oracle,
+    };
+
+    println!("roots = {:#?}", &roots);
+
+    registry::set_registry_config(
+        config,
+        &registry_pubkey,
+        programs,
+        roots,
+        RegistrySettings {
+            refresh_income_interval: REFRESH_INCOME_INTERVAL,
+        },
+    )?;
 
     Ok(())
 }
@@ -171,9 +220,9 @@ pub async fn command_create_depositor(
         config,
         &initialiazed_accounts.registry,
         keypair,
-        &initialiazed_accounts.general_pool_market,
-        &initialiazed_accounts.income_pool_market,
-        &initialiazed_accounts.liquidity_oracle,
+        // &initialiazed_accounts.general_pool_market,
+        // &initialiazed_accounts.income_pool_market,
+        // &initialiazed_accounts.liquidity_oracle,
     )?;
 
     initialiazed_accounts.depositor = depositor_pubkey;
@@ -466,6 +515,71 @@ pub async fn command_info_reserve_liquidity(config: &Config) -> anyhow::Result<(
             liquidity_reserve_transit_pubkey, liquidity_reserve_transit.amount
         );
     }
+
+    Ok(())
+}
+
+pub async fn command_migrate_depositor(config: &Config) -> anyhow::Result<()> {
+    let initialized_accounts = config.get_initialized_accounts();
+
+    // Check that RegistryConfig migrated
+    {
+        let (registry_config_pubkey, _) =
+            find_config_program_address(&everlend_registry::id(), &initialized_accounts.registry);
+        let account = config.rpc_client.get_account(&registry_config_pubkey)?;
+        if DeprecatedRegistryConfig::unpack_unchecked(&account.data).is_ok() {
+            bail!("RegistryConfig is not migrated yet.")
+        }
+    }
+
+    depositor::migrate_depositor(
+        config,
+        &initialized_accounts.depositor,
+        &initialized_accounts.registry,
+    )?;
+    Ok(())
+}
+
+pub async fn command_migrate_registry_config(config: &Config) -> anyhow::Result<()> {
+    let accounts = config.get_initialized_accounts();
+
+    let (registry_config_pubkey, _) =
+        find_config_program_address(&everlend_registry::id(), &accounts.registry);
+
+    {
+        let registry: Registry = config.get_account_unpack(dbg!(&accounts.registry))?;
+        let account = config.rpc_client.get_account(&accounts.registry)?;
+        println!(
+            "Registry: {}\nOwner: {}\n{:?}",
+            &accounts.registry, &account.owner, &registry
+        );
+    }
+
+    {
+        let registry_cfg: DeprecatedRegistryConfig =
+            config.get_account_unpack(&registry_config_pubkey)?;
+        let account = config.rpc_client.get_account(&registry_config_pubkey)?;
+        println!(
+            "RegistryConfig: {}\nOwner: {}\n{:?}",
+            &registry_config_pubkey, &account.owner, &registry_cfg
+        );
+    }
+
+    close_registry_config(config, &accounts.registry)?;
+    command_set_registry_config(config, accounts.registry).await?;
+
+    let account = config.rpc_client.get_account(&registry_config_pubkey)?;
+
+    let reg_conf = RegistryConfig::unpack_from_slice(&account.data)?;
+    let reg_prog = RegistryPrograms::unpack_from_slice(&account.data)?;
+    let reg_roots = RegistryRootAccounts::unpack_from_slice(&account.data)?;
+    let reg_sett = RegistrySettings::unpack_from_slice(&account.data)?;
+
+    println!("{:?}", reg_conf);
+    println!("{:?}", reg_prog);
+    println!("{:?}", reg_roots);
+    println!("{:?}", reg_sett);
+    println!("Migration of RgistryConfig finished");
 
     Ok(())
 }
