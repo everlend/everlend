@@ -7,8 +7,9 @@ use solana_sdk::{
 };
 
 use everlend_registry::{
+    find_registry_pool_config_program_address,
     find_config_program_address,
-    state::{Registry, RegistryPrograms, RegistryRootAccounts, RegistrySettings},
+    state::{Registry, RegistryPrograms, RegistryRootAccounts, RegistrySettings, SetRegistryPoolConfigParams},
 };
 
 use crate::utils::*;
@@ -109,3 +110,33 @@ pub fn close_registry_config(config: &Config, registry_pubkey: &Pubkey) -> Resul
 
     Ok(())
 }
+
+pub fn set_registry_pool_config(
+    config: &Config,
+    registry_pubkey: &Pubkey,
+    general_pool: &Pubkey,
+    params: SetRegistryPoolConfigParams,
+) -> Result<Pubkey, ClientError> {
+    let tx = Transaction::new_with_payer(
+        &[everlend_registry::instruction::set_registry_pool_config(
+            &everlend_registry::id(),
+            registry_pubkey,
+            &config.fee_payer.pubkey(),
+            general_pool,
+            params,
+        )],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+
+    let (registry_pool_config_pubkey, _) =
+        find_registry_pool_config_program_address(
+            &everlend_registry::id(),
+            registry_pubkey,
+            general_pool,
+        );
+
+    Ok(registry_pool_config_pubkey)
+}
+

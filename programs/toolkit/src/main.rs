@@ -16,13 +16,14 @@ use solana_client::client_error::ClientError;
 use solana_client::rpc_client::RpcClient;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::commitment_config::CommitmentConfig;
+use solana_sdk::signature::Keypair;
 use spl_associated_token_account::get_associated_token_address;
 
 use accounts_config::*;
 use commands::*;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::state::{
-    RegistryPrograms, DistributionPubkeys, RegistryRootAccounts, RegistrySettings, TOTAL_DISTRIBUTIONS,
+    RegistryPrograms, DistributionPubkeys, RegistryRootAccounts, RegistrySettings, TOTAL_DISTRIBUTIONS, SetRegistryPoolConfigParams,
 };
 use everlend_utils::integrations::MoneyMarket;
 use general_pool::get_withdrawal_requests;
@@ -344,16 +345,18 @@ async fn command_run_migrate(
 async fn command_run_migrate_pool_market(
     config: &Config,
     accounts_path: &str,
+    keypair: Keypair,
 ) -> anyhow::Result<()> {
     let initialized_accounts = InitializedAccounts::load(accounts_path).unwrap();
 
     println!("Close general pool market");
+    println!("pool market id: {}", &initialized_accounts.general_pool_market);
     general_pool::close_pool_market_account(
         config,
         &initialized_accounts.general_pool_market,
     )?;
-    general_pool::close_pool_market_account(
-        config, &initialized_accounts.general_pool_market
+    general_pool::create_market(
+        config, Some(keypair), &initialized_accounts.registry
     )?;
     println!("Finished!");
 
@@ -425,6 +428,29 @@ async fn main() -> anyhow::Result<()> {
                         .takes_value(true)
                         .required(true)
                         .help("Registry pubkey"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("set-registry-pool-config")
+                .about("Set a new registry pool config")
+                .arg(
+                    Arg::with_name("accounts")
+                        .short("A")
+                        .long("accounts")
+                        .value_name("PATH")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Accounts file"),
+                )
+                .arg(
+                    Arg::with_name("general-pool")
+                        .long("general-pool")
+                        .short("P")
+                        .validator(is_pubkey)
+                        .value_name("ADDRESS")
+                        .takes_value(true)
+                        .required(true)
+                        .help("General pool pubkey"),
                 ),
         )
         .subcommand(
@@ -754,6 +780,14 @@ async fn main() -> anyhow::Result<()> {
                                 .value_name("PATH")
                                 .takes_value(true)
                                 .help("Accounts file"),
+                        )
+                        .arg(
+                            Arg::with_name("keypair")
+                                .long("keypair")
+                                .validator(is_keypair)
+                                .value_name("KEYPAIR")
+                                .takes_value(true)
+                                .help("Keypair [default: new keypair]"),
                         ),
                 )
                 .subcommand(SubCommand::with_name("migrate-depositor").about(
@@ -839,6 +873,12 @@ async fn main() -> anyhow::Result<()> {
         ("set-registry-config", Some(arg_matches)) => {
             let registry_pubkey = pubkey_of(arg_matches, "registry").unwrap();
             command_set_registry_config(&config, registry_pubkey).await
+        }
+        ("set-registry-pool-config", Some(arg_matches)) => {
+            let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
+            let general_pool = pubkey_of(arg_matches, "general-pool").unwrap();
+            let params = SetRegistryPoolConfigParams { deposit_minimum: 0, withdraw_minimum: 0 };
+            command_set_registry_pool_config(&config, accounts_path, general_pool, params).await
         }
         ("create-general-pool-market", Some(arg_matches)) => {
             let keypair = keypair_of(arg_matches, "keypair");
@@ -972,9 +1012,11 @@ async fn main() -> anyhow::Result<()> {
                 }
                 ("migrate-pool-market", Some(arg_matches)) => {
                     let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
-                    command_run_migrate_pool_market(
+                    let keypair = keypair_of(arg_matches, "keypair").unwrap();
+                        command_run_migrate_pool_market(
                         &config,
                         accounts_path,
+                        keypair,
                     ).await
                 }
                 _ => unreachable!(),

@@ -222,6 +222,7 @@ impl Processor {
         assert_owned_by(registry_info, program_id)?;
 
         let registry = Registry::unpack(&registry_info.data.borrow())?;
+        msg!("1");
         assert_account_key(manager_info, &registry.manager)?;
 
         let (registry_pool_config_pubkey, bump_seed) = find_registry_pool_config_program_address(
@@ -250,6 +251,7 @@ impl Processor {
 
                 let mut registry_pool_config =
                     RegistryPoolConfig::unpack_unchecked(&registry_pool_config_info.data.borrow())?;
+                msg!("2");
                 registry_pool_config.init(*registry_info.key, *general_pool_info.key);
 
                 registry_pool_config
@@ -269,6 +271,7 @@ impl Processor {
 
         RegistryPoolConfig::pack(registry_pool_config, *registry_pool_config_info.data.borrow_mut())?;
 
+        msg!("3");
         Ok(())
     }
 

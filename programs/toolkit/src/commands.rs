@@ -6,7 +6,7 @@ use solana_sdk::signature::Keypair;
 use spl_associated_token_account::get_associated_token_address;
 
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::{DeprecatedRegistryConfig, Registry};
+use everlend_registry::state::{DeprecatedRegistryConfig, Registry, SetRegistryPoolConfigParams};
 use everlend_registry::{
     find_config_program_address,
     state::{
@@ -16,6 +16,7 @@ use everlend_registry::{
 };
 use everlend_utils::integrations::MoneyMarket;
 
+use crate::accounts_config::InitializedAccounts;
 use crate::registry::close_registry_config;
 use crate::{
     accounts_config::{MoneyMarketAccounts, TokenAccounts},
@@ -134,6 +135,23 @@ pub async fn command_set_registry_config(
         RegistrySettings {
             refresh_income_interval: REFRESH_INCOME_INTERVAL,
         },
+    )?;
+
+    Ok(())
+}
+
+pub async fn command_set_registry_pool_config(
+    config: &Config,
+    accounts_path: &str,
+    general_pool_pubkey: Pubkey,
+    params: SetRegistryPoolConfigParams,
+) -> anyhow::Result<()> {
+    let initialized_accounts = InitializedAccounts::load(accounts_path).unwrap();
+    registry::set_registry_pool_config(
+        config,
+        &initialized_accounts.registry,
+        &general_pool_pubkey,
+        params,
     )?;
 
     Ok(())

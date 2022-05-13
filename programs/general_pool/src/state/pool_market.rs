@@ -100,8 +100,8 @@ pub mod deprecated {
 
     impl Sealed for DeprecatedPoolMarket {}
     impl Pack for DeprecatedPoolMarket {
-        // 1 + 32 + 32
-        const LEN: usize = 65;
+        // 1 + 32
+        const LEN: usize = 33;
 
         fn pack_into_slice(&self, dst: &mut [u8]) {
             let mut slice = dst;
