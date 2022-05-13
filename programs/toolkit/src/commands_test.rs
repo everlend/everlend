@@ -33,7 +33,7 @@ pub async fn command_run_test(
     println!("default_accounts = {:#?}", default_accounts);
 
     let InitializedAccounts {
-        payer,
+        payer: _,
         registry,
         general_pool_market,
         income_pool_market,

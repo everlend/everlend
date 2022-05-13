@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use solana_client::client_error::ClientError;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::signature::Keypair;

@@ -176,6 +176,13 @@ pub enum LiquidityPoolsInstruction {
         collateral_amount: u64,
     },
 
+    /// Migrate PoolMarket
+    ///
+    /// Accounts:
+    /// [W] Pool market
+    /// [R] Manager
+    ClosePoolMarket,
+
     /// Migrate account data
     ///
     MigrationInstruction,
@@ -520,6 +527,26 @@ pub fn repay(
         accounts,
     )
 }
+
+/// Creates 'MigratePoolMarket' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn close_pool_market(
+    program_id: &Pubkey,
+    pool_market: &Pubkey,
+    manager: &Pubkey,
+) -> Instruction {
+    let accounts = vec![
+        AccountMeta::new(*pool_market, false),
+        AccountMeta::new_readonly(*manager, false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &LiquidityPoolsInstruction::ClosePoolMarket,
+        accounts,
+    )
+}
+
 
 /// Creates 'Migration' instruction.
 #[allow(clippy::too_many_arguments)]

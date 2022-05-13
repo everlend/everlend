@@ -283,13 +283,29 @@ async fn command_run_migrate(
         return Ok(());
     }
 
-    let token = initialiazed_accounts
+    let _token = initialiazed_accounts
         .token_accounts
         .get(&case.unwrap())
         .unwrap();
 
     println!("Migrate withdraw requests");
     general_pool::migrate_general_pool_account(config)?;
+    println!("Finished!");
+
+    Ok(())
+}
+
+async fn command_run_close_pool_market(
+    config: &Config,
+    accounts_path: &str,
+) -> anyhow::Result<()> {
+    let initialiazed_accounts = InitializedAccounts::load(accounts_path).unwrap_or_default();
+
+    println!("Close general pool market");
+    general_pool::close_pool_market_account(
+        config,
+        &initialiazed_accounts.general_pool_market,
+    )?;
     println!("Finished!");
 
     Ok(())
@@ -676,6 +692,18 @@ async fn main() -> anyhow::Result<()> {
                         .help("Accounts file"),
                 ),
         )
+        .subcommand(
+            SubCommand::with_name("close-pool-market")
+                .about("Migrate pool market account")
+                .arg(
+                    Arg::with_name("accounts")
+                        .short("A")
+                        .long("accounts")
+                        .value_name("PATH")
+                        .takes_value(true)
+                        .help("Accounts file"),
+                ),
+        )
         .get_matches();
 
     let mut wallet_manager = None;
@@ -858,6 +886,13 @@ async fn main() -> anyhow::Result<()> {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
             let case = value_of::<String>(arg_matches, "case");
             command_run_migrate(&config, accounts_path, case).await
+        }
+        ("close-pool-market", Some(arg_matches)) => {
+            let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
+            command_run_close_pool_market(
+                &config,
+                accounts_path,
+            ).await
         }
         _ => unreachable!(),
     }

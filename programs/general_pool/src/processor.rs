@@ -19,7 +19,7 @@ use solana_program::{
 };
 use spl_token::state::{Account, Mint};
 
-use crate::state::{InitWithdrawalRequestParams, InitWithdrawalRequestsParams, WITHDRAW_DELAY};
+use crate::state::{InitWithdrawalRequestParams, InitWithdrawalRequestsParams, WITHDRAW_DELAY, deprecated::DeprecatedPoolMarket};
 use crate::{
     find_pool_borrow_authority_program_address, find_pool_program_address,
     find_transit_program_address, find_transit_sol_unwrap_address,
@@ -856,6 +856,27 @@ impl Processor {
         Err(EverlendError::TemporaryUnavailable.into())
     }
 
+    /// Migrate pool market
+    pub fn close_pool_market(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let pool_market_info = next_account_info(account_info_iter)?;
+        let manager_info = next_account_info(account_info_iter)?;
+
+        assert_signer(manager_info)?;
+        assert_owned_by(pool_market_info, program_id)?;
+
+        let pool_market = PoolMarket::unpack_unchecked(&pool_market_info.data.borrow())?;
+        assert_account_key(manager_info, &pool_market.manager)?;
+
+        let from_starting_lamports = manager_info.lamports();
+        let deprecated_withdraw_request_lamports =pool_market_info.lamports();
+        **pool_market_info.lamports.borrow_mut() = 0;
+        **manager_info.lamports.borrow_mut() = from_starting_lamports
+            .checked_add(deprecated_withdraw_request_lamports)
+            .ok_or(EverlendError::MathOverflow)?;
+        Ok(())
+    }
+
     /// Instruction processing router
     pub fn process_instruction(
         program_id: &Pubkey,
@@ -863,7 +884,6 @@ impl Processor {
         input: &[u8],
     ) -> ProgramResult {
         let instruction = LiquidityPoolsInstruction::try_from_slice(input)?;
-
         match instruction {
             LiquidityPoolsInstruction::InitPoolMarket => {
                 msg!("LiquidityPoolsInstruction: InitPoolMarket");
@@ -916,6 +936,11 @@ impl Processor {
             } => {
                 msg!("LiquidityPoolsInstruction: Repay");
                 Self::repay(program_id, amount, interest_amount, accounts)
+            }
+
+            LiquidityPoolsInstruction::ClosePoolMarket => {
+                msg!("LiquidityPoolsInstruction: MigrationInstruction");
+                Self::close_pool_market(program_id, accounts)
             }
 
             LiquidityPoolsInstruction::MigrationInstruction => {
