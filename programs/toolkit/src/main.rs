@@ -341,16 +341,19 @@ async fn command_run_migrate(
     Ok(())
 }
 
-async fn command_run_close_pool_market(
+async fn command_run_migrate_pool_market(
     config: &Config,
     accounts_path: &str,
 ) -> anyhow::Result<()> {
-    let initialiazed_accounts = InitializedAccounts::load(accounts_path).unwrap_or_default();
+    let initialized_accounts = InitializedAccounts::load(accounts_path).unwrap();
 
     println!("Close general pool market");
     general_pool::close_pool_market_account(
         config,
-        &initialiazed_accounts.general_pool_market,
+        &initialized_accounts.general_pool_market,
+    )?;
+    general_pool::close_pool_market_account(
+        config, &initialized_accounts.general_pool_market
     )?;
     println!("Finished!");
 
@@ -741,6 +744,18 @@ async fn main() -> anyhow::Result<()> {
                                 .help("Accounts file"),
                         ),
                 )
+                .subcommand(
+                    SubCommand::with_name("migrate-pool-market")
+                        .about("Migrate pool market account")
+                        .arg(
+                            Arg::with_name("accounts")
+                                .short("A")
+                                .long("accounts")
+                                .value_name("PATH")
+                                .takes_value(true)
+                                .help("Accounts file"),
+                        ),
+                )
                 .subcommand(SubCommand::with_name("migrate-depositor").about(
                     "Migrate Depositor account. Must be invoke after migrate-registry-config.",
                 ))
@@ -748,18 +763,6 @@ async fn main() -> anyhow::Result<()> {
                     SubCommand::with_name("migrate-registry-config").about(
                         "Migrate RegistryConfig account. Must be invoke by registry manager.",
                     ),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name("close-pool-market")
-                .about("Migrate pool market account")
-                .arg(
-                    Arg::with_name("accounts")
-                        .short("A")
-                        .long("accounts")
-                        .value_name("PATH")
-                        .takes_value(true)
-                        .help("Accounts file"),
                 ),
         )
         .get_matches();
@@ -967,6 +970,13 @@ async fn main() -> anyhow::Result<()> {
                     println!("Started RegistryConfig migration");
                     command_migrate_registry_config(&config).await
                 }
+                ("migrate-pool-market", Some(arg_matches)) => {
+                    let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
+                    command_run_migrate_pool_market(
+                        &config,
+                        accounts_path,
+                    ).await
+                }
                 _ => unreachable!(),
             }
             .map_err(|err| {
@@ -974,13 +984,6 @@ async fn main() -> anyhow::Result<()> {
                 exit(1);
             });
             Ok(())
-        }
-        ("close-pool-market", Some(arg_matches)) => {
-            let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
-            command_run_close_pool_market(
-                &config,
-                accounts_path,
-            ).await
         }
         _ => unreachable!(),
     }
