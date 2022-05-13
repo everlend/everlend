@@ -20,9 +20,7 @@ pub enum DepositorInstruction {
     ///
     /// Accounts:
     /// [W] Depositor account - uninitialized
-    /// [R] General pool market
-    /// [R] Income pool market
-    /// [R] Liquidity oracle
+    /// [R] Registry
     /// [R] Rent sysvar
     Init,
 
@@ -121,27 +119,22 @@ pub enum DepositorInstruction {
     /// [R] Everlend ULP program id
     /// [R] Money market program id
     Withdraw,
+
+    /// Migrate depositor to v1
+    ///
+    /// Accounts
+    /// [W] Depositor
+    /// [R] Registry
+    /// [R] Registry config
+    MigrateDepositor,
 }
 
 /// Creates 'Init' instruction.
 #[allow(clippy::too_many_arguments)]
-pub fn init(
-    program_id: &Pubkey,
-    registry: &Pubkey,
-    depositor: &Pubkey,
-    general_pool_market: &Pubkey,
-    income_pool_market: &Pubkey,
-    liquidity_oracle: &Pubkey,
-) -> Instruction {
-    let (registry_config, _) =
-        everlend_registry::find_config_program_address(&everlend_registry::id(), registry);
-
+pub fn init(program_id: &Pubkey, registry: &Pubkey, depositor: &Pubkey) -> Instruction {
     let accounts = vec![
-        AccountMeta::new_readonly(registry_config, false),
         AccountMeta::new(*depositor, false),
-        AccountMeta::new_readonly(*general_pool_market, false),
-        AccountMeta::new_readonly(*income_pool_market, false),
-        AccountMeta::new_readonly(*liquidity_oracle, false),
+        AccountMeta::new_readonly(*registry, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
 
@@ -400,4 +393,27 @@ pub fn withdraw(
     accounts.extend(money_market_accounts);
 
     Instruction::new_with_borsh(*program_id, &DepositorInstruction::Withdraw, accounts)
+}
+
+/// Creates 'MigrateDepositor' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn migrate_depositor(
+    program_id: &Pubkey,
+    depositor: &Pubkey,
+    registry: &Pubkey,
+) -> Instruction {
+    let (registry_config, _) =
+        everlend_registry::find_config_program_address(&everlend_registry::id(), registry);
+
+    let accounts = vec![
+        AccountMeta::new(*depositor, false),
+        AccountMeta::new_readonly(*registry, false),
+        AccountMeta::new_readonly(registry_config, false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &DepositorInstruction::MigrateDepositor,
+        accounts,
+    )
 }

@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::path::PathBuf;
 use std::{process::exit, str::FromStr};
 
 use clap::{
@@ -20,7 +21,9 @@ use spl_associated_token_account::get_associated_token_address;
 use accounts_config::*;
 use commands::*;
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::{SetRegistryConfigParams, TOTAL_DISTRIBUTIONS};
+use everlend_registry::state::{
+    RegistryPrograms, RegistryRootAccounts, RegistrySettings, TOTAL_DISTRIBUTIONS,
+};
 use everlend_utils::integrations::MoneyMarket;
 use general_pool::get_withdrawal_requests;
 use utils::*;
@@ -63,25 +66,6 @@ async fn command_create(
 
     let (mint_map, collateral_mint_map) = get_asset_maps(default_accounts.clone());
 
-    println!("Registry");
-    let registry_pubkey = registry::init(config, None)?;
-    let mut registry_config = SetRegistryConfigParams {
-        general_pool_program_id: everlend_general_pool::id(),
-        ulp_program_id: everlend_ulp::id(),
-        liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
-        depositor_program_id: everlend_depositor::id(),
-        income_pools_program_id: everlend_income_pools::id(),
-        money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
-        refresh_income_interval: REFRESH_INCOME_INTERVAL,
-    };
-    registry_config.money_market_program_ids[0] = default_accounts.port_finance_program_id;
-    registry_config.money_market_program_ids[1] = default_accounts.larix_program_id;
-    registry_config.money_market_program_ids[2] = default_accounts.solend_program_id;
-
-    println!("registry_config = {:#?}", registry_config);
-
-    registry::set_registry_config(config, &registry_pubkey, registry_config)?;
-
     let general_pool_market_pubkey = general_pool::create_market(config, None)?;
     let income_pool_market_pubkey =
         income_pools::create_market(config, None, &general_pool_market_pubkey)?;
@@ -97,15 +81,55 @@ async fn command_create(
     let mut distribution = DistributionArray::default();
     distribution[0] = 0;
     distribution[1] = 0;
+    distribution[2] = 0;
+
+    println!("Registry");
+    let registry_pubkey = registry::init(config, None)?;
+    let mut programs = RegistryPrograms {
+        general_pool_program_id: everlend_general_pool::id(),
+        ulp_program_id: everlend_ulp::id(),
+        liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
+        depositor_program_id: everlend_depositor::id(),
+        income_pools_program_id: everlend_income_pools::id(),
+        money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
+        // refresh_income_interval: REFRESH_INCOME_INTERVAL,
+    };
+    programs.money_market_program_ids[0] = default_accounts.port_finance_program_id;
+    programs.money_market_program_ids[1] = default_accounts.larix_program_id;
+    programs.money_market_program_ids[2] = default_accounts.solend_program_id;
+
+    println!("programs = {:#?}", programs);
+
+    let mut collateral_pool_markets: [Pubkey; TOTAL_DISTRIBUTIONS] = Default::default();
+    collateral_pool_markets[..mm_pool_markets.len()].copy_from_slice(&mm_pool_markets);
+
+    let roots = RegistryRootAccounts {
+        general_pool_market: general_pool_market_pubkey,
+        income_pool_market: income_pool_market_pubkey,
+        collateral_pool_markets,
+        liquidity_oracle: liquidity_oracle_pubkey,
+    };
+
+    println!("roots = {:#?}", &roots);
+
+    registry::set_registry_config(
+        config,
+        &registry_pubkey,
+        programs,
+        roots,
+        RegistrySettings {
+            refresh_income_interval: REFRESH_INCOME_INTERVAL,
+        },
+    )?;
 
     println!("Depositor");
     let depositor_pubkey = depositor::init(
         config,
         &registry_pubkey,
         None,
-        &general_pool_market_pubkey,
-        &income_pool_market_pubkey,
-        &liquidity_oracle_pubkey,
+        // &general_pool_market_pubkey,
+        // &income_pool_market_pubkey,
+        // &liquidity_oracle_pubkey,
     )?;
 
     println!("Prepare borrow authority");
@@ -658,22 +682,34 @@ async fn main() -> anyhow::Result<()> {
                 ),
         )
         .subcommand(
-            SubCommand::with_name("migrate-general-pool")
-                .about("Migrate general pool account")
-                .arg(
-                    Arg::with_name("case")
-                        .value_name("TOKEN")
-                        .takes_value(true)
-                        .index(1)
-                        .help("Case"),
+            SubCommand::with_name("migration")
+                .about("Migrations")
+                .subcommand(
+                    SubCommand::with_name("migrate-general-pool")
+                        .about("Migrate general pool account")
+                        .arg(
+                            Arg::with_name("case")
+                                .value_name("TOKEN")
+                                .takes_value(true)
+                                .index(1)
+                                .help("Case"),
+                        )
+                        .arg(
+                            Arg::with_name("accounts")
+                                .short("A")
+                                .long("accounts")
+                                .value_name("PATH")
+                                .takes_value(true)
+                                .help("Accounts file"),
+                        ),
                 )
-                .arg(
-                    Arg::with_name("accounts")
-                        .short("A")
-                        .long("accounts")
-                        .value_name("PATH")
-                        .takes_value(true)
-                        .help("Accounts file"),
+                .subcommand(SubCommand::with_name("migrate-depositor").about(
+                    "Migrate Depositor account. Must be invoke after migrate-registry-config.",
+                ))
+                .subcommand(
+                    SubCommand::with_name("migrate-registry-config").about(
+                        "Migrate RegistryConfig account. Must be invoke by registry manager.",
+                    ),
                 ),
         )
         .get_matches();
@@ -682,7 +718,18 @@ async fn main() -> anyhow::Result<()> {
     let config = {
         let cli_config = if let Some(config_file) = matches.value_of("config_file") {
             println!("config_file = {:?}", config_file);
-            solana_cli_config::Config::load(config_file).unwrap_or_default()
+            solana_cli_config::Config::load(config_file)
+                .map(|mut cfg| {
+                    let path = PathBuf::from(cfg.keypair_path.clone());
+                    if !path.is_absolute() {
+                        let mut keypair_path = dirs_next::home_dir().expect("home directory");
+                        keypair_path.push(path);
+                        cfg.keypair_path = keypair_path.to_str().unwrap().to_string();
+                    }
+
+                    cfg
+                })
+                .unwrap_or_default()
         } else {
             solana_cli_config::Config::default()
         };
@@ -853,10 +900,29 @@ async fn main() -> anyhow::Result<()> {
 
             Ok(())
         }
-        ("migrate-general-pool", Some(arg_matches)) => {
-            let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
-            let case = value_of::<String>(arg_matches, "case");
-            command_run_migrate(&config, accounts_path, case).await
+        ("migration", Some(arg_matches)) => {
+            let _ = match arg_matches.subcommand() {
+                ("migrate-general-pool", Some(arg_matches)) => {
+                    let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
+                    let case = value_of::<String>(arg_matches, "case");
+                    command_run_migrate(&config, accounts_path, case).await
+                }
+                ("migrate-depositor", Some(_)) => {
+                    println!("WARN! This migration must be invoke after migrate-registry-config.");
+                    println!("Started Depositor migration");
+                    command_migrate_depositor(&config).await
+                }
+                ("migrate-registry-config", Some(_)) => {
+                    println!("Started RegistryConfig migration");
+                    command_migrate_registry_config(&config).await
+                }
+                _ => unreachable!(),
+            }
+            .map_err(|err| {
+                eprintln!("{}", err);
+                exit(1);
+            });
+            Ok(())
         }
         _ => unreachable!(),
     }
