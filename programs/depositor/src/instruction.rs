@@ -262,6 +262,7 @@ pub fn deposit(
     collateral_mint: &Pubkey,
     money_market_program_id: &Pubkey,
     money_market_accounts: Vec<AccountMeta>,
+    rebalancer: &Pubkey,
 ) -> Instruction {
     let (registry_config, _) =
         everlend_registry::find_config_program_address(&everlend_registry::id(), registry);
@@ -300,6 +301,7 @@ pub fn deposit(
         AccountMeta::new_readonly(*liquidity_mint, false),
         AccountMeta::new(collateral_transit, false),
         AccountMeta::new(*collateral_mint, false),
+        AccountMeta::new_readonly(*rebalancer, true),
         // Programs
         AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
@@ -328,6 +330,7 @@ pub fn withdraw(
     liquidity_mint: &Pubkey,
     money_market_program_id: &Pubkey,
     money_market_accounts: Vec<AccountMeta>,
+    rebalancer: &Pubkey,
 ) -> Instruction {
     let (registry_config, _) =
         everlend_registry::find_config_program_address(&everlend_registry::id(), registry);
@@ -381,6 +384,7 @@ pub fn withdraw(
         AccountMeta::new(liquidity_transit, false),
         AccountMeta::new(liquidity_reserve_transit, false),
         AccountMeta::new_readonly(*liquidity_mint, false),
+        AccountMeta::new_readonly(*rebalancer, true),
         // Programs
         AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
