@@ -41,7 +41,7 @@ use crate::{
 };
 
 /// Rebalancer pubkey
-pub const REBALANCER: &str = "5c3btNcKH3U3Ntk6b7k45fpAcYaQ5cByCcjqCmd8AGKY";
+pub const REBALANCER: &str = "9xjZ9CYGxtXGRTxJMevumNoVcqFEu4ZfFRyungr7WBff";
 
 /// Program state handler.
 pub struct Processor {}
