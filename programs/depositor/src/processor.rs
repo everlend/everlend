@@ -4,7 +4,6 @@ use std::cmp::Ordering;
 
 use borsh::BorshDeserialize;
 use solana_program::program_error::ProgramError;
-use solana_program::program_memory::sol_memset;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     clock::Clock,
@@ -30,7 +29,6 @@ use everlend_utils::{
     find_program_address, EverlendError,
 };
 
-use crate::state::DeprecatedDepositor;
 use crate::{
     find_rebalancing_program_address, find_transit_program_address,
     instruction::DepositorInstruction,
@@ -89,9 +87,9 @@ impl Processor {
         let _system_program_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
+        // Check programs
         assert_owned_by(depositor_info, program_id)?;
 
-        // Get depositor state
         // Check initialized
         Depositor::unpack(&depositor_info.data.borrow())?;
 
@@ -164,6 +162,10 @@ impl Processor {
         let _liquidity_oracle_program_info = next_account_info(account_info_iter)?;
         let _general_pool_program_info = next_account_info(account_info_iter)?;
 
+        // Check programs
+        assert_owned_by(registry_config_info, &everlend_registry::id())?;
+        assert_owned_by(depositor_info, program_id)?;
+
         // Get depositor state
         let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
 
@@ -177,15 +179,19 @@ impl Processor {
         let roots = RegistryRootAccounts::unpack_from_slice(&registry_config_info.data.borrow())?;
         let settings = RegistrySettings::unpack_from_slice(&registry_config_info.data.borrow())?;
 
-        // Check programs
-        assert_owned_by(registry_config_info, &everlend_registry::id())?;
-        assert_owned_by(depositor_info, program_id)?;
+        // Check external programs
         assert_owned_by(
             token_distribution_info,
             &programs.liquidity_oracle_program_id,
         )?;
+        assert_owned_by(general_pool_market_info, &programs.general_pool_program_id)?;
         assert_owned_by(general_pool_info, &programs.general_pool_program_id)?;
         assert_owned_by(withdrawal_requests_info, &programs.general_pool_program_id)?;
+        assert_owned_by(liquidity_oracle_info, &programs.liquidity_oracle_program_id)?;
+        assert_owned_by(
+            token_distribution_info,
+            &programs.liquidity_oracle_program_id,
+        )?;
 
         // Check root accounts
         assert_account_key(general_pool_market_info, &roots.general_pool_market)?;
@@ -274,6 +280,7 @@ impl Processor {
             &general_pool.token_mint,
         );
         assert_account_key(withdrawal_requests_info, &withdrawal_requests_pubkey)?;
+
         let withdrawal_requests =
             WithdrawalRequests::unpack(&withdrawal_requests_info.data.borrow())?;
 
@@ -401,6 +408,7 @@ impl Processor {
 
         let money_market_program_info = next_account_info(account_info_iter)?;
 
+        // Check programs
         assert_owned_by(registry_config_info, &everlend_registry::id())?;
         assert_owned_by(depositor_info, program_id)?;
         assert_owned_by(rebalancing_info, program_id)?;
@@ -416,7 +424,9 @@ impl Processor {
         let root_accounts =
             RegistryRootAccounts::unpack_from_slice(&registry_config_info.data.borrow())?;
 
+        // Check external programs
         assert_owned_by(collateral_pool_market_info, &programs.ulp_program_id)?;
+        assert_owned_by(collateral_pool_info, &programs.ulp_program_id)?;
 
         // Check collateral pool market
         if !root_accounts
@@ -576,12 +586,13 @@ impl Processor {
 
         let programs = RegistryPrograms::unpack_from_slice(&registry_config_info.data.borrow())
             .map(Box::new)?;
-
         let root_accounts =
             RegistryRootAccounts::unpack_from_slice(&registry_config_info.data.borrow())
                 .map(Box::new)?;
 
+        // Check external programs
         assert_owned_by(collateral_pool_market_info, &programs.ulp_program_id)?;
+        assert_owned_by(collateral_pool_info, &programs.ulp_program_id)?;
 
         // Check collateral pool market
         if !root_accounts
@@ -659,6 +670,18 @@ impl Processor {
         );
         assert_account_key(collateral_transit_info, &collateral_transit_pubkey)?;
 
+        // Check transit: collateral pool collateral (top naming)
+        let (collateral_pool_collateral_transit_pubkey, _) = find_transit_program_address(
+            program_id,
+            depositor_info.key,
+            collateral_pool_collateral_mint_info.key,
+            "",
+        );
+        assert_account_key(
+            collateral_pool_collateral_transit_info,
+            &collateral_pool_collateral_transit_pubkey,
+        )?;
+
         // Create depositor authority account
         let (depositor_authority_pubkey, bump_seed) =
             find_program_address(program_id, depositor_info.key);
@@ -707,48 +730,8 @@ impl Processor {
     }
 
     /// Process MigrateDepositor instruction
-    pub fn migrate_depositor(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
-        let account_info_iter = &mut accounts.iter();
-
-        let depositor_info = next_account_info(account_info_iter)?;
-        let registry_info = next_account_info(account_info_iter)?;
-        let registry_config_info = next_account_info(account_info_iter)?;
-
-        assert_owned_by(registry_config_info, &everlend_registry::id())?;
-        assert_owned_by(registry_info, &everlend_registry::id())?;
-        assert_owned_by(depositor_info, program_id)?;
-
-        let (registry_config, _) =
-            find_config_program_address(&everlend_registry::id(), registry_info.key);
-        assert_account_key(registry_config_info, &registry_config)?;
-
-        // Get deprecated depositor state
-        let deprecated_depositor = DeprecatedDepositor::unpack(&depositor_info.data.borrow())?;
-
-        let root_accounts =
-            RegistryRootAccounts::unpack_from_slice(&registry_config_info.data.borrow())?;
-        if &deprecated_depositor.general_pool_market != &root_accounts.general_pool_market {
-            Err(ProgramError::InvalidArgument)?;
-        }
-
-        if &deprecated_depositor.income_pool_market != &root_accounts.income_pool_market {
-            Err(ProgramError::InvalidArgument)?;
-        }
-
-        if &deprecated_depositor.income_pool_market != &root_accounts.income_pool_market {
-            Err(ProgramError::InvalidArgument)?;
-        }
-
-        let mut actual_depositor = Depositor::default();
-
-        actual_depositor.init(InitDepositorParams {
-            registry: *registry_info.key,
-        });
-
-        sol_memset(*depositor_info.data.borrow_mut(), 0, Depositor::LEN);
-        Depositor::pack(actual_depositor, *depositor_info.data.borrow_mut())?;
-
-        Ok(())
+    pub fn migrate_depositor(_program_id: &Pubkey, _accounts: &[AccountInfo]) -> ProgramResult {
+        Err(EverlendError::TemporaryUnavailable.into())
     }
 
     /// Instruction processing router
