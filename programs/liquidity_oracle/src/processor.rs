@@ -33,13 +33,11 @@ impl Processor {
         let liquidity_oracle_info = next_account_info(account_info_iter)?;
         let authority_info = next_account_info(account_info_iter)?;
 
-        // Check signer
         assert_signer(authority_info)?;
 
-        // Check liquidity oracle owner
+        // Check programs
         assert_owned_by(liquidity_oracle_info, program_id)?;
 
-        // Get state
         let mut liquidity_oracle =
             LiquidityOracle::unpack_unchecked(&liquidity_oracle_info.data.borrow())?;
         assert_uninitialized(&liquidity_oracle)?;
@@ -65,24 +63,19 @@ impl Processor {
         let update_authority = next_account_info(account_info_iter)?;
         let authority_info = next_account_info(account_info_iter)?;
 
-        // Check signer
         assert_signer(authority_info)?;
 
-        // Check liquidity oracle owner
+        // Check programs
         assert_owned_by(liquidity_oracle_info, program_id)?;
 
-        // Get state
         let mut liquidity_oracle = LiquidityOracle::unpack(&liquidity_oracle_info.data.borrow())?;
 
-        // Check liquidity oracle authority
-        if liquidity_oracle.authority != *authority_info.key {
-            return Err(ProgramError::InvalidArgument);
-        }
+        // Check current authority
+        assert_account_key(authority_info, &liquidity_oracle.authority)?;
 
-        // Update
+        // Update to new authority
         liquidity_oracle.update(*update_authority.key);
 
-        // Save state
         LiquidityOracle::pack(liquidity_oracle, *liquidity_oracle_info.data.borrow_mut())?;
 
         Ok(())
@@ -105,14 +98,14 @@ impl Processor {
         let rent = &Rent::from_account_info(rent_info)?;
         let _system_program_info = next_account_info(account_info_iter)?;
 
-        // Check signer
         assert_signer(authority_info)?;
 
-        // Check liquidity oracle owner
+        // Check programs
         assert_owned_by(liquidity_oracle_info, program_id)?;
 
-        // Get state
         let liquidity_oracle = LiquidityOracle::unpack(&liquidity_oracle_info.data.borrow())?;
+
+        // Check authotiry
         assert_account_key(authority_info, &liquidity_oracle.authority)?;
 
         // Check token distribution account
@@ -122,15 +115,17 @@ impl Processor {
                 liquidity_oracle_info.key,
                 token_mint.key,
             );
-        if token_distribution_pubkey != *token_distribution_account.key {
-            msg!("Token distribution provided does not match generated token distribution");
-            return Err(ProgramError::InvalidArgument);
-        }
+        // msg!("Token distribution provided does not match generated token distribution");
+        assert_account_key(token_distribution_account, &token_distribution_pubkey)?;
 
         let mut distribution = TokenDistribution::default();
 
         // Init account type
         distribution.init();
+
+        // TODO: If this is a creation instruction, then it is supposed to mean only the creation,
+        // and we can safely assume that the account does not exist.
+
         if token_distribution_account.data.borrow().len() > 0 {
             distribution =
                 TokenDistribution::unpack_unchecked(&token_distribution_account.data.borrow())?;
@@ -173,26 +168,26 @@ impl Processor {
         let clock_info = next_account_info(account_info_iter)?;
         let clock = Clock::from_account_info(clock_info)?;
 
-        // Check signer
         assert_signer(authority_info)?;
 
-        // Check liquidity oracle owner
+        // Check programs
         assert_owned_by(liquidity_oracle_info, program_id)?;
 
         // Get state
         let liquidity_oracle = LiquidityOracle::unpack(&liquidity_oracle_info.data.borrow())?;
+
+        // Check authotiry
         assert_account_key(authority_info, &liquidity_oracle.authority)?;
 
+        // Check token distribution
         let (token_distribution_pubkey, _) =
             find_liquidity_oracle_token_distribution_program_address(
                 program_id,
                 liquidity_oracle_info.key,
                 token_mint.key,
             );
-        if token_distribution_pubkey != *token_distribution_account.key {
-            msg!("Token distribution provided does not match generated token distribution");
-            return Err(ProgramError::InvalidArgument);
-        }
+        // msg!("Token distribution provided does not match generated token distribution");
+        assert_account_key(token_distribution_account, &token_distribution_pubkey)?;
 
         let mut distribution =
             TokenDistribution::unpack(&token_distribution_account.data.borrow())?;

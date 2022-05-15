@@ -38,6 +38,7 @@ impl Processor {
 
         assert_rent_exempt(rent, pool_market_info)?;
 
+        // Check programs
         assert_owned_by(pool_market_info, program_id)?;
         // TODO: replace to getting id from config program
         assert_owned_by(general_pool_market_info, &everlend_general_pool::id())?;
@@ -72,11 +73,13 @@ impl Processor {
 
         assert_signer(manager_info)?;
 
+        // Check programs
         assert_owned_by(pool_market_info, program_id)?;
 
         // Get pool market state
         let pool_market = IncomePoolMarket::unpack(&pool_market_info.data.borrow())?;
 
+        // Check manager
         assert_account_key(manager_info, &pool_market.manager)?;
 
         // Create pool account
@@ -133,12 +136,13 @@ impl Processor {
 
         assert_signer(user_transfer_authority_info)?;
 
+        // Check programs
         assert_owned_by(income_pool_market_info, program_id)?;
         assert_owned_by(income_pool_info, program_id)?;
 
-        // Get pool state
         let income_pool = IncomePool::unpack(&income_pool_info.data.borrow())?;
 
+        // Check income pool accounts
         assert_account_key(income_pool_market_info, &income_pool.income_pool_market)?;
         assert_account_key(income_pool_token_account_info, &income_pool.token_account)?;
 
@@ -166,6 +170,7 @@ impl Processor {
         let _everlend_general_pool_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
+        // Check programs
         assert_owned_by(income_pool_market_info, program_id)?;
         assert_owned_by(income_pool_info, program_id)?;
         assert_owned_by(general_pool_info, &everlend_general_pool::id())?;
@@ -173,10 +178,14 @@ impl Processor {
         let pool_market = IncomePoolMarket::unpack(&income_pool_market_info.data.borrow())?;
 
         let pool = IncomePool::unpack(&income_pool_info.data.borrow())?;
+
+        // Check pool accounts
         assert_account_key(income_pool_market_info, &pool.income_pool_market)?;
         assert_account_key(income_pool_token_account_info, &pool.token_account)?;
 
         let general_pool = Pool::unpack(&general_pool_info.data.borrow())?;
+
+        // Check general pool
         if general_pool.pool_market != pool_market.general_pool_market {
             return Err(ProgramError::InvalidArgument);
         }
@@ -185,13 +194,7 @@ impl Processor {
         let token_amount =
             Account::unpack_unchecked(&income_pool_token_account_info.data.borrow())?.amount;
 
-        let (income_pool_market_authority, bump_seed) =
-            find_program_address(program_id, income_pool_market_info.key);
-        assert_account_key(
-            income_pool_market_authority_info,
-            &income_pool_market_authority,
-        )?;
-
+        let (_, bump_seed) = find_program_address(program_id, income_pool_market_info.key);
         let signers_seeds = &[&income_pool_market_info.key.to_bytes()[..32], &[bump_seed]];
 
         // Transfer from token account to destination

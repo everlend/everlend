@@ -225,6 +225,8 @@ impl Processor {
                 rebalancing
             }
             _ => {
+                assert_owned_by(rebalancing_info, program_id)?;
+
                 let rebalancing = Rebalancing::unpack(&rebalancing_info.data.borrow())?;
                 assert_account_key(depositor_info, &rebalancing.depositor)?;
                 assert_account_key(mint_info, &rebalancing.mint)?;
@@ -232,8 +234,6 @@ impl Processor {
                 rebalancing
             }
         };
-
-        assert_owned_by(rebalancing_info, program_id)?;
 
         // Check rebalancing is completed
         if !rebalancing.is_completed() {

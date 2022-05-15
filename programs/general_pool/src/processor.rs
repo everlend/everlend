@@ -296,6 +296,7 @@ impl Processor {
 
         // Check programs
         assert_owned_by(pool_market_info, program_id)?;
+        assert_owned_by(pool_info, program_id)?;
         assert_owned_by(pool_borrow_authority_info, program_id)?;
 
         // Get pool market state
@@ -337,14 +338,17 @@ impl Processor {
 
         // Check programs
         assert_owned_by(pool_market_info, program_id)?;
+        assert_owned_by(pool_info, program_id)?;
         assert_owned_by(pool_borrow_authority_info, program_id)?;
 
-        // Get pool market state
         let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+
+        // Check manager
         assert_account_key(manager_info, &pool_market.manager)?;
 
-        // Get pool state
         let pool = Pool::unpack(&pool_info.data.borrow())?;
+
+        // Check pool accounts
         assert_account_key(pool_market_info, &pool.pool_market)?;
 
         // Get pool borrow authority state to check initialized

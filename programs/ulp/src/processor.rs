@@ -1,6 +1,10 @@
 //! Program state processor
 
 use borsh::BorshDeserialize;
+use everlend_utils::{
+    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
+    cpi, find_program_address, EverlendError,
+};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
@@ -12,11 +16,6 @@ use solana_program::{
     sysvar::Sysvar,
 };
 use spl_token::state::Mint;
-
-use everlend_utils::{
-    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
-    cpi, find_program_address, EverlendError,
-};
 
 use crate::{
     find_pool_borrow_authority_program_address, find_pool_program_address,
@@ -42,6 +41,7 @@ impl Processor {
 
         assert_rent_exempt(rent, pool_market_info)?;
 
+        // Check programs
         assert_owned_by(pool_market_info, program_id)?;
 
         // Get pool market state
@@ -74,6 +74,7 @@ impl Processor {
 
         assert_signer(manager_info)?;
 
+        // Check programs
         assert_owned_by(pool_market_info, program_id)?;
 
         // Get pool market state
@@ -152,15 +153,19 @@ impl Processor {
 
         assert_signer(manager_info)?;
 
+        // Check programs
         assert_owned_by(pool_market_info, program_id)?;
         assert_owned_by(pool_info, program_id)?;
 
         // Get pool market state
         let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+
+        // Check manager
         assert_account_key(manager_info, &pool_market.manager)?;
 
-        // Get pool state
         let pool = Pool::unpack(&pool_info.data.borrow())?;
+
+        // Check pool accounts
         assert_account_key(pool_market_info, &pool.pool_market)?;
 
         // Create pool borrow authority account
@@ -217,20 +222,27 @@ impl Processor {
         let manager_info = next_account_info(account_info_iter)?;
 
         assert_signer(manager_info)?;
+
+        // Check programs
         assert_owned_by(pool_market_info, program_id)?;
+        assert_owned_by(pool_info, program_id)?;
         assert_owned_by(pool_borrow_authority_info, program_id)?;
 
-        // Get pool market state
         let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+
+        // Check manager
         assert_account_key(manager_info, &pool_market.manager)?;
 
-        // Get pool state
         let pool = Pool::unpack(&pool_info.data.borrow())?;
+
+        // Check pool accounts
         assert_account_key(pool_market_info, &pool.pool_market)?;
 
         // Get pool borrow authority state
         let mut pool_borrow_authority =
             PoolBorrowAuthority::unpack(&pool_borrow_authority_info.data.borrow())?;
+
+        // Check pool borrow authority accounts
         assert_account_key(pool_info, &pool_borrow_authority.pool)?;
 
         pool_borrow_authority.update_share_allowed(share_allowed);
@@ -256,15 +268,21 @@ impl Processor {
         let manager_info = next_account_info(account_info_iter)?;
 
         assert_signer(manager_info)?;
+
+        // Check programs
         assert_owned_by(pool_market_info, program_id)?;
+        assert_owned_by(pool_info, program_id)?;
         assert_owned_by(pool_borrow_authority_info, program_id)?;
 
-        // Get pool market state
         let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+
+        // Check manager
         assert_account_key(manager_info, &pool_market.manager)?;
 
-        // Get pool state
         let pool = Pool::unpack(&pool_info.data.borrow())?;
+
+        // Check pool accounts
+        // Check pool borrow authority accounts
         assert_account_key(pool_market_info, &pool.pool_market)?;
 
         // Get pool borrow authority state to check initialized
@@ -303,12 +321,14 @@ impl Processor {
 
         assert_signer(user_transfer_authority_info)?;
 
+        // Check programs
         assert_owned_by(pool_market_info, program_id)?;
         assert_owned_by(pool_info, program_id)?;
 
         // Get pool state
         let pool = Pool::unpack(&pool_info.data.borrow())?;
 
+        // Check pool accounts
         assert_account_key(pool_market_info, &pool.pool_market)?;
         assert_account_key(token_account_info, &pool.token_account)?;
         assert_account_key(pool_mint_info, &pool.pool_mint)?;
@@ -366,12 +386,14 @@ impl Processor {
 
         assert_signer(user_transfer_authority_info)?;
 
+        // Check programs
         assert_owned_by(pool_market_info, program_id)?;
         assert_owned_by(pool_info, program_id)?;
 
         // Get pool state
         let pool = Pool::unpack(&pool_info.data.borrow())?;
 
+        // Check pool accounts
         assert_account_key(pool_market_info, &pool.pool_market)?;
         assert_account_key(token_account_info, &pool.token_account)?;
         assert_account_key(pool_mint_info, &pool.pool_mint)?;
@@ -424,18 +446,21 @@ impl Processor {
 
         assert_signer(borrow_authority_info)?;
 
+        // Check programs
         assert_owned_by(pool_market_info, program_id)?;
         assert_owned_by(pool_info, program_id)?;
         assert_owned_by(pool_borrow_authority_info, program_id)?;
 
-        // Get pool state
         let mut pool = Pool::unpack(&pool_info.data.borrow())?;
+
+        // Check pool accounts
         assert_account_key(pool_market_info, &pool.pool_market)?;
         assert_account_key(token_account_info, &pool.token_account)?;
 
-        // Get pool borrow authority state
         let mut pool_borrow_authority =
             PoolBorrowAuthority::unpack(&pool_borrow_authority_info.data.borrow())?;
+
+        // Check pool borrow authority accounts
         assert_account_key(pool_info, &pool_borrow_authority.pool)?;
         assert_account_key(
             borrow_authority_info,
@@ -449,7 +474,7 @@ impl Processor {
         )?)?;
         pool.borrow(amount)?;
 
-        // Checks...
+        // Check interest ?
 
         PoolBorrowAuthority::pack(
             pool_borrow_authority,
@@ -490,24 +515,27 @@ impl Processor {
 
         assert_signer(user_transfer_authority_info)?;
 
+        // Check programs
         assert_owned_by(pool_market_info, program_id)?;
         assert_owned_by(pool_info, program_id)?;
         assert_owned_by(pool_borrow_authority_info, program_id)?;
 
-        // Get pool state
         let mut pool = Pool::unpack(&pool_info.data.borrow())?;
+
+        // Check pool accounts
         assert_account_key(pool_market_info, &pool.pool_market)?;
         assert_account_key(token_account_info, &pool.token_account)?;
 
-        // Get pool borrow authority state
         let mut pool_borrow_authority =
             PoolBorrowAuthority::unpack(&pool_borrow_authority_info.data.borrow())?;
+
+        // Check pool borrow authority accounts
         assert_account_key(pool_info, &pool_borrow_authority.pool)?;
 
         pool_borrow_authority.repay(amount)?;
         pool.repay(amount)?;
 
-        // Checks...
+        // Check interest ?
 
         PoolBorrowAuthority::pack(
             pool_borrow_authority,
