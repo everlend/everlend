@@ -26,8 +26,8 @@ use everlend_registry::{
     state::{RegistryPrograms, RegistryRootAccounts, RegistrySettings},
 };
 use everlend_utils::{
-    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
-    cpi, find_program_address, EverlendError,
+    assert_account_key, assert_owned_by, assert_rent_exempt, assert_uninitialized, cpi,
+    find_program_address, EverlendError,
 };
 
 use crate::state::DeprecatedDepositor;
@@ -39,9 +39,6 @@ use crate::{
     },
     utils::{deposit, withdraw},
 };
-
-/// Rebalancer pubkey
-pub const REBALANCER: &str = "5c3btNcKH3U3Ntk6b7k45fpAcYaQ5cByCcjqCmd8AGKY";
 
 /// Program state handler.
 pub struct Processor {}
@@ -169,11 +166,6 @@ impl Processor {
 
         // Get depositor state
         let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
-
-        assert_signer(from_info)?;
-        if from_info.key.to_string() != REBALANCER {
-            return Err(ProgramError::InvalidArgument);
-        }
 
         // Check registry
         let (registry_config_pubkey, _) =
@@ -402,19 +394,12 @@ impl Processor {
         let collateral_transit_info = next_account_info(account_info_iter)?;
         let collateral_mint_info = next_account_info(account_info_iter)?;
 
-        let rebalancer_info = next_account_info(account_info_iter)?;
-
         let clock_info = next_account_info(account_info_iter)?;
         let clock = Clock::from_account_info(clock_info)?;
         let _token_program_info = next_account_info(account_info_iter)?;
         let _everlend_ulp_info = next_account_info(account_info_iter)?;
 
         let money_market_program_info = next_account_info(account_info_iter)?;
-
-        assert_signer(rebalancer_info)?;
-        if rebalancer_info.key.to_string() != REBALANCER {
-            return Err(ProgramError::InvalidArgument);
-        }
 
         assert_owned_by(registry_config_info, &everlend_registry::id())?;
         assert_owned_by(depositor_info, program_id)?;
@@ -570,8 +555,6 @@ impl Processor {
         let liquidity_reserve_transit_info = next_account_info(account_info_iter)?;
         let liquidity_mint_info = next_account_info(account_info_iter)?;
 
-        let rebalancer_info = next_account_info(account_info_iter)?;
-
         let clock_info = next_account_info(account_info_iter)?;
         let clock = Clock::from_account_info(clock_info)?;
         let _token_program_info = next_account_info(account_info_iter)?;
@@ -579,11 +562,6 @@ impl Processor {
         let _everlend_income_pools_info = next_account_info(account_info_iter)?;
 
         let money_market_program_info = next_account_info(account_info_iter)?;
-
-        assert_signer(rebalancer_info)?;
-        if rebalancer_info.key.to_string() != REBALANCER {
-            return Err(ProgramError::InvalidArgument);
-        }
 
         assert_owned_by(registry_config_info, &everlend_registry::id())?;
         assert_owned_by(depositor_info, program_id)?;
