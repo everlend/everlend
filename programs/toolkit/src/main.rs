@@ -439,7 +439,6 @@ async fn main() -> anyhow::Result<()> {
                         .long("accounts")
                         .value_name("PATH")
                         .takes_value(true)
-                        .required(true)
                         .help("Accounts file"),
                 )
                 .arg(
