@@ -1042,7 +1042,10 @@ async fn fail_with_invalid_collateral_mint() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(0, InvalidAccountData)
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
+        )
     );
 }
 

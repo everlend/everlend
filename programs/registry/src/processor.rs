@@ -39,6 +39,8 @@ impl Processor {
         let rent = &Rent::from_account_info(rent_info)?;
 
         assert_rent_exempt(rent, registry_info)?;
+
+        // Check programs
         assert_owned_by(registry_info, program_id)?;
 
         // Get registry state
@@ -72,12 +74,14 @@ impl Processor {
 
         assert_signer(manager_info)?;
 
+        // Check programs
         assert_owned_by(registry_info, program_id)?;
 
         // Get registry state
         let registry = Registry::unpack(&registry_info.data.borrow())?;
         assert_account_key(manager_info, &registry.manager)?;
 
+        // Check registry config
         let (registry_config_pubkey, bump_seed) =
             find_config_program_address(program_id, registry_info.key);
         assert_account_key(registry_config_info, &registry_config_pubkey)?;
@@ -109,14 +113,16 @@ impl Processor {
                 registry_config
             }
             _ => {
+                assert_owned_by(registry_config_info, program_id)?;
+
                 let registry_config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
+
+                // Check registry config accounts
                 assert_account_key(registry_info, &registry_config.registry)?;
 
                 registry_config
             }
         };
-
-        assert_owned_by(registry_config_info, program_id)?;
 
         RegistryPrograms::pack_into_slice(&programs, *registry_config_info.data.borrow_mut());
         RegistryRootAccounts::pack_into_slice(&roots, *registry_config_info.data.borrow_mut());
@@ -141,20 +147,25 @@ impl Processor {
 
         assert_signer(manager_info)?;
 
+        // Check programs
         assert_owned_by(registry_info, program_id)?;
+        assert_owned_by(registry_config_info, program_id)?;
 
         // Get registry state
         let registry = Registry::unpack(&registry_info.data.borrow())?;
+
+        // Check manager
         assert_account_key(manager_info, &registry.manager)?;
 
+        // Check registry config
         let (registry_config_pubkey, _) =
             find_config_program_address(program_id, registry_info.key);
         assert_account_key(registry_config_info, &registry_config_pubkey)?;
 
         let registry_config = RegistryConfig::unpack(&registry_config_info.data.borrow())?;
-        assert_account_key(registry_info, &registry_config.registry)?;
 
-        assert_owned_by(registry_config_info, program_id)?;
+        // Check registry config accounts
+        assert_account_key(registry_info, &registry_config.registry)?;
 
         RegistryRootAccounts::pack_into_slice(&roots, *registry_config_info.data.borrow_mut());
 
@@ -170,19 +181,25 @@ impl Processor {
 
         assert_signer(manager_info)?;
 
+        // Check programs
         assert_owned_by(registry_info, program_id)?;
         assert_owned_by(registry_config_info, program_id)?;
 
         // Get registry state
         let registry = Registry::unpack(&registry_info.data.borrow())?;
+
+        // Check manager
         assert_account_key(manager_info, &registry.manager)?;
 
+        // Check registry config
         let (registry_config_pubkey, _) =
             find_config_program_address(program_id, registry_info.key);
         assert_account_key(registry_config_info, &registry_config_pubkey)?;
 
         let registry_config =
             DeprecatedRegistryConfig::unpack(&registry_config_info.data.borrow())?;
+
+        // Check registry config accounts
         assert_account_key(registry_info, &registry_config.registry)?;
 
         // Close registry config account and return rent
