@@ -1,6 +1,6 @@
 import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import { PublicKey } from '@solana/web3.js'
-import { RegistryProgram } from './registry-program'
+import { RegistryProgram } from './registryProgram'
 
 export const findAssociatedTokenAccount = async (owner: PublicKey, mint: PublicKey) => {
   return (
