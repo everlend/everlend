@@ -286,7 +286,6 @@ impl Processor {
 
         RegistryPoolConfig::pack(registry_pool_config, *registry_pool_config_info.data.borrow_mut())?;
 
-        msg!("3");
         Ok(())
     }
 
