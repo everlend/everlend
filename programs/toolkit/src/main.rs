@@ -450,6 +450,20 @@ async fn main() -> anyhow::Result<()> {
                         .takes_value(true)
                         .required(true)
                         .help("General pool pubkey"),
+                )
+                .arg(
+                    Arg::with_name("min-deposit")
+                        .long("min-deposit")
+                        .value_name("NUMBER")
+                        .takes_value(true)
+                        .help("Minimum amount for deposit"),
+                )
+                .arg(
+                    Arg::with_name("min-withdraw")
+                        .long("min-withdraw")
+                        .value_name("NUMBER")
+                        .takes_value(true)
+                        .help("Minimum amount for deposit"),
                 ),
         )
         .subcommand(
@@ -876,7 +890,9 @@ async fn main() -> anyhow::Result<()> {
         ("set-registry-pool-config", Some(arg_matches)) => {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
             let general_pool = pubkey_of(arg_matches, "general-pool").unwrap();
-            let params = SetRegistryPoolConfigParams { deposit_minimum: 0, withdraw_minimum: 0 };
+            let deposit_minimum = value_of::<u64>(arg_matches, "min-deposit").unwrap_or(0);
+            let withdraw_minimum = value_of::<u64>(arg_matches, "min-withdraw").unwrap_or(0);
+            let params = SetRegistryPoolConfigParams { deposit_minimum, withdraw_minimum };
             command_set_registry_pool_config(&config, accounts_path, general_pool, params).await
         }
         ("create-general-pool-market", Some(arg_matches)) => {
