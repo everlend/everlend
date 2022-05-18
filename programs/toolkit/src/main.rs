@@ -778,6 +778,9 @@ async fn main() -> anyhow::Result<()> {
             exit(1);
         });
 
+        println!("fee_payer = {:?}", fee_payer);
+        println!("owner = {:?}", owner);
+
         let verbose = matches.is_present("verbose");
 
         Config {
