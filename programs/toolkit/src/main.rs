@@ -355,6 +355,9 @@ async fn command_run_migrate_pool_market(
         config,
         &initialized_accounts.general_pool_market,
     )?;
+    println!("Closed general pool market");
+
+    println!("Create general pool market");
     general_pool::create_market(
         config, Some(keypair), &initialized_accounts.registry
     )?;
