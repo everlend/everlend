@@ -39,10 +39,15 @@ pub fn find_safety_fund_token_account_address(
 ) -> (Pubkey, u8) {
     Pubkey::find_program_address(
         &[
-            br"safety_fund",
+            safety_fund_token_account_seed().as_bytes(),
             &pool_market_pubkey.to_bytes(),
             &token_mint_pubkey.to_bytes(),
         ],
         program_id,
     )
+}
+
+/// Generate safety fund token account seed
+pub fn safety_fund_token_account_seed() -> String{
+    return "safety_fund".to_owned()
 }

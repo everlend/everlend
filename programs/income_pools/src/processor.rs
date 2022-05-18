@@ -1,7 +1,7 @@
 //! Program state processor
 
 use crate::{
-    find_pool_program_address, find_safety_fund_token_account_address,
+    find_pool_program_address, find_safety_fund_token_account_address, safety_fund_token_account_seed,
     instruction::IncomePoolsInstruction,
     state::{IncomePool, IncomePoolMarket, InitIncomePoolMarketParams, InitIncomePoolParams},
 };
@@ -267,8 +267,9 @@ impl Processor {
 
         assert_account_key(token_account_info, &token_account_pubkey)?;
 
+        let safety_fund_token_account_seed = safety_fund_token_account_seed();
         let signers_seeds = &[
-            br"safety_fund",
+            safety_fund_token_account_seed.as_bytes(),
             &income_pool_market_info.key.to_bytes()[..32],
             &token_mint_info.key.to_bytes()[..32],
             &[bump_seed],
