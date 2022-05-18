@@ -10,7 +10,7 @@ import {
 } from './accounts'
 import { GeneralPoolsProgram } from './program'
 import { CreateAssociatedTokenAccount, findAssociatedTokenAccount, findRegistryPoolConfigAccount } from '@everlend/common'
-import { Borrow, CreatePool, Deposit, InitPoolMarket, Repay, WithdrawRequest } from './transactions'
+import { Borrow, CreatePool, Deposit, InitPoolMarket, Repay, WithdrawRequest, Withdraw } from './transactions'
 import { Buffer } from 'buffer'
 
 export type ActionResult = {
@@ -207,6 +207,62 @@ export const withdrawRequest = async (
         collateralTransit,
         poolMint,
         collateralAmount,
+      },
+    ),
+  )
+
+  return { tx }
+}
+
+export const withdraw = async (
+  { connection, payerPublicKey }: ActionOptions,
+  withdrawalRequest: PublicKey,
+): Promise<ActionResult> => {
+  const {
+    data: { from, destination, pool },
+  } = await WithdrawRequest.load(connection, withdrawalRequest)
+
+  const {
+    data: { tokenMint, poolMarket, poolMint, tokenAccount },
+  } = await Pool.load(connection, pool)
+
+  const withdrawRequests = await WithdrawalRequests.getPDA(poolMarket, tokenMint)
+  const poolMarketAuthority = await GeneralPoolsProgram.findProgramAddress([poolMarket.toBuffer()])
+
+  const collateralTransit = await GeneralPoolsProgram.findProgramAddress([
+    Buffer.from('transit'),
+    poolMarket.toBuffer(),
+    poolMint.toBuffer(),
+  ])
+
+  const tx = new Transaction()
+
+  // Create destination account for token mint if doesn't exist
+  !(await connection.getAccountInfo(destination)) &&
+  tx.add(
+    new CreateAssociatedTokenAccount(
+      { feePayer: payerPublicKey },
+      {
+        associatedTokenAddress: destination,
+        tokenMint,
+      },
+    ),
+  )
+
+  tx.add(
+    new Withdraw(
+      { feePayer: payerPublicKey },
+      {
+        poolMarket,
+        pool,
+        poolMarketAuthority,
+        poolMint,
+        withdrawRequests,
+        withdrawalRequest,
+        from,
+        destination,
+        tokenAccount,
+        collateralTransit,
       },
     ),
   )
