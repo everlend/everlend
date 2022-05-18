@@ -170,6 +170,22 @@ pub enum LiquidityPoolsInstruction {
         collateral_amount: u64,
     },
 
+    /// Cancel withdraw request and return collateral tokens to user
+    ///
+    /// Accounts:
+    /// [R] Pool market
+    /// [R] Pool
+    /// [W] Withdrawal requests account
+    /// [W] Withdrawal request account
+    /// [W] Withdrawal source collateral account
+    /// [W] Transit collateral account
+    /// [W] Pool mint account
+    /// [R] Pool market authority
+    /// [W] From account
+    /// [RS] Market manager
+    /// [R] Token program id
+    CancelWithdrawRequest,
+
     /// Migrate account data
     ///
     MigrationInstruction,
@@ -436,6 +452,47 @@ pub fn withdraw_request(
     Instruction::new_with_borsh(
         *program_id,
         &LiquidityPoolsInstruction::WithdrawRequest { collateral_amount },
+        accounts,
+    )
+}
+
+/// Creates 'CancelWithdrawRequest' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn cancel_withdraw_request(
+    program_id: &Pubkey,
+    pool_market: &Pubkey,
+    pool: &Pubkey,
+    source: &Pubkey,
+    token_mint: &Pubkey,
+    pool_mint: &Pubkey,
+    manager: &Pubkey,
+    from: &Pubkey,
+) -> Instruction {
+    let (pool_market_authority, _) = find_program_address(program_id, pool_market);
+
+    let (withdrawal_requests, _) =
+        find_withdrawal_requests_program_address(program_id, pool_market, token_mint);
+    let (collateral_transit, _) = find_transit_program_address(program_id, pool_market, pool_mint);
+    let (withdrawal_request, _) =
+        find_withdrawal_request_program_address(program_id, &withdrawal_requests, from);
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*pool_market, false),
+        AccountMeta::new_readonly(*pool, false),
+        AccountMeta::new(withdrawal_requests, false),
+        AccountMeta::new(withdrawal_request, false),
+        AccountMeta::new(*source, false),
+        AccountMeta::new(collateral_transit, false),
+        AccountMeta::new(*pool_mint, false),
+        AccountMeta::new_readonly(pool_market_authority, false),
+        AccountMeta::new(*from, false),
+        AccountMeta::new_readonly(*manager, true),
+        AccountMeta::new_readonly(spl_token::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &LiquidityPoolsInstruction::CancelWithdrawRequest,
         accounts,
     )
 }

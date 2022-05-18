@@ -489,6 +489,19 @@ async fn main() -> anyhow::Result<()> {
                 ),
         )
         .subcommand(
+            SubCommand::with_name("cancel-withdraw-request")
+                .about("Cancel withdraw request")
+                .arg(
+                    Arg::with_name("request")
+                        .long("request")
+                        .validator(is_pubkey)
+                        .value_name("ADDRESS")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Withdrawal request pubkey"),
+                ),
+        )
+        .subcommand(
             SubCommand::with_name("add-reserve-liquidity")
                 .about("Transfer liquidity to reserve account")
                 .arg(
@@ -765,6 +778,9 @@ async fn main() -> anyhow::Result<()> {
             exit(1);
         });
 
+        println!("fee_payer = {:?}", fee_payer);
+        println!("owner = {:?}", owner);
+
         let verbose = matches.is_present("verbose");
 
         Config {
@@ -821,6 +837,10 @@ async fn main() -> anyhow::Result<()> {
             let mint = arg_matches.value_of("mint").unwrap();
             let amount = value_of::<u64>(arg_matches, "amount").unwrap();
             command_add_reserve_liquidity(&config, mint, amount).await
+        }
+        ("cancel-withdraw-request", Some(arg_matches)) => {
+            let request_pubkey = pubkey_of(arg_matches, "request").unwrap();
+            command_cancel_withdraw_request(&config, &request_pubkey).await
         }
         ("info-reserve-liquidity", Some(_)) => command_info_reserve_liquidity(&config).await,
         ("create", Some(arg_matches)) => {

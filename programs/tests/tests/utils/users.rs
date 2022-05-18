@@ -55,9 +55,6 @@ pub async fn add_liquidity_provider(
     )
     .await?;
 
-    // Fill user account by native token
-    transfer(context, &token_account.pubkey(), mint_amount).await?;
-
     if *token_mint_pubkey != spl_token::native_mint::id() {
         mint_tokens(
             context,
@@ -67,7 +64,10 @@ pub async fn add_liquidity_provider(
             mint_amount,
         )
         .await?;
-    };
+    } else {
+        // Fill user account by native token
+        transfer(context, &token_account.pubkey(), mint_amount).await?;
+    }
 
     Ok(LiquidityProvider {
         owner: user,
