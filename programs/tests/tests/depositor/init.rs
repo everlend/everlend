@@ -21,7 +21,7 @@ async fn success() {
     test_liquidity_oracle.init(&mut context).await.unwrap();
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context).await.unwrap();
+    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let income_pool_market = TestIncomePoolMarket::new();
     income_pool_market
@@ -45,7 +45,7 @@ async fn fail_second_time_init() {
     test_liquidity_oracle.init(&mut context).await.unwrap();
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context).await.unwrap();
+    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let income_pool_market = TestIncomePoolMarket::new();
     income_pool_market
@@ -84,13 +84,13 @@ async fn fail_second_time_init() {
 
 #[tokio::test]
 async fn fail_with_invalid_registry() {
-    let (mut context, _, _, _) = presetup().await;
+    let (mut context, _, _, registry) = presetup().await;
 
     let test_liquidity_oracle = TestLiquidityOracle::new();
     test_liquidity_oracle.init(&mut context).await.unwrap();
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context).await.unwrap();
+    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let income_pool_market = TestIncomePoolMarket::new();
     income_pool_market
@@ -129,9 +129,47 @@ async fn fail_with_invalid_registry() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(
-            1,
-            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32)
-        )
+        TransactionError::InstructionError(1,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32))
+    );
+}
+
+#[tokio::test]
+async fn fail_with_invalid_uncreated_depositor_account() {
+    let (mut context, _, _, registry) = presetup().await;
+
+    let test_liquidity_oracle = TestLiquidityOracle::new();
+    test_liquidity_oracle.init(&mut context).await.unwrap();
+
+    let general_pool_market = TestGeneralPoolMarket::new();
+    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
+
+    let income_pool_market = TestIncomePoolMarket::new();
+    income_pool_market
+        .init(&mut context, &general_pool_market)
+        .await
+        .unwrap();
+
+    let test_depositor = TestDepositor::new();
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::init(
+            &everlend_depositor::id(),
+            &registry.keypair.pubkey(),
+            &test_depositor.depositor.pubkey(),
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(0, InstructionError::AccountNotRentExempt)
     );
 }

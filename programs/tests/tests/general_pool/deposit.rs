@@ -9,22 +9,32 @@ use solana_sdk::signature::Keypair;
 use solana_sdk::{
     pubkey::Pubkey, signer::Signer, transaction::Transaction, transaction::TransactionError,
 };
+use everlend_registry::state::SetRegistryPoolConfigParams;
 use spl_token::error::TokenError;
 
 async fn setup() -> (
     ProgramTestContext,
+    TestRegistry,
     TestGeneralPoolMarket,
     TestGeneralPool,
     LiquidityProvider,
 ) {
-    let mut context = presetup().await.0;
+    let (mut context, _, _, registry) = presetup().await;
 
     let test_pool_market = TestGeneralPoolMarket::new();
-    test_pool_market.init(&mut context).await.unwrap();
+    test_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let test_pool = TestGeneralPool::new(&test_pool_market, None);
     test_pool
         .create(&mut context, &test_pool_market)
+        .await
+        .unwrap();
+    registry
+        .set_registry_pool_config(
+            &mut context,
+            &test_pool.pool_pubkey,
+            SetRegistryPoolConfigParams { deposit_minimum: 0, withdraw_minimum: 0 }
+        )
         .await
         .unwrap();
 
@@ -37,15 +47,15 @@ async fn setup() -> (
     .await
     .unwrap();
 
-    (context, test_pool_market, test_pool, user)
+    (context, registry, test_pool_market, test_pool, user)
 }
 
 #[tokio::test]
 async fn success() {
-    let (mut context, test_pool_market, test_pool, user) = setup().await;
+    let (mut context, test_registry, test_pool_market, test_pool, user) = setup().await;
 
     test_pool
-        .deposit(&mut context, &test_pool_market, &user, 100)
+        .deposit(&mut context, &test_registry, &test_pool_market, &user, 100)
         .await
         .unwrap();
 
@@ -57,12 +67,12 @@ async fn success() {
 
 #[tokio::test]
 async fn success_with_rate() {
-    let (mut context, test_pool_market, test_pool, user) = setup().await;
+    let (mut context, test_registry, test_pool_market, test_pool, user) = setup().await;
     let a = (100 * EXP, 50 * EXP, 100 * EXP); // Deposit -> Raise -> Deposit
 
     // 0. Deposit to 100
     test_pool
-        .deposit(&mut context, &test_pool_market, &user, a.0)
+        .deposit(&mut context, &test_registry, &test_pool_market, &user, a.0)
         .await
         .unwrap();
 
@@ -81,7 +91,7 @@ async fn success_with_rate() {
 
     // 2. More deposit with changed rate
     test_pool
-        .deposit(&mut context, &test_pool_market, &user, a.2)
+        .deposit(&mut context, &test_registry, &test_pool_market, &user, a.2)
         .await
         .unwrap();
 
@@ -99,11 +109,12 @@ const AMOUNT: u64 = 100 * EXP;
 
 #[tokio::test]
 async fn fail_with_invalid_pool_mint_pubkey_argument() {
-    let (mut context, test_pool_market, test_pool, user) = setup().await;
+    let (mut context, test_registry, test_pool_market, test_pool, user) = setup().await;
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
             &everlend_general_pool::id(),
+            &test_registry.keypair.pubkey(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &user.token_account,
@@ -132,11 +143,12 @@ async fn fail_with_invalid_pool_mint_pubkey_argument() {
 
 #[tokio::test]
 async fn fail_with_invalid_token_account_pubkey_argument() {
-    let (mut context, test_pool_market, test_pool, user) = setup().await;
+    let (mut context, test_registry, test_pool_market, test_pool, user) = setup().await;
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
             &everlend_general_pool::id(),
+            &test_registry.keypair.pubkey(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &user.token_account,
@@ -165,13 +177,14 @@ async fn fail_with_invalid_token_account_pubkey_argument() {
 
 #[tokio::test]
 async fn fail_with_invalid_destination_argument() {
-    let (mut context, test_pool_market, test_pool, user) = setup().await;
+    let (mut context, test_registry, test_pool_market, test_pool, user) = setup().await;
 
     // Create new pool
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
             &everlend_general_pool::id(),
+            &test_registry.keypair.pubkey(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &user.token_account,
@@ -203,11 +216,12 @@ async fn fail_with_invalid_destination_argument() {
 
 #[tokio::test]
 async fn fail_with_invalid_source_argument() {
-    let (mut context, test_pool_market, test_pool, user) = setup().await;
+    let (mut context, test_registry, test_pool_market, test_pool, user) = setup().await;
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
             &everlend_general_pool::id(),
+            &test_registry.keypair.pubkey(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             //Wrong source
@@ -239,13 +253,14 @@ async fn fail_with_invalid_source_argument() {
 
 #[tokio::test]
 async fn fail_with_invalid_user_transfer_authority() {
-    let (mut context, test_pool_market, test_pool, user) = setup().await;
+    let (mut context, test_registry, test_pool_market, test_pool, user) = setup().await;
 
     let wrong_authority = Keypair::new();
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
             &everlend_general_pool::id(),
+            &test_registry.keypair.pubkey(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &user.token_account,
@@ -277,11 +292,12 @@ async fn fail_with_invalid_user_transfer_authority() {
 
 #[tokio::test]
 async fn fail_with_invalid_pool_market_argument() {
-    let (mut context, _test_pool_market, test_pool, user) = setup().await;
+    let (mut context, test_registry, _test_pool_market, test_pool, user) = setup().await;
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
             &everlend_general_pool::id(),
+            &test_registry.keypair.pubkey(),
             // Wrong pool market
             &Pubkey::new_unique(),
             &test_pool.pool_pubkey,
@@ -313,11 +329,12 @@ async fn fail_with_invalid_pool_market_argument() {
 
 #[tokio::test]
 async fn fail_with_invalid_pool_argument() {
-    let (mut context, test_pool_market, test_pool, user) = setup().await;
+    let (mut context, test_registry, test_pool_market, test_pool, user) = setup().await;
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
             &everlend_general_pool::id(),
+            &test_registry.keypair.pubkey(),
             &test_pool_market.keypair.pubkey(),
             //Wrong pool
             &Pubkey::new_unique(),
@@ -343,6 +360,51 @@ async fn fail_with_invalid_pool_argument() {
         TransactionError::InstructionError(
             0,
             InstructionError::Custom(EverlendError::InvalidAccountOwner as u32)
+        )
+    );
+}
+
+#[tokio::test]
+async fn fail_with_amount_too_small() {
+    let (mut context, test_registry, test_pool_market, test_pool, user) = setup().await;
+    let deposit_amount = 1000;
+    let pool_config_params = SetRegistryPoolConfigParams {
+        deposit_minimum: 1100,
+        withdraw_minimum: 1100,
+    };
+    test_registry
+        .set_registry_pool_config(&mut context, &test_pool.pool_pubkey, pool_config_params)
+        .await
+        .unwrap();
+
+    let tx = Transaction::new_signed_with_payer(
+        &[instruction::deposit(
+            &everlend_general_pool::id(),
+            &test_registry.keypair.pubkey(),
+            &test_pool_market.keypair.pubkey(),
+            &test_pool.pool_pubkey,
+            &user.token_account,
+            &user.pool_account,
+            &test_pool.token_account.pubkey(),
+            &test_pool.pool_mint.pubkey(),
+            &user.pubkey(),
+            deposit_amount,
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer, &user.owner],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::DepositAmountTooSmall as u32)
         )
     );
 }

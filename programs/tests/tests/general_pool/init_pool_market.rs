@@ -11,10 +11,10 @@ use solana_sdk::transaction::{Transaction, TransactionError};
 
 #[tokio::test]
 async fn success() {
-    let mut context = presetup().await.0;
+    let (mut context, _, _, registry) = presetup().await;
 
     let test_pool_market = TestGeneralPoolMarket::new();
-    test_pool_market.init(&mut context).await.unwrap();
+    test_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let pool_market = test_pool_market.get_data(&mut context).await;
 
@@ -23,10 +23,10 @@ async fn success() {
 
 #[tokio::test]
 async fn fail_second_time_init() {
-    let mut context = presetup().await.0;
+    let (mut context, _, _, registry) = presetup().await;
 
     let test_pool_market = TestGeneralPoolMarket::new();
-    test_pool_market.init(&mut context).await.unwrap();
+    test_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let pool_market = test_pool_market.get_data(&mut context).await;
 
@@ -39,6 +39,7 @@ async fn fail_second_time_init() {
             &everlend_general_pool::id(),
             &test_pool_market.keypair.pubkey(),
             &test_pool_market.manager.pubkey(),
+            &registry.keypair.pubkey(),
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer],

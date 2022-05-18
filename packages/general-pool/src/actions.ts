@@ -9,7 +9,7 @@ import {
   WithdrawalRequests,
 } from './accounts'
 import { GeneralPoolsProgram } from './program'
-import { CreateAssociatedTokenAccount, findAssociatedTokenAccount } from '@everlend/common'
+import { CreateAssociatedTokenAccount, findAssociatedTokenAccount, findRegistryPoolConfigAccount } from '@everlend/common'
 import { Borrow, CreatePool, Deposit, InitPoolMarket, Repay, WithdrawRequest } from './transactions'
 import { Buffer } from 'buffer'
 
@@ -106,6 +106,7 @@ export const createPool = async (
 export const deposit = async (
   { connection, payerPublicKey }: ActionOptions,
   pool: PublicKey,
+  registry: PublicKey,
   amount: BN,
   source: PublicKey,
   destination?: PublicKey,
@@ -117,6 +118,7 @@ export const deposit = async (
   const poolMarketAuthority = await GeneralPoolsProgram.findProgramAddress([poolMarket.toBuffer()])
 
   const tx = new Transaction()
+  const registryPoolConfig = await findRegistryPoolConfigAccount(registry, pool)
 
   // Create destination account for pool mint if doesn't exist
   destination = destination ?? (await findAssociatedTokenAccount(payerPublicKey, poolMint))
@@ -135,6 +137,8 @@ export const deposit = async (
     new Deposit(
       { feePayer: payerPublicKey },
       {
+        registryPoolConfig,
+        registry,
         poolMarket,
         pool,
         source,
@@ -153,6 +157,7 @@ export const deposit = async (
 export const withdrawRequest = async (
   { connection, payerPublicKey }: ActionOptions,
   pool: PublicKey,
+  registry: PublicKey,
   collateralAmount: BN,
   source: PublicKey,
   destination?: PublicKey,
@@ -172,6 +177,7 @@ export const withdrawRequest = async (
 
   const tx = new Transaction()
 
+  const registryPoolConfig = await findRegistryPoolConfigAccount(registry, pool)
   // Create destination account for token mint if doesn't exist
   destination = destination ?? (await findAssociatedTokenAccount(payerPublicKey, tokenMint))
   !(await connection.getAccountInfo(destination)) &&
@@ -189,6 +195,8 @@ export const withdrawRequest = async (
     new WithdrawRequest(
       { feePayer: payerPublicKey },
       {
+        registry,
+        registryPoolConfig,
         poolMarket,
         pool,
         withdrawRequests,

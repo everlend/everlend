@@ -18,6 +18,7 @@ export const payerPublicKey = payer.publicKey
 export const POOL_MARKET_PUBKEY: PublicKey = new PublicKey(
   '4P2WtU2RayKhRc1pfjJP5M9JmVVWZQi91za2ugJvHumG',
 )
+export const REGISTRY_PUBKEY: PublicKey = new PublicKey('6KCHtgSGR2WDE3aqrqSJppHRGVPgy9fHDX5XD8VZgb61')
 export const POOL_PUBKEY: PublicKey = new PublicKey('CEDGxQ1Hga4LsCHAHme1C4RJM9fimTfwjUfokPM5YU8Q')
 export const POOL2_PUBKEY: PublicKey = new PublicKey('4rEzYjgu8QyvG75waddZkTDdgP7XHy8YcWMxdNsPXAdV')
 export const POOL_BORROW_AUTHORITY_PUBKEY: PublicKey = new PublicKey(

@@ -1,5 +1,6 @@
 //! Instruction types
 
+use crate::{find_config_program_address, state::{SetRegistryPoolConfigParams}, find_registry_pool_config_program_address};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
     instruction::{AccountMeta, Instruction},
@@ -8,7 +9,6 @@ use solana_program::{
 };
 
 use crate::{
-    find_config_program_address,
     state::{RegistryPrograms, RegistryRootAccounts, RegistrySettings},
 };
 
@@ -60,6 +60,20 @@ pub enum RegistryInstruction {
     /// [W] Registry config
     /// [WS] Manager
     CloseRegistryConfig,
+
+    /// Set pool config
+    ///
+    /// Accounts:
+    /// [R] Registry
+    /// [R] General Pool
+    /// [W] Pool config
+    /// [WS] Manager
+    /// [R] Rent sysvar
+    /// [R] Sytem program
+    SetRegistryPoolConfig {
+        /// Set pool config params
+        params: SetRegistryPoolConfigParams,
+    },
 }
 
 /// Creates 'Init' instruction.
@@ -143,6 +157,32 @@ pub fn close_registry_config(
     Instruction::new_with_borsh(
         *program_id,
         &RegistryInstruction::CloseRegistryConfig,
+        accounts,
+    )
+}
+
+/// Creates 'SetRegistryPoolConfig' instruction.
+pub fn set_registry_pool_config(
+    program_id: &Pubkey,
+    registry: &Pubkey,
+    manager: &Pubkey,
+    pool: &Pubkey,
+    params: SetRegistryPoolConfigParams,
+) -> Instruction {
+    let (registry_pool_config, _) = find_registry_pool_config_program_address(&crate::id(), registry, pool);
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*registry, false),
+        AccountMeta::new_readonly(*pool, false),
+        AccountMeta::new(registry_pool_config, false),
+        AccountMeta::new(*manager, true),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+        AccountMeta::new_readonly(system_program::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &RegistryInstruction::SetRegistryPoolConfig { params },
         accounts,
     )
 }

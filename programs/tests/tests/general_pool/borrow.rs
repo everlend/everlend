@@ -9,6 +9,7 @@ use solana_sdk::{
     pubkey::Pubkey, signature::Keypair, signer::Signer, transaction::Transaction,
     transaction::TransactionError,
 };
+use everlend_registry::state::SetRegistryPoolConfigParams;
 use spl_token::error::TokenError;
 
 async fn setup() -> (
@@ -18,10 +19,10 @@ async fn setup() -> (
     TestGeneralPoolBorrowAuthority,
     LiquidityProvider,
 ) {
-    let mut context = presetup().await.0;
+    let (mut context, _, _, registry) = presetup().await;
 
     let test_pool_market = TestGeneralPoolMarket::new();
-    test_pool_market.init(&mut context).await.unwrap();
+    test_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let test_pool = TestGeneralPool::new(&test_pool_market, None);
     test_pool
@@ -40,6 +41,14 @@ async fn setup() -> (
         )
         .await
         .unwrap();
+    registry
+        .set_registry_pool_config(
+            &mut context,
+            &test_pool.pool_pubkey,
+            SetRegistryPoolConfigParams { deposit_minimum: 0, withdraw_minimum: 0 }
+        )
+        .await
+        .unwrap();
 
     let user = add_liquidity_provider(
         &mut context,
@@ -51,7 +60,7 @@ async fn setup() -> (
     .unwrap();
 
     test_pool
-        .deposit(&mut context, &test_pool_market, &user, 100)
+        .deposit(&mut context, &registry, &test_pool_market, &user, 100)
         .await
         .unwrap();
 

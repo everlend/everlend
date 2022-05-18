@@ -12,10 +12,10 @@ use crate::utils::*;
 
 #[tokio::test]
 async fn success() {
-    let mut context = presetup().await.0;
+    let (mut context, _, _, registry) = presetup().await;
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context).await.unwrap();
+    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let test_income_pool_market = TestIncomePoolMarket::new();
     test_income_pool_market
@@ -30,10 +30,10 @@ async fn success() {
 
 #[tokio::test]
 async fn fail_second_time_init() {
-    let mut context = presetup().await.0;
+    let (mut context, _, _, registry) = presetup().await;
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context).await.unwrap();
+    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let test_income_pool_market = TestIncomePoolMarket::new();
     test_income_pool_market

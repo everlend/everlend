@@ -16,13 +16,14 @@ use solana_client::client_error::ClientError;
 use solana_client::rpc_client::RpcClient;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::commitment_config::CommitmentConfig;
+use solana_sdk::signature::Keypair;
 use spl_associated_token_account::get_associated_token_address;
 
 use accounts_config::*;
 use commands::*;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::state::{
-    RegistryPrograms, RegistryRootAccounts, RegistrySettings, TOTAL_DISTRIBUTIONS,
+    RegistryPrograms, DistributionPubkeys, RegistryRootAccounts, RegistrySettings, TOTAL_DISTRIBUTIONS, SetRegistryPoolConfigParams,
 };
 use everlend_utils::integrations::MoneyMarket;
 use general_pool::get_withdrawal_requests;
@@ -66,7 +67,29 @@ async fn command_create(
 
     let (mint_map, collateral_mint_map) = get_asset_maps(default_accounts.clone());
 
-    let general_pool_market_pubkey = general_pool::create_market(config, None)?;
+    println!("Registry");
+    let registry_pubkey = registry::init(config, None)?;
+    let mut programs = RegistryPrograms {
+        general_pool_program_id: everlend_general_pool::id(),
+        ulp_program_id: everlend_ulp::id(),
+        liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
+        depositor_program_id: everlend_depositor::id(),
+        income_pools_program_id: everlend_income_pools::id(),
+        money_market_program_ids: DistributionPubkeys::default(),
+    };
+    programs.money_market_program_ids[0] = spl_token_lending::id();
+
+    registry::set_registry_config(
+            config,
+            &registry_pubkey,
+            programs,
+            RegistryRootAccounts::default(),
+            RegistrySettings {
+                refresh_income_interval: REFRESH_INCOME_INTERVAL,
+            }
+        )?;
+
+    let general_pool_market_pubkey = general_pool::create_market(config, None, &registry_pubkey)?;
     let income_pool_market_pubkey =
         income_pools::create_market(config, None, &general_pool_market_pubkey)?;
 
@@ -307,13 +330,37 @@ async fn command_run_migrate(
         return Ok(());
     }
 
-    let token = initialiazed_accounts
+    let _token = initialiazed_accounts
         .token_accounts
         .get(&case.unwrap())
         .unwrap();
 
     println!("Migrate withdraw requests");
     general_pool::migrate_general_pool_account(config)?;
+    println!("Finished!");
+
+    Ok(())
+}
+
+async fn command_run_migrate_pool_market(
+    config: &Config,
+    accounts_path: &str,
+    keypair: Keypair,
+) -> anyhow::Result<()> {
+    let initialized_accounts = InitializedAccounts::load(accounts_path).unwrap();
+
+    println!("Close general pool market");
+    println!("pool market id: {}", &initialized_accounts.general_pool_market);
+    general_pool::close_pool_market_account(
+        config,
+        &initialized_accounts.general_pool_market,
+    )?;
+    println!("Closed general pool market");
+
+    println!("Create general pool market");
+    general_pool::create_market(
+        config, Some(keypair), &initialized_accounts.registry
+    )?;
     println!("Finished!");
 
     Ok(())
@@ -384,6 +431,42 @@ async fn main() -> anyhow::Result<()> {
                         .takes_value(true)
                         .required(true)
                         .help("Registry pubkey"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("set-registry-pool-config")
+                .about("Set a new registry pool config")
+                .arg(
+                    Arg::with_name("accounts")
+                        .short("A")
+                        .long("accounts")
+                        .value_name("PATH")
+                        .takes_value(true)
+                        .help("Accounts file"),
+                )
+                .arg(
+                    Arg::with_name("general-pool")
+                        .long("general-pool")
+                        .short("P")
+                        .validator(is_pubkey)
+                        .value_name("ADDRESS")
+                        .takes_value(true)
+                        .required(true)
+                        .help("General pool pubkey"),
+                )
+                .arg(
+                    Arg::with_name("min-deposit")
+                        .long("min-deposit")
+                        .value_name("NUMBER")
+                        .takes_value(true)
+                        .help("Minimum amount for deposit"),
+                )
+                .arg(
+                    Arg::with_name("min-withdraw")
+                        .long("min-withdraw")
+                        .value_name("NUMBER")
+                        .takes_value(true)
+                        .help("Minimum amount for deposit"),
                 ),
         )
         .subcommand(
@@ -716,6 +799,26 @@ async fn main() -> anyhow::Result<()> {
                                 .help("Accounts file"),
                         ),
                 )
+                .subcommand(
+                    SubCommand::with_name("migrate-pool-market")
+                        .about("Migrate pool market account")
+                        .arg(
+                            Arg::with_name("accounts")
+                                .short("A")
+                                .long("accounts")
+                                .value_name("PATH")
+                                .takes_value(true)
+                                .help("Accounts file"),
+                        )
+                        .arg(
+                            Arg::with_name("keypair")
+                                .long("keypair")
+                                .validator(is_keypair)
+                                .value_name("KEYPAIR")
+                                .takes_value(true)
+                                .help("Keypair [default: new keypair]"),
+                        ),
+                )
                 .subcommand(SubCommand::with_name("migrate-depositor").about(
                     "Migrate Depositor account. Must be invoke after migrate-registry-config.",
                 ))
@@ -803,9 +906,18 @@ async fn main() -> anyhow::Result<()> {
             let registry_pubkey = pubkey_of(arg_matches, "registry").unwrap();
             command_set_registry_config(&config, registry_pubkey).await
         }
+        ("set-registry-pool-config", Some(arg_matches)) => {
+            let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
+            let general_pool = pubkey_of(arg_matches, "general-pool").unwrap();
+            let deposit_minimum = value_of::<u64>(arg_matches, "min-deposit").unwrap_or(0);
+            let withdraw_minimum = value_of::<u64>(arg_matches, "min-withdraw").unwrap_or(0);
+            let params = SetRegistryPoolConfigParams { deposit_minimum, withdraw_minimum };
+            command_set_registry_pool_config(&config, accounts_path, general_pool, params).await
+        }
         ("create-general-pool-market", Some(arg_matches)) => {
             let keypair = keypair_of(arg_matches, "keypair");
-            command_create_general_pool_market(&config, keypair).await
+            let registry_pubkey = pubkey_of(arg_matches, "registry").unwrap();
+            command_create_general_pool_market(&config, keypair, registry_pubkey).await
         }
         ("create-income-pool-market", Some(arg_matches)) => {
             let keypair = keypair_of(arg_matches, "keypair");
@@ -935,6 +1047,15 @@ async fn main() -> anyhow::Result<()> {
                 ("migrate-registry-config", Some(_)) => {
                     println!("Started RegistryConfig migration");
                     command_migrate_registry_config(&config).await
+                }
+                ("migrate-pool-market", Some(arg_matches)) => {
+                    let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
+                    let keypair = keypair_of(arg_matches, "keypair").unwrap();
+                        command_run_migrate_pool_market(
+                        &config,
+                        accounts_path,
+                        keypair,
+                    ).await
                 }
                 _ => unreachable!(),
             }

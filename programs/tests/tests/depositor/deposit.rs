@@ -14,6 +14,7 @@ use everlend_utils::{
     integrations::{self, MoneyMarketPubkeys},
     EverlendError,
 };
+use everlend_registry::state::SetRegistryPoolConfigParams;
 
 use crate::utils::*;
 
@@ -50,22 +51,27 @@ async fn setup() -> (
         &money_market.market_pubkey.to_bytes()[..32],
         &[lending_market.bump_seed],
     ];
-    let lending_market_authority_pubkey =
+    let _lending_market_authority_pubkey =
         Pubkey::create_program_address(authority_signer_seeds, &spl_token_lending::id()).unwrap();
 
-    println!("{:#?}", lending_market_authority_pubkey);
-
-    let collateral_mint = get_mint_data(&mut context, &reserve.collateral.mint_pubkey).await;
-    println!("{:#?}", collateral_mint);
+    let _collateral_mint = get_mint_data(&mut context, &reserve.collateral.mint_pubkey).await;
 
     // 1. Prepare general pool
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context).await.unwrap();
+    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let general_pool = TestGeneralPool::new(&general_pool_market, None);
     general_pool
         .create(&mut context, &general_pool_market)
+        .await
+        .unwrap();
+    registry
+        .set_registry_pool_config(
+            &mut context,
+            &general_pool.pool_pubkey,
+            SetRegistryPoolConfigParams { deposit_minimum: 0, withdraw_minimum: 0 }
+        )
         .await
         .unwrap();
 
@@ -83,6 +89,7 @@ async fn setup() -> (
     general_pool
         .deposit(
             &mut context,
+            &registry,
             &general_pool_market,
             &liquidity_provider,
             100 * EXP,
@@ -351,6 +358,7 @@ async fn success_increased_liquidity() {
     general_pool
         .deposit(
             &mut context,
+            &registry,
             &general_pool_market,
             &liquidity_provider,
             50 * EXP,
