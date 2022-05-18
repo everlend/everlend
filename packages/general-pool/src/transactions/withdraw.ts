@@ -20,7 +20,7 @@ type WithdrawParams = {
   pool: PublicKey
   poolMarketAuthority: PublicKey
   poolMint: PublicKey
-  withdrawRequests: PublicKey
+  withdrawalRequests: PublicKey
   withdrawalRequest: PublicKey
   from: PublicKey
   destination: PublicKey
@@ -36,7 +36,7 @@ export class Withdraw extends Transaction {
       pool,
       poolMarketAuthority,
       poolMint,
-      withdrawRequests,
+      withdrawalRequests,
       withdrawalRequest,
       destination,
       tokenAccount,
@@ -53,7 +53,7 @@ export class Withdraw extends Transaction {
           { pubkey: pool, isSigner: false, isWritable: false },
           { pubkey: poolMarketAuthority, isSigner: false, isWritable: false },
           { pubkey: poolMint, isSigner: false, isWritable: true },
-          { pubkey: withdrawRequests, isSigner: false, isWritable: true },
+          { pubkey: withdrawalRequests, isSigner: false, isWritable: true },
           { pubkey: withdrawalRequest, isSigner: false, isWritable: true },
           { pubkey: destination, isSigner: false, isWritable: true },
           { pubkey: tokenAccount, isSigner: false, isWritable: true },

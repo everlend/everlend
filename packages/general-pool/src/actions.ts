@@ -9,8 +9,20 @@ import {
   WithdrawalRequests,
 } from './accounts'
 import { GeneralPoolsProgram } from './program'
-import { CreateAssociatedTokenAccount, findAssociatedTokenAccount, findRegistryPoolConfigAccount } from '@everlend/common'
-import { Borrow, CreatePool, Deposit, InitPoolMarket, Repay, WithdrawRequest, Withdraw } from './transactions'
+import {
+  CreateAssociatedTokenAccount,
+  findAssociatedTokenAccount,
+  findRegistryPoolConfigAccount,
+} from '@everlend/common'
+import {
+  Borrow,
+  CreatePool,
+  Deposit,
+  InitPoolMarket,
+  Repay,
+  WithdrawRequest,
+  Withdraw,
+} from './transactions'
 import { Buffer } from 'buffer'
 
 export type ActionResult = {
@@ -220,13 +232,13 @@ export const withdraw = async (
 ): Promise<ActionResult> => {
   const {
     data: { from, destination, pool },
-  } = await WithdrawRequest.load(connection, withdrawalRequest)
+  } = await WithdrawalRequest.load(connection, withdrawalRequest)
 
   const {
     data: { tokenMint, poolMarket, poolMint, tokenAccount },
   } = await Pool.load(connection, pool)
 
-  const withdrawRequests = await WithdrawalRequests.getPDA(poolMarket, tokenMint)
+  const withdrawalRequests = await WithdrawalRequests.getPDA(poolMarket, tokenMint)
   const poolMarketAuthority = await GeneralPoolsProgram.findProgramAddress([poolMarket.toBuffer()])
 
   const collateralTransit = await GeneralPoolsProgram.findProgramAddress([
@@ -239,15 +251,15 @@ export const withdraw = async (
 
   // Create destination account for token mint if doesn't exist
   !(await connection.getAccountInfo(destination)) &&
-  tx.add(
-    new CreateAssociatedTokenAccount(
-      { feePayer: payerPublicKey },
-      {
-        associatedTokenAddress: destination,
-        tokenMint,
-      },
-    ),
-  )
+    tx.add(
+      new CreateAssociatedTokenAccount(
+        { feePayer: payerPublicKey },
+        {
+          associatedTokenAddress: destination,
+          tokenMint,
+        },
+      ),
+    )
 
   tx.add(
     new Withdraw(
@@ -257,7 +269,7 @@ export const withdraw = async (
         pool,
         poolMarketAuthority,
         poolMint,
-        withdrawRequests,
+        withdrawalRequests,
         withdrawalRequest,
         from,
         destination,
