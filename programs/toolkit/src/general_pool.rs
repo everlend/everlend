@@ -248,6 +248,35 @@ pub fn withdraw_request(
 }
 
 #[allow(clippy::too_many_arguments)]
+pub fn cancel_withdraw_request(
+    config: &Config,
+    pool_market_pubkey: &Pubkey,
+    pool_pubkey: &Pubkey,
+    source: &Pubkey,
+    token_mint: &Pubkey,
+    pool_mint: &Pubkey,
+    from: &Pubkey,
+) -> Result<(), ClientError> {
+    let tx = Transaction::new_with_payer(
+        &[instruction::cancel_withdraw_request(
+            &everlend_general_pool::id(),
+            pool_market_pubkey,
+            pool_pubkey,
+            source,
+            token_mint,
+            pool_mint,
+            &config.fee_payer.pubkey(),
+            from,
+        )],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
 pub fn withdraw(
     config: &Config,
     pool_market_pubkey: &Pubkey,

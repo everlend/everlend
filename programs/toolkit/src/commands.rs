@@ -55,7 +55,7 @@ pub async fn command_create_registry(
     println!("programs = {:#?}", programs);
 
     let mut collateral_pool_markets: [Pubkey; TOTAL_DISTRIBUTIONS] = Default::default();
-    collateral_pool_markets[..mm_pool_markets.len()].copy_from_slice(&mm_pool_markets);
+    collateral_pool_markets[..mm_pool_markets.len()].copy_from_slice(mm_pool_markets);
 
     let roots = RegistryRootAccounts {
         general_pool_market: initialized_accounts.general_pool_market,
@@ -465,6 +465,33 @@ pub async fn command_create_token_accounts(
     initialiazed_accounts
         .save(&format!("accounts.{}.yaml", config.network))
         .unwrap();
+
+    Ok(())
+}
+
+pub async fn command_cancel_withdraw_request(
+    config: &Config,
+    withdrawal_request_pubkey: &Pubkey,
+) -> anyhow::Result<()> {
+    let initialiazed_accounts = config.get_initialized_accounts();
+
+    let withdrawal_request = config
+        .get_account_unpack::<everlend_general_pool::state::WithdrawalRequest>(
+            withdrawal_request_pubkey,
+        )?;
+
+    let general_pool = config
+        .get_account_unpack::<everlend_general_pool::state::Pool>(&withdrawal_request.pool)?;
+
+    general_pool::cancel_withdraw_request(
+        config,
+        &initialiazed_accounts.general_pool_market,
+        &withdrawal_request.pool,
+        &withdrawal_request.source,
+        &general_pool.token_mint,
+        &general_pool.pool_mint,
+        &withdrawal_request.from,
+    )?;
 
     Ok(())
 }
