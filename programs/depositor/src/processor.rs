@@ -393,7 +393,6 @@ impl Processor {
         let collateral_pool_market_authority_info = next_account_info(account_info_iter)?;
         let collateral_pool_info = next_account_info(account_info_iter)?;
         let collateral_pool_token_account_info = next_account_info(account_info_iter)?;
-        let collateral_pool_collateral_transit_info = next_account_info(account_info_iter)?;
         let collateral_pool_collateral_mint_info = next_account_info(account_info_iter)?;
 
         let liquidity_transit_info = next_account_info(account_info_iter)?;
@@ -513,7 +512,6 @@ impl Processor {
             collateral_pool_market_authority_info.clone(),
             collateral_pool_info.clone(),
             collateral_pool_token_account_info.clone(),
-            collateral_pool_collateral_transit_info.clone(),
             collateral_pool_collateral_mint_info.clone(),
             collateral_transit_info.clone(),
             collateral_mint_info.clone(),
@@ -556,7 +554,7 @@ impl Processor {
         let collateral_pool_market_authority_info = next_account_info(account_info_iter)?;
         let collateral_pool_info = next_account_info(account_info_iter)?;
         let collateral_pool_token_account_info = next_account_info(account_info_iter)?;
-        let collateral_pool_collateral_transit_info = next_account_info(account_info_iter)?;
+        let collateral_pool_withdraw_authrity = next_account_info(account_info_iter)?;
         let collateral_pool_collateral_mint_info = next_account_info(account_info_iter)?;
 
         let collateral_transit_info = next_account_info(account_info_iter)?;
@@ -677,10 +675,6 @@ impl Processor {
             collateral_pool_collateral_mint_info.key,
             "",
         );
-        assert_account_key(
-            collateral_pool_collateral_transit_info,
-            &collateral_pool_collateral_transit_pubkey,
-        )?;
 
         // Create depositor authority account
         let (depositor_authority_pubkey, bump_seed) =
@@ -706,7 +700,7 @@ impl Processor {
             collateral_pool_market_authority_info.clone(),
             collateral_pool_info.clone(),
             collateral_pool_token_account_info.clone(),
-            collateral_pool_collateral_transit_info.clone(),
+            collateral_pool_withdraw_authrity.clone(),
             collateral_pool_collateral_mint_info.clone(),
             collateral_transit_info.clone(),
             collateral_mint_info.clone(),

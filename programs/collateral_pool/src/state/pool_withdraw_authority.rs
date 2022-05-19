@@ -47,12 +47,12 @@ impl PoolWithdrawAuthority {
 pub struct InitPoolWithdrawAuthorityParams {
     /// Pool
     pub pool: Pubkey,
-    /// Borrow authority
-    pub borrow_authority: Pubkey,
+    /// Withdraw authority
+    pub withdraw_authority: Pubkey,
 }
 
-impl Sealed for PoolBorrowAuthority {}
-impl Pack for PoolBorrowAuthority {
+impl Sealed for PoolWithdrawAuthority {}
+impl Pack for PoolWithdrawAuthority {
     // 1 + 32 + 32 + 8
     const LEN: usize = 73;
 
@@ -70,7 +70,7 @@ impl Pack for PoolBorrowAuthority {
     }
 }
 
-impl IsInitialized for PoolBorrowAuthority {
+impl IsInitialized for PoolWithdrawAuthority {
     fn is_initialized(&self) -> bool {
             self.account_type == AccountType::PoolWithdrawAuthority
     }

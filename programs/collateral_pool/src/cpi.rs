@@ -4,7 +4,7 @@ use solana_program::{
     account_info::AccountInfo, program::invoke_signed, program_error::ProgramError,
 };
 
-/// ULP borrow tokens
+/// Borrow collateral tokens
 #[allow(clippy::too_many_arguments)]
 pub fn borrow<'a>(
     pool_market: AccountInfo<'a>,
@@ -43,7 +43,7 @@ pub fn borrow<'a>(
     )
 }
 
-/// ULP repay tokens
+/// Repay collateral tokens
 #[allow(clippy::too_many_arguments)]
 pub fn repay<'a>(
     pool_market: AccountInfo<'a>,
@@ -84,7 +84,7 @@ pub fn repay<'a>(
     )
 }
 
-/// ULP deposit tokens
+/// Deposit collateral tokens
 #[allow(clippy::too_many_arguments)]
 pub fn deposit<'a>(
     pool_market: AccountInfo<'a>,
@@ -123,14 +123,13 @@ pub fn deposit<'a>(
     )
 }
 
-/// Collateral pool deposit tokens
+/// Withdraw collateral tokens
 #[allow(clippy::too_many_arguments)]
 pub fn withdraw<'a>(
     pool_market: AccountInfo<'a>,
     pool_market_authority: AccountInfo<'a>,
     pool: AccountInfo<'a>,
     pool_withdraw_authority: AccountInfo<'a>,
-    source: AccountInfo<'a>,
     destination: AccountInfo<'a>,
     token_account: AccountInfo<'a>,
     user_transfer_authority: AccountInfo<'a>,
@@ -142,7 +141,6 @@ pub fn withdraw<'a>(
         pool_market.key,
         pool.key,
         pool_withdraw_authority.key,
-        source.key,
         destination.key,
         token_account.key,
         user_transfer_authority.key,
@@ -154,7 +152,6 @@ pub fn withdraw<'a>(
         &[
             pool_market,
             pool,
-            source,
             destination,
             token_account,
             pool_market_authority,

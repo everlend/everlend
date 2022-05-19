@@ -192,6 +192,7 @@ impl TestDepositor {
                 &mm_pool_market.keypair.pubkey(),
                 &mm_pool.token_account.pubkey(),
                 &mm_pool_collateral_mint,
+
                 &collateral_mint,
                 &liquidity_mint,
                 money_market_program_id,

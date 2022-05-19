@@ -20,7 +20,6 @@ pub fn deposit<'a>(
     mm_pool_market_authority: AccountInfo<'a>,
     mm_pool: AccountInfo<'a>,
     mm_pool_token_account: AccountInfo<'a>,
-    mm_pool_collateral_transit: AccountInfo<'a>,
     mm_pool_collateral_mint: AccountInfo<'a>,
     collateral_transit: AccountInfo<'a>,
     collateral_mint: AccountInfo<'a>,
@@ -51,12 +50,11 @@ pub fn deposit<'a>(
     let collateral_amount = Account::unpack_unchecked(&collateral_transit.data.borrow())?.amount;
 
     msg!("Collect collateral tokens to MM Pool");
-    everlend_ulp::cpi::deposit(
+    everlend_collateral_pool::cpi::deposit(
         mm_pool_market.clone(),
         mm_pool_market_authority.clone(),
         mm_pool.clone(),
         collateral_transit.clone(),
-        mm_pool_collateral_transit.clone(),
         mm_pool_token_account.clone(),
         mm_pool_collateral_mint.clone(),
         authority.clone(),
@@ -78,7 +76,7 @@ pub fn withdraw<'a>(
     mm_pool_market_authority: AccountInfo<'a>,
     mm_pool: AccountInfo<'a>,
     mm_pool_token_account: AccountInfo<'a>,
-    mm_pool_collateral_transit: AccountInfo<'a>,
+    mm_pool_withdraw_authrity: AccountInfo<'a>,
     mm_pool_collateral_mint: AccountInfo<'a>,
     collateral_transit: AccountInfo<'a>,
     collateral_mint: AccountInfo<'a>,
@@ -96,12 +94,11 @@ pub fn withdraw<'a>(
     let liquidity_transit_supply = Account::unpack(&liquidity_transit.data.borrow())?.amount;
 
     msg!("Withdraw collateral tokens from MM Pool");
-    everlend_ulp::cpi::withdraw(
+    everlend_collateral_pool::cpi::withdraw(
         mm_pool_market.clone(),
         mm_pool_market_authority.clone(),
         mm_pool.clone(),
-        mm_pool_collateral_transit.clone(),
-        collateral_transit.clone(),
+        mm_pool_withdraw_authrity.clone(),
         mm_pool_token_account.clone(),
         mm_pool_collateral_mint.clone(),
         authority.clone(),

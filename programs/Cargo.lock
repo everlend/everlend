@@ -1010,10 +1010,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "everlend-collateral-pool"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "everlend-utils",
+ "num-derive",
+ "num-traits",
+ "solana-program",
+ "solana-program-test",
+ "solana-sdk",
+ "spl-token 3.2.0",
+ "thiserror",
+]
+
+[[package]]
 name = "everlend-depositor"
 version = "0.1.0"
 dependencies = [
  "borsh",
+ "everlend-collateral-pool",
  "everlend-general-pool",
  "everlend-income-pools",
  "everlend-liquidity-oracle",

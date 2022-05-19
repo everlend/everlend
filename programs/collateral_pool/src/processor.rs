@@ -9,7 +9,6 @@ use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
     msg,
-    program_error::ProgramError,
     program_pack::Pack,
     pubkey::Pubkey,
     rent::Rent,
@@ -22,7 +21,7 @@ use crate::{
     instruction::LiquidityPoolsInstruction,
     state::{
         InitPoolBorrowAuthorityParams, InitPoolMarketParams, InitPoolParams, Pool,
-        PoolBorrowAuthority, PoolMarket,
+        PoolBorrowAuthority, PoolMarket, PoolWithdrawAuthority
     },
     utils::*,
 };
@@ -107,12 +106,6 @@ impl Processor {
             token_mint_info.clone(),
             pool_market_authority_info.clone(),
             rent_info.clone(),
-        )?;
-
-        cpi::spl_token::initialize_mint(
-            pool_market_authority_info.clone(),
-            rent_info.clone(),
-            token_mint.decimals,
         )?;
 
         pool.init(InitPoolParams {
@@ -303,9 +296,7 @@ impl Processor {
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_info = next_account_info(account_info_iter)?;
         let source_info = next_account_info(account_info_iter)?;
-        let destination_info = next_account_info(account_info_iter)?;
         let token_account_info = next_account_info(account_info_iter)?;
-        let pool_market_authority_info = next_account_info(account_info_iter)?;
         let user_transfer_authority_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
@@ -327,9 +318,6 @@ impl Processor {
             &[],
         )?;
 
-        let (_, bump_seed) = find_program_address(program_id, pool_market_info.key);
-        let signers_seeds = &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]];
-
         Ok(())
     }
 
@@ -339,14 +327,13 @@ impl Processor {
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_info = next_account_info(account_info_iter)?;
         let pool_withdraw_authority_info = next_account_info(account_info_iter)?;
-        let source_info = next_account_info(account_info_iter)?;
         let destination_info = next_account_info(account_info_iter)?;
         let token_account_info = next_account_info(account_info_iter)?;
         let pool_market_authority_info = next_account_info(account_info_iter)?;
         let withdraw_authority_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
-        assert_signer(user_transfer_authority_info)?;
+        assert_signer(withdraw_authority_info)?;
 
         assert_owned_by(pool_market_info, program_id)?;
         assert_owned_by(pool_info, program_id)?;
@@ -357,18 +344,16 @@ impl Processor {
         assert_account_key(pool_market_info, &pool.pool_market)?;
         assert_account_key(token_account_info, &pool.token_account)?;
 
-        let mut pool_withdraw_authority =
-            PoolBorrowAuthority::unpack(&pool_withdraw_authority_info.data.borrow())?;
+        let pool_withdraw_authority =
+            PoolWithdrawAuthority::unpack(&pool_withdraw_authority_info.data.borrow())?;
 
-        // Check pool borrow authority accounts
         assert_account_key(pool_info, &pool_withdraw_authority.pool)?;
         assert_account_key(
             withdraw_authority_info,
-            &pool_borrow_authority.withdraw_authority,
+            &pool_withdraw_authority.withdraw_authority,
         )?;
-        let total_incoming =
-            total_pool_amount(token_account_info.clone(), pool.total_amount_borrowed)?;
-        // TODO: add missing logic here
+        let (_, bump_seed) = find_program_address(program_id, pool_market_info.key);
+        let signers_seeds = &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]];
         cpi::spl_token::transfer(
             token_account_info.clone(),
             destination_info.clone(),

@@ -78,10 +78,8 @@ pub enum LiquidityPoolsInstruction {
     /// [R] Pool market
     /// [R] Pool
     /// [W] Source account (for token mint)
-    /// [W] Destination account (for pool mint)
     /// [W] Token account
     /// [R] Pool market authority
-    /// [RS] User transfer authority
     /// [R] Token program id
     Deposit {
         /// Amount to deposit
@@ -93,7 +91,7 @@ pub enum LiquidityPoolsInstruction {
     /// Accounts:
     /// [R] Pool market
     /// [R] Pool
-    /// [R] Pool withdraw authority
+    /// [R] Pool withdraw authority //TODO: maybe delete?
     /// [W] Source account (for pool mint)
     /// [W] Destination account (for token mint)
     /// [W] Token account
@@ -286,7 +284,6 @@ pub fn deposit(
     source: &Pubkey,
     destination: &Pubkey,
     token_account: &Pubkey,
-    pool_mint: &Pubkey,
     user_transfer_authority: &Pubkey,
     amount: u64,
 ) -> Instruction {
@@ -298,7 +295,6 @@ pub fn deposit(
         AccountMeta::new(*source, false),
         AccountMeta::new(*destination, false),
         AccountMeta::new(*token_account, false),
-        AccountMeta::new(*pool_mint, false),
         AccountMeta::new_readonly(pool_market_authority, false),
         AccountMeta::new_readonly(*user_transfer_authority, true),
         AccountMeta::new_readonly(spl_token::id(), false),
@@ -317,10 +313,9 @@ pub fn withdraw(
     program_id: &Pubkey,
     pool_market: &Pubkey,
     pool: &Pubkey,
-    source: &Pubkey,
+    withdraw_authority: &Pubkey,
     destination: &Pubkey,
     token_account: &Pubkey,
-    pool_mint: &Pubkey,
     user_transfer_authority: &Pubkey,
     amount: u64,
 ) -> Instruction {
@@ -329,10 +324,9 @@ pub fn withdraw(
     let accounts = vec![
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new_readonly(*pool, false),
-        AccountMeta::new(*source, false),
+        AccountMeta::new(*withdraw_authority, false),
         AccountMeta::new(*destination, false),
         AccountMeta::new(*token_account, false),
-        AccountMeta::new(*pool_mint, false),
         AccountMeta::new_readonly(pool_market_authority, false),
         AccountMeta::new_readonly(*user_transfer_authority, true),
         AccountMeta::new_readonly(spl_token::id(), false),

@@ -81,7 +81,6 @@ pub enum DepositorInstruction {
     /// [R] MM Pool market authority
     /// [R] MM Pool
     /// [W] MM Pool token account (for collateral mint)
-    /// [W] MM Pool collateral transit account
     /// [W] MM Pool collateral mint
     /// [W] Liquidity transit account
     /// [R] Liquidity mint
@@ -108,7 +107,7 @@ pub enum DepositorInstruction {
     /// [R] MM Pool market authority
     /// [R] MM Pool
     /// [W] MM Pool token account (for collateral mint)
-    /// [W] MM Pool collateral transit account
+    /// [W] MM Pool withdraw authority // TODO: delete, should be depository auth
     /// [W] MM Pool collateral mint
     /// [W] Collateral transit account
     /// [W] Collateral mint
@@ -324,6 +323,7 @@ pub fn withdraw(
     mm_pool_market: &Pubkey,
     mm_pool_token_account: &Pubkey,
     mm_pool_collateral_mint: &Pubkey,
+    mm_pool_withdraw_authority: &Pubkey,
     collateral_mint: &Pubkey,
     liquidity_mint: &Pubkey,
     money_market_program_id: &Pubkey,
@@ -353,8 +353,6 @@ pub fn withdraw(
         find_transit_program_address(program_id, depositor, collateral_mint, "");
     let (liquidity_transit, _) =
         find_transit_program_address(program_id, depositor, liquidity_mint, "");
-    let (mm_pool_collateral_transit, _) =
-        find_transit_program_address(program_id, depositor, mm_pool_collateral_mint, "");
 
     let (liquidity_reserve_transit, _) =
         find_transit_program_address(program_id, depositor, liquidity_mint, "reserve");
@@ -373,7 +371,7 @@ pub fn withdraw(
         AccountMeta::new_readonly(mm_pool_market_authority, false),
         AccountMeta::new_readonly(mm_pool, false),
         AccountMeta::new(*mm_pool_token_account, false),
-        AccountMeta::new(mm_pool_collateral_transit, false),
+        AccountMeta::new(*mm_pool_withdraw_authority, false),
         AccountMeta::new(*mm_pool_collateral_mint, false),
         // Common
         AccountMeta::new(collateral_transit, false),
