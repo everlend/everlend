@@ -105,8 +105,8 @@ pub enum LiquidityPoolsInstruction {
     ///
     /// Accounts:
     /// [R] Pool market
-    /// [R] Pool
     /// [R] Pool market authority
+    /// [R] Pool
     /// [W] Pool mint account
     /// [W] Withdrawal requests account
     /// [W] Withdrawal request account

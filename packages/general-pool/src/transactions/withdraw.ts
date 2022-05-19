@@ -50,8 +50,8 @@ export class Withdraw extends Transaction {
       new TransactionInstruction({
         keys: [
           { pubkey: poolMarket, isSigner: false, isWritable: false },
-          { pubkey: pool, isSigner: false, isWritable: false },
           { pubkey: poolMarketAuthority, isSigner: false, isWritable: false },
+          { pubkey: pool, isSigner: false, isWritable: false },
           { pubkey: poolMint, isSigner: false, isWritable: true },
           { pubkey: withdrawalRequests, isSigner: false, isWritable: true },
           { pubkey: withdrawalRequest, isSigner: false, isWritable: true },
