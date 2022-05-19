@@ -1,4 +1,4 @@
-import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token'
+import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID, NATIVE_MINT } from '@solana/spl-token'
 import { Connection, Keypair, PublicKey, SystemProgram, Transaction } from '@solana/web3.js'
 import BN from 'bn.js'
 import {
@@ -22,6 +22,7 @@ import {
   Repay,
   WithdrawRequest,
   Withdraw,
+  UnwrapParams,
 } from './transactions'
 import { Buffer } from 'buffer'
 
@@ -247,6 +248,16 @@ export const withdraw = async (
     poolMint.toBuffer(),
   ])
 
+  let unwrapAccounts: UnwrapParams = undefined
+  if (tokenMint == NATIVE_MINT) {
+    const unwrapTokenAccount = await WithdrawalRequest.getUnwrapSOLPDA(withdrawalRequest)
+    unwrapAccounts = {
+      tokenMint: tokenMint,
+      unwrapTokenAccount: unwrapTokenAccount,
+      signer: payerPublicKey,
+    }
+  }
+
   const tx = new Transaction()
 
   // Create destination account for token mint if doesn't exist
@@ -275,6 +286,7 @@ export const withdraw = async (
         tokenAccount,
         collateralTransit,
         from,
+        unwrapAccounts,
       },
     ),
   )

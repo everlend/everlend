@@ -116,6 +116,12 @@ pub enum LiquidityPoolsInstruction {
     /// [W] From account
     /// [R] Clock sysvar
     /// [R] Token program id
+    /// Additional accounts for SOL unwrap
+    /// [R] Token mint
+    /// [W] Unwrap SOL token account
+    /// [S] Signer
+    /// [R] Rent sysvar
+    /// [R] System program
     Withdraw,
 
     /// Borrow funds from the pool
