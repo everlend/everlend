@@ -185,7 +185,7 @@ pub fn withdraw(
 
 /// Creates 'CreateSafetyPoolTokenAccount' instruction.
 #[allow(clippy::too_many_arguments)]
-pub fn safety_pool_token_account(
+pub fn create_safety_pool_token_account(
     program_id: &Pubkey,
     token_mint: &Pubkey,
     income_pool_market: &Pubkey,

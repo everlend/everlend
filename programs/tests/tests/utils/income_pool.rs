@@ -148,7 +148,7 @@ impl TestIncomePool {
         general_pool: &TestGeneralPool,
     ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
-            &[instruction::safety_pool_token_account(
+            &[instruction::create_safety_pool_token_account(
                 &everlend_income_pools::id(),
                 &general_pool.token_mint_pubkey,
                 &test_income_pool_market.keypair.pubkey(),

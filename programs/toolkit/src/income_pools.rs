@@ -72,7 +72,7 @@ pub fn create_pool(
         income_pool_market_pubkey,
         token_mint,
     );
-    
+
     let account_info = config
         .rpc_client
         .get_account_with_commitment(&income_pool_pubkey, config.rpc_client.commitment())?
@@ -108,7 +108,7 @@ pub fn create_pool(
                 &token_account.pubkey(),
                 &config.fee_payer.pubkey(),
             ),
-            instruction::safety_pool_token_account(
+            instruction::create_safety_pool_token_account(
                 &everlend_income_pools::id(),
                 token_mint,
                 income_pool_market_pubkey,
@@ -140,7 +140,7 @@ pub fn create_income_pool_safety_fund_token_account(
 
     let tx = Transaction::new_with_payer(
         &[
-            instruction::safety_pool_token_account(
+            instruction::create_safety_pool_token_account(
                 &everlend_income_pools::id(),
                 token_mint,
                 income_pool_market_pubkey,

@@ -9,7 +9,7 @@ use borsh::BorshDeserialize;
 use everlend_general_pool::state::Pool;
 use everlend_utils::{
     assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
-    cpi, find_program_address,
+    cpi, find_program_address, EverlendError, math,
 };
 
 use solana_program::{
@@ -24,7 +24,8 @@ use solana_program::{
 };
 use spl_token::state::Account;
 
-const INCOME_FEE: u64 = 2;
+///Income fee 2%
+const INCOME_FEE: u64 = 20_000_000;
 
 /// Program state handler.
 pub struct Processor {}
@@ -188,13 +189,11 @@ impl Processor {
         let mut token_amount =
             Account::unpack_unchecked(&income_pool_token_account_info.data.borrow())?.amount;
 
-        let safety_fund_amount = (token_amount as u128)
-            .checked_mul(INCOME_FEE as u128)
-            .ok_or(ProgramError::InvalidArgument)?
-            .checked_div(100)
-            .ok_or(ProgramError::InvalidArgument)? as u64;
+        let safety_fund_amount = math::share_floor(token_amount, INCOME_FEE)?;
 
-        token_amount -= safety_fund_amount;
+        token_amount = token_amount.
+            checked_sub(safety_fund_amount).
+            ok_or(EverlendError::MathOverflow)?;
 
         let (income_pool_market_authority, bump_seed) =
             find_program_address(program_id, income_pool_market_info.key);
@@ -229,7 +228,7 @@ impl Processor {
     }
 
     /// Process CreateSafetyFundTokenAccount instruction
-    pub fn safety_fund_token_account(
+    pub fn create_safety_fund_token_account(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
     ) -> ProgramResult {
@@ -238,7 +237,7 @@ impl Processor {
         let income_pool_info = next_account_info(account_info_iter)?;
         let pool_market_authority_info = next_account_info(account_info_iter)?;
         let token_mint_info = next_account_info(account_info_iter)?;
-        let token_account_info = next_account_info(account_info_iter)?;
+        let safety_fund_token_account_info = next_account_info(account_info_iter)?;
         let manager_info = next_account_info(account_info_iter)?;
         let rent_info = next_account_info(account_info_iter)?;
         let rent = &Rent::from_account_info(rent_info)?;
@@ -259,13 +258,13 @@ impl Processor {
             find_pool_program_address(program_id, income_pool_market_info.key, token_mint_info.key);
         assert_account_key(income_pool_info, &income_pool_pubkey)?;
 
-        let (token_account_pubkey, bump_seed) = find_safety_fund_token_account_address(
+        let (safety_fund_token_account_pubkey, bump_seed) = find_safety_fund_token_account_address(
             program_id,
             income_pool_market_info.key,
             token_mint_info.key,
         );
 
-        assert_account_key(token_account_info, &token_account_pubkey)?;
+        assert_account_key(safety_fund_token_account_info, &safety_fund_token_account_pubkey)?;
 
         let safety_fund_token_account_seed = safety_fund_token_account_seed();
         let signers_seeds = &[
@@ -278,14 +277,14 @@ impl Processor {
         cpi::system::create_account::<spl_token::state::Account>(
             &spl_token::id(),
             manager_info.clone(),
-            token_account_info.clone(),
+            safety_fund_token_account_info.clone(),
             &[signers_seeds],
             rent,
         )?;
 
         // Initialize transit token account for spl token
         cpi::spl_token::initialize_account(
-            token_account_info.clone(),
+            safety_fund_token_account_info.clone(),
             token_mint_info.clone(),
             pool_market_authority_info.clone(),
             rent_info.clone(),
@@ -325,7 +324,7 @@ impl Processor {
 
             IncomePoolsInstruction::CreateSafetyPoolTokenAccount => {
                 msg!("IncomePoolsInstruction: CreateSafetyPoolTokenAccount");
-                Self::safety_fund_token_account(program_id, accounts)
+                Self::create_safety_fund_token_account(program_id, accounts)
             }
         }
     }
