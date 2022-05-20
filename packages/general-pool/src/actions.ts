@@ -249,7 +249,7 @@ export const withdraw = async (
   ])
 
   let unwrapAccounts: UnwrapParams = undefined
-  if (tokenMint == NATIVE_MINT) {
+  if (tokenMint.equals(NATIVE_MINT)) {
     const unwrapTokenAccount = await WithdrawalRequest.getUnwrapSOLPDA(withdrawalRequest)
     unwrapAccounts = {
       tokenMint: tokenMint,
