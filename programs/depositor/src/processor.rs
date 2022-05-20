@@ -554,7 +554,7 @@ impl Processor {
         let collateral_pool_market_authority_info = next_account_info(account_info_iter)?;
         let collateral_pool_info = next_account_info(account_info_iter)?;
         let collateral_pool_token_account_info = next_account_info(account_info_iter)?;
-        let collateral_pool_withdraw_authrity = next_account_info(account_info_iter)?;
+        let collateral_pool_withdraw_authority = next_account_info(account_info_iter)?;
         let collateral_pool_collateral_mint_info = next_account_info(account_info_iter)?;
 
         let collateral_transit_info = next_account_info(account_info_iter)?;
@@ -700,7 +700,7 @@ impl Processor {
             collateral_pool_market_authority_info.clone(),
             collateral_pool_info.clone(),
             collateral_pool_token_account_info.clone(),
-            collateral_pool_withdraw_authrity.clone(),
+            collateral_pool_withdraw_authority.clone(),
             collateral_pool_collateral_mint_info.clone(),
             collateral_transit_info.clone(),
             collateral_mint_info.clone(),
