@@ -6,7 +6,6 @@ use solana_program::{
     clock::Clock,
     entrypoint::ProgramResult,
     msg,
-    program_error::ProgramError,
     program_pack::Pack,
     pubkey::Pubkey,
     rent::Rent,

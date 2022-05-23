@@ -14,7 +14,6 @@ use solana_program::{
     rent::Rent,
     sysvar::Sysvar,
 };
-use spl_token::state::Mint;
 
 use crate::{
     find_pool_borrow_authority_program_address, find_pool_program_address,
