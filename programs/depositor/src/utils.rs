@@ -20,7 +20,6 @@ pub fn deposit<'a>(
     mm_pool_market_authority: AccountInfo<'a>,
     mm_pool: AccountInfo<'a>,
     mm_pool_token_account: AccountInfo<'a>,
-    mm_pool_collateral_mint: AccountInfo<'a>,
     collateral_transit: AccountInfo<'a>,
     collateral_mint: AccountInfo<'a>,
     liquidity_transit: AccountInfo<'a>,
