@@ -256,7 +256,6 @@ pub fn deposit(
     depositor: &Pubkey,
     mm_pool_market: &Pubkey,
     mm_pool_token_account: &Pubkey,
-    mm_pool_collateral_mint: &Pubkey,
     liquidity_mint: &Pubkey,
     collateral_mint: &Pubkey,
     money_market_program_id: &Pubkey,
@@ -279,8 +278,6 @@ pub fn deposit(
         find_transit_program_address(program_id, depositor, liquidity_mint, "");
     let (collateral_transit, _) =
         find_transit_program_address(program_id, depositor, collateral_mint, "");
-    let (mm_pool_collateral_transit, _) =
-        find_transit_program_address(program_id, depositor, mm_pool_collateral_mint, "");
 
     let mut accounts = vec![
         AccountMeta::new_readonly(registry_config, false),
@@ -292,8 +289,6 @@ pub fn deposit(
         AccountMeta::new_readonly(mm_pool_market_authority, false),
         AccountMeta::new_readonly(mm_pool, false),
         AccountMeta::new(*mm_pool_token_account, false),
-        AccountMeta::new(mm_pool_collateral_transit, false),
-        AccountMeta::new(*mm_pool_collateral_mint, false),
         // Common
         AccountMeta::new(liquidity_transit, false),
         AccountMeta::new_readonly(*liquidity_mint, false),
@@ -322,7 +317,6 @@ pub fn withdraw(
     income_pool_token_account: &Pubkey,
     mm_pool_market: &Pubkey,
     mm_pool_token_account: &Pubkey,
-    mm_pool_collateral_mint: &Pubkey,
     mm_pool_withdraw_authority: &Pubkey,
     collateral_mint: &Pubkey,
     liquidity_mint: &Pubkey,
@@ -372,7 +366,6 @@ pub fn withdraw(
         AccountMeta::new_readonly(mm_pool, false),
         AccountMeta::new(*mm_pool_token_account, false),
         AccountMeta::new(*mm_pool_withdraw_authority, false),
-        AccountMeta::new(*mm_pool_collateral_mint, false),
         // Common
         AccountMeta::new(collateral_transit, false),
         AccountMeta::new(*collateral_mint, false),

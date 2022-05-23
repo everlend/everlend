@@ -473,7 +473,6 @@ async fn fail_with_invalid_registry() {
 
     let collateral_mint = mm_pool.token_mint_pubkey;
     let liquidity_mint = get_liquidity_mint().1;
-    let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
 
     let withdraw_accounts =
         integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
@@ -487,7 +486,6 @@ async fn fail_with_invalid_registry() {
             &income_pool.token_account.pubkey(),
             &mm_pool_market.keypair.pubkey(),
             &mm_pool.token_account.pubkey(),
-            &mm_pool_collateral_mint,
             &collateral_mint,
             &liquidity_mint,
             money_market_program_id,
@@ -547,7 +545,6 @@ async fn fail_with_invalid_depositor() {
 
     let collateral_mint = mm_pool.token_mint_pubkey;
     let liquidity_mint = get_liquidity_mint().1;
-    let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
 
     let withdraw_accounts =
         integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
@@ -561,7 +558,6 @@ async fn fail_with_invalid_depositor() {
             &income_pool.token_account.pubkey(),
             &mm_pool_market.keypair.pubkey(),
             &mm_pool.token_account.pubkey(),
-            &mm_pool_collateral_mint,
             &collateral_mint,
             &liquidity_mint,
             money_market_program_id,
@@ -635,7 +631,6 @@ async fn fail_with_invalid_income_pool_market() {
 
     let collateral_mint = mm_pool.token_mint_pubkey;
     let liquidity_mint = get_liquidity_mint().1;
-    let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
 
     let withdraw_accounts =
         integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
@@ -649,7 +644,6 @@ async fn fail_with_invalid_income_pool_market() {
             &income_pool.token_account.pubkey(),
             &mm_pool_market.keypair.pubkey(),
             &mm_pool.token_account.pubkey(),
-            &mm_pool_collateral_mint,
             &collateral_mint,
             &liquidity_mint,
             money_market_program_id,
@@ -723,7 +717,6 @@ async fn fail_with_invalid_income_pool_token_account() {
 
     let collateral_mint = mm_pool.token_mint_pubkey;
     let liquidity_mint = get_liquidity_mint().1;
-    let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
 
     let withdraw_accounts =
         integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
@@ -737,7 +730,6 @@ async fn fail_with_invalid_income_pool_token_account() {
             &Pubkey::new_unique(),
             &mm_pool_market.keypair.pubkey(),
             &mm_pool.token_account.pubkey(),
-            &mm_pool_collateral_mint,
             &collateral_mint,
             &liquidity_mint,
             money_market_program_id,
@@ -794,7 +786,6 @@ async fn fail_with_invalid_mm_pool_market() {
 
     let collateral_mint = mm_pool.token_mint_pubkey;
     let liquidity_mint = get_liquidity_mint().1;
-    let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
 
     let withdraw_accounts =
         integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
@@ -808,7 +799,6 @@ async fn fail_with_invalid_mm_pool_market() {
             &income_pool.token_account.pubkey(),
             &Pubkey::new_unique(),
             &mm_pool.token_account.pubkey(),
-            &mm_pool_collateral_mint,
             &collateral_mint,
             &liquidity_mint,
             money_market_program_id,
@@ -868,7 +858,6 @@ async fn fail_with_invalid_mm_pool_token_account() {
 
     let collateral_mint = mm_pool.token_mint_pubkey;
     let liquidity_mint = get_liquidity_mint().1;
-    let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
 
     let withdraw_accounts =
         integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
@@ -882,7 +871,6 @@ async fn fail_with_invalid_mm_pool_token_account() {
             &income_pool.token_account.pubkey(),
             &mm_pool_market.keypair.pubkey(),
             &Pubkey::new_unique(),
-            &mm_pool_collateral_mint,
             &collateral_mint,
             &liquidity_mint,
             money_market_program_id,
@@ -939,7 +927,6 @@ async fn fail_with_invalid_mm_pool_collateral_mint() {
 
     let collateral_mint = mm_pool.token_mint_pubkey;
     let liquidity_mint = get_liquidity_mint().1;
-    let mm_pool_collateral_mint = Pubkey::new_unique();
 
     let withdraw_accounts =
         integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
@@ -953,7 +940,6 @@ async fn fail_with_invalid_mm_pool_collateral_mint() {
             &income_pool.token_account.pubkey(),
             &mm_pool_market.keypair.pubkey(),
             &mm_pool.token_account.pubkey(),
-            &mm_pool_collateral_mint,
             &collateral_mint,
             &liquidity_mint,
             money_market_program_id,
@@ -1010,7 +996,6 @@ async fn fail_with_invalid_collateral_mint() {
 
     let collateral_mint = Pubkey::new_unique();
     let liquidity_mint = get_liquidity_mint().1;
-    let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
 
     let withdraw_accounts =
         integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
@@ -1024,7 +1009,6 @@ async fn fail_with_invalid_collateral_mint() {
             &income_pool.token_account.pubkey(),
             &mm_pool_market.keypair.pubkey(),
             &mm_pool.token_account.pubkey(),
-            &mm_pool_collateral_mint,
             &collateral_mint,
             &liquidity_mint,
             money_market_program_id,
@@ -1084,7 +1068,6 @@ async fn fail_with_invalid_liquidity_mint() {
 
     let collateral_mint = mm_pool.token_mint_pubkey;
     let liquidity_mint = Pubkey::new_unique();
-    let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
 
     let withdraw_accounts =
         integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
@@ -1098,7 +1081,6 @@ async fn fail_with_invalid_liquidity_mint() {
             &income_pool.token_account.pubkey(),
             &mm_pool_market.keypair.pubkey(),
             &mm_pool.token_account.pubkey(),
-            &mm_pool_collateral_mint,
             &collateral_mint,
             &liquidity_mint,
             money_market_program_id,
@@ -1158,7 +1140,6 @@ async fn fail_with_invalid_mm_program_id() {
 
     let collateral_mint = mm_pool.token_mint_pubkey;
     let liquidity_mint = get_liquidity_mint().1;
-    let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
 
     let withdraw_accounts =
         integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
@@ -1172,7 +1153,6 @@ async fn fail_with_invalid_mm_program_id() {
             &income_pool.token_account.pubkey(),
             &mm_pool_market.keypair.pubkey(),
             &mm_pool.token_account.pubkey(),
-            &mm_pool_collateral_mint,
             &collateral_mint,
             &liquidity_mint,
             money_market_program_id,
@@ -1232,7 +1212,6 @@ async fn fail_with_invalid_withdraw_accounts() {
 
     let collateral_mint = mm_pool.token_mint_pubkey;
     let liquidity_mint = get_liquidity_mint().1;
-    let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
 
     let withdraw_accounts =
         integrations::withdraw_accounts(&Pubkey::new_unique(), &money_market_pubkeys);
@@ -1246,7 +1225,6 @@ async fn fail_with_invalid_withdraw_accounts() {
             &income_pool.token_account.pubkey(),
             &mm_pool_market.keypair.pubkey(),
             &mm_pool.token_account.pubkey(),
-            &mm_pool_collateral_mint,
             &collateral_mint,
             &liquidity_mint,
             money_market_program_id,
