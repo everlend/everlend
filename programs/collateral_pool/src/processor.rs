@@ -441,7 +441,7 @@ impl Processor {
         assert_account_key(pool_market_info, &pool.pool_market)?;
         assert_account_key(token_account_info, &pool.token_account)?;
 
-        let pool_withdraw_authority =
+        let mut pool_withdraw_authority =
             PoolWithdrawAuthority::unpack(&pool_withdraw_authority_info.data.borrow())?;
 
         assert_account_key(pool_info, &pool_withdraw_authority.pool)?;
@@ -449,6 +449,7 @@ impl Processor {
             withdraw_authority_info,
             &pool_withdraw_authority.withdraw_authority,
         )?;
+        pool_withdraw_authority.withdraw(amount)?;
         let (_, bump_seed) = find_program_address(program_id, pool_market_info.key);
         let signers_seeds = &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]];
         cpi::spl_token::transfer(
