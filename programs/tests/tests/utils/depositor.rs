@@ -185,7 +185,7 @@ impl TestDepositor {
         let (mm_pool_withdraw_authority, _) = find_pool_withdraw_authority_program_address(
             &everlend_collateral_pool::id(),
             &mm_pool.pool_pubkey,
-            &context.payer.pubkey(), //TODO: double check
+            &context.payer.pubkey(),
         );
         let tx = Transaction::new_signed_with_payer(
             &[everlend_depositor::instruction::withdraw(

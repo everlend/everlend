@@ -9,7 +9,7 @@ use solana_program::{
 
 use everlend_utils::find_program_address;
 
-use crate::{find_pool_borrow_authority_program_address, find_pool_program_address};
+use crate::{find_pool_borrow_authority_program_address, find_pool_program_address, find_pool_withdraw_authority_program_address};
 
 /// Instructions supported by the program
 #[derive(Debug, BorshDeserialize, BorshSerialize, PartialEq)]
@@ -293,6 +293,65 @@ pub fn delete_pool_borrow_authority(
         accounts,
     )
 }
+
+/// Creates 'CreatePoolWithdrawAuthority' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn create_pool_withdraw_authority(
+    program_id: &Pubkey,
+    pool_market: &Pubkey,
+    pool: &Pubkey,
+    withdraw_authority: &Pubkey,
+    manager: &Pubkey,
+) -> Instruction {
+    let (pool_withdraw_authority, _) =
+        find_pool_withdraw_authority_program_address(program_id, pool, withdraw_authority);
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*pool_market, false),
+        AccountMeta::new_readonly(*pool, false),
+        AccountMeta::new(pool_withdraw_authority, false),
+        AccountMeta::new_readonly(*withdraw_authority, false),
+        AccountMeta::new(*manager, true),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+        AccountMeta::new_readonly(system_program::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &LiquidityPoolsInstruction::CreatePoolWithdrawAuthority,
+        accounts,
+    )
+}
+
+/// Creates 'DeletePoolWithdrawAuthority' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn delete_pool_withdraw_authority(
+    program_id: &Pubkey,
+    pool_market: &Pubkey,
+    pool: &Pubkey,
+    withdraw_authority: &Pubkey,
+    receiver: &Pubkey,
+    manager: &Pubkey,
+) -> Instruction {
+    let (pool_withdraw_authority, _) =
+        find_pool_withdraw_authority_program_address(program_id, pool, withdraw_authority);
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*pool_market, false),
+        AccountMeta::new_readonly(*pool, false),
+        AccountMeta::new(pool_withdraw_authority, false),
+        AccountMeta::new(*receiver, false),
+        AccountMeta::new_readonly(*manager, true),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &LiquidityPoolsInstruction::DeletePoolWithdrawAuthority,
+        accounts,
+    )
+}
+
+
 
 /// Creates 'Deposit' instruction.
 #[allow(clippy::too_many_arguments)]
