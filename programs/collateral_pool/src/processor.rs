@@ -21,9 +21,9 @@ use crate::{
     instruction::LiquidityPoolsInstruction,
     state::{
         InitPoolBorrowAuthorityParams, InitPoolMarketParams, InitPoolParams, Pool,
-        PoolBorrowAuthority, PoolMarket, PoolWithdrawAuthority
+        PoolBorrowAuthority, PoolMarket, PoolWithdrawAuthority 
     },
-    utils::*,
+    utils::*, find_pool_withdraw_authority_program_address,
 };
 
 /// Program state handler.
@@ -77,8 +77,6 @@ impl Processor {
         let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
 
         assert_account_key(manager_info, &pool_market.manager)?;
-
-        let token_mint = Mint::unpack(&token_mint_info.data.borrow())?;
 
         let (pool_pubkey, bump_seed) =
             find_pool_program_address(program_id, pool_market_info.key, token_mint_info.key);
@@ -285,6 +283,106 @@ impl Processor {
         PoolBorrowAuthority::pack(
             Default::default(),
             *pool_borrow_authority_info.data.borrow_mut(),
+        )?;
+
+        Ok(())
+    }
+
+    /// Process CreatePoolWithdrawAuthority instruction
+    pub fn create_pool_withdraw_authority(
+        program_id: &Pubkey,
+        accounts: &[AccountInfo],
+    ) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let pool_market_info = next_account_info(account_info_iter)?;
+        let pool_info = next_account_info(account_info_iter)?;
+        let pool_withdraw_authority_info = next_account_info(account_info_iter)?;
+        let withdraw_authority_info = next_account_info(account_info_iter)?;
+        let manager_info = next_account_info(account_info_iter)?;
+        let rent_info = next_account_info(account_info_iter)?;
+        let rent = &Rent::from_account_info(rent_info)?;
+        let _system_program_info = next_account_info(account_info_iter)?;
+
+        assert_signer(manager_info)?;
+        assert_owned_by(pool_market_info, program_id)?;
+        assert_owned_by(pool_info, program_id)?;
+
+        let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+        assert_account_key(manager_info, &pool_market.manager)?;
+
+        let pool = Pool::unpack(&pool_info.data.borrow())?;
+        assert_account_key(pool_market_info, &pool.pool_market)?;
+
+        let (pool_withdraw_authority_pubkey, bump_seed) = find_pool_withdraw_authority_program_address(
+            program_id,
+            pool_info.key,
+            withdraw_authority_info.key,
+        );
+        assert_account_key(pool_withdraw_authority_info, &pool_withdraw_authority_pubkey)?;
+
+        let signers_seeds = &[
+            &pool_info.key.to_bytes()[..32],
+            &withdraw_authority_info.key.to_bytes()[..32],
+            &[bump_seed],
+        ];
+        cpi::system::create_account::<PoolWithdrawAuthority>(
+            program_id,
+            manager_info.clone(),
+            pool_withdraw_authority_info.clone(),
+            &[signers_seeds],
+            rent,
+        )?;
+
+        let mut pool_withdraw_authority =
+            PoolWithdrawAuthority::unpack_unchecked(&pool_withdraw_authority_info.data.borrow())?;
+        assert_uninitialized(&pool_withdraw_authority)?;
+
+        pool_withdraw_authority.init(*pool_info.key, *withdraw_authority_info.key);
+        PoolWithdrawAuthority::pack(
+            pool_withdraw_authority,
+            *pool_withdraw_authority_info.data.borrow_mut(),
+        )?;
+
+        Ok(())
+    }
+
+    /// Process DeletePoolWithdrawAuthority instruction
+    pub fn delete_pool_withdraw_authority(
+        program_id: &Pubkey,
+        accounts: &[AccountInfo],
+    ) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let pool_market_info = next_account_info(account_info_iter)?;
+        let pool_info = next_account_info(account_info_iter)?;
+        let pool_withdraw_authority_info = next_account_info(account_info_iter)?;
+        let receiver_info = next_account_info(account_info_iter)?;
+        let manager_info = next_account_info(account_info_iter)?;
+
+        assert_signer(manager_info)?;
+        assert_owned_by(pool_market_info, program_id)?;
+        assert_owned_by(pool_info, program_id)?;
+        assert_owned_by(pool_withdraw_authority_info, program_id)?;
+
+        let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+        assert_account_key(manager_info, &pool_market.manager)?;
+
+        let pool = Pool::unpack(&pool_info.data.borrow())?;
+        assert_account_key(pool_market_info, &pool.pool_market)?;
+
+        let pool_withdraw_authority =
+            PoolWithdrawAuthority::unpack(&pool_withdraw_authority_info.data.borrow())?;
+        assert_account_key(pool_info, &pool_withdraw_authority.pool)?;
+
+        let receiver_starting_lamports = receiver_info.lamports();
+        let pool_withdraw_authority_lamports = pool_withdraw_authority_info.lamports();
+        **pool_withdraw_authority_info.lamports.borrow_mut() = 0;
+        **receiver_info.lamports.borrow_mut() = receiver_starting_lamports
+            .checked_add(pool_withdraw_authority_lamports)
+            .ok_or(EverlendError::MathOverflow)?;
+
+        PoolWithdrawAuthority::pack(
+            Default::default(),
+            *pool_withdraw_authority_info.data.borrow_mut(),
         )?;
 
         Ok(())
@@ -521,6 +619,17 @@ impl Processor {
                 msg!("LiquidityPoolsInstruction: DeletePoolBorrowAuthority");
                 Self::delete_pool_borrow_authority(program_id, accounts)
             }
+
+            LiquidityPoolsInstruction::CreatePoolWithdrawAuthority => {
+                msg!("LiquidityPoolsInstruction: CreatePoolWithdrawAuthority");
+                Self::create_pool_withdraw_authority(program_id, accounts)
+            }
+
+            LiquidityPoolsInstruction::DeletePoolWithdrawAuthority => {
+                msg!("LiquidityPoolsInstruction: DeletePoolWithdrawAuthority");
+                Self::delete_pool_withdraw_authority(program_id, accounts)
+            }
+
 
             LiquidityPoolsInstruction::Deposit { amount } => {
                 msg!("LiquidityPoolsInstruction: Deposit");

@@ -72,6 +72,26 @@ pub enum LiquidityPoolsInstruction {
     /// [RS] Market manager
     DeletePoolBorrowAuthority,
 
+    /// Creates and initializes a pool withdraw authority
+    ///
+    /// Accounts:
+    /// [R] Pool market
+    /// [R] Pool
+    /// [W] Pool withdraw authority
+    /// [WS] Market manager
+    /// [R] Rent sysvar
+    /// [R] Sytem program
+    CreatePoolWithdrawAuthority,
+    
+    /// Delete a pool withdraw authority
+    ///
+    /// Accounts:
+    /// [W] Pool withdraw authority
+    /// [R] Pool
+    /// [W] Receiver lamports
+    /// [RS] Market manager
+    DeletePoolWithdrawAuthority,
+
     /// Deposit funds in the pool
     ///
     /// Accounts:
@@ -91,7 +111,7 @@ pub enum LiquidityPoolsInstruction {
     /// Accounts:
     /// [R] Pool market
     /// [R] Pool
-    /// [R] Pool withdraw authority //TODO: maybe delete?
+    /// [R] Pool withdraw authority
     /// [W] Source account (for pool mint)
     /// [W] Destination account (for token mint)
     /// [W] Token account

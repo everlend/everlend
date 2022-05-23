@@ -3,6 +3,7 @@
 use std::cmp::Ordering;
 
 use borsh::BorshDeserialize;
+use everlend_collateral_pool::find_pool_withdraw_authority_program_address;
 use solana_program::program_error::ProgramError;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -424,8 +425,8 @@ impl Processor {
             RegistryRootAccounts::unpack_from_slice(&registry_config_info.data.borrow())?;
 
         // Check external programs
-        assert_owned_by(collateral_pool_market_info, &programs.ulp_program_id)?;
-        assert_owned_by(collateral_pool_info, &programs.ulp_program_id)?;
+        assert_owned_by(collateral_pool_market_info, &programs.collateral_pool_program_id)?;
+        assert_owned_by(collateral_pool_info, &programs.collateral_pool_program_id)?;
 
         // Check collateral pool market
         if !root_accounts
@@ -437,7 +438,7 @@ impl Processor {
 
         // Check collateral pool
         let (collateral_pool_pubkey, _) = everlend_ulp::find_pool_program_address(
-            &programs.ulp_program_id,
+            &programs.collateral_pool_program_id,
             collateral_pool_market_info.key,
             collateral_mint_info.key,
         );
@@ -554,7 +555,7 @@ impl Processor {
         let collateral_pool_market_authority_info = next_account_info(account_info_iter)?;
         let collateral_pool_info = next_account_info(account_info_iter)?;
         let collateral_pool_token_account_info = next_account_info(account_info_iter)?;
-        let collateral_pool_withdraw_authority = next_account_info(account_info_iter)?;
+        let collateral_pool_withdraw_authority_info = next_account_info(account_info_iter)?;
         let collateral_pool_collateral_mint_info = next_account_info(account_info_iter)?;
 
         let collateral_transit_info = next_account_info(account_info_iter)?;
@@ -589,8 +590,8 @@ impl Processor {
                 .map(Box::new)?;
 
         // Check external programs
-        assert_owned_by(collateral_pool_market_info, &programs.ulp_program_id)?;
-        assert_owned_by(collateral_pool_info, &programs.ulp_program_id)?;
+        assert_owned_by(collateral_pool_market_info, &programs.collateral_pool_program_id)?;
+        assert_owned_by(collateral_pool_info, &programs.collateral_pool_program_id)?;
 
         // Check collateral pool market
         if !root_accounts
@@ -602,7 +603,7 @@ impl Processor {
 
         // Check collateral pool
         let (collateral_pool_pubkey, _) = everlend_ulp::find_pool_program_address(
-            &programs.ulp_program_id,
+            &programs.collateral_pool_program_id,
             collateral_pool_market_info.key,
             collateral_mint_info.key,
         );
@@ -621,6 +622,13 @@ impl Processor {
             collateral_pool_collateral_mint_info,
             &collateral_pool.pool_mint,
         )?;
+
+        let (collateral_pool_withdraw_authority, _) = find_pool_withdraw_authority_program_address(
+            &programs.collateral_pool_program_id,
+            collateral_pool_info.key,
+            depositor_authority_info.key, 
+        );
+        assert_account_key(collateral_pool_withdraw_authority_info, &collateral_pool_withdraw_authority)?;
 
         // Check rebalancing
         let (rebalancing_pubkey, _) = find_rebalancing_program_address(
@@ -668,14 +676,6 @@ impl Processor {
         );
         assert_account_key(collateral_transit_info, &collateral_transit_pubkey)?;
 
-        // Check transit: collateral pool collateral (top naming)
-        let (collateral_pool_collateral_transit_pubkey, _) = find_transit_program_address(
-            program_id,
-            depositor_info.key,
-            collateral_pool_collateral_mint_info.key,
-            "",
-        );
-
         // Create depositor authority account
         let (depositor_authority_pubkey, bump_seed) =
             find_program_address(program_id, depositor_info.key);
@@ -700,7 +700,7 @@ impl Processor {
             collateral_pool_market_authority_info.clone(),
             collateral_pool_info.clone(),
             collateral_pool_token_account_info.clone(),
-            collateral_pool_withdraw_authority.clone(),
+            collateral_pool_withdraw_authority_info.clone(),
             collateral_pool_collateral_mint_info.clone(),
             collateral_transit_info.clone(),
             collateral_mint_info.clone(),

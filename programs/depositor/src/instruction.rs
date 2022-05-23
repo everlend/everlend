@@ -107,7 +107,7 @@ pub enum DepositorInstruction {
     /// [R] MM Pool market authority
     /// [R] MM Pool
     /// [W] MM Pool token account (for collateral mint)
-    /// [W] MM Pool withdraw authority // TODO: delete, should be depository auth
+    /// [W] MM Pool withdraw authority
     /// [W] MM Pool collateral mint
     /// [W] Collateral transit account
     /// [W] Collateral mint

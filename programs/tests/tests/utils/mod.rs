@@ -145,7 +145,7 @@ pub async fn presetup() -> (
 
     let mut programs = RegistryPrograms {
         general_pool_program_id: everlend_general_pool::id(),
-        ulp_program_id: everlend_ulp::id(),
+        collateral_pool_program_id: everlend_collateral_pool::id(),
         liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
         depositor_program_id: everlend_depositor::id(),
         income_pools_program_id: everlend_income_pools::id(),

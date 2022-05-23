@@ -26,10 +26,10 @@ pub struct PoolWithdrawAuthority {
 
 impl PoolWithdrawAuthority {
     /// Initialize a PoolWithdrawAuthority
-    pub fn init(&mut self, params: InitPoolWithdrawAuthorityParams) {
+    pub fn init(&mut self, pool: Pubkey, withdraw_authority: Pubkey) {
         self.account_type = AccountType::PoolWithdrawAuthority;
-        self.pool = params.pool;
-        self.withdraw_authority = params.withdraw_authority;
+        self.pool = pool;
+        self.withdraw_authority = withdraw_authority;
         self.amount_withdrawn = 0;
     }
 
@@ -41,14 +41,6 @@ impl PoolWithdrawAuthority {
             .ok_or(EverlendError::MathOverflow)?;
         Ok(())
     }
-}
-
-/// Initialize a PoolWithdrawAuthority params
-pub struct InitPoolWithdrawAuthorityParams {
-    /// Pool
-    pub pool: Pubkey,
-    /// Withdraw authority
-    pub withdraw_authority: Pubkey,
 }
 
 impl Sealed for PoolWithdrawAuthority {}

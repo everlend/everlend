@@ -7,6 +7,7 @@ use everlend_depositor::{
     find_rebalancing_program_address,
     state::{Depositor, Rebalancing},
 };
+use everlend_collateral_pool::find_pool_withdraw_authority_program_address;
 use everlend_utils::integrations::{self, MoneyMarketPubkeys};
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::ProgramTestContext;
@@ -181,7 +182,11 @@ impl TestDepositor {
 
         let withdraw_accounts =
             integrations::withdraw_accounts(money_market_program_id, money_market_pubkeys);
-
+        let (mm_pool_withdraw_authority, _) = find_pool_withdraw_authority_program_address(
+            &everlend_collateral_pool::id(),
+            &mm_pool.pool_pubkey,
+            &context.payer.pubkey(), //TODO: double check
+        );
         let tx = Transaction::new_signed_with_payer(
             &[everlend_depositor::instruction::withdraw(
                 &everlend_depositor::id(),
@@ -192,7 +197,7 @@ impl TestDepositor {
                 &mm_pool_market.keypair.pubkey(),
                 &mm_pool.token_account.pubkey(),
                 &mm_pool_collateral_mint,
-
+                &mm_pool_withdraw_authority,
                 &collateral_mint,
                 &liquidity_mint,
                 money_market_program_id,
