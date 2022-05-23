@@ -112,7 +112,6 @@ pub enum LiquidityPoolsInstruction {
     /// [R] Pool market
     /// [R] Pool
     /// [R] Pool withdraw authority
-    /// [W] Source account (for pool mint)
     /// [W] Destination account (for token mint)
     /// [W] Token account
     /// [R] Pool market authority
