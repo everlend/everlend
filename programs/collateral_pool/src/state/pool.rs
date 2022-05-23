@@ -91,6 +91,6 @@ impl Pack for Pool {
 
 impl IsInitialized for Pool {
     fn is_initialized(&self) -> bool {
-        self.account_type != AccountType::Uninitialized && self.account_type == AccountType::Pool
+        self.account_type == AccountType::Pool
     }
 }
