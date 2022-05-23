@@ -1,5 +1,5 @@
 use super::{get_account, BanksClientResult};
-use everlend_ulp::{instruction, state::PoolMarket};
+use everlend_collateral_pool::{instruction, state::PoolMarket};
 use solana_program::{program_pack::Pack, system_instruction};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{

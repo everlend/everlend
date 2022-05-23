@@ -513,7 +513,6 @@ impl Processor {
             collateral_pool_market_authority_info.clone(),
             collateral_pool_info.clone(),
             collateral_pool_token_account_info.clone(),
-            collateral_pool_collateral_mint_info.clone(),
             collateral_transit_info.clone(),
             collateral_mint_info.clone(),
             liquidity_transit_info.clone(),
