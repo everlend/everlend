@@ -56,7 +56,6 @@ pub fn deposit<'a>(
         mm_pool.clone(),
         collateral_transit.clone(),
         mm_pool_token_account.clone(),
-        mm_pool_collateral_mint.clone(),
         authority.clone(),
         collateral_amount,
         signers_seeds,

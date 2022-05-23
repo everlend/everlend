@@ -302,20 +302,15 @@ pub fn deposit(
     pool_market: &Pubkey,
     pool: &Pubkey,
     source: &Pubkey,
-    destination: &Pubkey,
     token_account: &Pubkey,
     user_transfer_authority: &Pubkey,
     amount: u64,
 ) -> Instruction {
-    let (pool_market_authority, _) = find_program_address(program_id, pool_market);
-
     let accounts = vec![
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new_readonly(*pool, false),
         AccountMeta::new(*source, false),
-        AccountMeta::new(*destination, false),
         AccountMeta::new(*token_account, false),
-        AccountMeta::new_readonly(pool_market_authority, false),
         AccountMeta::new_readonly(*user_transfer_authority, true),
         AccountMeta::new_readonly(spl_token::id(), false),
     ];
