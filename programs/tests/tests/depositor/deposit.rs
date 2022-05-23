@@ -8,13 +8,13 @@ use solana_sdk::signer::Signer;
 use solana_sdk::transaction::{Transaction, TransactionError};
 
 use everlend_liquidity_oracle::state::DistributionArray;
+use everlend_registry::state::SetRegistryPoolConfigParams;
 use everlend_registry::state::{DistributionPubkeys, RegistryRootAccounts};
 use everlend_utils::{
     find_program_address,
     integrations::{self, MoneyMarketPubkeys},
     EverlendError,
 };
-use everlend_registry::state::SetRegistryPoolConfigParams;
 
 use crate::utils::*;
 
@@ -59,7 +59,10 @@ async fn setup() -> (
     // 1. Prepare general pool
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
+    general_pool_market
+        .init(&mut context, &registry.keypair.pubkey())
+        .await
+        .unwrap();
 
     let general_pool = TestGeneralPool::new(&general_pool_market, None);
     general_pool
@@ -70,7 +73,10 @@ async fn setup() -> (
         .set_registry_pool_config(
             &mut context,
             &general_pool.pool_pubkey,
-            SetRegistryPoolConfigParams { deposit_minimum: 0, withdraw_minimum: 0 }
+            SetRegistryPoolConfigParams {
+                deposit_minimum: 0,
+                withdraw_minimum: 0,
+            },
         )
         .await
         .unwrap();
@@ -222,7 +228,7 @@ async fn setup() -> (
 }
 
 #[tokio::test]
-async fn success() {
+async fn success2() {
     let (
         mut context,
         money_market,
@@ -252,6 +258,10 @@ async fn success() {
         .get_rebalancing_data(&mut context, &general_pool.token_mint_pubkey)
         .await;
 
+    println!(
+        "token_mint_pubkey mint: {}",
+        &general_pool.token_mint_pubkey
+    );
     println!("rebalancing = {:#?}", rebalancing);
 
     let money_market_pubkeys =

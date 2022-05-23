@@ -12,11 +12,13 @@ use solana_program::{
 use spl_token::state::Account;
 
 use everlend_registry::state::RegistryPrograms;
-use everlend_utils::{cpi, integrations, EverlendError};
+use everlend_utils::{assert_account_key, cpi, integrations, EverlendError};
+
+use crate::state::{InternalMining, MiningType};
 
 /// Deposit
 #[allow(clippy::too_many_arguments)]
-pub fn deposit<'a>(
+pub fn deposit<'b, 'a: 'b>(
     registry_programs: &RegistryPrograms,
     mm_pool_market: AccountInfo<'a>,
     mm_pool_market_authority: AccountInfo<'a>,
@@ -31,12 +33,14 @@ pub fn deposit<'a>(
     authority: AccountInfo<'a>,
     clock: AccountInfo<'a>,
     money_market_program: AccountInfo<'a>,
-    money_market_account_info_iter: &mut Iter<AccountInfo<'a>>,
+    money_market_account_info_iter: &mut Iter<'b, AccountInfo<'a>>,
     liquidity_amount: u64,
     signers_seeds: &[&[&[u8]]],
+    internal_mining_info: AccountInfo<'a>,
+    internal_mining: Option<InternalMining>,
 ) -> Result<u64, ProgramError> {
-    msg!("Deposit to Money market");
-    money_market_deposit(
+    msg!("Deposit to Money market: {}", &liquidity_amount);
+    let money_market_account_info_vec = money_market_deposit(
         registry_programs,
         money_market_program.clone(),
         liquidity_transit.clone(),
@@ -52,19 +56,88 @@ pub fn deposit<'a>(
 
     let collateral_amount = Account::unpack_unchecked(&collateral_transit.data.borrow())?.amount;
 
-    msg!("Collect collateral tokens to MM Pool");
-    everlend_ulp::cpi::deposit(
-        mm_pool_market.clone(),
-        mm_pool_market_authority.clone(),
-        mm_pool.clone(),
-        collateral_transit.clone(),
-        mm_pool_collateral_transit.clone(),
-        mm_pool_token_account.clone(),
-        mm_pool_collateral_mint.clone(),
-        authority.clone(),
-        collateral_amount,
-        signers_seeds,
-    )?;
+    if let Some(internal_mining) = internal_mining {
+        match internal_mining.mining_type {
+            MiningType::Larix { mining_account } => {
+                let reserve_bonus_info = next_account_info(money_market_account_info_iter)?;
+                let mining_info = next_account_info(money_market_account_info_iter)?;
+                assert_account_key(mining_info, &mining_account)?;
+                cpi::larix::deposit_mining(
+                    &money_market_program.key,
+                    collateral_transit.clone(),
+                    reserve_bonus_info.clone(),
+                    mining_info.clone(),
+                    money_market_account_info_vec[0].clone(),
+                    money_market_account_info_vec[2].clone(),
+                    internal_mining_info.clone(),
+                    internal_mining_info,
+                    u64::MAX,
+                )?;
+            }
+            MiningType::PortFinanceQuarry {
+                quarry_mining_program_id,
+                quarry,
+                rewarder,
+                miner_vault,
+            } => {
+                let quarry_mining_program_id_info =
+                    next_account_info(money_market_account_info_iter)?;
+                assert_account_key(quarry_mining_program_id_info, &quarry_mining_program_id)?;
+                let miner_info = next_account_info(money_market_account_info_iter)?;
+                let quarry_info = next_account_info(money_market_account_info_iter)?;
+                assert_account_key(quarry_info, &quarry)?;
+                let rewarder_info = next_account_info(money_market_account_info_iter)?;
+                assert_account_key(rewarder_info, &rewarder)?;
+                let miner_vault_info = next_account_info(money_market_account_info_iter)?;
+                assert_account_key(miner_vault_info, &miner_vault)?;
+                let (miner_pubkey, _miner_bump) = cpi::quarry::find_miner_program_address(
+                    &quarry_mining_program_id,
+                    &quarry,
+                    &internal_mining_info.key,
+                );
+                assert_account_key(miner_info, &miner_pubkey)?;
+                cpi::quarry::stake_tokens(
+                    &quarry_mining_program_id,
+                    internal_mining_info.clone(),
+                    miner_info.clone(),
+                    quarry_info.clone(),
+                    miner_vault_info.clone(),
+                    collateral_transit.clone(),
+                    rewarder_info.clone(),
+                    collateral_amount,
+                )?;
+            }
+            _ => {
+                msg!("Collect collateral tokens to MM Pool");
+                everlend_ulp::cpi::deposit(
+                    mm_pool_market.clone(),
+                    mm_pool_market_authority.clone(),
+                    mm_pool.clone(),
+                    collateral_transit.clone(),
+                    mm_pool_collateral_transit.clone(),
+                    mm_pool_token_account.clone(),
+                    mm_pool_collateral_mint.clone(),
+                    authority.clone(),
+                    collateral_amount,
+                    signers_seeds,
+                )?;
+            }
+        }
+    } else {
+        msg!("Collect collateral tokens to MM Pool");
+        everlend_ulp::cpi::deposit(
+            mm_pool_market.clone(),
+            mm_pool_market_authority.clone(),
+            mm_pool.clone(),
+            collateral_transit.clone(),
+            mm_pool_collateral_transit.clone(),
+            mm_pool_token_account.clone(),
+            mm_pool_collateral_mint.clone(),
+            authority.clone(),
+            collateral_amount,
+            signers_seeds,
+        )?;
+    }
 
     Ok(collateral_amount)
 }
@@ -172,7 +245,7 @@ pub fn withdraw<'a>(
 
 /// Money market deposit
 #[allow(clippy::too_many_arguments)]
-pub fn money_market_deposit<'a>(
+pub fn money_market_deposit<'b, 'a: 'b>(
     registry_programs: &RegistryPrograms,
     money_market_program: AccountInfo<'a>,
     source_liquidity: AccountInfo<'a>,
@@ -180,11 +253,11 @@ pub fn money_market_deposit<'a>(
     destination_collateral: AccountInfo<'a>,
     collateral_mint: AccountInfo<'a>,
     authority: AccountInfo<'a>,
-    money_market_account_info_iter: &mut Iter<AccountInfo<'a>>,
+    money_market_account_info_iter: &mut Iter<'b, AccountInfo<'a>>,
     clock: AccountInfo<'a>,
     amount: u64,
     signers_seeds: &[&[&[u8]]],
-) -> Result<(), ProgramError> {
+) -> Result<Vec<&'b AccountInfo<'a>>, ProgramError> {
     let port_finance_program_id = registry_programs.money_market_program_ids[0];
     let larix_program_id = registry_programs.money_market_program_ids[1];
     let solend_program_id = registry_programs.money_market_program_ids[2];
@@ -204,7 +277,7 @@ pub fn money_market_deposit<'a>(
             clock.clone(),
         )?;
 
-        return cpi::spl_token_lending::deposit(
+        cpi::spl_token_lending::deposit(
             money_market_program.key,
             source_liquidity.clone(),
             destination_collateral.clone(),
@@ -217,7 +290,14 @@ pub fn money_market_deposit<'a>(
             clock.clone(),
             amount,
             signers_seeds,
-        );
+        )?;
+        return Ok(vec![
+            reserve_info,
+            reserve_liquidity_supply_info,
+            lending_market_info,
+            lending_market_authority_info,
+            reserve_liquidity_oracle_info,
+        ]);
     }
 
     if *money_market_program.key == port_finance_program_id {
@@ -247,7 +327,14 @@ pub fn money_market_deposit<'a>(
             clock.clone(),
             amount,
             signers_seeds,
-        )
+        )?;
+        Ok(vec![
+            reserve_info,
+            reserve_liquidity_supply_info,
+            lending_market_info,
+            lending_market_authority_info,
+            reserve_liquidity_oracle_info,
+        ])
     } else if *money_market_program.key == larix_program_id {
         let reserve_info = next_account_info(money_market_account_info_iter)?;
         let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
@@ -273,7 +360,14 @@ pub fn money_market_deposit<'a>(
             authority.clone(),
             amount,
             signers_seeds,
-        )
+        )?;
+        Ok(vec![
+            reserve_info,
+            reserve_liquidity_supply_info,
+            lending_market_info,
+            lending_market_authority_info,
+            reserve_liquidity_oracle_info,
+        ])
     } else if *money_market_program.key == solend_program_id {
         let reserve_info = next_account_info(money_market_account_info_iter)?;
         let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
@@ -304,7 +398,15 @@ pub fn money_market_deposit<'a>(
             clock.clone(),
             amount,
             signers_seeds,
-        )
+        )?;
+        Ok(vec![
+            reserve_info,
+            reserve_liquidity_supply_info,
+            lending_market_info,
+            lending_market_authority_info,
+            reserve_liquidity_pyth_oracle_info,
+            reserve_liquidity_switchboard_oracle_info,
+        ])
     } else {
         Err(EverlendError::IncorrectInstructionProgramId.into())
     }

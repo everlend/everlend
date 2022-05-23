@@ -11,6 +11,7 @@ use everlend_general_pool::find_withdrawal_requests_program_address;
 use everlend_liquidity_oracle::find_liquidity_oracle_token_distribution_program_address;
 use everlend_utils::find_program_address;
 
+use crate::state::MiningType;
 use crate::{find_rebalancing_program_address, find_transit_program_address};
 
 /// Instructions supported by the program
@@ -91,6 +92,10 @@ pub enum DepositorInstruction {
     /// [R] Token program id
     /// [R] Everlend ULP program id
     /// [R] Money market program id
+    /// [R] Internal mining account
+    /// For larix mining:
+    /// [R] Reserve Bonus
+    /// [R] Mining account
     Deposit,
 
     /// Withdraw funds from MM pool to money market.
@@ -118,6 +123,7 @@ pub enum DepositorInstruction {
     /// [R] Token program id
     /// [R] Everlend ULP program id
     /// [R] Money market program id
+    /// [R] Internal mining account
     Withdraw,
 
     /// Migrate depositor to v1
@@ -127,6 +133,31 @@ pub enum DepositorInstruction {
     /// [R] Registry
     /// [R] Registry config
     MigrateDepositor,
+
+    /// Initialize accounts for mining LM rewards/
+    ///
+    /// Accounts:
+    /// [] Collateral mint (collateral of liquidity asset)
+    /// [] Money market program id
+    /// [W] Internal mining account
+    /// [R] Depositor
+    /// [R] Registry
+    /// [S] Manager
+    /// For larix mining:
+    /// [R] Mining account
+    /// [R] Lending market
+    /// For PortFinance mining:
+    /// [R] Staking program id
+    /// [R] Staking pool
+    /// [W] Staking account
+    /// For PortFinanceQuarry:
+    ///
+    InitMiningAccounts {
+        /// Bump seed of pda
+        internal_mining_bump_seed: u8,
+        /// Type of mining
+        mining_type: MiningType,
+    },
 }
 
 /// Creates 'Init' instruction.
@@ -283,6 +314,12 @@ pub fn deposit(
     let (mm_pool_collateral_transit, _) =
         find_transit_program_address(program_id, depositor, mm_pool_collateral_mint, "");
 
+    let (internal_mining, internal_mining_bump_seed) = crate::find_internal_mining_program_address(
+        program_id,
+        liquidity_mint,
+        money_market_program_id,
+    );
+
     let mut accounts = vec![
         AccountMeta::new_readonly(registry_config, false),
         AccountMeta::new_readonly(*depositor, false),
@@ -306,6 +343,7 @@ pub fn deposit(
         AccountMeta::new_readonly(everlend_ulp::id(), false),
         // Money market
         AccountMeta::new_readonly(*money_market_program_id, false),
+        AccountMeta::new_readonly(internal_mining, false),
     ];
 
     accounts.extend(money_market_accounts);
@@ -359,6 +397,12 @@ pub fn withdraw(
     let (liquidity_reserve_transit, _) =
         find_transit_program_address(program_id, depositor, liquidity_mint, "reserve");
 
+    let (internal_mining, internal_mining_bump_seed) = crate::find_internal_mining_program_address(
+        program_id,
+        liquidity_mint,
+        money_market_program_id,
+    );
+
     let mut accounts = vec![
         AccountMeta::new_readonly(registry_config, false),
         AccountMeta::new_readonly(*depositor, false),
@@ -388,6 +432,7 @@ pub fn withdraw(
         AccountMeta::new_readonly(everlend_ulp::id(), false),
         // Money market
         AccountMeta::new_readonly(*money_market_program_id, false),
+        AccountMeta::new_readonly(internal_mining, false),
     ];
 
     accounts.extend(money_market_accounts);
@@ -396,7 +441,6 @@ pub fn withdraw(
 }
 
 /// Creates 'MigrateDepositor' instruction.
-#[allow(clippy::too_many_arguments)]
 pub fn migrate_depositor(
     program_id: &Pubkey,
     depositor: &Pubkey,
@@ -414,6 +458,56 @@ pub fn migrate_depositor(
     Instruction::new_with_borsh(
         *program_id,
         &DepositorInstruction::MigrateDepositor,
+        accounts,
+    )
+}
+
+/// Creates 'InitMiningAccounts' instruction.
+pub fn init_mining_accounts(
+    program_id: &Pubkey,
+    collateral_mint: &Pubkey,
+    money_market_program_id: &Pubkey,
+    depositor: &Pubkey,
+    registry: &Pubkey,
+    manager: &Pubkey,
+    mining_type: MiningType,
+    larix_pubkeys: Vec<Pubkey>,
+    port_finance_pubkeys: Vec<Pubkey>,
+) -> Instruction {
+    let (internal_mining, internal_mining_bump_seed) = crate::find_internal_mining_program_address(
+        program_id,
+        collateral_mint,
+        money_market_program_id,
+    );
+
+    let mut accounts = vec![
+        AccountMeta::new(internal_mining, false),
+        AccountMeta::new_readonly(*collateral_mint, false),
+        AccountMeta::new_readonly(*money_market_program_id, false),
+        AccountMeta::new_readonly(*depositor, false),
+        AccountMeta::new_readonly(*registry, false),
+        AccountMeta::new_readonly(*manager, true),
+    ];
+
+    match mining_type {
+        MiningType::Larix { .. } => {
+            accounts.push(AccountMeta::new_readonly(larix_pubkeys[0], false));
+            accounts.push(AccountMeta::new_readonly(larix_pubkeys[1], false));
+        }
+        MiningType::PortFinance => {
+            accounts.push(AccountMeta::new_readonly(port_finance_pubkeys[0], false));
+            accounts.push(AccountMeta::new_readonly(port_finance_pubkeys[1], false));
+            accounts.push(AccountMeta::new(port_finance_pubkeys[2], false));
+        }
+        _ => {}
+    }
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &DepositorInstruction::InitMiningAccounts {
+            internal_mining_bump_seed,
+            mining_type,
+        },
         accounts,
     )
 }
