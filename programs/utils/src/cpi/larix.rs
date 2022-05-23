@@ -144,6 +144,7 @@ pub fn init_mining<'a>(
     mining_info: AccountInfo<'a>,
     authority: AccountInfo<'a>,
     lending_market: AccountInfo<'a>,
+    signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
     let ix = Instruction {
         program_id: *program_id,
@@ -155,7 +156,11 @@ pub fn init_mining<'a>(
         data: LendingInstruction::InitMining.pack(),
     };
 
-    invoke(&ix, &[mining_info, authority, lending_market])
+    invoke_signed(
+        &ix,
+        &[mining_info, authority, lending_market],
+        signers_seeds,
+    )
 }
 
 pub fn deposit_mining<'a>(

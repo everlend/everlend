@@ -14,6 +14,8 @@ use spl_token::state::Account;
 use everlend_registry::state::RegistryPrograms;
 use everlend_utils::{cpi, integrations, EverlendError};
 
+use crate::state::{InternalMining, MiningType};
+
 /// Deposit
 #[allow(clippy::too_many_arguments)]
 pub fn deposit<'a>(
@@ -34,6 +36,7 @@ pub fn deposit<'a>(
     money_market_account_info_iter: &mut Iter<AccountInfo<'a>>,
     liquidity_amount: u64,
     signers_seeds: &[&[&[u8]]],
+    internal_mining: Option<InternalMining>,
 ) -> Result<u64, ProgramError> {
     msg!("Deposit to Money market");
     money_market_deposit(
@@ -52,19 +55,44 @@ pub fn deposit<'a>(
 
     let collateral_amount = Account::unpack_unchecked(&collateral_transit.data.borrow())?.amount;
 
-    msg!("Collect collateral tokens to MM Pool");
-    everlend_ulp::cpi::deposit(
-        mm_pool_market.clone(),
-        mm_pool_market_authority.clone(),
-        mm_pool.clone(),
-        collateral_transit.clone(),
-        mm_pool_collateral_transit.clone(),
-        mm_pool_token_account.clone(),
-        mm_pool_collateral_mint.clone(),
-        authority.clone(),
-        collateral_amount,
-        signers_seeds,
-    )?;
+    if let Some(internal_mining) = internal_mining {
+        match internal_mining.mining_type {
+            MiningType::Larix {
+                mining_account,
+                destination_collateral,
+            } => cpi::larix::deposit_mining(),
+            MiningType::PortFinanceQuarry { .. } => {}
+            _ => {
+                msg!("Collect collateral tokens to MM Pool");
+                everlend_ulp::cpi::deposit(
+                    mm_pool_market.clone(),
+                    mm_pool_market_authority.clone(),
+                    mm_pool.clone(),
+                    collateral_transit.clone(),
+                    mm_pool_collateral_transit.clone(),
+                    mm_pool_token_account.clone(),
+                    mm_pool_collateral_mint.clone(),
+                    authority.clone(),
+                    collateral_amount,
+                    signers_seeds,
+                )?;
+            }
+        }
+    } else {
+        msg!("Collect collateral tokens to MM Pool");
+        everlend_ulp::cpi::deposit(
+            mm_pool_market.clone(),
+            mm_pool_market_authority.clone(),
+            mm_pool.clone(),
+            collateral_transit.clone(),
+            mm_pool_collateral_transit.clone(),
+            mm_pool_token_account.clone(),
+            mm_pool_collateral_mint.clone(),
+            authority.clone(),
+            collateral_amount,
+            signers_seeds,
+        )?;
+    }
 
     Ok(collateral_amount)
 }

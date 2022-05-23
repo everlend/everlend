@@ -117,3 +117,19 @@ pub fn redeem<'a>(
         signers_seeds,
     )
 }
+
+pub fn create_stake_account<'a>(
+    program_id: &Pubkey,
+    stake_account: AccountInfo<'a>,
+    staking_pool: AccountInfo<'a>,
+    stake_account_owner: AccountInfo<'a>,
+) -> Result<(), ProgramError> {
+    let ix = port_finance_staking_instructions::instruction::create_stake_account(
+        *program_id,
+        *stake_account.key,
+        *staking_pool.key,
+        *stake_account_owner.key,
+    );
+
+    invoke(&ix, &[stake_account, staking_pool, stake_account_owner])
+}
