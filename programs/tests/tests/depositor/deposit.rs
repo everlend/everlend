@@ -1,18 +1,20 @@
 #![cfg(feature = "test-bpf")]
 
 use solana_program::instruction::InstructionError;
+use solana_program::instruction::InstructionError::InvalidAccountData;
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::*;
 use solana_sdk::signer::Signer;
 use solana_sdk::transaction::{Transaction, TransactionError};
-use spl_token_lending::error::LendingError;
 
 use everlend_liquidity_oracle::state::DistributionArray;
+use everlend_registry::state::{DistributionPubkeys, RegistryRootAccounts};
 use everlend_utils::{
     find_program_address,
     integrations::{self, MoneyMarketPubkeys},
     EverlendError,
 };
+use everlend_registry::state::SetRegistryPoolConfigParams;
 
 use crate::utils::*;
 
@@ -49,22 +51,27 @@ async fn setup() -> (
         &money_market.market_pubkey.to_bytes()[..32],
         &[lending_market.bump_seed],
     ];
-    let lending_market_authority_pubkey =
+    let _lending_market_authority_pubkey =
         Pubkey::create_program_address(authority_signer_seeds, &spl_token_lending::id()).unwrap();
 
-    println!("{:#?}", lending_market_authority_pubkey);
-
-    let collateral_mint = get_mint_data(&mut context, &reserve.collateral.mint_pubkey).await;
-    println!("{:#?}", collateral_mint);
+    let _collateral_mint = get_mint_data(&mut context, &reserve.collateral.mint_pubkey).await;
 
     // 1. Prepare general pool
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context).await.unwrap();
+    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let general_pool = TestGeneralPool::new(&general_pool_market, None);
     general_pool
         .create(&mut context, &general_pool_market)
+        .await
+        .unwrap();
+    registry
+        .set_registry_pool_config(
+            &mut context,
+            &general_pool.pool_pubkey,
+            SetRegistryPoolConfigParams { deposit_minimum: 0, withdraw_minimum: 0 }
+        )
         .await
         .unwrap();
 
@@ -82,6 +89,7 @@ async fn setup() -> (
     general_pool
         .deposit(
             &mut context,
+            &registry,
             &general_pool_market,
             &liquidity_provider,
             100 * EXP,
@@ -133,16 +141,7 @@ async fn setup() -> (
         .unwrap();
 
     let test_depositor = TestDepositor::new();
-    test_depositor
-        .init(
-            &mut context,
-            &registry,
-            &general_pool_market,
-            &income_pool_market,
-            &test_liquidity_oracle,
-        )
-        .await
-        .unwrap();
+    test_depositor.init(&mut context, &registry).await.unwrap();
 
     // 4.2 Create transit account for liquidity token
     test_depositor
@@ -176,6 +175,18 @@ async fn setup() -> (
             &general_pool,
             ULP_SHARE_ALLOWED,
         )
+        .await
+        .unwrap();
+
+    let mut roots = RegistryRootAccounts {
+        general_pool_market: general_pool_market.keypair.pubkey(),
+        income_pool_market: income_pool_market.keypair.pubkey(),
+        collateral_pool_markets: DistributionPubkeys::default(),
+        liquidity_oracle: test_liquidity_oracle.keypair.pubkey(),
+    };
+    roots.collateral_pool_markets[0] = mm_pool_market.keypair.pubkey();
+    registry
+        .set_registry_root_accounts(&mut context, roots)
         .await
         .unwrap();
 
@@ -347,6 +358,7 @@ async fn success_increased_liquidity() {
     general_pool
         .deposit(
             &mut context,
+            &registry,
             &general_pool_market,
             &liquidity_provider,
             50 * EXP,
@@ -840,7 +852,7 @@ async fn fail_with_invalid_collateral_mint() {
             .unwrap(),
         TransactionError::InstructionError(
             0,
-            InstructionError::Custom(LendingError::InvalidAccountInput as u32),
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
         )
     );
 }

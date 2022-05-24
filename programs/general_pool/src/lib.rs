@@ -66,7 +66,7 @@ pub fn withdrawal_requests_seed() -> String {
     let mut withdrawal_requests_seed = "withdrawals".to_owned();
     withdrawal_requests_seed.push_str(&ACTUAL_VERSION.to_string());
 
-    return withdrawal_requests_seed;
+    withdrawal_requests_seed
 }
 
 /// Generates user withdrawal request address

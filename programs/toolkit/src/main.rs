@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::path::PathBuf;
 use std::{process::exit, str::FromStr};
 
 use clap::{
@@ -15,12 +16,15 @@ use solana_client::client_error::ClientError;
 use solana_client::rpc_client::RpcClient;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::commitment_config::CommitmentConfig;
+use solana_sdk::signature::Keypair;
 use spl_associated_token_account::get_associated_token_address;
 
 use accounts_config::*;
 use commands::*;
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::{SetRegistryConfigParams, TOTAL_DISTRIBUTIONS};
+use everlend_registry::state::{
+    RegistryPrograms, DistributionPubkeys, RegistryRootAccounts, RegistrySettings, TOTAL_DISTRIBUTIONS, SetRegistryPoolConfigParams,
+};
 use everlend_utils::integrations::MoneyMarket;
 use general_pool::get_withdrawal_requests;
 use utils::*;
@@ -65,24 +69,27 @@ async fn command_create(
 
     println!("Registry");
     let registry_pubkey = registry::init(config, None)?;
-    let mut registry_config = SetRegistryConfigParams {
+    let mut programs = RegistryPrograms {
         general_pool_program_id: everlend_general_pool::id(),
         ulp_program_id: everlend_ulp::id(),
         liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
         depositor_program_id: everlend_depositor::id(),
         income_pools_program_id: everlend_income_pools::id(),
-        money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
-        refresh_income_interval: REFRESH_INCOME_INTERVAL,
+        money_market_program_ids: DistributionPubkeys::default(),
     };
-    registry_config.money_market_program_ids[0] = default_accounts.port_finance_program_id;
-    registry_config.money_market_program_ids[1] = default_accounts.larix_program_id;
-    registry_config.money_market_program_ids[2] = default_accounts.solend_program_id;
+    programs.money_market_program_ids[0] = spl_token_lending::id();
 
-    println!("registry_config = {:#?}", registry_config);
+    registry::set_registry_config(
+            config,
+            &registry_pubkey,
+            programs,
+            RegistryRootAccounts::default(),
+            RegistrySettings {
+                refresh_income_interval: REFRESH_INCOME_INTERVAL,
+            }
+        )?;
 
-    registry::set_registry_config(config, &registry_pubkey, registry_config)?;
-
-    let general_pool_market_pubkey = general_pool::create_market(config, None)?;
+    let general_pool_market_pubkey = general_pool::create_market(config, None, &registry_pubkey)?;
     let income_pool_market_pubkey =
         income_pools::create_market(config, None, &general_pool_market_pubkey)?;
 
@@ -97,15 +104,55 @@ async fn command_create(
     let mut distribution = DistributionArray::default();
     distribution[0] = 0;
     distribution[1] = 0;
+    distribution[2] = 0;
+
+    println!("Registry");
+    let registry_pubkey = registry::init(config, None)?;
+    let mut programs = RegistryPrograms {
+        general_pool_program_id: everlend_general_pool::id(),
+        ulp_program_id: everlend_ulp::id(),
+        liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
+        depositor_program_id: everlend_depositor::id(),
+        income_pools_program_id: everlend_income_pools::id(),
+        money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
+        // refresh_income_interval: REFRESH_INCOME_INTERVAL,
+    };
+    programs.money_market_program_ids[0] = default_accounts.port_finance_program_id;
+    programs.money_market_program_ids[1] = default_accounts.larix_program_id;
+    programs.money_market_program_ids[2] = default_accounts.solend_program_id;
+
+    println!("programs = {:#?}", programs);
+
+    let mut collateral_pool_markets: [Pubkey; TOTAL_DISTRIBUTIONS] = Default::default();
+    collateral_pool_markets[..mm_pool_markets.len()].copy_from_slice(&mm_pool_markets);
+
+    let roots = RegistryRootAccounts {
+        general_pool_market: general_pool_market_pubkey,
+        income_pool_market: income_pool_market_pubkey,
+        collateral_pool_markets,
+        liquidity_oracle: liquidity_oracle_pubkey,
+    };
+
+    println!("roots = {:#?}", &roots);
+
+    registry::set_registry_config(
+        config,
+        &registry_pubkey,
+        programs,
+        roots,
+        RegistrySettings {
+            refresh_income_interval: REFRESH_INCOME_INTERVAL,
+        },
+    )?;
 
     println!("Depositor");
     let depositor_pubkey = depositor::init(
         config,
         &registry_pubkey,
         None,
-        &general_pool_market_pubkey,
-        &income_pool_market_pubkey,
-        &liquidity_oracle_pubkey,
+        // &general_pool_market_pubkey,
+        // &income_pool_market_pubkey,
+        // &liquidity_oracle_pubkey,
     )?;
 
     println!("Prepare borrow authority");
@@ -283,13 +330,37 @@ async fn command_run_migrate(
         return Ok(());
     }
 
-    let token = initialiazed_accounts
+    let _token = initialiazed_accounts
         .token_accounts
         .get(&case.unwrap())
         .unwrap();
 
     println!("Migrate withdraw requests");
     general_pool::migrate_general_pool_account(config)?;
+    println!("Finished!");
+
+    Ok(())
+}
+
+async fn command_run_migrate_pool_market(
+    config: &Config,
+    accounts_path: &str,
+    keypair: Keypair,
+) -> anyhow::Result<()> {
+    let initialized_accounts = InitializedAccounts::load(accounts_path).unwrap();
+
+    println!("Close general pool market");
+    println!("pool market id: {}", &initialized_accounts.general_pool_market);
+    general_pool::close_pool_market_account(
+        config,
+        &initialized_accounts.general_pool_market,
+    )?;
+    println!("Closed general pool market");
+
+    println!("Create general pool market");
+    general_pool::create_market(
+        config, Some(keypair), &initialized_accounts.registry
+    )?;
     println!("Finished!");
 
     Ok(())
@@ -385,6 +456,42 @@ async fn main() -> anyhow::Result<()> {
                         .takes_value(true)
                         .required(true)
                         .help("Registry pubkey"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("set-registry-pool-config")
+                .about("Set a new registry pool config")
+                .arg(
+                    Arg::with_name("accounts")
+                        .short("A")
+                        .long("accounts")
+                        .value_name("PATH")
+                        .takes_value(true)
+                        .help("Accounts file"),
+                )
+                .arg(
+                    Arg::with_name("general-pool")
+                        .long("general-pool")
+                        .short("P")
+                        .validator(is_pubkey)
+                        .value_name("ADDRESS")
+                        .takes_value(true)
+                        .required(true)
+                        .help("General pool pubkey"),
+                )
+                .arg(
+                    Arg::with_name("min-deposit")
+                        .long("min-deposit")
+                        .value_name("NUMBER")
+                        .takes_value(true)
+                        .help("Minimum amount for deposit"),
+                )
+                .arg(
+                    Arg::with_name("min-withdraw")
+                        .long("min-withdraw")
+                        .value_name("NUMBER")
+                        .takes_value(true)
+                        .help("Minimum amount for deposit"),
                 ),
         )
         .subcommand(
@@ -487,6 +594,19 @@ async fn main() -> anyhow::Result<()> {
                         .required(true)
                         .min_values(1)
                         .takes_value(true),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("cancel-withdraw-request")
+                .about("Cancel withdraw request")
+                .arg(
+                    Arg::with_name("request")
+                        .long("request")
+                        .validator(is_pubkey)
+                        .value_name("ADDRESS")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Withdrawal request pubkey"),
                 ),
         )
         .subcommand(
@@ -683,22 +803,54 @@ async fn main() -> anyhow::Result<()> {
                 ),
         )
         .subcommand(
-            SubCommand::with_name("migrate-general-pool")
-                .about("Migrate general pool account")
-                .arg(
-                    Arg::with_name("case")
-                        .value_name("TOKEN")
-                        .takes_value(true)
-                        .index(1)
-                        .help("Case"),
+            SubCommand::with_name("migration")
+                .about("Migrations")
+                .subcommand(
+                    SubCommand::with_name("migrate-general-pool")
+                        .about("Migrate general pool account")
+                        .arg(
+                            Arg::with_name("case")
+                                .value_name("TOKEN")
+                                .takes_value(true)
+                                .index(1)
+                                .help("Case"),
+                        )
+                        .arg(
+                            Arg::with_name("accounts")
+                                .short("A")
+                                .long("accounts")
+                                .value_name("PATH")
+                                .takes_value(true)
+                                .help("Accounts file"),
+                        ),
                 )
-                .arg(
-                    Arg::with_name("accounts")
-                        .short("A")
-                        .long("accounts")
-                        .value_name("PATH")
-                        .takes_value(true)
-                        .help("Accounts file"),
+                .subcommand(
+                    SubCommand::with_name("migrate-pool-market")
+                        .about("Migrate pool market account")
+                        .arg(
+                            Arg::with_name("accounts")
+                                .short("A")
+                                .long("accounts")
+                                .value_name("PATH")
+                                .takes_value(true)
+                                .help("Accounts file"),
+                        )
+                        .arg(
+                            Arg::with_name("keypair")
+                                .long("keypair")
+                                .validator(is_keypair)
+                                .value_name("KEYPAIR")
+                                .takes_value(true)
+                                .help("Keypair [default: new keypair]"),
+                        ),
+                )
+                .subcommand(SubCommand::with_name("migrate-depositor").about(
+                    "Migrate Depositor account. Must be invoke after migrate-registry-config.",
+                ))
+                .subcommand(
+                    SubCommand::with_name("migrate-registry-config").about(
+                        "Migrate RegistryConfig account. Must be invoke by registry manager.",
+                    ),
                 ),
         )
         .get_matches();
@@ -707,7 +859,18 @@ async fn main() -> anyhow::Result<()> {
     let config = {
         let cli_config = if let Some(config_file) = matches.value_of("config_file") {
             println!("config_file = {:?}", config_file);
-            solana_cli_config::Config::load(config_file).unwrap_or_default()
+            solana_cli_config::Config::load(config_file)
+                .map(|mut cfg| {
+                    let path = PathBuf::from(cfg.keypair_path.clone());
+                    if !path.is_absolute() {
+                        let mut keypair_path = dirs_next::home_dir().expect("home directory");
+                        keypair_path.push(path);
+                        cfg.keypair_path = keypair_path.to_str().unwrap().to_string();
+                    }
+
+                    cfg
+                })
+                .unwrap_or_default()
         } else {
             solana_cli_config::Config::default()
         };
@@ -743,6 +906,9 @@ async fn main() -> anyhow::Result<()> {
             exit(1);
         });
 
+        println!("fee_payer = {:?}", fee_payer);
+        println!("owner = {:?}", owner);
+
         let verbose = matches.is_present("verbose");
 
         Config {
@@ -765,9 +931,18 @@ async fn main() -> anyhow::Result<()> {
             let registry_pubkey = pubkey_of(arg_matches, "registry").unwrap();
             command_set_registry_config(&config, registry_pubkey).await
         }
+        ("set-registry-pool-config", Some(arg_matches)) => {
+            let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
+            let general_pool = pubkey_of(arg_matches, "general-pool").unwrap();
+            let deposit_minimum = value_of::<u64>(arg_matches, "min-deposit").unwrap_or(0);
+            let withdraw_minimum = value_of::<u64>(arg_matches, "min-withdraw").unwrap_or(0);
+            let params = SetRegistryPoolConfigParams { deposit_minimum, withdraw_minimum };
+            command_set_registry_pool_config(&config, accounts_path, general_pool, params).await
+        }
         ("create-general-pool-market", Some(arg_matches)) => {
             let keypair = keypair_of(arg_matches, "keypair");
-            command_create_general_pool_market(&config, keypair).await
+            let registry_pubkey = pubkey_of(arg_matches, "registry").unwrap();
+            command_create_general_pool_market(&config, keypair, registry_pubkey).await
         }
         ("create-income-pool-market", Some(arg_matches)) => {
             let keypair = keypair_of(arg_matches, "keypair");
@@ -799,6 +974,10 @@ async fn main() -> anyhow::Result<()> {
             let mint = arg_matches.value_of("mint").unwrap();
             let amount = value_of::<u64>(arg_matches, "amount").unwrap();
             command_add_reserve_liquidity(&config, mint, amount).await
+        }
+        ("cancel-withdraw-request", Some(arg_matches)) => {
+            let request_pubkey = pubkey_of(arg_matches, "request").unwrap();
+            command_cancel_withdraw_request(&config, &request_pubkey).await
         }
         ("info-reserve-liquidity", Some(_)) => command_info_reserve_liquidity(&config).await,
         ("create", Some(arg_matches)) => {
@@ -878,10 +1057,38 @@ async fn main() -> anyhow::Result<()> {
 
             Ok(())
         }
-        ("migrate-general-pool", Some(arg_matches)) => {
-            let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
-            let case = value_of::<String>(arg_matches, "case");
-            command_run_migrate(&config, accounts_path, case).await
+        ("migration", Some(arg_matches)) => {
+            let _ = match arg_matches.subcommand() {
+                ("migrate-general-pool", Some(arg_matches)) => {
+                    let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
+                    let case = value_of::<String>(arg_matches, "case");
+                    command_run_migrate(&config, accounts_path, case).await
+                }
+                ("migrate-depositor", Some(_)) => {
+                    println!("WARN! This migration must be invoke after migrate-registry-config.");
+                    println!("Started Depositor migration");
+                    command_migrate_depositor(&config).await
+                }
+                ("migrate-registry-config", Some(_)) => {
+                    println!("Started RegistryConfig migration");
+                    command_migrate_registry_config(&config).await
+                }
+                ("migrate-pool-market", Some(arg_matches)) => {
+                    let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
+                    let keypair = keypair_of(arg_matches, "keypair").unwrap();
+                        command_run_migrate_pool_market(
+                        &config,
+                        accounts_path,
+                        keypair,
+                    ).await
+                }
+                _ => unreachable!(),
+            }
+            .map_err(|err| {
+                eprintln!("{}", err);
+                exit(1);
+            });
+            Ok(())
         }
         /// TODO remove after migration
         ("create-safety-fund-token-account", Some(arg_matches)) => {

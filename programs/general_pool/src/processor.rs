@@ -1,6 +1,7 @@
 //! Program state processor
 
 use borsh::BorshDeserialize;
+use everlend_registry::{find_registry_pool_config_program_address, state::RegistryPoolConfig};
 use everlend_utils::{
     assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
     cpi, find_program_address, EverlendError,
@@ -18,7 +19,10 @@ use solana_program::{
 };
 use spl_token::state::{Account, Mint};
 
-use crate::state::{InitWithdrawalRequestParams, InitWithdrawalRequestsParams, WITHDRAW_DELAY};
+use crate::state::{
+    InitWithdrawalRequestParams, InitWithdrawalRequestsParams,
+    WITHDRAW_DELAY,
+};
 use crate::{
     find_pool_borrow_authority_program_address, find_pool_program_address,
     find_transit_program_address, find_transit_sol_unwrap_address,
@@ -41,11 +45,13 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
         let pool_market_info = next_account_info(account_info_iter)?;
         let manager_info = next_account_info(account_info_iter)?;
+        let registry_info = next_account_info(account_info_iter)?;
         let rent_info = next_account_info(account_info_iter)?;
         let rent = &Rent::from_account_info(rent_info)?;
 
         assert_rent_exempt(rent, pool_market_info)?;
 
+        // Check programs
         assert_owned_by(pool_market_info, program_id)?;
 
         // Get pool market state
@@ -54,6 +60,7 @@ impl Processor {
 
         pool_market.init(InitPoolMarketParams {
             manager: *manager_info.key,
+            registry: *registry_info.key,
         });
 
         PoolMarket::pack(pool_market, *pool_market_info.data.borrow_mut())?;
@@ -80,11 +87,13 @@ impl Processor {
 
         assert_signer(manager_info)?;
 
+        // Check programs
         assert_owned_by(pool_market_info, program_id)?;
 
         // Get pool market state
         let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
 
+        // Check manager
         assert_account_key(manager_info, &pool_market.manager)?;
 
         let token_mint = Mint::unpack(&token_mint_info.data.borrow())?;
@@ -224,6 +233,7 @@ impl Processor {
 
         assert_signer(manager_info)?;
 
+        // Check programs
         assert_owned_by(pool_market_info, program_id)?;
         assert_owned_by(pool_info, program_id)?;
 
@@ -289,7 +299,10 @@ impl Processor {
         let manager_info = next_account_info(account_info_iter)?;
 
         assert_signer(manager_info)?;
+
+        // Check programs
         assert_owned_by(pool_market_info, program_id)?;
+        assert_owned_by(pool_info, program_id)?;
         assert_owned_by(pool_borrow_authority_info, program_id)?;
 
         // Get pool market state
@@ -328,15 +341,20 @@ impl Processor {
         let manager_info = next_account_info(account_info_iter)?;
 
         assert_signer(manager_info)?;
+
+        // Check programs
         assert_owned_by(pool_market_info, program_id)?;
+        assert_owned_by(pool_info, program_id)?;
         assert_owned_by(pool_borrow_authority_info, program_id)?;
 
-        // Get pool market state
         let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+
+        // Check manager
         assert_account_key(manager_info, &pool_market.manager)?;
 
-        // Get pool state
         let pool = Pool::unpack(&pool_info.data.borrow())?;
+
+        // Check pool accounts
         assert_account_key(pool_market_info, &pool.pool_market)?;
 
         // Get pool borrow authority state to check initialized
@@ -363,6 +381,8 @@ impl Processor {
     /// Process Deposit instruction
     pub fn deposit(program_id: &Pubkey, amount: u64, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
+        let registry_info = next_account_info(account_info_iter)?;
+        let registry_pool_config_info = next_account_info(account_info_iter)?;
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_info = next_account_info(account_info_iter)?;
         let source_info = next_account_info(account_info_iter)?;
@@ -374,13 +394,14 @@ impl Processor {
         let _token_program_info = next_account_info(account_info_iter)?;
 
         assert_signer(user_transfer_authority_info)?;
-
+        assert_owned_by(registry_pool_config_info, &everlend_registry::id())?;
         assert_owned_by(pool_market_info, program_id)?;
         assert_owned_by(pool_info, program_id)?;
 
         // Get pool state
         let pool = Pool::unpack(&pool_info.data.borrow())?;
 
+        // Check pool accounts
         assert_account_key(pool_market_info, &pool.pool_market)?;
         assert_account_key(token_account_info, &pool.token_account)?;
         assert_account_key(pool_mint_info, &pool.pool_mint)?;
@@ -398,6 +419,19 @@ impl Processor {
                 .checked_div(total_incoming as u128)
                 .ok_or(ProgramError::InvalidArgument)? as u64
         };
+        let (registry_pool_config_pubkey, _) = find_registry_pool_config_program_address(
+            &everlend_registry::id(),
+            registry_info.key,
+            pool_info.key,
+        );
+        assert_account_key(registry_pool_config_info, &registry_pool_config_pubkey)?;
+        let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+        assert_account_key(registry_info, &pool_market.registry)?;
+        let registry_pool_config =
+            RegistryPoolConfig::unpack(&registry_pool_config_info.data.borrow())?;
+        if mint_amount < registry_pool_config.deposit_minimum {
+            return Err(EverlendError::DepositAmountTooSmall.into());
+        }
 
         // Transfer token from source to token account
         cpi::spl_token::transfer(
@@ -440,6 +474,7 @@ impl Processor {
         let clock = Clock::from_account_info(clock_info)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
+        // Check programs
         assert_owned_by(pool_market_info, program_id)?;
         assert_owned_by(pool_info, program_id)?;
         assert_owned_by(withdrawal_requests_info, program_id)?;
@@ -450,34 +485,46 @@ impl Processor {
             find_transit_program_address(program_id, pool_market_info.key, pool_mint_info.key);
         assert_account_key(collateral_transit_info, &collateral_transit_pubkey)?;
 
+        // We don't check the pool pda, because it's created from the program
+        // and is linked to the pool market
+
         // Get pool state
         let pool = Pool::unpack(&pool_info.data.borrow())?;
         assert_account_key(pool_market_info, &pool.pool_market)?;
         assert_account_key(token_account_info, &pool.token_account)?;
         assert_account_key(pool_mint_info, &pool.pool_mint)?;
 
+        // We don't check the withdrawal requests pda, because it's created from the program
+        // and is linked to the pool
+
         let mut withdrawal_requests =
             WithdrawalRequests::unpack(&withdrawal_requests_info.data.borrow())?;
         assert_account_key(pool_info, &withdrawal_requests.pool)?;
 
         let withdrawal_request = WithdrawalRequest::unpack(&withdrawal_request_info.data.borrow())?;
+
+        // Check withdraw request accounts
         assert_account_key(pool_info, &withdrawal_request.pool)?;
         assert_account_key(destination_info, &withdrawal_request.destination)?;
         assert_account_key(from_info, &withdrawal_request.from)?;
 
+        // Check that enough time has passed to make a withdraw
         if withdrawal_request.ticket > clock.slot {
             return Err(EverlendError::WithdrawRequestsInvalidTicket.into());
         }
+
+        // In the case of a SOL token, we do unwrap SPL token,
+        // the destination can be any account
 
         if pool.token_mint == spl_token::native_mint::id() {
             let token_mint_info = next_account_info(account_info_iter)?;
             assert_account_key(token_mint_info, &pool.token_mint)?;
 
             let unwrap_sol_info = next_account_info(account_info_iter)?;
-            // Check withdraw requests account
+
+            // Check transit: unwrapped sol
             let (unwrap_sol_pubkey, bump_seed) =
                 find_transit_sol_unwrap_address(program_id, withdrawal_request_info.key);
-
             assert_account_key(unwrap_sol_info, &unwrap_sol_pubkey)?;
 
             let signer_info = next_account_info(account_info_iter)?;
@@ -588,6 +635,8 @@ impl Processor {
         accounts: &[AccountInfo],
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
+        let registry_info = next_account_info(account_info_iter)?;
+        let registry_pool_config_info = next_account_info(account_info_iter)?;
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_info = next_account_info(account_info_iter)?;
         let pool_mint_info = next_account_info(account_info_iter)?;
@@ -607,16 +656,19 @@ impl Processor {
 
         assert_signer(user_transfer_authority_info)?;
 
+        assert_owned_by(registry_pool_config_info, &everlend_registry::id())?;
         assert_owned_by(pool_market_info, program_id)?;
         assert_owned_by(pool_info, program_id)?;
         assert_owned_by(withdrawal_requests_info, program_id)?;
 
-        // Get pool state
         let pool = Pool::unpack(&pool_info.data.borrow())?;
+
+        // Check pool accounts
         assert_account_key(pool_market_info, &pool.pool_market)?;
         assert_account_key(token_account_info, &pool.token_account)?;
         assert_account_key(pool_mint_info, &pool.pool_mint)?;
 
+        // In all cases except SOL token, we must check destination account
         if pool.token_mint != spl_token::native_mint::id() {
             let destination_account = Account::unpack(&destination_info.data.borrow())?;
             if pool.token_mint != destination_account.mint {
@@ -624,27 +676,23 @@ impl Processor {
             }
         }
 
-        // Check collateral token transit account
+        // Check transit: collateral
         let (collateral_transit_pubkey, _) =
             find_transit_program_address(program_id, pool_market_info.key, pool_mint_info.key);
         assert_account_key(collateral_transit_info, &collateral_transit_pubkey)?;
 
-        // Get withdrawals account
         let mut withdrawal_requests =
             WithdrawalRequests::unpack(&withdrawal_requests_info.data.borrow())?;
+
+        // Check withdrawal requests accounts
         assert_account_key(pool_info, &withdrawal_requests.pool)?;
 
+        // Check withdrawal request
         let (withdrawal_request_pubkey, bump_seed) = find_withdrawal_request_program_address(
             program_id,
             withdrawal_requests_info.key,
             user_transfer_authority_info.key,
         );
-        let signers_seeds = &[
-            br"withdrawal",
-            &withdrawal_requests_info.key.to_bytes()[..32],
-            &user_transfer_authority_info.key.to_bytes()[..32],
-            &[bump_seed],
-        ];
         assert_account_key(withdrawal_request_info, &withdrawal_request_pubkey)?;
 
         let total_incoming =
@@ -657,6 +705,20 @@ impl Processor {
             .checked_div(total_minted as u128)
             .ok_or(EverlendError::MathOverflow)? as u64;
 
+        let (registry_pool_config_pubkey, _) = find_registry_pool_config_program_address(
+            &everlend_registry::id(),
+            registry_info.key,
+            pool_info.key,
+        );
+        assert_account_key(registry_pool_config_info, &registry_pool_config_pubkey)?;
+        let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+        assert_account_key(registry_info, &pool_market.registry)?;
+        let registry_pool_config =
+            RegistryPoolConfig::unpack(&registry_pool_config_info.data.borrow())?;
+        if liquidity_amount < registry_pool_config.withdraw_minimum {
+            return Err(EverlendError::WithdrawAmountTooSmall.into());
+        }
+
         // Transfer
         cpi::spl_token::transfer(
             source_info.clone(),
@@ -665,6 +727,13 @@ impl Processor {
             collateral_amount,
             &[],
         )?;
+
+        let signers_seeds = &[
+            br"withdrawal",
+            &withdrawal_requests_info.key.to_bytes()[..32],
+            &user_transfer_authority_info.key.to_bytes()[..32],
+            &[bump_seed],
+        ];
 
         cpi::system::create_account::<WithdrawalRequest>(
             program_id,
@@ -701,6 +770,97 @@ impl Processor {
         Ok(())
     }
 
+    /// Process Cancel withdraw request instruction
+    pub fn cancel_withdraw_request(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let pool_market_info = next_account_info(account_info_iter)?;
+        let pool_info = next_account_info(account_info_iter)?;
+        let withdrawal_requests_info = next_account_info(account_info_iter)?;
+        let withdrawal_request_info = next_account_info(account_info_iter)?;
+        let source_info = next_account_info(account_info_iter)?;
+        let collateral_transit_info = next_account_info(account_info_iter)?;
+        let pool_mint_info = next_account_info(account_info_iter)?;
+        let pool_market_authority_info = next_account_info(account_info_iter)?;
+        let from_info = next_account_info(account_info_iter)?;
+        let manager_info = next_account_info(account_info_iter)?;
+        let _token_program_info = next_account_info(account_info_iter)?;
+
+        assert_signer(manager_info)?;
+
+        // Check programs
+        assert_owned_by(pool_market_info, program_id)?;
+        assert_owned_by(pool_info, program_id)?;
+        assert_owned_by(withdrawal_requests_info, program_id)?;
+        assert_owned_by(withdrawal_request_info, program_id)?;
+
+        let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+
+        // Check manager
+        assert_account_key(manager_info, &pool_market.manager)?;
+
+        // Check collateral token transit account
+        let (collateral_transit_pubkey, _) =
+            find_transit_program_address(program_id, pool_market_info.key, pool_mint_info.key);
+        assert_account_key(collateral_transit_info, &collateral_transit_pubkey)?;
+
+        // We don't check the pool pda, because it's created from the program
+        // and is linked to the pool market
+
+        // Get pool state
+        let pool = Pool::unpack(&pool_info.data.borrow())?;
+        assert_account_key(pool_market_info, &pool.pool_market)?;
+        assert_account_key(pool_mint_info, &pool.pool_mint)?;
+
+        // We don't check the withdrawal requests pda, because it's created from the program
+        // and is linked to the pool
+
+        let mut withdrawal_requests =
+            WithdrawalRequests::unpack(&withdrawal_requests_info.data.borrow())?;
+
+        // Check withdrawal requests accounts
+        assert_account_key(pool_info, &withdrawal_requests.pool)?;
+
+        let withdrawal_request = WithdrawalRequest::unpack(&withdrawal_request_info.data.borrow())?;
+
+        // Check withdrawal request accounts
+        assert_account_key(pool_info, &withdrawal_request.pool)?;
+        assert_account_key(source_info, &withdrawal_request.source)?;
+        assert_account_key(from_info, &withdrawal_request.from)?;
+
+        let (_, bump_seed) = find_program_address(program_id, pool_market_info.key);
+        let signers_seeds = &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]];
+
+        cpi::spl_token::transfer(
+            collateral_transit_info.clone(),
+            source_info.clone(),
+            pool_market_authority_info.clone(),
+            withdrawal_request.collateral_amount,
+            &[signers_seeds],
+        )?;
+
+        withdrawal_requests.process(withdrawal_request.liquidity_amount)?;
+
+        // Close withdraw account and return rent
+        let from_starting_lamports = from_info.lamports();
+        let withdraw_request_lamports = withdrawal_request_info.lamports();
+
+        **withdrawal_request_info.lamports.borrow_mut() = 0;
+        **from_info.lamports.borrow_mut() = from_starting_lamports
+            .checked_add(withdraw_request_lamports)
+            .ok_or(EverlendError::MathOverflow)?;
+
+        WithdrawalRequests::pack(
+            withdrawal_requests,
+            *withdrawal_requests_info.data.borrow_mut(),
+        )?;
+        WithdrawalRequest::pack(
+            withdrawal_request,
+            *withdrawal_request_info.data.borrow_mut(),
+        )?;
+
+        Ok(())
+    }
+
     /// Process Borrow instruction
     pub fn borrow(program_id: &Pubkey, amount: u64, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
@@ -715,18 +875,21 @@ impl Processor {
 
         assert_signer(borrow_authority_info)?;
 
+        // Check programs
         assert_owned_by(pool_market_info, program_id)?;
         assert_owned_by(pool_info, program_id)?;
         assert_owned_by(pool_borrow_authority_info, program_id)?;
 
-        // Get pool state
         let mut pool = Pool::unpack(&pool_info.data.borrow())?;
+
+        // Check pool accounts
         assert_account_key(pool_market_info, &pool.pool_market)?;
         assert_account_key(token_account_info, &pool.token_account)?;
 
-        // Get pool borrow authority state
         let mut pool_borrow_authority =
             PoolBorrowAuthority::unpack(&pool_borrow_authority_info.data.borrow())?;
+
+        // Check pool borrow authority accounts
         assert_account_key(pool_info, &pool_borrow_authority.pool)?;
         assert_account_key(
             borrow_authority_info,
@@ -740,7 +903,7 @@ impl Processor {
         )?)?;
         pool.borrow(amount)?;
 
-        // Checks...
+        // Check interest ?
 
         PoolBorrowAuthority::pack(
             pool_borrow_authority,
@@ -781,12 +944,15 @@ impl Processor {
 
         assert_signer(user_transfer_authority_info)?;
 
+        // Check programs
         assert_owned_by(pool_market_info, program_id)?;
         assert_owned_by(pool_info, program_id)?;
         assert_owned_by(pool_borrow_authority_info, program_id)?;
 
         // Get pool state
         let mut pool = Pool::unpack(&pool_info.data.borrow())?;
+
+        // Check pool accounts
         assert_account_key(pool_market_info, &pool.pool_market)?;
         assert_account_key(token_account_info, &pool.token_account)?;
 
@@ -798,7 +964,7 @@ impl Processor {
         pool_borrow_authority.repay(amount)?;
         pool.repay(amount)?;
 
-        // Checks...
+        // Check interest ?
 
         PoolBorrowAuthority::pack(
             pool_borrow_authority,
@@ -823,6 +989,11 @@ impl Processor {
         Err(EverlendError::TemporaryUnavailable.into())
     }
 
+    /// Migrate pool market
+    pub fn close_pool_market(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+        Err(EverlendError::TemporaryUnavailable.into())
+    }
+
     /// Instruction processing router
     pub fn process_instruction(
         program_id: &Pubkey,
@@ -830,7 +1001,6 @@ impl Processor {
         input: &[u8],
     ) -> ProgramResult {
         let instruction = LiquidityPoolsInstruction::try_from_slice(input)?;
-
         match instruction {
             LiquidityPoolsInstruction::InitPoolMarket => {
                 msg!("LiquidityPoolsInstruction: InitPoolMarket");
@@ -872,6 +1042,11 @@ impl Processor {
                 Self::withdraw_request(program_id, collateral_amount, accounts)
             }
 
+            LiquidityPoolsInstruction::CancelWithdrawRequest => {
+                msg!("LiquidityPoolsInstruction: CancelWithdrawRequest");
+                Self::cancel_withdraw_request(program_id, accounts)
+            }
+
             LiquidityPoolsInstruction::Borrow { amount } => {
                 msg!("LiquidityPoolsInstruction: Borrow");
                 Self::borrow(program_id, amount, accounts)
@@ -883,6 +1058,11 @@ impl Processor {
             } => {
                 msg!("LiquidityPoolsInstruction: Repay");
                 Self::repay(program_id, amount, interest_amount, accounts)
+            }
+
+            LiquidityPoolsInstruction::ClosePoolMarket => {
+                msg!("LiquidityPoolsInstruction: ClosePoolMarket");
+                Self::close_pool_market(program_id, accounts)
             }
 
             LiquidityPoolsInstruction::MigrationInstruction => {

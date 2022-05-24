@@ -1,6 +1,7 @@
 //! Pool market state definitions
 use super::*;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+use everlend_utils::AccountVersion;
 use solana_program::{
     msg,
     program_error::ProgramError,
@@ -14,15 +15,23 @@ use solana_program::{
 pub struct PoolMarket {
     /// Account type - PoolMarket
     pub account_type: AccountType,
+    /// Account version
+    pub account_version: AccountVersion,
     /// Market manager
     pub manager: Pubkey,
+    /// Registry
+    pub registry: Pubkey,
 }
 
 impl PoolMarket {
+    /// Account actual version
+    const ACTUAL_VERSION: AccountVersion = AccountVersion::V0;
     /// Initialize a Pool market
     pub fn init(&mut self, params: InitPoolMarketParams) {
         self.account_type = AccountType::PoolMarket;
+        self.account_version = Self::ACTUAL_VERSION;
         self.manager = params.manager;
+        self.registry = params.registry;
     }
 }
 
@@ -30,12 +39,14 @@ impl PoolMarket {
 pub struct InitPoolMarketParams {
     /// Market manager
     pub manager: Pubkey,
+    /// Registry
+    pub registry: Pubkey,
 }
 
 impl Sealed for PoolMarket {}
 impl Pack for PoolMarket {
-    // 1 + 32
-    const LEN: usize = 33;
+    // 1 + 1 + 32 + 32
+    const LEN: usize = 66;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;

@@ -6,7 +6,10 @@ use everlend_depositor::{
 };
 use everlend_general_pool::state::WITHDRAW_DELAY;
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::{find_config_program_address, state::RegistryConfig};
+use everlend_registry::{
+    find_config_program_address,
+    state::{RegistryConfig, RegistryPrograms},
+};
 use everlend_utils::integrations::{self, MoneyMarketPubkeys};
 use solana_account_decoder::parse_token::UiTokenAmount;
 use solana_program::program_pack::Pack;
@@ -33,7 +36,7 @@ pub async fn command_run_test(
     println!("default_accounts = {:#?}", default_accounts);
 
     let InitializedAccounts {
-        payer,
+        payer: _,
         registry,
         general_pool_market,
         income_pool_market,
@@ -47,8 +50,10 @@ pub async fn command_run_test(
         find_config_program_address(&everlend_registry::id(), &registry);
     let registry_config_account = config.rpc_client.get_account(&registry_config_pubkey)?;
     let registry_config = RegistryConfig::unpack(&registry_config_account.data).unwrap();
+    let programs = RegistryPrograms::unpack_unchecked(&registry_config_account.data).unwrap();
 
     println!("registry_config = {:#?}", registry_config);
+    println!("programs = {:#?}", programs);
 
     let sol = token_accounts.get("SOL").unwrap();
 
@@ -147,8 +152,8 @@ pub async fn command_run_test(
             &sol.mint,
             &sol.mm_pools[i].token_mint,
             &sol.mm_pools[i].pool_mint,
-            &registry_config.money_market_program_ids[i],
-            integrations::deposit_accounts(&registry_config.money_market_program_ids[i], &pubkeys),
+            &programs.money_market_program_ids[i],
+            integrations::deposit_accounts(&programs.money_market_program_ids[i], &pubkeys),
         )
     };
 
@@ -172,8 +177,8 @@ pub async fn command_run_test(
             &sol.mm_pools[i].token_mint,
             &sol.mint,
             &sol.mm_pools[i].pool_mint,
-            &registry_config.money_market_program_ids[i],
-            integrations::withdraw_accounts(&registry_config.money_market_program_ids[i], &pubkeys),
+            &programs.money_market_program_ids[i],
+            integrations::withdraw_accounts(&programs.money_market_program_ids[i], &pubkeys),
         )
     };
 
@@ -222,6 +227,7 @@ pub async fn command_run_test(
         println!("Deposit liquidity");
         general_pool::deposit(
             config,
+            &registry,
             &general_pool_market,
             &sol.general_pool,
             &sol.liquidity_token_account,
@@ -236,6 +242,7 @@ pub async fn command_run_test(
         println!("Withdraw request");
         general_pool::withdraw_request(
             config,
+            &registry,
             &general_pool_market,
             &sol.general_pool,
             &sol.collateral_token_account,

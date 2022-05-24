@@ -1,4 +1,4 @@
-use super::BanksClientResult;
+use super::{BanksClientResult, TestRegistry};
 use super::{
     general_pool_borrow_authority::TestGeneralPoolBorrowAuthority, get_account, get_liquidity_mint,
     LiquidityProvider, TestGeneralPoolMarket, User,
@@ -138,6 +138,7 @@ impl TestGeneralPool {
     pub async fn deposit(
         &self,
         context: &mut ProgramTestContext,
+        test_registry: &TestRegistry,
         test_pool_market: &TestGeneralPoolMarket,
         user: &LiquidityProvider,
         amount: u64,
@@ -145,6 +146,7 @@ impl TestGeneralPool {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::deposit(
                 &everlend_general_pool::id(),
+                &test_registry.keypair.pubkey(),
                 &test_pool_market.keypair.pubkey(),
                 &self.pool_pubkey,
                 &user.token_account,
@@ -219,6 +221,7 @@ impl TestGeneralPool {
     pub async fn withdraw_request(
         &self,
         context: &mut ProgramTestContext,
+        test_registry: &TestRegistry,
         test_pool_market: &TestGeneralPoolMarket,
         user: &LiquidityProvider,
         collateral_amount: u64,
@@ -231,6 +234,7 @@ impl TestGeneralPool {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::withdraw_request(
                 &everlend_general_pool::id(),
+                &test_registry.keypair.pubkey(),
                 &test_pool_market.keypair.pubkey(),
                 &self.pool_pubkey,
                 &user.pool_account,
@@ -243,6 +247,31 @@ impl TestGeneralPool {
             )],
             Some(&context.payer.pubkey()),
             &[&context.payer, &user.owner],
+            context.last_blockhash,
+        );
+
+        context.banks_client.process_transaction(tx).await
+    }
+
+    pub async fn cancel_withdraw_request(
+        &self,
+        context: &mut ProgramTestContext,
+        test_pool_market: &TestGeneralPoolMarket,
+        user: &LiquidityProvider,
+    ) -> BanksClientResult<()> {
+        let tx = Transaction::new_signed_with_payer(
+            &[instruction::cancel_withdraw_request(
+                &everlend_general_pool::id(),
+                &test_pool_market.keypair.pubkey(),
+                &self.pool_pubkey,
+                &user.pool_account,
+                &self.token_mint_pubkey,
+                &self.pool_mint.pubkey(),
+                &test_pool_market.manager.pubkey(),
+                &user.owner.pubkey(),
+            )],
+            Some(&context.payer.pubkey()),
+            &[&context.payer, &test_pool_market.manager],
             context.last_blockhash,
         );
 

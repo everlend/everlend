@@ -1,8 +1,3 @@
-use crate::utils::*;
-use everlend_registry::{
-    find_config_program_address,
-    state::{Registry, SetRegistryConfigParams},
-};
 use solana_client::client_error::ClientError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_sdk::{
@@ -10,6 +5,14 @@ use solana_sdk::{
     signer::Signer,
     transaction::Transaction,
 };
+
+use everlend_registry::{
+    find_registry_pool_config_program_address,
+    find_config_program_address,
+    state::{Registry, RegistryPrograms, RegistryRootAccounts, RegistrySettings, SetRegistryPoolConfigParams},
+};
+
+use crate::utils::*;
 
 pub fn init(config: &Config, registry_keypair: Option<Keypair>) -> Result<Pubkey, ClientError> {
     let registry_keypair = registry_keypair.unwrap_or_else(Keypair::new);
@@ -55,14 +58,18 @@ pub fn init(config: &Config, registry_keypair: Option<Keypair>) -> Result<Pubkey
 pub fn set_registry_config(
     config: &Config,
     registry_pubkey: &Pubkey,
-    params: SetRegistryConfigParams,
+    programs: RegistryPrograms,
+    roots: RegistryRootAccounts,
+    settings: RegistrySettings,
 ) -> Result<Pubkey, ClientError> {
     let tx = Transaction::new_with_payer(
         &[everlend_registry::instruction::set_registry_config(
             &everlend_registry::id(),
             registry_pubkey,
             &config.fee_payer.pubkey(),
-            params,
+            programs,
+            roots,
+            settings,
         )],
         Some(&config.fee_payer.pubkey()),
     );
@@ -74,3 +81,62 @@ pub fn set_registry_config(
 
     Ok(registry_config_pubkey)
 }
+
+pub fn close_registry_config(config: &Config, registry_pubkey: &Pubkey) -> Result<(), ClientError> {
+    println!("Sending CloseRegistryConfig itx ...");
+    let tx = Transaction::new_with_payer(
+        &[everlend_registry::instruction::close_registry_config(
+            &everlend_registry::id(),
+            registry_pubkey,
+            &config.fee_payer.pubkey(),
+        )],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+
+    let (config_registry_pubkey, _) =
+        find_config_program_address(&everlend_registry::id(), registry_pubkey);
+
+    while config
+        .rpc_client
+        .get_account(&config_registry_pubkey)
+        .is_ok()
+    {
+        delay(500);
+    }
+
+    println!("RegistryConfig account closed.");
+
+    Ok(())
+}
+
+pub fn set_registry_pool_config(
+    config: &Config,
+    registry_pubkey: &Pubkey,
+    general_pool: &Pubkey,
+    params: SetRegistryPoolConfigParams,
+) -> Result<Pubkey, ClientError> {
+    let tx = Transaction::new_with_payer(
+        &[everlend_registry::instruction::set_registry_pool_config(
+            &everlend_registry::id(),
+            registry_pubkey,
+            &config.fee_payer.pubkey(),
+            general_pool,
+            params,
+        )],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+
+    let (registry_pool_config_pubkey, _) =
+        find_registry_pool_config_program_address(
+            &everlend_registry::id(),
+            registry_pubkey,
+            general_pool,
+        );
+
+    Ok(registry_pool_config_pubkey)
+}
+

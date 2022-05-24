@@ -12,11 +12,11 @@ use everlend_utils::EverlendError;
 
 use crate::utils::*;
 
-async fn setup() -> (ProgramTestContext, TestGeneralPoolMarket, TestGeneralPool) {
-    let mut context = presetup().await.0;
+async fn setup() -> (ProgramTestContext, TestRegistry, TestGeneralPoolMarket, TestGeneralPool) {
+    let (mut context, _, _, registry) = presetup().await;
 
     let test_pool_market = TestGeneralPoolMarket::new();
-    test_pool_market.init(&mut context).await.unwrap();
+    test_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let test_pool = TestGeneralPool::new(&test_pool_market, None);
     test_pool
@@ -24,12 +24,12 @@ async fn setup() -> (ProgramTestContext, TestGeneralPoolMarket, TestGeneralPool)
         .await
         .unwrap();
 
-    (context, test_pool_market, test_pool)
+    (context, registry, test_pool_market, test_pool)
 }
 
 #[tokio::test]
 async fn success() {
-    let (mut context, test_pool_market, test_pool) = setup().await;
+    let (mut context, _, test_pool_market, test_pool) = setup().await;
 
     let test_pool_borrow_authority =
         TestGeneralPoolBorrowAuthority::new(&test_pool, context.payer.pubkey());
@@ -66,7 +66,7 @@ async fn success() {
 
 #[tokio::test]
 async fn fail_update_with_fake_pool_market() {
-    let (mut context, test_pool_market, test_pool) = setup().await;
+    let (mut context, registry, test_pool_market, test_pool) = setup().await;
 
     let test_pool_borrow_authority =
         TestGeneralPoolBorrowAuthority::new(&test_pool, context.payer.pubkey());
@@ -82,7 +82,7 @@ async fn fail_update_with_fake_pool_market() {
         .unwrap();
 
     let fake_pool_market = TestGeneralPoolMarket::new();
-    fake_pool_market.init(&mut context).await.unwrap();
+    fake_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     context.warp_to_slot(3).unwrap();
 
@@ -115,7 +115,7 @@ async fn fail_update_with_fake_pool_market() {
 
 #[tokio::test]
 async fn fail_update_with_invalid_pool_market() {
-    let (mut context, test_pool_market, test_pool) = setup().await;
+    let (mut context, _, test_pool_market, test_pool) = setup().await;
 
     let test_pool_borrow_authority =
         TestGeneralPoolBorrowAuthority::new(&test_pool, context.payer.pubkey());
@@ -164,7 +164,7 @@ async fn fail_update_with_invalid_pool_market() {
 
 #[tokio::test]
 async fn fail_update_with_invalid_pool() {
-    let (mut context, test_pool_market, test_pool) = setup().await;
+    let (mut context, _, test_pool_market, test_pool) = setup().await;
 
     let test_pool_borrow_authority =
         TestGeneralPoolBorrowAuthority::new(&test_pool, context.payer.pubkey());
@@ -213,7 +213,7 @@ async fn fail_update_with_invalid_pool() {
 
 #[tokio::test]
 async fn fail_update_with_invalid_borrow_authority() {
-    let (mut context, test_pool_market, test_pool) = setup().await;
+    let (mut context, _, test_pool_market, test_pool) = setup().await;
 
     let test_pool_borrow_authority =
         TestGeneralPoolBorrowAuthority::new(&test_pool, context.payer.pubkey());
@@ -262,7 +262,7 @@ async fn fail_update_with_invalid_borrow_authority() {
 
 #[tokio::test]
 async fn fail_update_with_wrong_manager() {
-    let (mut context, test_pool_market, test_pool) = setup().await;
+    let (mut context, _, test_pool_market, test_pool) = setup().await;
 
     let test_pool_borrow_authority =
         TestGeneralPoolBorrowAuthority::new(&test_pool, context.payer.pubkey());

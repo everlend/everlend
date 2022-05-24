@@ -1,6 +1,7 @@
 //! Instruction types
 
 use borsh::{BorshDeserialize, BorshSerialize};
+use everlend_registry::find_registry_pool_config_program_address;
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
@@ -23,6 +24,7 @@ pub enum LiquidityPoolsInstruction {
     /// Accounts:
     /// [W] Pool market - uninitialized
     /// [R] Market manager
+    /// [R] Registry
     /// [R] Rent sysvar
     InitPoolMarket,
 
@@ -83,6 +85,8 @@ pub enum LiquidityPoolsInstruction {
     /// Deposit funds in the pool
     ///
     /// Accounts:
+    /// [R] Registry
+    /// [R] Pool config
     /// [R] Pool market
     /// [R] Pool
     /// [W] Source account (for token mint)
@@ -151,6 +155,8 @@ pub enum LiquidityPoolsInstruction {
     /// Move pool tokens to transit account and create withdraw request
     ///
     /// Accounts:
+    /// [R] Registry
+    /// [R] Pool config
     /// [R] Pool market
     /// [R] Pool
     /// [W] Pool mint account
@@ -170,6 +176,29 @@ pub enum LiquidityPoolsInstruction {
         collateral_amount: u64,
     },
 
+    /// Cancel withdraw request and return collateral tokens to user
+    ///
+    /// Accounts:
+    /// [R] Pool market
+    /// [R] Pool
+    /// [W] Withdrawal requests account
+    /// [W] Withdrawal request account
+    /// [W] Withdrawal source collateral account
+    /// [W] Transit collateral account
+    /// [W] Pool mint account
+    /// [R] Pool market authority
+    /// [W] From account
+    /// [RS] Market manager
+    /// [R] Token program id
+    CancelWithdrawRequest,
+
+    /// Migrate PoolMarket
+    ///
+    /// Accounts:
+    /// [W] Pool market
+    /// [R] Manager
+    ClosePoolMarket,
+
     /// Migrate account data
     ///
     MigrationInstruction,
@@ -181,10 +210,12 @@ pub fn init_pool_market(
     program_id: &Pubkey,
     pool_market: &Pubkey,
     manager: &Pubkey,
+    registry: &Pubkey,
 ) -> Instruction {
     let accounts = vec![
         AccountMeta::new(*pool_market, false),
         AccountMeta::new_readonly(*manager, false),
+        AccountMeta::new_readonly(*registry, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
 
@@ -322,6 +353,7 @@ pub fn delete_pool_borrow_authority(
 #[allow(clippy::too_many_arguments)]
 pub fn deposit(
     program_id: &Pubkey,
+    registry: &Pubkey,
     pool_market: &Pubkey,
     pool: &Pubkey,
     source: &Pubkey,
@@ -332,8 +364,12 @@ pub fn deposit(
     amount: u64,
 ) -> Instruction {
     let (pool_market_authority, _) = find_program_address(program_id, pool_market);
+    let (registry_pool_config, _) =
+        find_registry_pool_config_program_address(&everlend_registry::id(), registry, pool);
 
     let accounts = vec![
+        AccountMeta::new_readonly(*registry, false),
+        AccountMeta::new_readonly(registry_pool_config, false),
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new_readonly(*pool, false),
         AccountMeta::new(*source, false),
@@ -397,6 +433,7 @@ pub fn withdraw(
 #[allow(clippy::too_many_arguments)]
 pub fn withdraw_request(
     program_id: &Pubkey,
+    registry: &Pubkey,
     pool_market: &Pubkey,
     pool: &Pubkey,
     source: &Pubkey,
@@ -415,8 +452,12 @@ pub fn withdraw_request(
         &withdrawal_requests,
         user_transfer_authority,
     );
+    let (registry_pool_config, _) =
+        find_registry_pool_config_program_address(&everlend_registry::id(), registry, pool);
 
     let accounts = vec![
+        AccountMeta::new_readonly(*registry, false),
+        AccountMeta::new_readonly(registry_pool_config, false),
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new_readonly(*pool, false),
         AccountMeta::new(*pool_mint, false),
@@ -436,6 +477,47 @@ pub fn withdraw_request(
     Instruction::new_with_borsh(
         *program_id,
         &LiquidityPoolsInstruction::WithdrawRequest { collateral_amount },
+        accounts,
+    )
+}
+
+/// Creates 'CancelWithdrawRequest' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn cancel_withdraw_request(
+    program_id: &Pubkey,
+    pool_market: &Pubkey,
+    pool: &Pubkey,
+    source: &Pubkey,
+    token_mint: &Pubkey,
+    pool_mint: &Pubkey,
+    manager: &Pubkey,
+    from: &Pubkey,
+) -> Instruction {
+    let (pool_market_authority, _) = find_program_address(program_id, pool_market);
+
+    let (withdrawal_requests, _) =
+        find_withdrawal_requests_program_address(program_id, pool_market, token_mint);
+    let (collateral_transit, _) = find_transit_program_address(program_id, pool_market, pool_mint);
+    let (withdrawal_request, _) =
+        find_withdrawal_request_program_address(program_id, &withdrawal_requests, from);
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*pool_market, false),
+        AccountMeta::new_readonly(*pool, false),
+        AccountMeta::new(withdrawal_requests, false),
+        AccountMeta::new(withdrawal_request, false),
+        AccountMeta::new(*source, false),
+        AccountMeta::new(collateral_transit, false),
+        AccountMeta::new(*pool_mint, false),
+        AccountMeta::new_readonly(pool_market_authority, false),
+        AccountMeta::new(*from, false),
+        AccountMeta::new_readonly(*manager, true),
+        AccountMeta::new_readonly(spl_token::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &LiquidityPoolsInstruction::CancelWithdrawRequest,
         accounts,
     )
 }
@@ -501,6 +583,25 @@ pub fn repay(
             amount,
             interest_amount,
         },
+        accounts,
+    )
+}
+
+/// Creates 'MigratePoolMarket' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn close_pool_market(
+    program_id: &Pubkey,
+    pool_market: &Pubkey,
+    manager: &Pubkey,
+) -> Instruction {
+    let accounts = vec![
+        AccountMeta::new(*pool_market, false),
+        AccountMeta::new_readonly(*manager, false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &LiquidityPoolsInstruction::ClosePoolMarket,
         accounts,
     )
 }

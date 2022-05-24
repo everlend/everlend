@@ -1,5 +1,6 @@
 #![cfg(feature = "test-bpf")]
 
+use everlend_registry::state::{DistributionPubkeys, RegistryRootAccounts};
 use solana_program::instruction::InstructionError;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::*;
@@ -13,6 +14,7 @@ use everlend_utils::{
     integrations::{self, MoneyMarketPubkeys},
     EverlendError,
 };
+use everlend_registry::state::SetRegistryPoolConfigParams;
 
 use crate::utils::*;
 
@@ -48,11 +50,19 @@ async fn setup() -> (
     // 1. Prepare general pool
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context).await.unwrap();
+    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let general_pool = TestGeneralPool::new(&general_pool_market, None);
     general_pool
         .create(&mut context, &general_pool_market)
+        .await
+        .unwrap();
+    registry
+        .set_registry_pool_config(
+            &mut context,
+            &general_pool.pool_pubkey,
+            SetRegistryPoolConfigParams { deposit_minimum: 0, withdraw_minimum: 0 }
+        )
         .await
         .unwrap();
 
@@ -70,6 +80,7 @@ async fn setup() -> (
     general_pool
         .deposit(
             &mut context,
+            &registry,
             &general_pool_market,
             &liquidity_provider,
             100 * EXP,
@@ -127,16 +138,7 @@ async fn setup() -> (
         .unwrap();
 
     let test_depositor = TestDepositor::new();
-    test_depositor
-        .init(
-            &mut context,
-            &registry,
-            &general_pool_market,
-            &income_pool_market,
-            &test_liquidity_oracle,
-        )
-        .await
-        .unwrap();
+    test_depositor.init(&mut context, &registry).await.unwrap();
 
     // 4.2 Create transit account for liquidity token
     test_depositor
@@ -195,6 +197,18 @@ async fn setup() -> (
             &general_pool,
             ULP_SHARE_ALLOWED,
         )
+        .await
+        .unwrap();
+
+    let mut roots = RegistryRootAccounts {
+        general_pool_market: general_pool_market.keypair.pubkey(),
+        income_pool_market: income_pool_market.keypair.pubkey(),
+        collateral_pool_markets: DistributionPubkeys::default(),
+        liquidity_oracle: test_liquidity_oracle.keypair.pubkey(),
+    };
+    roots.collateral_pool_markets[0] = mm_pool_market.keypair.pubkey();
+    registry
+        .set_registry_root_accounts(&mut context, roots)
         .await
         .unwrap();
 
@@ -531,7 +545,10 @@ async fn fail_with_invalid_registry() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(0, InstructionError::InvalidAccountData)
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
+        )
     );
 }
 
