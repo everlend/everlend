@@ -1,34 +1,36 @@
 use super::{get_account, get_token_balance, BanksClientResult, TestPool, TestPoolMarket};
 use everlend_collateral_pool::{
-    find_pool_withdraw_authority_program_address, instruction,
+    find_pool_borrow_authority_program_address, instruction,
     state::{Pool, PoolBorrowAuthority},
 };
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{signature::Signer, transaction::Transaction};
 
+pub const ULP_SHARE_ALLOWED: u16 = 10_000; // 100% of the total pool
+
 #[derive(Debug)]
-pub struct TestPoolWithdrawAuthority {
-    pub pool_withdraw_authority_pubkey: Pubkey,
-    pub withdraw_authority: Pubkey,
+pub struct TestPoolBorrowAuthority {
+    pub pool_borrow_authority_pubkey: Pubkey,
+    pub borrow_authority: Pubkey,
 }
 
-impl TestPoolWithdrawAuthority {
-    pub fn new(test_pool: &TestPool, withdraw_authority: Pubkey) -> Self {
-        let (pool_withdraw_authority_pubkey, _) = find_pool_withdraw_authority_program_address(
+impl TestPoolBorrowAuthority {
+    pub fn new(test_pool: &TestPool, borrow_authority: Pubkey) -> Self {
+        let (pool_borrow_authority_pubkey, _) = find_pool_borrow_authority_program_address(
             &everlend_collateral_pool::id(),
             &test_pool.pool_pubkey,
-            &withdraw_authority,
+            &borrow_authority,
         );
 
         Self {
-            pool_withdraw_authority_pubkey,
-            withdraw_authority,
+            pool_borrow_authority_pubkey,
+            borrow_authority,
         }
     }
 
     pub async fn get_data(&self, context: &mut ProgramTestContext) -> PoolBorrowAuthority {
-        let account = get_account(context, &self.pool_withdraw_authority_pubkey).await;
+        let account = get_account(context, &self.pool_borrow_authority_pubkey).await;
         PoolBorrowAuthority::unpack_unchecked(&account.data).unwrap()
     }
 
@@ -50,14 +52,40 @@ impl TestPoolWithdrawAuthority {
         context: &mut ProgramTestContext,
         test_pool_market: &TestPoolMarket,
         test_pool: &TestPool,
+        share_allowed: u16,
     ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
-            &[instruction::create_pool_withdraw_authority(
+            &[instruction::create_pool_borrow_authority(
                 &everlend_collateral_pool::id(),
                 &test_pool_market.keypair.pubkey(),
                 &test_pool.pool_pubkey,
-                &self.withdraw_authority,
+                &self.borrow_authority,
                 &test_pool_market.manager.pubkey(),
+                share_allowed,
+            )],
+            Some(&context.payer.pubkey()),
+            &[&context.payer, &test_pool_market.manager],
+            context.last_blockhash,
+        );
+
+        context.banks_client.process_transaction(tx).await
+    }
+
+    pub async fn update(
+        &self,
+        context: &mut ProgramTestContext,
+        test_pool_market: &TestPoolMarket,
+        test_pool: &TestPool,
+        share_allowed: u16,
+    ) -> BanksClientResult<()> {
+        let tx = Transaction::new_signed_with_payer(
+            &[instruction::update_pool_borrow_authority(
+                &everlend_collateral_pool::id(),
+                &test_pool_market.keypair.pubkey(),
+                &test_pool.pool_pubkey,
+                &self.borrow_authority,
+                &test_pool_market.manager.pubkey(),
+                share_allowed,
             )],
             Some(&context.payer.pubkey()),
             &[&context.payer, &test_pool_market.manager],
@@ -78,7 +106,7 @@ impl TestPoolWithdrawAuthority {
                 &everlend_collateral_pool::id(),
                 &test_pool_market.keypair.pubkey(),
                 &test_pool.pool_pubkey,
-                &self.withdraw_authority,
+                &self.borrow_authority,
                 &context.payer.pubkey(),
                 &test_pool_market.manager.pubkey(),
             )],

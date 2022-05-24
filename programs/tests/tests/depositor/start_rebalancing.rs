@@ -167,12 +167,6 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    // 4.4 Create transit account for mm pool collateral token
-    test_depositor
-        .create_transit(&mut context, &mm_pool.pool_mint.pubkey(), None)
-        .await
-        .unwrap();
-
     // 5. Prepare borrow authority
     let (depositor_authority, _) = find_program_address(
         &everlend_depositor::id(),

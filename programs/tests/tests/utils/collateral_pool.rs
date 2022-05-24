@@ -1,6 +1,6 @@
 use super::{
     get_account, get_liquidity_mint, ulp_pool_borrow_authority::TestPoolBorrowAuthority,
-    BanksClientResult, LiquidityProvider, TestPoolMarket, User,
+    BanksClientResult, LiquidityProvider, TestPoolMarket, User, TestPoolWithdrawAuthority,
 };
 use everlend_collateral_pool::{find_pool_program_address, instruction, state::Pool};
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
@@ -66,7 +66,6 @@ impl TestPool {
             &[
                 &context.payer,
                 &self.token_account,
-                &self.pool_mint,
                 &test_pool_market.manager,
             ],
             context.last_blockhash,
@@ -89,8 +88,6 @@ impl TestPool {
                 &self.pool_pubkey,
                 &user.token_account,
                 &user.pool_account,
-                &self.token_account.pubkey(),
-                &self.pool_mint.pubkey(),
                 &user.pubkey(),
                 amount,
             )],
@@ -106,18 +103,18 @@ impl TestPool {
         &self,
         context: &mut ProgramTestContext,
         test_pool_market: &TestPoolMarket,
+        withdraw_authority: &TestPoolWithdrawAuthority,
         user: &LiquidityProvider,
         amount: u64,
     ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::withdraw(
-                &everlend_ulp::id(),
+                &everlend_collateral_pool::id(),
                 &test_pool_market.keypair.pubkey(),
                 &self.pool_pubkey,
+                &withdraw_authority.pool_withdraw_authority_pubkey,
                 &user.pool_account,
-                &user.token_account,
                 &self.token_account.pubkey(),
-                &self.pool_mint.pubkey(),
                 &user.pubkey(),
                 amount,
             )],

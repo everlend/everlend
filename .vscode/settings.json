@@ -3,5 +3,23 @@
     "cli",
     "program",
     "api"
+  ],
+  "cSpell.words": [
+    "blockhash",
+    "borsh",
+    "Borsh",
+    "everlend",
+    "keypair",
+    "lamports",
+    "presetup",
+    "pubkey",
+    "Pubkey",
+    "Pubkeys",
+    "Pyth",
+    "rebalancing",
+    "Rebalancing",
+    "solana",
+    "sysvar",
+    "Sytem"
   ]
 }
