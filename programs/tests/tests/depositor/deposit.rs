@@ -422,7 +422,6 @@ async fn fail_with_invalid_registry() {
             &test_depositor.depositor.pubkey(),
             &mm_pool_market.keypair.pubkey(),
             &mm_pool.token_account.pubkey(),
-            &mm_pool.pool_mint.pubkey(),
             &get_liquidity_mint().1,
             &mm_pool.token_mint_pubkey,
             &spl_token_lending::id(),
@@ -490,7 +489,6 @@ async fn fail_with_invalid_depositor() {
             &Pubkey::new_unique(),
             &mm_pool_market.keypair.pubkey(),
             &mm_pool.token_account.pubkey(),
-            &mm_pool.pool_mint.pubkey(),
             &get_liquidity_mint().1,
             &mm_pool.token_mint_pubkey,
             &spl_token_lending::id(),
@@ -558,7 +556,6 @@ async fn fail_with_invalid_mm_pool_market() {
             &test_depositor.depositor.pubkey(),
             &Pubkey::new_unique(),
             &mm_pool.token_account.pubkey(),
-            &mm_pool.pool_mint.pubkey(),
             &get_liquidity_mint().1,
             &mm_pool.token_mint_pubkey,
             &spl_token_lending::id(),
@@ -626,7 +623,6 @@ async fn fail_with_invalid_mm_pool_token_account() {
             &test_depositor.depositor.pubkey(),
             &mm_pool_market.keypair.pubkey(),
             &Pubkey::new_unique(),
-            &mm_pool.pool_mint.pubkey(),
             &get_liquidity_mint().1,
             &mm_pool.token_mint_pubkey,
             &spl_token_lending::id(),
@@ -647,72 +643,6 @@ async fn fail_with_invalid_mm_pool_token_account() {
         TransactionError::InstructionError(0, InstructionError::InvalidArgument)
     );
 }
-
-#[tokio::test]
-async fn fail_with_invalid_mm_pool_collateral_mint() {
-    let (
-        mut context,
-        money_market,
-        pyth_oracle,
-        registry,
-        _,
-        _,
-        _,
-        mm_pool_market,
-        mm_pool,
-        _,
-        test_depositor,
-        _,
-        _,
-        _,
-    ) = setup().await;
-
-    let reserve = money_market.get_reserve_data(&mut context).await;
-
-    // Rates should be refreshed
-    context.warp_to_slot(3).unwrap();
-    pyth_oracle.update(&mut context, 3).await;
-
-    let money_market_pubkeys =
-        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
-            reserve: money_market.reserve_pubkey,
-            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
-            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
-            lending_market: money_market.market_pubkey,
-        });
-
-    let deposit_accounts =
-        integrations::deposit_accounts(&spl_token_lending::id(), &money_market_pubkeys);
-
-    let tx = Transaction::new_signed_with_payer(
-        &[everlend_depositor::instruction::deposit(
-            &everlend_depositor::id(),
-            &registry.keypair.pubkey(),
-            &test_depositor.depositor.pubkey(),
-            &mm_pool_market.keypair.pubkey(),
-            &mm_pool.token_account.pubkey(),
-            &Pubkey::new_unique(),
-            &get_liquidity_mint().1,
-            &mm_pool.token_mint_pubkey,
-            &spl_token_lending::id(),
-            deposit_accounts,
-        )],
-        Some(&context.payer.pubkey()),
-        &[&context.payer],
-        context.last_blockhash,
-    );
-
-    assert_eq!(
-        context
-            .banks_client
-            .process_transaction(tx)
-            .await
-            .unwrap_err()
-            .unwrap(),
-        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
-    );
-}
-
 #[tokio::test]
 async fn fail_with_invalid_liquidity_mint() {
     let (
@@ -756,7 +686,6 @@ async fn fail_with_invalid_liquidity_mint() {
             &test_depositor.depositor.pubkey(),
             &mm_pool_market.keypair.pubkey(),
             &mm_pool.token_account.pubkey(),
-            &mm_pool.pool_mint.pubkey(),
             &Pubkey::new_unique(),
             &mm_pool.token_mint_pubkey,
             &spl_token_lending::id(),
@@ -824,7 +753,6 @@ async fn fail_with_invalid_collateral_mint() {
             &test_depositor.depositor.pubkey(),
             &mm_pool_market.keypair.pubkey(),
             &mm_pool.token_account.pubkey(),
-            &mm_pool.pool_mint.pubkey(),
             &get_liquidity_mint().1,
             &Pubkey::new_unique(),
             &spl_token_lending::id(),
@@ -892,7 +820,6 @@ async fn fail_with_invalid_money_market_program_id() {
             &test_depositor.depositor.pubkey(),
             &mm_pool_market.keypair.pubkey(),
             &mm_pool.token_account.pubkey(),
-            &mm_pool.pool_mint.pubkey(),
             &get_liquidity_mint().1,
             &mm_pool.token_mint_pubkey,
             &Pubkey::new_unique(),
@@ -949,7 +876,6 @@ async fn fail_with_invalid_money_market_accounts() {
             &test_depositor.depositor.pubkey(),
             &mm_pool_market.keypair.pubkey(),
             &mm_pool.token_account.pubkey(),
-            &mm_pool.pool_mint.pubkey(),
             &get_liquidity_mint().1,
             &mm_pool.token_mint_pubkey,
             &spl_token_lending::id(),

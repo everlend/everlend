@@ -1,5 +1,5 @@
 use super::{get_account, BanksClientResult};
-use everlend_ulp::{instruction, state::PoolMarket};
+use everlend_collateral_pool::{instruction, state::PoolMarket};
 use solana_program::{program_pack::Pack, system_instruction};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{
@@ -41,10 +41,10 @@ impl TestPoolMarket {
                     &self.keypair.pubkey(),
                     rent.minimum_balance(PoolMarket::LEN),
                     PoolMarket::LEN as u64,
-                    &everlend_ulp::id(),
+                    &everlend_collateral_pool::id(),
                 ),
                 instruction::init_pool_market(
-                    &everlend_ulp::id(),
+                    &everlend_collateral_pool::id(),
                     &self.keypair.pubkey(),
                     &self.manager.pubkey(),
                 ),
@@ -57,3 +57,4 @@ impl TestPoolMarket {
         context.banks_client.process_transaction(tx).await
     }
 }
+

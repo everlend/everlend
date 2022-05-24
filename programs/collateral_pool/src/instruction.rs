@@ -183,7 +183,6 @@ pub fn create_pool(
     pool_market: &Pubkey,
     token_mint: &Pubkey,
     token_account: &Pubkey,
-    pool_mint: &Pubkey,
     manager: &Pubkey,
 ) -> Instruction {
     let (pool_market_authority, _) = find_program_address(program_id, pool_market);
@@ -194,7 +193,6 @@ pub fn create_pool(
         AccountMeta::new(pool, false),
         AccountMeta::new_readonly(*token_mint, false),
         AccountMeta::new(*token_account, false),
-        AccountMeta::new(*pool_mint, false),
         AccountMeta::new(*manager, true),
         AccountMeta::new_readonly(pool_market_authority, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),

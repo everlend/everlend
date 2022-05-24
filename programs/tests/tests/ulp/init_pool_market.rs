@@ -1,7 +1,7 @@
 #![cfg(feature = "test-bpf")]
 
 use crate::utils::*;
-use everlend_ulp::state::AccountType;
+use everlend_collateral_pool::state::AccountType;
 use solana_program_test::*;
 
 #[tokio::test]

@@ -138,7 +138,6 @@ impl TestDepositor {
     ) -> BanksClientResult<()> {
         let liquidity_mint = get_liquidity_mint().1;
         let collateral_mint = mm_pool.token_mint_pubkey;
-        let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
 
         let deposit_accounts =
             integrations::deposit_accounts(money_market_program_id, money_market_pubkeys);
@@ -150,7 +149,6 @@ impl TestDepositor {
                 &self.depositor.pubkey(),
                 &mm_pool_market.keypair.pubkey(),
                 &mm_pool.token_account.pubkey(),
-                &mm_pool_collateral_mint,
                 &liquidity_mint,
                 &collateral_mint,
                 money_market_program_id,
@@ -178,7 +176,6 @@ impl TestDepositor {
     ) -> BanksClientResult<()> {
         let collateral_mint = mm_pool.token_mint_pubkey;
         let liquidity_mint = get_liquidity_mint().1;
-        let mm_pool_collateral_mint = mm_pool.pool_mint.pubkey();
 
         let withdraw_accounts =
             integrations::withdraw_accounts(money_market_program_id, money_market_pubkeys);
@@ -196,7 +193,6 @@ impl TestDepositor {
                 &income_pool.token_account.pubkey(),
                 &mm_pool_market.keypair.pubkey(),
                 &mm_pool.token_account.pubkey(),
-                &mm_pool_collateral_mint,
                 &mm_pool_withdraw_authority,
                 &collateral_mint,
                 &liquidity_mint,
