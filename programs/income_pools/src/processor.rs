@@ -179,21 +179,26 @@ impl Processor {
         assert_owned_by(income_pool_info, program_id)?;
         assert_owned_by(general_pool_info, &everlend_general_pool::id())?;
 
-        let pool_market = IncomePoolMarket::unpack(&income_pool_market_info.data.borrow())?;
+        let income_pool_market = IncomePoolMarket::unpack(&income_pool_market_info.data.borrow())?;
 
-        let pool = IncomePool::unpack(&income_pool_info.data.borrow())?;
+        let income_pool = IncomePool::unpack(&income_pool_info.data.borrow())?;
 
         // Check pool accounts
-        assert_account_key(income_pool_market_info, &pool.income_pool_market)?;
-        assert_account_key(income_pool_token_account_info, &pool.token_account)?;
+        assert_account_key(income_pool_market_info, &income_pool.income_pool_market)?;
+        assert_account_key(income_pool_token_account_info, &income_pool.token_account)?;
 
         let general_pool = Pool::unpack(&general_pool_info.data.borrow())?;
 
         // Check general pool
-        if general_pool.pool_market != pool_market.general_pool_market {
+        if general_pool.pool_market != income_pool_market.general_pool_market {
             return Err(ProgramError::InvalidArgument);
         }
         assert_account_key(general_pool_token_account_info, &general_pool.token_account)?;
+
+        let (safety_fund_token_account, _) =
+            find_safety_fund_token_account_address(program_id, income_pool_market_info.key, &general_pool.token_mint);
+
+        assert_account_key(safety_fund_token_account_info, &safety_fund_token_account)?;
 
         let mut token_amount =
             Account::unpack_unchecked(&income_pool_token_account_info.data.borrow())?.amount;
