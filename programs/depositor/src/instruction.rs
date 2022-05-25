@@ -267,9 +267,9 @@ pub fn deposit(
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
 
     // MM pool
-    let (mm_pool_market_authority, _) = find_program_address(&everlend_ulp::id(), mm_pool_market);
-    let (mm_pool, _) = everlend_ulp::find_pool_program_address(
-        &everlend_ulp::id(),
+    let (mm_pool_market_authority, _) = find_program_address(&everlend_collateral_pool::id(), mm_pool_market);
+    let (mm_pool, _) = everlend_collateral_pool::find_pool_program_address(
+        &everlend_collateral_pool::id(),
         mm_pool_market,
         collateral_mint,
     );
@@ -297,7 +297,7 @@ pub fn deposit(
         // Programs
         AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
-        AccountMeta::new_readonly(everlend_ulp::id(), false),
+        AccountMeta::new_readonly(everlend_collateral_pool::id(), false),
         // Money market
         AccountMeta::new_readonly(*money_market_program_id, false),
     ];
@@ -336,9 +336,9 @@ pub fn withdraw(
     );
 
     // MM pool
-    let (mm_pool_market_authority, _) = find_program_address(&everlend_ulp::id(), mm_pool_market);
-    let (mm_pool, _) = everlend_ulp::find_pool_program_address(
-        &everlend_ulp::id(),
+    let (mm_pool_market_authority, _) = find_program_address(&everlend_collateral_pool::id(), mm_pool_market);
+    let (mm_pool, _) = everlend_collateral_pool::find_pool_program_address(
+        &everlend_collateral_pool::id(),
         mm_pool_market,
         collateral_mint,
     );
@@ -376,7 +376,7 @@ pub fn withdraw(
         AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
         AccountMeta::new_readonly(everlend_income_pools::id(), false),
-        AccountMeta::new_readonly(everlend_ulp::id(), false),
+        AccountMeta::new_readonly(everlend_collateral_pool::id(), false),
         // Money market
         AccountMeta::new_readonly(*money_market_program_id, false),
     ];

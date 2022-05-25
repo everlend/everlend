@@ -1,5 +1,5 @@
 use super::{
-    get_account, get_liquidity_mint, ulp_pool_borrow_authority::TestPoolBorrowAuthority,
+    get_account, get_liquidity_mint, collateral_pool_borrow_authority::TestPoolBorrowAuthority,
     BanksClientResult, LiquidityProvider, TestPoolMarket, User, TestPoolWithdrawAuthority,
 };
 use everlend_collateral_pool::{find_pool_program_address, instruction, state::Pool};
@@ -22,7 +22,7 @@ impl TestPool {
         let token_mint_pubkey = token_mint_pubkey.unwrap_or(get_liquidity_mint().1);
 
         let (pool_pubkey, _) = find_pool_program_address(
-            &everlend_ulp::id(),
+            &everlend_collateral_pool::id(),
             &test_pool_market.keypair.pubkey(),
             &token_mint_pubkey,
         );
@@ -55,7 +55,7 @@ impl TestPool {
                     &spl_token::id(),
                 ),
                 instruction::create_pool(
-                    &everlend_ulp::id(),
+                    &everlend_collateral_pool::id(),
                     &test_pool_market.keypair.pubkey(),
                     &self.token_mint_pubkey,
                     &self.token_account.pubkey(),
@@ -83,7 +83,7 @@ impl TestPool {
     ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::deposit(
-                &everlend_ulp::id(),
+                &everlend_collateral_pool::id(),
                 &test_pool_market.keypair.pubkey(),
                 &self.pool_pubkey,
                 &user.token_account,
@@ -139,7 +139,7 @@ impl TestPool {
 
         let tx = Transaction::new_signed_with_payer(
             &[instruction::borrow(
-                &everlend_ulp::id(),
+                &everlend_collateral_pool::id(),
                 &test_pool_market.keypair.pubkey(),
                 &self.pool_pubkey,
                 &test_pool_borrow_authority.pool_borrow_authority_pubkey,
@@ -167,7 +167,7 @@ impl TestPool {
     ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::repay(
-                &everlend_ulp::id(),
+                &everlend_collateral_pool::id(),
                 &test_pool_market.keypair.pubkey(),
                 &self.pool_pubkey,
                 &test_pool_borrow_authority.pool_borrow_authority_pubkey,

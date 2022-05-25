@@ -27,9 +27,6 @@ pub mod collateral_pool;
 pub mod collateral_pool_borrow_authority;
 pub mod collateral_pool_withdraw_authority;
 pub mod collateral_pool_market;
-pub mod ulp_pool;
-pub mod ulp_pool_borrow_authority;
-pub mod ulp_pool_market;
 pub mod users;
 
 pub use depositor::*;
@@ -54,9 +51,9 @@ pub type BanksClientResult<T> = transport::Result<T>;
 
 pub fn program_test() -> ProgramTest {
     let mut program = ProgramTest::new(
-        "everlend_ulp",
-        everlend_ulp::id(),
-        processor!(everlend_ulp::processor::Processor::process_instruction),
+        "everlend_collateral_pool",
+        everlend_collateral_pool::id(),
+        processor!(everlend_collateral_pool::processor::Processor::process_instruction),
     );
     program.add_program(
         "everlend_general_pool",

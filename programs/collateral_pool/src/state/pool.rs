@@ -72,8 +72,8 @@ pub struct InitPoolParams {
 
 impl Sealed for Pool {}
 impl Pack for Pool {
-    // 1 + 32 + 32 + 32 + 32 + 8
-    const LEN: usize = 137;
+    // 1 + 32 + 32 + 32 + 8
+    const LEN: usize = 105;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;

@@ -74,7 +74,6 @@ impl Processor {
         assert_owned_by(pool_market_info, program_id)?;
 
         let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
-
         assert_account_key(manager_info, &pool_market.manager)?;
 
         let (pool_pubkey, bump_seed) =

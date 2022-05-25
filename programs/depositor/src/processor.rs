@@ -394,7 +394,6 @@ impl Processor {
         let collateral_pool_market_authority_info = next_account_info(account_info_iter)?;
         let collateral_pool_info = next_account_info(account_info_iter)?;
         let collateral_pool_token_account_info = next_account_info(account_info_iter)?;
-        let collateral_pool_collateral_mint_info = next_account_info(account_info_iter)?;
 
         let liquidity_transit_info = next_account_info(account_info_iter)?;
         let liquidity_mint_info = next_account_info(account_info_iter)?;
@@ -437,7 +436,7 @@ impl Processor {
         }
 
         // Check collateral pool
-        let (collateral_pool_pubkey, _) = everlend_ulp::find_pool_program_address(
+        let (collateral_pool_pubkey, _) = everlend_collateral_pool::find_pool_program_address(
             &programs.collateral_pool_program_id,
             collateral_pool_market_info.key,
             collateral_mint_info.key,
@@ -445,17 +444,13 @@ impl Processor {
         assert_account_key(collateral_pool_info, &collateral_pool_pubkey)?;
 
         let collateral_pool =
-            everlend_ulp::state::Pool::unpack(&collateral_pool_info.data.borrow())?;
+            everlend_collateral_pool::state::Pool::unpack(&collateral_pool_info.data.borrow())?;
 
         // Check collateral pool accounts
         assert_account_key(collateral_mint_info, &collateral_pool.token_mint)?;
         assert_account_key(
             collateral_pool_token_account_info,
             &collateral_pool.token_account,
-        )?;
-        assert_account_key(
-            collateral_pool_collateral_mint_info,
-            &collateral_pool.pool_mint,
         )?;
 
         // Check rebalancing
@@ -600,7 +595,7 @@ impl Processor {
         }
 
         // Check collateral pool
-        let (collateral_pool_pubkey, _) = everlend_ulp::find_pool_program_address(
+        let (collateral_pool_pubkey, _) = everlend_collateral_pool::find_pool_program_address(
             &programs.collateral_pool_program_id,
             collateral_pool_market_info.key,
             collateral_mint_info.key,
@@ -608,7 +603,7 @@ impl Processor {
         assert_account_key(collateral_pool_info, &collateral_pool_pubkey)?;
 
         let collateral_pool =
-            everlend_ulp::state::Pool::unpack(&collateral_pool_info.data.borrow())?;
+            everlend_collateral_pool::state::Pool::unpack(&collateral_pool_info.data.borrow())?;
 
         // Check collateral pool accounts
         assert_account_key(collateral_mint_info, &collateral_pool.token_mint)?;
@@ -747,6 +742,7 @@ impl Processor {
 
             DepositorInstruction::Deposit => {
                 msg!("DepositorInstruction: Deposit");
+                msg!("==========================================================");
                 Self::deposit(program_id, accounts)
             }
 
