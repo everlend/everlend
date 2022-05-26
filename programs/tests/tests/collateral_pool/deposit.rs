@@ -1,5 +1,6 @@
 #![cfg(feature = "test-bpf")]
 
+use crate::utils::*;
 use everlend_ulp::instruction;
 use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
@@ -8,17 +9,6 @@ use solana_sdk::{
     pubkey::Pubkey, signer::Signer, transaction::Transaction, transaction::TransactionError,
 };
 use spl_token::error::TokenError;
-use crate::utils::{
-    presetup,
-    UlpMarket,
-    UniversalLiquidityPool,
-    LiquidityProvider,
-    add_liquidity_provider,
-    EXP,
-    get_token_balance,
-    mint_tokens,
-    users::*,
-};
 
 async fn setup() -> (
     ProgramTestContext,

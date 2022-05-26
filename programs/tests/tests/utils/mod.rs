@@ -62,6 +62,11 @@ pub fn program_test() -> ProgramTest {
         processor!(everlend_collateral_pool::processor::Processor::process_instruction),
     );
     program.add_program(
+        "everlend_ulp",
+        everlend_ulp::id(),
+        processor!(everlend_ulp::processor::Processor::process_instruction),
+    );
+    program.add_program(
         "everlend_general_pool",
         everlend_general_pool::id(),
         processor!(everlend_general_pool::processor::Processor::process_instruction),

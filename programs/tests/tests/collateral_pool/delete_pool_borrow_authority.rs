@@ -1,19 +1,11 @@
 #![cfg(feature = "test-bpf")]
 
+use crate::utils::*;
 use everlend_ulp::state::AccountType;
 use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program_test::*;
 use solana_sdk::{signer::Signer, transaction::TransactionError};
-use crate::utils::presetup;
-use crate::utils::{
-    UniversalLiquidityPoolBorrowAuthority,
-    UlpMarket,
-    UniversalLiquidityPool,
-};
-use crate::ulp::ulp_utils::{
-    ULP_SHARE_ALLOWED,
-};
 
 async fn setup() -> (ProgramTestContext, UlpMarket, UniversalLiquidityPool) {
     let mut context = presetup().await.0;

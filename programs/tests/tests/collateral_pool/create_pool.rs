@@ -1,12 +1,8 @@
 #![cfg(feature = "test-bpf")]
 
+use crate::utils::*;
 use everlend_ulp::state::AccountType;
 use solana_program_test::*;
-use crate::utils::{
-    presetup,
-    UlpMarket,
-    UniversalLiquidityPool,
-};
 
 async fn setup() -> (ProgramTestContext, UlpMarket) {
     let mut context = presetup().await.0;

@@ -1,11 +1,8 @@
 #![cfg(feature = "test-bpf")]
 
-use everlend_ulp::state::AccountType;
+use crate::utils::*;
+use everlend_collateral_pool::state::AccountType;
 use solana_program_test::*;
-use crate::utils::{
-    presetup,
-    UlpMarket,
-};
 
 #[tokio::test]
 async fn success() {
