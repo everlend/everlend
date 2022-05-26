@@ -159,7 +159,7 @@ async fn setup() -> (
             &mut context,
             &general_pool_market,
             &general_pool,
-            ULP_SHARE_ALLOWED,
+            COLLATERAL_POOL_SHARE_ALLOWED,
         )
         .await
         .unwrap();

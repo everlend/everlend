@@ -27,6 +27,9 @@ pub mod collateral_pool;
 pub mod collateral_pool_borrow_authority;
 pub mod collateral_pool_withdraw_authority;
 pub mod collateral_pool_market;
+pub mod ulp_pool;
+pub mod ulp_pool_borrow_authority;
+pub mod ulp_pool_market;
 pub mod users;
 
 pub use depositor::*;
@@ -42,6 +45,9 @@ pub use collateral_pool::*;
 pub use collateral_pool_borrow_authority::*;
 pub use collateral_pool_withdraw_authority::*;
 pub use collateral_pool_market::*;
+pub use ulp_pool::*;
+pub use ulp_pool_borrow_authority::*;
+pub use ulp_pool_market::*;
 pub use users::*;
 
 pub const EXP: u64 = 1_000_000_000;
