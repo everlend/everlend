@@ -1,4 +1,4 @@
-import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token'
+import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID, NATIVE_MINT } from '@solana/spl-token'
 import { Connection, Keypair, PublicKey, SystemProgram, Transaction } from '@solana/web3.js'
 import BN from 'bn.js'
 import {
@@ -9,8 +9,21 @@ import {
   WithdrawalRequests,
 } from './accounts'
 import { GeneralPoolsProgram } from './program'
-import { CreateAssociatedTokenAccount, findAssociatedTokenAccount, findRegistryPoolConfigAccount } from '@everlend/common'
-import { Borrow, CreatePool, Deposit, InitPoolMarket, Repay, WithdrawRequest } from './transactions'
+import {
+  CreateAssociatedTokenAccount,
+  findAssociatedTokenAccount,
+  findRegistryPoolConfigAccount,
+} from '@everlend/common'
+import {
+  Borrow,
+  CreatePool,
+  Deposit,
+  InitPoolMarket,
+  Repay,
+  WithdrawRequest,
+  Withdraw,
+  UnwrapParams,
+} from './transactions'
 import { Buffer } from 'buffer'
 
 export type ActionResult = {
@@ -207,6 +220,73 @@ export const withdrawRequest = async (
         collateralTransit,
         poolMint,
         collateralAmount,
+      },
+    ),
+  )
+
+  return { tx }
+}
+
+export const withdraw = async (
+  { connection, payerPublicKey }: ActionOptions,
+  withdrawalRequest: PublicKey,
+): Promise<ActionResult> => {
+  const {
+    data: { from, destination, pool },
+  } = await WithdrawalRequest.load(connection, withdrawalRequest)
+
+  const {
+    data: { tokenMint, poolMarket, poolMint, tokenAccount },
+  } = await Pool.load(connection, pool)
+
+  const withdrawalRequests = await WithdrawalRequests.getPDA(poolMarket, tokenMint)
+  const poolMarketAuthority = await GeneralPoolsProgram.findProgramAddress([poolMarket.toBuffer()])
+
+  const collateralTransit = await GeneralPoolsProgram.findProgramAddress([
+    Buffer.from('transit'),
+    poolMarket.toBuffer(),
+    poolMint.toBuffer(),
+  ])
+
+  let unwrapAccounts: UnwrapParams = undefined
+  if (tokenMint.equals(NATIVE_MINT)) {
+    const unwrapTokenAccount = await WithdrawalRequest.getUnwrapSOLPDA(withdrawalRequest)
+    unwrapAccounts = {
+      tokenMint: tokenMint,
+      unwrapTokenAccount: unwrapTokenAccount,
+      signer: payerPublicKey,
+    }
+  }
+
+  const tx = new Transaction()
+
+  // Create destination account for token mint if doesn't exist
+  !(await connection.getAccountInfo(destination)) &&
+    tx.add(
+      new CreateAssociatedTokenAccount(
+        { feePayer: payerPublicKey },
+        {
+          associatedTokenAddress: destination,
+          tokenMint,
+        },
+      ),
+    )
+
+  tx.add(
+    new Withdraw(
+      { feePayer: payerPublicKey },
+      {
+        poolMarket,
+        pool,
+        poolMarketAuthority,
+        poolMint,
+        withdrawalRequests,
+        withdrawalRequest,
+        destination,
+        tokenAccount,
+        collateralTransit,
+        from,
+        unwrapAccounts,
       },
     ),
   )
