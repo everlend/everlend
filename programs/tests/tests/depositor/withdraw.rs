@@ -1,7 +1,6 @@
 #![cfg(feature = "test-bpf")]
 
 use solana_program::instruction::InstructionError;
-use solana_program::instruction::InstructionError::InvalidAccountData;
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::*;
 use solana_sdk::signer::Signer;
@@ -9,7 +8,7 @@ use solana_sdk::transaction::{Transaction, TransactionError};
 
 use everlend_depositor::find_transit_program_address;
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::{DistributionPubkeys, RegistryRootAccounts};
+use everlend_registry::state::{RegistryRootAccounts};
 use everlend_utils::{
     find_program_address,
     integrations::{self, MoneyMarketPubkeys},
@@ -30,7 +29,6 @@ async fn setup() -> (
     TestIncomePool,
     TestPoolMarket,
     TestPool,
-    TestPoolWithdrawAuthority,
     LiquidityProvider,
     TestDepositor,
 ) {
@@ -196,22 +194,22 @@ async fn setup() -> (
         )
         .await
         .unwrap();
-
+    let ten = [1,2,3,4,5,6,7,8,9,0];
+    let collateral_pool_markets = ten.map(|_| { mm_pool_market.keypair.pubkey().clone() });
     let mut roots = RegistryRootAccounts {
         general_pool_market: general_pool_market.keypair.pubkey(),
         income_pool_market: income_pool_market.keypair.pubkey(),
-        collateral_pool_markets: DistributionPubkeys::default(),
         liquidity_oracle: test_liquidity_oracle.keypair.pubkey(),
+        collateral_pool_markets,
     };
     roots.collateral_pool_markets[0] = mm_pool_market.keypair.pubkey();
     registry
         .set_registry_root_accounts(&mut context, roots)
         .await
         .unwrap();
-
-    // 6. Prepare withdraw
+    // 6. Prepare withdraw authority
     let withdraw_authority = TestPoolWithdrawAuthority::new(&mm_pool, depositor_authority);
-    withdraw_authority.create(&mut context, &mm_pool_market, &mm_pool);
+    withdraw_authority.create(&mut context, &mm_pool_market, &mm_pool).await;
 
     // 7. Start rebalancing
     test_depositor
@@ -290,7 +288,6 @@ async fn setup() -> (
         income_pool,
         mm_pool_market,
         mm_pool,
-        withdraw_authority,
         liquidity_provider,
         test_depositor,
     )
@@ -310,7 +307,6 @@ async fn success() {
         income_pool,
         mm_pool_market,
         mm_pool,
-        _,
         _,
         test_depositor,
     ) = setup().await;
@@ -374,7 +370,6 @@ async fn success_with_incomes() {
         income_pool,
         mm_pool_market,
         mm_pool,
-        _,
         liquidity_provider,
         test_depositor,
     ) = setup().await;
@@ -454,7 +449,6 @@ async fn fail_with_invalid_registry() {
         income_pool,
         mm_pool_market,
         mm_pool,
-        withdraw_authority,
         _,
         test_depositor,
     ) = setup().await;
@@ -489,7 +483,6 @@ async fn fail_with_invalid_registry() {
             &income_pool.token_account.pubkey(),
             &mm_pool_market.keypair.pubkey(),
             &mm_pool.token_account.pubkey(),
-            &withdraw_authority.pool_withdraw_authority_pubkey,
             &liquidity_mint,
             &collateral_mint,
             money_market_program_id,
@@ -528,7 +521,6 @@ async fn fail_with_invalid_depositor() {
         income_pool,
         mm_pool_market,
         mm_pool,
-        withdraw_authority,
         _,
         _,
     ) = setup().await;
@@ -563,7 +555,6 @@ async fn fail_with_invalid_depositor() {
             &income_pool.token_account.pubkey(),
             &mm_pool_market.keypair.pubkey(),
             &mm_pool.token_account.pubkey(),
-            &withdraw_authority.pool_withdraw_authority_pubkey,
             &collateral_mint,
             &liquidity_mint,
             money_market_program_id,
@@ -602,7 +593,6 @@ async fn fail_with_invalid_income_pool_market() {
         income_pool,
         mm_pool_market,
         mm_pool,
-        withdraw_authority,
         liquidity_provider,
         test_depositor,
     ) = setup().await;
@@ -651,7 +641,6 @@ async fn fail_with_invalid_income_pool_market() {
             &income_pool.token_account.pubkey(),
             &mm_pool_market.keypair.pubkey(),
             &mm_pool.token_account.pubkey(),
-            &withdraw_authority.pool_withdraw_authority_pubkey,
             &collateral_mint,
             &liquidity_mint,
             money_market_program_id,
@@ -690,7 +679,6 @@ async fn fail_with_invalid_income_pool_token_account() {
         _,
         mm_pool_market,
         mm_pool,
-        withdraw_authority,
         liquidity_provider,
         test_depositor,
     ) = setup().await;
@@ -739,7 +727,6 @@ async fn fail_with_invalid_income_pool_token_account() {
             &Pubkey::new_unique(),
             &mm_pool_market.keypair.pubkey(),
             &mm_pool.token_account.pubkey(),
-            &withdraw_authority.pool_withdraw_authority_pubkey,
             &collateral_mint,
             &liquidity_mint,
             money_market_program_id,
@@ -775,7 +762,6 @@ async fn fail_with_invalid_mm_pool_market() {
         income_pool,
         _,
         mm_pool,
-        withdraw_authority,
         _,
         test_depositor,
     ) = setup().await;
@@ -810,7 +796,6 @@ async fn fail_with_invalid_mm_pool_market() {
             &income_pool.token_account.pubkey(),
             &Pubkey::new_unique(),
             &mm_pool.token_account.pubkey(),
-            &withdraw_authority.pool_withdraw_authority_pubkey,
             &collateral_mint,
             &liquidity_mint,
             money_market_program_id,
@@ -849,7 +834,6 @@ async fn fail_with_invalid_mm_pool_token_account() {
         income_pool,
         mm_pool_market,
         mm_pool,
-        withdraw_authority,
         _,
         test_depositor,
     ) = setup().await;
@@ -884,7 +868,6 @@ async fn fail_with_invalid_mm_pool_token_account() {
             &income_pool.token_account.pubkey(),
             &mm_pool_market.keypair.pubkey(),
             &Pubkey::new_unique(),
-            &withdraw_authority.pool_withdraw_authority_pubkey,
             &collateral_mint,
             &liquidity_mint,
             money_market_program_id,
@@ -920,7 +903,6 @@ async fn fail_with_invalid_mm_pool_collateral_mint() {
         income_pool,
         mm_pool_market,
         mm_pool,
-        withdraw_authority,
         _,
         test_depositor,
     ) = setup().await;
@@ -955,7 +937,6 @@ async fn fail_with_invalid_mm_pool_collateral_mint() {
             &income_pool.token_account.pubkey(),
             &mm_pool_market.keypair.pubkey(),
             &mm_pool.token_account.pubkey(),
-            &withdraw_authority.pool_withdraw_authority_pubkey,
             &collateral_mint,
             &liquidity_mint,
             money_market_program_id,
@@ -991,7 +972,6 @@ async fn fail_with_invalid_collateral_mint() {
         income_pool,
         mm_pool_market,
         mm_pool,
-        withdraw_authority,
         _,
         test_depositor,
     ) = setup().await;
@@ -1026,7 +1006,6 @@ async fn fail_with_invalid_collateral_mint() {
             &income_pool.token_account.pubkey(),
             &mm_pool_market.keypair.pubkey(),
             &mm_pool.token_account.pubkey(),
-            &withdraw_authority.pool_withdraw_authority_pubkey,
             &collateral_mint,
             &liquidity_mint,
             money_market_program_id,
@@ -1065,7 +1044,6 @@ async fn fail_with_invalid_liquidity_mint() {
         income_pool,
         mm_pool_market,
         mm_pool,
-        withdraw_authority,
         _,
         test_depositor,
     ) = setup().await;
@@ -1100,7 +1078,6 @@ async fn fail_with_invalid_liquidity_mint() {
             &income_pool.token_account.pubkey(),
             &mm_pool_market.keypair.pubkey(),
             &mm_pool.token_account.pubkey(),
-            &withdraw_authority.pool_withdraw_authority_pubkey,
             &collateral_mint,
             &liquidity_mint,
             money_market_program_id,
@@ -1139,7 +1116,6 @@ async fn fail_with_invalid_mm_program_id() {
         income_pool,
         mm_pool_market,
         mm_pool,
-        withdraw_authority,
         _,
         test_depositor,
     ) = setup().await;
@@ -1174,7 +1150,6 @@ async fn fail_with_invalid_mm_program_id() {
             &income_pool.token_account.pubkey(),
             &mm_pool_market.keypair.pubkey(),
             &mm_pool.token_account.pubkey(),
-            &withdraw_authority.pool_withdraw_authority_pubkey,
             &collateral_mint,
             &liquidity_mint,
             money_market_program_id,
@@ -1213,7 +1188,6 @@ async fn fail_with_invalid_withdraw_accounts() {
         income_pool,
         mm_pool_market,
         mm_pool,
-        withdraw_authority,
         _,
         test_depositor,
     ) = setup().await;
@@ -1248,7 +1222,6 @@ async fn fail_with_invalid_withdraw_accounts() {
             &income_pool.token_account.pubkey(),
             &mm_pool_market.keypair.pubkey(),
             &mm_pool.token_account.pubkey(),
-            &withdraw_authority.pool_withdraw_authority_pubkey,
             &collateral_mint,
             &liquidity_mint,
             money_market_program_id,

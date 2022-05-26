@@ -149,6 +149,7 @@ pub fn withdraw<'a>(
         &[
             pool_market,
             pool,
+            pool_withdraw_authority,
             destination,
             token_account,
             pool_market_authority,

@@ -403,7 +403,7 @@ impl Processor {
         let clock_info = next_account_info(account_info_iter)?;
         let clock = Clock::from_account_info(clock_info)?;
         let _token_program_info = next_account_info(account_info_iter)?;
-        let _everlend_ulp_info = next_account_info(account_info_iter)?;
+        let _everlend_collateral_pool_info = next_account_info(account_info_iter)?;
 
         let money_market_program_info = next_account_info(account_info_iter)?;
 
@@ -560,7 +560,7 @@ impl Processor {
         let clock_info = next_account_info(account_info_iter)?;
         let clock = Clock::from_account_info(clock_info)?;
         let _token_program_info = next_account_info(account_info_iter)?;
-        let _everlend_ulp_info = next_account_info(account_info_iter)?;
+        let _everlend_collateral_pool_info = next_account_info(account_info_iter)?;
         let _everlend_income_pools_info = next_account_info(account_info_iter)?;
 
         let money_market_program_info = next_account_info(account_info_iter)?;
@@ -742,7 +742,6 @@ impl Processor {
 
             DepositorInstruction::Deposit => {
                 msg!("DepositorInstruction: Deposit");
-                msg!("==========================================================");
                 Self::deposit(program_id, accounts)
             }
 

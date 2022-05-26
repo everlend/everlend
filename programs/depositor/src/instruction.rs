@@ -1,6 +1,7 @@
 //! Instruction types
 
 use borsh::{BorshDeserialize, BorshSerialize};
+use everlend_collateral_pool::find_pool_withdraw_authority_program_address;
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
@@ -317,7 +318,6 @@ pub fn withdraw(
     income_pool_token_account: &Pubkey,
     mm_pool_market: &Pubkey,
     mm_pool_token_account: &Pubkey,
-    mm_pool_withdraw_authority: &Pubkey,
     collateral_mint: &Pubkey,
     liquidity_mint: &Pubkey,
     money_market_program_id: &Pubkey,
@@ -351,6 +351,12 @@ pub fn withdraw(
     let (liquidity_reserve_transit, _) =
         find_transit_program_address(program_id, depositor, liquidity_mint, "reserve");
 
+    let (mm_pool_withdraw_authority, _) = find_pool_withdraw_authority_program_address(
+        &everlend_collateral_pool::id(),
+        &mm_pool,
+        &depositor_authority, 
+    );
+
     let mut accounts = vec![
         AccountMeta::new_readonly(registry_config, false),
         AccountMeta::new_readonly(*depositor, false),
@@ -365,7 +371,7 @@ pub fn withdraw(
         AccountMeta::new_readonly(mm_pool_market_authority, false),
         AccountMeta::new_readonly(mm_pool, false),
         AccountMeta::new(*mm_pool_token_account, false),
-        AccountMeta::new(*mm_pool_withdraw_authority, false),
+        AccountMeta::new(mm_pool_withdraw_authority, false),
         // Common
         AccountMeta::new(collateral_transit, false),
         AccountMeta::new(*collateral_mint, false),

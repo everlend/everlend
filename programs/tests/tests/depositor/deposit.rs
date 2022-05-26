@@ -1,7 +1,6 @@
 #![cfg(feature = "test-bpf")]
 
 use solana_program::instruction::InstructionError;
-use solana_program::instruction::InstructionError::InvalidAccountData;
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::*;
 use solana_sdk::signer::Signer;
