@@ -34,7 +34,7 @@ pub enum DepositorInstruction {
     /// [R] Depositor authority
     /// [WS] From account
     /// [R] Rent sysvar
-    /// [R] Sytem program
+    /// [R] System program
     /// [R] Token program id
     CreateTransit {
         /// Seed
@@ -61,7 +61,7 @@ pub enum DepositorInstruction {
     /// [WS] From account
     /// [R] Rent sysvar
     /// [R] Clock sysvar
-    /// [R] Sytem program
+    /// [R] System program
     /// [R] Token program id
     /// [R] Everlend Liquidity Oracle program id
     /// [R] Everlend general pool program id

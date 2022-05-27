@@ -87,7 +87,7 @@ impl TestPool {
                 &test_pool_market.keypair.pubkey(),
                 &self.pool_pubkey,
                 &user.token_account,
-                &user.pool_account,
+                &self.token_account.pubkey(),
                 &user.pubkey(),
                 amount,
             )],

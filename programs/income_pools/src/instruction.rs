@@ -30,7 +30,7 @@ pub enum IncomePoolsInstruction {
     /// [WS] Market manager
     /// [R] Income pool market authority
     /// [R] Rent sysvar
-    /// [R] Sytem program
+    /// [R] System program
     /// [R] Token program id
     CreatePool,
 

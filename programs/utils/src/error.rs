@@ -24,8 +24,8 @@ pub enum EverlendError {
     #[error("Data type mismatch")]
     DataTypeMismatch,
 
-    /// Ammount allowed of interest on the borrowing is exceeded
-    #[error("Ammount allowed of interest on the borrowing is exceeded")]
+    /// Amount allowed of interest on the borrowing is exceeded
+    #[error("Amount allowed of interest on the borrowing is exceeded")]
     AmountAllowedCheckFailed,
 
     /// Amount borrowed less then repay amount

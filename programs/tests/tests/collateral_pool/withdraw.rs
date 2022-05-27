@@ -1,55 +1,69 @@
 #![cfg(feature = "test-bpf")]
 
-use crate::utils::*;
-use everlend_ulp::instruction;
+use everlend_collateral_pool::instruction;
 use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program_test::*;
 use solana_sdk::{
-    pubkey::Pubkey, signer::Signer, transaction::Transaction, transaction::TransactionError,
+    pubkey::Pubkey, signer::Signer, transaction::Transaction, transaction::TransactionError
 };
 use spl_token::error::TokenError;
 
+use crate::utils::{
+    presetup,
+    TestPoolMarket,
+    TestPool,
+    TestPoolWithdrawAuthority,
+    get_token_balance,
+    LiquidityProvider,
+    mint_tokens,
+    EXP,
+    users::*,
+};
+use crate::collateral_pool::collateral_pool_utils::{
+    add_liquidity_provider,
+};
+
 async fn setup() -> (
     ProgramTestContext,
-    UlpMarket,
-    UniversalLiquidityPool,
+    TestPoolMarket,
+    TestPool,
+    TestPoolWithdrawAuthority,
     LiquidityProvider,
 ) {
     let mut context = presetup().await.0;
 
-    let test_pool_market = UlpMarket::new();
+    let test_pool_market = TestPoolMarket::new();
     test_pool_market.init(&mut context).await.unwrap();
-
-    let test_pool = UniversalLiquidityPool::new(&test_pool_market, None);
+    let test_pool = TestPool::new(&test_pool_market, None);
     test_pool
         .create(&mut context, &test_pool_market)
         .await
         .unwrap();
+    let withdraw_authority = TestPoolWithdrawAuthority::new(&test_pool, Pubkey::new_unique());
+    withdraw_authority.create(&mut context, &test_pool_market, &test_pool).await.unwrap();
 
     let user = add_liquidity_provider(
         &mut context,
         &test_pool.token_mint_pubkey,
-        &test_pool.pool_mint.pubkey(),
         9999 * EXP,
     )
     .await
     .unwrap();
 
-    (context, test_pool_market, test_pool, user)
+    (context, test_pool_market, test_pool, withdraw_authority, user)
 }
 
 #[tokio::test]
 async fn success() {
-    let (mut context, test_pool_market, test_pool, user) = setup().await;
+    let (mut context, test_pool_market, test_pool, withdraw_authority, user) = setup().await;
 
     test_pool
         .deposit(&mut context, &test_pool_market, &user, 100)
         .await
         .unwrap();
-
     test_pool
-        .withdraw(&mut context, &test_pool_market, &user, 50)
+        .withdraw(&mut context, &test_pool_market, &withdraw_authority, &user, 50)
         .await
         .unwrap();
 
@@ -65,7 +79,7 @@ async fn success() {
 
 #[tokio::test]
 async fn success_with_rate() {
-    let (mut context, test_pool_market, test_pool, user) = setup().await;
+    let (mut context, test_pool_market, test_pool, withdraw_authority, user) = setup().await;
     let start_source_balance = get_token_balance(&mut context, &user.token_account).await;
     let a = (100 * EXP, 50 * EXP, 100 * EXP); // Deposit -> Raice -> Deposit
 
@@ -108,7 +122,7 @@ async fn success_with_rate() {
     // 3. Try bigger
     assert_eq!(
         test_pool
-            .withdraw(&mut context, &test_pool_market, &user, withdraw_amount + 1)
+            .withdraw(&mut context, &test_pool_market, &withdraw_authority, &user, withdraw_amount + 1)
             .await
             .unwrap_err()
             .unwrap(),
@@ -120,7 +134,7 @@ async fn success_with_rate() {
 
     // 4. Withdraw with 2:3 rate
     test_pool
-        .withdraw(&mut context, &test_pool_market, &user, withdraw_amount)
+        .withdraw(&mut context, &test_pool_market, &withdraw_authority, &user, withdraw_amount)
         .await
         .unwrap();
 
@@ -135,52 +149,18 @@ async fn success_with_rate() {
 const AMOUNT: u64 = 100 * EXP;
 
 #[tokio::test]
-async fn fail_with_invalid_pool_mint_pubkey_argument() {
-    let (mut context, test_pool_market, test_pool, user) = setup().await;
-
-    let tx = Transaction::new_signed_with_payer(
-        &[instruction::withdraw(
-            &everlend_ulp::id(),
-            &test_pool_market.keypair.pubkey(),
-            &test_pool.pool_pubkey,
-            &user.pool_account,
-            &user.token_account,
-            &test_pool.token_account.pubkey(),
-            // Wrong pool mint pubkey
-            &Pubkey::new_unique(),
-            &user.pubkey(),
-            AMOUNT,
-        )],
-        Some(&context.payer.pubkey()),
-        &[&context.payer, &user.owner],
-        context.last_blockhash,
-    );
-
-    assert_eq!(
-        context
-            .banks_client
-            .process_transaction(tx)
-            .await
-            .unwrap_err()
-            .unwrap(),
-        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
-    );
-}
-
-#[tokio::test]
 async fn fail_with_invalid_token_account_pubkey_argument() {
-    let (mut context, test_pool_market, test_pool, user) = setup().await;
+    let (mut context, test_pool_market, test_pool, _withdraw_authority, user) = setup().await;
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::withdraw(
-            &everlend_ulp::id(),
+            &everlend_collateral_pool::id(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &user.pool_account,
             &user.token_account,
             // Wrong token account pubkey
             &Pubkey::new_unique(),
-            &test_pool.pool_mint.pubkey(),
             &user.pubkey(),
             AMOUNT,
         )],
@@ -202,7 +182,7 @@ async fn fail_with_invalid_token_account_pubkey_argument() {
 
 #[tokio::test]
 async fn fail_with_invalid_source_argument() {
-    let (mut context, test_pool_market, test_pool, user) = setup().await;
+    let (mut context, test_pool_market, test_pool, _withdraw_authority, user) = setup().await;
 
     // 0. Deposit to 100
     test_pool
@@ -212,14 +192,13 @@ async fn fail_with_invalid_source_argument() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::withdraw(
-            &everlend_ulp::id(),
+            &everlend_collateral_pool::id(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &user.pool_account,
             // Wrong source
             &user.pool_account,
             &test_pool.token_account.pubkey(),
-            &test_pool.pool_mint.pubkey(),
             &user.pubkey(),
             AMOUNT,
         )],
@@ -244,7 +223,7 @@ async fn fail_with_invalid_source_argument() {
 
 #[tokio::test]
 async fn fail_invalid_destination_argument() {
-    let (mut context, test_pool_market, test_pool, user) = setup().await;
+    let (mut context, test_pool_market, test_pool, _withdraw_authority, user) = setup().await;
 
     // 0. Deposit to 100
     test_pool
@@ -254,14 +233,13 @@ async fn fail_invalid_destination_argument() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::withdraw(
-            &everlend_ulp::id(),
+            &everlend_collateral_pool::id(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             // Wrong destination
             &user.token_account,
             &user.token_account,
             &test_pool.token_account.pubkey(),
-            &test_pool.pool_mint.pubkey(),
             &user.pubkey(),
             50,
         )],
@@ -286,17 +264,16 @@ async fn fail_invalid_destination_argument() {
 
 #[tokio::test]
 async fn fail_withdraw_from_empty_pool_mint() {
-    let (mut context, test_pool_market, test_pool, user) = setup().await;
+    let (mut context, test_pool_market, test_pool, _withdraw_authority, user) = setup().await;
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::withdraw(
-            &everlend_ulp::id(),
+            &everlend_collateral_pool::id(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &user.pool_account,
             &user.token_account,
             &test_pool.token_account.pubkey(),
-            &test_pool.pool_mint.pubkey(),
             &user.pubkey(),
             AMOUNT,
         )],
@@ -318,18 +295,17 @@ async fn fail_withdraw_from_empty_pool_mint() {
 
 #[tokio::test]
 async fn fail_with_invalid_pool_market_argument() {
-    let (mut context, _test_pool_market, test_pool, user) = setup().await;
+    let (mut context, _test_pool_market, test_pool, _withdraw_authority, user) = setup().await;
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::withdraw(
-            &everlend_ulp::id(),
+            &everlend_collateral_pool::id(),
             // Wrong pool market
             &Pubkey::new_unique(),
             &test_pool.pool_pubkey,
             &user.pool_account,
             &user.token_account,
             &test_pool.token_account.pubkey(),
-            &test_pool.pool_mint.pubkey(),
             &user.pubkey(),
             AMOUNT,
         )],
@@ -354,18 +330,17 @@ async fn fail_with_invalid_pool_market_argument() {
 
 #[tokio::test]
 async fn fail_with_invalid_pool_argument() {
-    let (mut context, test_pool_market, test_pool, user) = setup().await;
+    let (mut context, test_pool_market, test_pool, _withdraw_authority, user) = setup().await;
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::withdraw(
-            &everlend_ulp::id(),
+            &everlend_collateral_pool::id(),
             &test_pool_market.keypair.pubkey(),
             //Wrong pool
             &Pubkey::new_unique(),
             &user.pool_account,
             &user.token_account,
             &test_pool.token_account.pubkey(),
-            &test_pool.pool_mint.pubkey(),
             &user.pubkey(),
             AMOUNT,
         )],

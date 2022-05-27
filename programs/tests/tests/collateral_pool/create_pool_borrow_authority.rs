@@ -1,17 +1,23 @@
 #![cfg(feature = "test-bpf")]
 
-use crate::utils::*;
-use everlend_ulp::state::AccountType;
+use everlend_collateral_pool::state::AccountType;
 use solana_program_test::*;
-use solana_sdk::signer::Signer;
+use solana_sdk::{signer::Signer};
+use crate::utils::{
+    presetup,
+    TestPoolMarket,
+    TestPool,
+    TestPoolBorrowAuthority,
+    COLLATERAL_POOL_SHARE_ALLOWED,
+};
 
-async fn setup() -> (ProgramTestContext, UlpMarket, UniversalLiquidityPool) {
+async fn setup() -> (ProgramTestContext, TestPoolMarket, TestPool) {
     let mut context = presetup().await.0;
 
-    let test_pool_market = UlpMarket::new();
+    let test_pool_market = TestPoolMarket::new();
     test_pool_market.init(&mut context).await.unwrap();
 
-    let test_pool = UniversalLiquidityPool::new(&test_pool_market, None);
+    let test_pool = TestPool::new(&test_pool_market, None);
     test_pool
         .create(&mut context, &test_pool_market)
         .await
@@ -25,13 +31,13 @@ async fn success() {
     let (mut context, test_pool_market, test_pool) = setup().await;
 
     let test_pool_borrow_authority =
-        UniversalLiquidityPoolBorrowAuthority::new(&test_pool, context.payer.pubkey());
+        TestPoolBorrowAuthority::new(&test_pool, context.payer.pubkey());
     test_pool_borrow_authority
         .create(
             &mut context,
             &test_pool_market,
             &test_pool,
-            ULP_SHARE_ALLOWED,
+            COLLATERAL_POOL_SHARE_ALLOWED,
         )
         .await
         .unwrap();

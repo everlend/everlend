@@ -1,7 +1,6 @@
 #![cfg(feature = "test-bpf")]
 
-use crate::utils::*;
-use everlend_ulp::instruction;
+use everlend_collateral_pool::instruction;
 use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program_test::*;
@@ -9,34 +8,45 @@ use solana_sdk::{
     pubkey::Pubkey, signature::Keypair, signer::Signer, transaction::Transaction,
     transaction::TransactionError,
 };
-use spl_token::error::TokenError;
+use crate::utils::{
+    presetup,
+    TestPoolMarket,
+    TestPool,
+    TestPoolBorrowAuthority,
+    LiquidityProvider,
+    get_token_balance,
+    get_amount_allowed,
+    COLLATERAL_POOL_SHARE_ALLOWED,
+};
+use crate::collateral_pool::collateral_pool_utils::{
+    add_liquidity_provider,
+};
 
 async fn setup() -> (
     ProgramTestContext,
-    UlpMarket,
-    UniversalLiquidityPool,
-    UniversalLiquidityPoolBorrowAuthority,
+    TestPoolMarket,
+    TestPool,
+    TestPoolBorrowAuthority,
     LiquidityProvider,
 ) {
     let mut context = presetup().await.0;
 
-    let test_pool_market = UlpMarket::new();
+    let test_pool_market = TestPoolMarket::new();
     test_pool_market.init(&mut context).await.unwrap();
-
-    let test_pool = UniversalLiquidityPool::new(&test_pool_market, None);
+    let test_pool = TestPool::new(&test_pool_market, None);
     test_pool
         .create(&mut context, &test_pool_market)
         .await
         .unwrap();
 
     let test_pool_borrow_authority =
-        UniversalLiquidityPoolBorrowAuthority::new(&test_pool, context.payer.pubkey());
+        TestPoolBorrowAuthority::new(&test_pool, context.payer.pubkey());
     test_pool_borrow_authority
         .create(
             &mut context,
             &test_pool_market,
             &test_pool,
-            ULP_SHARE_ALLOWED,
+            COLLATERAL_POOL_SHARE_ALLOWED,
         )
         .await
         .unwrap();
@@ -44,7 +54,6 @@ async fn setup() -> (
     let user = add_liquidity_provider(
         &mut context,
         &test_pool.token_mint_pubkey,
-        &test_pool.pool_mint.pubkey(),
         100,
     )
     .await
@@ -121,7 +130,7 @@ async fn fail_wrong_borrow_authority() {
 
 #[tokio::test]
 async fn fail_invalid_destination() {
-    let (mut context, test_pool_market, test_pool, test_pool_borrow_authority, user) =
+    let (mut context, test_pool_market, test_pool, test_pool_borrow_authority, _) =
         setup().await;
     let amount_allowed = test_pool_borrow_authority
         .get_amount_allowed(&mut context)
@@ -134,7 +143,7 @@ async fn fail_invalid_destination() {
                 &test_pool_market,
                 &test_pool_borrow_authority,
                 None,
-                &user.pool_account,
+                &Pubkey::new_unique(),
                 amount_allowed,
             )
             .await
@@ -142,7 +151,7 @@ async fn fail_invalid_destination() {
             .unwrap(),
         TransactionError::InstructionError(
             0,
-            InstructionError::Custom(TokenError::MintMismatch as u32)
+            InstructionError::InvalidAccountData
         )
     );
 }
@@ -156,7 +165,7 @@ async fn fail_invalid_token_account() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::borrow(
-            &everlend_ulp::id(),
+            &everlend_collateral_pool::id(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &test_pool_borrow_authority.pool_borrow_authority_pubkey,
@@ -190,7 +199,7 @@ async fn fail_invalid_pool_market() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::borrow(
-            &everlend_ulp::id(),
+            &everlend_collateral_pool::id(),
             &Pubkey::new_unique(),
             &test_pool.pool_pubkey,
             &test_pool_borrow_authority.pool_borrow_authority_pubkey,
@@ -227,7 +236,7 @@ async fn fail_invalid_pool() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::borrow(
-            &everlend_ulp::id(),
+            &everlend_collateral_pool::id(),
             &test_pool_market.keypair.pubkey(),
             &Pubkey::new_unique(),
             &test_pool_borrow_authority.pool_borrow_authority_pubkey,
@@ -264,7 +273,7 @@ async fn fail_invalid_pool_borrow_authority() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::borrow(
-            &everlend_ulp::id(),
+            &everlend_collateral_pool::id(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &Pubkey::new_unique(),

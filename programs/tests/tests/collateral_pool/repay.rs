@@ -1,7 +1,6 @@
 #![cfg(feature = "test-bpf")]
 
-use crate::utils::*;
-use everlend_ulp::instruction;
+use everlend_collateral_pool::instruction;
 use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program_test::*;
@@ -9,32 +8,45 @@ use solana_sdk::{
     pubkey::Pubkey, signer::Signer, transaction::Transaction, transaction::TransactionError,
 };
 
+use crate::utils::{
+    presetup,
+    TestPoolMarket,
+    TestPool,
+    TestPoolBorrowAuthority,
+    get_token_balance,
+    LiquidityProvider,
+    COLLATERAL_POOL_SHARE_ALLOWED,
+    users::*,
+};
+use crate::collateral_pool::collateral_pool_utils::{
+    add_liquidity_provider,
+};
+
 async fn setup() -> (
     ProgramTestContext,
-    UlpMarket,
-    UniversalLiquidityPool,
-    UniversalLiquidityPoolBorrowAuthority,
+    TestPoolMarket,
+    TestPool,
+    TestPoolBorrowAuthority,
     LiquidityProvider,
 ) {
     let mut context = presetup().await.0;
 
-    let test_pool_market = UlpMarket::new();
+    let test_pool_market = TestPoolMarket::new();
     test_pool_market.init(&mut context).await.unwrap();
-
-    let test_pool = UniversalLiquidityPool::new(&test_pool_market, None);
+    let test_pool = TestPool::new(&test_pool_market, None);
     test_pool
         .create(&mut context, &test_pool_market)
         .await
         .unwrap();
 
     let test_pool_borrow_authority =
-        UniversalLiquidityPoolBorrowAuthority::new(&test_pool, context.payer.pubkey());
+        TestPoolBorrowAuthority::new(&test_pool, context.payer.pubkey());
     test_pool_borrow_authority
         .create(
             &mut context,
             &test_pool_market,
             &test_pool,
-            ULP_SHARE_ALLOWED,
+            COLLATERAL_POOL_SHARE_ALLOWED,
         )
         .await
         .unwrap();
@@ -42,7 +54,6 @@ async fn setup() -> (
     let user = add_liquidity_provider(
         &mut context,
         &test_pool.token_mint_pubkey,
-        &test_pool.pool_mint.pubkey(),
         101,
     )
     .await
@@ -235,7 +246,7 @@ async fn fail_with_invalid_pool_market() {
     let amount = 1;
     let interest_amount = 1;
 
-    let test_pool_market = UlpMarket::new();
+    let test_pool_market = TestPoolMarket::new();
     test_pool_market.init(&mut context).await.unwrap();
 
     let tx = Transaction::new_signed_with_payer(
