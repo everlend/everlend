@@ -61,7 +61,7 @@ async fn success() {
         .unwrap();
 
     assert_eq!(
-        get_token_balance(&mut context, &user.pool_account).await,
+        get_token_balance(&mut context, &test_pool.token_account.pubkey()).await,
         100,
     );
 }
@@ -100,7 +100,7 @@ async fn success_with_rate() {
     let destination_amount = a.0 + (a.2 as u128 * a.0 as u128 / (a.0 + a.1) as u128) as u64;
 
     assert_eq!(
-        get_token_balance(&mut context, &user.pool_account).await,
+        get_token_balance(&mut context, &test_pool.token_account.pubkey()).await,
         destination_amount
     );
 }
