@@ -173,44 +173,6 @@ async fn fail_with_invalid_token_account_pubkey_argument() {
 }
 
 #[tokio::test]
-async fn fail_with_invalid_destination_argument() {
-    let (mut context, test_pool_market, test_pool, user) = setup().await;
-
-    // Create new pool
-
-    let tx = Transaction::new_signed_with_payer(
-        &[instruction::deposit(
-            &everlend_ulp::id(),
-            &test_pool_market.keypair.pubkey(),
-            &test_pool.pool_pubkey,
-            &user.token_account,
-            // Wrong destination
-            &user.token_account,
-            &test_pool.token_account.pubkey(),
-            &test_pool.pool_mint.pubkey(),
-            &user.pubkey(),
-            AMOUNT,
-        )],
-        Some(&context.payer.pubkey()),
-        &[&context.payer, &user.owner],
-        context.last_blockhash,
-    );
-
-    assert_eq!(
-        context
-            .banks_client
-            .process_transaction(tx)
-            .await
-            .unwrap_err()
-            .unwrap(),
-        TransactionError::InstructionError(
-            0,
-            InstructionError::Custom(TokenError::MintMismatch as u32)
-        )
-    );
-}
-
-#[tokio::test]
 async fn fail_with_invalid_source_argument() {
     let (mut context, test_pool_market, test_pool, user) = setup().await;
 

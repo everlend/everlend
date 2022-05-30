@@ -1,8 +1,14 @@
-use crate::utils::{LiquidityProvider, BanksClientResult, create_token_account, mint_tokens, transfer};
+use crate::utils::{BanksClientResult, create_token_account, mint_tokens, transfer};
 
 use solana_program::{pubkey::Pubkey};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::signature::{Keypair, Signer};
+
+#[derive(Debug)]
+pub struct LiquidityProvider {
+    pub owner: Keypair,
+    pub token_account: Pubkey,
+}
 
 pub async fn add_liquidity_provider(
     context: &mut ProgramTestContext,
@@ -11,7 +17,6 @@ pub async fn add_liquidity_provider(
 ) -> BanksClientResult<LiquidityProvider> {
     let user = Keypair::new();
     let token_account = Keypair::new();
-    let pool_account = Keypair::new();
 
     let mut lamports: u64 = 0;
     if *token_mint_pubkey == spl_token::native_mint::id() {
@@ -45,7 +50,6 @@ pub async fn add_liquidity_provider(
     Ok(LiquidityProvider {
         owner: user,
         token_account: token_account.pubkey(),
-        pool_account: pool_account.pubkey(),
     })
 }
 

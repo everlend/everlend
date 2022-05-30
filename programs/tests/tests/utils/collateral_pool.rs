@@ -1,6 +1,6 @@
 use super::{
     get_account, get_liquidity_mint, collateral_pool_borrow_authority::TestPoolBorrowAuthority,
-    BanksClientResult, LiquidityProvider, TestPoolMarket, User, TestPoolWithdrawAuthority,
+    BanksClientResult, TestPoolMarket, TestPoolWithdrawAuthority,
 };
 use everlend_collateral_pool::{find_pool_program_address, instruction, state::Pool};
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
@@ -9,6 +9,7 @@ use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
+use crate::collateral_pool::collateral_pool_utils::{LiquidityProvider};
 
 #[derive(Debug)]
 pub struct TestPool {
@@ -88,7 +89,7 @@ impl TestPool {
                 &self.pool_pubkey,
                 &user.token_account,
                 &self.token_account.pubkey(),
-                &user.pubkey(),
+                &user.owner.pubkey(),
                 amount,
             )],
             Some(&context.payer.pubkey()),
@@ -113,9 +114,9 @@ impl TestPool {
                 &test_pool_market.keypair.pubkey(),
                 &self.pool_pubkey,
                 &withdraw_authority.pool_withdraw_authority_pubkey,
-                &user.pool_account,
+                &user.token_account,
                 &self.token_account.pubkey(),
-                &user.pubkey(),
+                &withdraw_authority.withdraw_authority,
                 amount,
             )],
             Some(&context.payer.pubkey()),
@@ -173,7 +174,7 @@ impl TestPool {
                 &test_pool_borrow_authority.pool_borrow_authority_pubkey,
                 &user.token_account,
                 &self.token_account.pubkey(),
-                &user.pubkey(),
+                &user.owner.pubkey(),
                 amount,
                 interest_amount,
             )],

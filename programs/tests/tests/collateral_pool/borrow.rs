@@ -13,12 +13,12 @@ use crate::utils::{
     TestPoolMarket,
     TestPool,
     TestPoolBorrowAuthority,
-    LiquidityProvider,
     get_token_balance,
     get_amount_allowed,
     COLLATERAL_POOL_SHARE_ALLOWED,
 };
 use crate::collateral_pool::collateral_pool_utils::{
+    LiquidityProvider,
     add_liquidity_provider,
 };
 

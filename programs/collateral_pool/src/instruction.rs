@@ -384,7 +384,7 @@ pub fn withdraw(
     program_id: &Pubkey,
     pool_market: &Pubkey,
     pool: &Pubkey,
-    withdraw_authority: &Pubkey,
+    pool_withdraw_authority: &Pubkey,
     destination: &Pubkey,
     token_account: &Pubkey,
     user_transfer_authority: &Pubkey,
@@ -395,7 +395,7 @@ pub fn withdraw(
     let accounts = vec![
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new_readonly(*pool, false),
-        AccountMeta::new(*withdraw_authority, false),
+        AccountMeta::new(*pool_withdraw_authority, false),
         AccountMeta::new(*destination, false),
         AccountMeta::new(*token_account, false),
         AccountMeta::new_readonly(pool_market_authority, false),

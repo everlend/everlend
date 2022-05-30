@@ -14,11 +14,10 @@ use crate::utils::{
     TestPool,
     TestPoolBorrowAuthority,
     get_token_balance,
-    LiquidityProvider,
     COLLATERAL_POOL_SHARE_ALLOWED,
-    users::*,
 };
 use crate::collateral_pool::collateral_pool_utils::{
+    LiquidityProvider,
     add_liquidity_provider,
 };
 
@@ -125,14 +124,14 @@ async fn fail_with_invalid_pool_market_pubkey_argument() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::repay(
-            &everlend_ulp::id(),
+            &everlend_collateral_pool::id(),
             // Wrong pool market pubkey
             &Pubkey::new_unique(),
             &test_pool.pool_pubkey,
             &test_pool_borrow_authority.pool_borrow_authority_pubkey,
             &user.token_account,
             &test_pool.token_account.pubkey(),
-            &user.pubkey(),
+            &user.owner.pubkey(),
             amount,
             interest_amount,
         )],
@@ -165,7 +164,7 @@ async fn fail_with_invalid_pool_pubkey_argument() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::repay(
-            &everlend_ulp::id(),
+            &everlend_collateral_pool::id(),
             // Wrong pool market pubkey
             &test_pool_market.keypair.pubkey(),
             &Pubkey::new_unique(),
@@ -173,7 +172,7 @@ async fn fail_with_invalid_pool_pubkey_argument() {
             &test_pool_borrow_authority.pool_borrow_authority_pubkey,
             &user.token_account,
             &test_pool.token_account.pubkey(),
-            &user.pubkey(),
+            &user.owner.pubkey(),
             amount,
             interest_amount,
         )],
@@ -206,16 +205,14 @@ async fn fail_with_invalid_pool_borrow_authority_argument() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::repay(
-            &everlend_ulp::id(),
-            // Wrong pool market pubkey
+            &everlend_collateral_pool::id(),
             &test_pool_market.keypair.pubkey(),
-            // &Pubkey::new_unique(),
             &test_pool.pool_pubkey,
+            // wrong borrow authority
             &Pubkey::new_unique(),
-            // &test_pool_borrow_authority.pool_borrow_authority_pubkey,
             &user.token_account,
             &test_pool.token_account.pubkey(),
-            &user.pubkey(),
+            &user.owner.pubkey(),
             amount,
             interest_amount,
         )],
@@ -251,13 +248,13 @@ async fn fail_with_invalid_pool_market() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::repay(
-            &everlend_ulp::id(),
+            &everlend_collateral_pool::id(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &test_pool_borrow_authority.pool_borrow_authority_pubkey,
             &user.token_account,
             &test_pool.token_account.pubkey(),
-            &user.pubkey(),
+            &user.owner.pubkey(),
             amount,
             interest_amount,
         )],
@@ -287,13 +284,13 @@ async fn fail_with_invalid_pool_token_account() {
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::repay(
-            &everlend_ulp::id(),
+            &everlend_collateral_pool::id(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &test_pool_borrow_authority.pool_borrow_authority_pubkey,
             &user.token_account,
             &Pubkey::new_unique(),
-            &user.pubkey(),
+            &user.owner.pubkey(),
             amount,
             interest_amount,
         )],
