@@ -10,7 +10,7 @@ import BN from 'bn.js'
 import { Borsh } from '@everlend/common'
 import { GeneralPoolsProgram } from '../program'
 
-export class CreatePoolBorrowAuthorityArgs extends Borsh.Data<{ shareAllowed: BN }> {
+export class CreatePoolBorrowAuthorityTxData extends Borsh.Data<{ shareAllowed: BN }> {
   static readonly SCHEMA = this.struct([
     ['instruction', 'u8'],
     ['shareAllowed', 'u16'],
@@ -19,7 +19,7 @@ export class CreatePoolBorrowAuthorityArgs extends Borsh.Data<{ shareAllowed: BN
   instruction = 2
 }
 
-type CreatePoolBorrowAuthorityParams = {
+type CreatePoolBorrowAuthorityTxParams = {
   poolMarket: PublicKey
   pool: PublicKey
   poolBorrowAuthority: PublicKey
@@ -28,13 +28,13 @@ type CreatePoolBorrowAuthorityParams = {
   manager?: PublicKey
 }
 
-export class CreatePoolBorrowAuthority extends Transaction {
-  constructor(options: TransactionCtorFields, params: CreatePoolBorrowAuthorityParams) {
+export class CreatePoolBorrowAuthorityTx extends Transaction {
+  constructor(options: TransactionCtorFields, params: CreatePoolBorrowAuthorityTxParams) {
     super(options)
     const { feePayer } = options
     const { poolMarket, pool, poolBorrowAuthority, borrowAuthority, shareAllowed, manager } = params
 
-    const data = CreatePoolBorrowAuthorityArgs.serialize({ shareAllowed })
+    const data = CreatePoolBorrowAuthorityTxData.serialize({ shareAllowed })
 
     this.add(
       new TransactionInstruction({

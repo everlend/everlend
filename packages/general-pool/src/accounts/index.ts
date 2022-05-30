@@ -1,5 +1,5 @@
 export * from './poolMarket'
 export * from './pool'
 export * from './poolBorrowAuthority'
-export * from './withdrawalRequests'
-export * from './withdrawalRequest'
+export * from './withdrawalRequestsState'
+export * from './userWithdrawalRequest'

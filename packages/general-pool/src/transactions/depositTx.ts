@@ -1,9 +1,6 @@
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import {
   PublicKey,
-  SystemProgram,
-  SYSVAR_RENT_PUBKEY,
-  SYSVAR_CLOCK_PUBKEY,
   Transaction,
   TransactionCtorFields,
   TransactionInstruction,
@@ -12,32 +9,30 @@ import BN from 'bn.js'
 import { Borsh } from '@everlend/common'
 import { GeneralPoolsProgram } from '../program'
 
-export class WithdrawRequestArgs extends Borsh.Data<{ collateralAmount: BN }> {
+export class DepositTxData extends Borsh.Data<{ amount: BN }> {
   static readonly SCHEMA = this.struct([
     ['instruction', 'u8'],
-    ['collateralAmount', 'u64'],
+    ['amount', 'u64'],
   ])
 
-  instruction = 9
+  instruction = 5
 }
 
-type WithdrawRequestParams = {
+type DepositTxParams = {
   registry: PublicKey
   registryPoolConfig: PublicKey
   poolMarket: PublicKey
   pool: PublicKey
-  poolMint: PublicKey
-  withdrawRequests: PublicKey
-  withdrawalRequest: PublicKey
   source: PublicKey
   destination: PublicKey
   tokenAccount: PublicKey
-  collateralTransit: PublicKey
-  collateralAmount: BN
+  poolMint: PublicKey
+  poolMarketAuthority: PublicKey
+  amount: BN
 }
 
-export class WithdrawRequest extends Transaction {
-  constructor(options: TransactionCtorFields, params: WithdrawRequestParams) {
+export class DepositTx extends Transaction {
+  constructor(options: TransactionCtorFields, params: DepositTxParams) {
     super(options)
     const { feePayer } = options
     const {
@@ -45,17 +40,15 @@ export class WithdrawRequest extends Transaction {
       registryPoolConfig,
       poolMarket,
       pool,
-      withdrawRequests,
-      withdrawalRequest,
       source,
       destination,
       tokenAccount,
-      collateralTransit,
       poolMint,
-      collateralAmount,
+      poolMarketAuthority,
+      amount,
     } = params
 
-    const data = WithdrawRequestArgs.serialize({ collateralAmount })
+    const data = DepositTxData.serialize({ amount })
 
     this.add(
       new TransactionInstruction({
@@ -64,17 +57,12 @@ export class WithdrawRequest extends Transaction {
           { pubkey: registryPoolConfig, isSigner: false, isWritable: false },
           { pubkey: poolMarket, isSigner: false, isWritable: false },
           { pubkey: pool, isSigner: false, isWritable: false },
-          { pubkey: poolMint, isSigner: false, isWritable: true },
-          { pubkey: withdrawRequests, isSigner: false, isWritable: true },
-          { pubkey: withdrawalRequest, isSigner: false, isWritable: true },
           { pubkey: source, isSigner: false, isWritable: true },
           { pubkey: destination, isSigner: false, isWritable: true },
           { pubkey: tokenAccount, isSigner: false, isWritable: true },
-          { pubkey: collateralTransit, isSigner: false, isWritable: true },
+          { pubkey: poolMint, isSigner: false, isWritable: true },
+          { pubkey: poolMarketAuthority, isSigner: false, isWritable: false },
           { pubkey: feePayer, isSigner: true, isWritable: false },
-          { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
-          { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
-          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
           { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
         ],
         programId: GeneralPoolsProgram.PUBKEY,
