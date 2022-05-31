@@ -22,7 +22,6 @@ mod ulp {
 }
 
 mod collateral_pool {
-    pub mod collateral_pool_utils;
     mod borrow;
     mod create_pool_borrow_authority;
     mod create_pool;

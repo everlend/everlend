@@ -5,7 +5,7 @@ use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program_test::*;
 use solana_sdk::{
-    pubkey::Pubkey, signer::Signer, transaction::Transaction, transaction::TransactionError,
+    pubkey::Pubkey, transaction::Transaction, transaction::TransactionError, signature::Signer
 };
 
 use crate::utils::{
@@ -15,10 +15,7 @@ use crate::utils::{
     get_token_balance,
     EXP,
 };
-use crate::collateral_pool::collateral_pool_utils::{
-    LiquidityProvider,
-    add_liquidity_provider,
-};
+use crate::utils::collateral_pool_liquidity_provider::{LiquidityProvider};
 
 // Const amount for all fail tests with invalid arguments
 const AMOUNT: u64 = 100 * EXP;
@@ -40,13 +37,12 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    let user = add_liquidity_provider(
+    let user = LiquidityProvider::new(
         &mut context,
         &test_pool.token_mint_pubkey,
         9999 * EXP,
     )
-    .await
-    .unwrap();
+    .await;
 
     (context, test_pool_market, test_pool, user)
 }

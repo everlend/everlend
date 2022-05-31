@@ -9,7 +9,7 @@ use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
-use crate::collateral_pool::collateral_pool_utils::{LiquidityProvider};
+use super::collateral_pool_liquidity_provider::{LiquidityProvider};
 
 #[derive(Debug)]
 pub struct TestPool {

@@ -1,7 +1,7 @@
-use super::{get_account, get_token_balance, BanksClientResult, TestPool, TestPoolMarket};
+use super::{get_account, BanksClientResult, TestPool, TestPoolMarket};
 use everlend_collateral_pool::{
     find_pool_withdraw_authority_program_address, instruction,
-    state::{Pool, PoolBorrowAuthority},
+    state::{PoolWithdrawAuthority},
 };
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::ProgramTestContext;
@@ -25,22 +25,9 @@ impl TestPoolWithdrawAuthority {
         }
     }
 
-    pub async fn get_data(&self, context: &mut ProgramTestContext) -> PoolBorrowAuthority {
+    pub async fn get_data(&self, context: &mut ProgramTestContext) -> PoolWithdrawAuthority {
         let account = get_account(context, &self.pool_withdraw_authority_pubkey).await;
-        PoolBorrowAuthority::unpack_unchecked(&account.data).unwrap()
-    }
-
-    pub async fn get_amount_allowed(&self, context: &mut ProgramTestContext) -> u64 {
-        let pool_borrow_authority = self.get_data(context).await;
-        let pool_account = get_account(context, &pool_borrow_authority.pool).await;
-        let pool = Pool::unpack_unchecked(&pool_account.data).unwrap();
-        let token_amount = get_token_balance(context, &pool.token_account).await;
-        let total_amount_borrowed = pool.total_amount_borrowed;
-        let total_pool_amount = token_amount + total_amount_borrowed;
-
-        pool_borrow_authority
-            .get_amount_allowed(total_pool_amount)
-            .unwrap()
+        PoolWithdrawAuthority::unpack_unchecked(&account.data).unwrap()
     }
 
     pub async fn create(

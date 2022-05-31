@@ -27,6 +27,7 @@ pub mod collateral_pool;
 pub mod collateral_pool_borrow_authority;
 pub mod collateral_pool_withdraw_authority;
 pub mod collateral_pool_market;
+pub mod collateral_pool_liquidity_provider;
 pub mod ulp_pool;
 pub mod ulp_pool_borrow_authority;
 pub mod ulp_pool_market;

@@ -16,10 +16,7 @@ use crate::utils::{
     get_token_balance,
     COLLATERAL_POOL_SHARE_ALLOWED,
 };
-use crate::collateral_pool::collateral_pool_utils::{
-    LiquidityProvider,
-    add_liquidity_provider,
-};
+use crate::utils::collateral_pool_liquidity_provider::{LiquidityProvider};
 
 async fn setup() -> (
     ProgramTestContext,
@@ -50,13 +47,12 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    let user = add_liquidity_provider(
+    let user = LiquidityProvider::new(
         &mut context,
         &test_pool.token_mint_pubkey,
         101,
     )
-    .await
-    .unwrap();
+    .await;
 
     test_pool
         .deposit(&mut context, &test_pool_market, &user, 100)

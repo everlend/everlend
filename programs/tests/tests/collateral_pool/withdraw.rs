@@ -16,10 +16,8 @@ use crate::utils::{
     get_token_balance,
     EXP,
 };
-use crate::collateral_pool::collateral_pool_utils::{
-    LiquidityProvider,
-    add_liquidity_provider,
-};
+use crate::utils::collateral_pool_liquidity_provider::{LiquidityProvider};
+
 // Const amount for all fail tests with invalid arguments
 const AMOUNT: u64 = 100 * EXP;
 const INITIAL_AMOUNT: u64 = 1000;
@@ -49,13 +47,12 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    let user = add_liquidity_provider(
+    let user = LiquidityProvider::new(
         &mut context,
         &test_pool.token_mint_pubkey,
         INITIAL_AMOUNT,
     )
-    .await
-    .unwrap();
+    .await;
 
     (context, test_pool_market, test_pool, withdraw_authority, user)
 }
