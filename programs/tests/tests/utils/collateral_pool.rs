@@ -104,23 +104,25 @@ impl TestPool {
         &self,
         context: &mut ProgramTestContext,
         test_pool_market: &TestPoolMarket,
-        withdraw_authority: &TestPoolWithdrawAuthority,
+        pool_withdraw_authority: &TestPoolWithdrawAuthority,
+        withdraw_authority: Option<&Keypair>,
         user: &LiquidityProvider,
         amount: u64,
     ) -> BanksClientResult<()> {
+        let withdraw_authority = withdraw_authority.unwrap_or(&context.payer);
         let tx = Transaction::new_signed_with_payer(
             &[instruction::withdraw(
                 &everlend_collateral_pool::id(),
                 &test_pool_market.keypair.pubkey(),
                 &self.pool_pubkey,
-                &withdraw_authority.pool_withdraw_authority_pubkey,
+                &pool_withdraw_authority.pool_withdraw_authority_pubkey,
                 &user.token_account,
                 &self.token_account.pubkey(),
-                &withdraw_authority.withdraw_authority,
+                &withdraw_authority.pubkey(),
                 amount,
             )],
             Some(&context.payer.pubkey()),
-            &[&context.payer, &user.owner],
+            &[&context.payer, withdraw_authority],
             context.last_blockhash,
         );
 

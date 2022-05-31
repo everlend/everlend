@@ -208,8 +208,11 @@ async fn setup() -> (
         .await
         .unwrap();
     // 6. Prepare withdraw authority
-    let withdraw_authority = TestPoolWithdrawAuthority::new(&mm_pool, depositor_authority);
-    withdraw_authority.create(&mut context, &mm_pool_market, &mm_pool).await.unwrap();
+    let withdraw_authority = TestPoolWithdrawAuthority::new(&mm_pool, &depositor_authority);
+    withdraw_authority
+        .create(&mut context, &mm_pool_market, &mm_pool, &depositor_authority)
+        .await
+        .unwrap();
 
     // 7. Start rebalancing
     test_depositor

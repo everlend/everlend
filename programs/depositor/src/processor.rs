@@ -274,7 +274,7 @@ impl Processor {
         assert_account_key(general_pool_token_account_info, &general_pool.token_account)?;
         assert_account_key(mint_info, &general_pool.token_mint)?;
 
-        // Check withtdrawal requests
+        // Check withdrawal requests
         let (withdrawal_requests_pubkey, _) = find_withdrawal_requests_program_address(
             &programs.general_pool_program_id,
             general_pool_market_info.key,

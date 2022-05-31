@@ -5,16 +5,15 @@ use everlend_collateral_pool::{
 };
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::ProgramTestContext;
-use solana_sdk::{signature::Signer, transaction::Transaction};
+use solana_sdk::{signature::{Signer, Keypair}, transaction::Transaction};
 
 #[derive(Debug)]
 pub struct TestPoolWithdrawAuthority {
     pub pool_withdraw_authority_pubkey: Pubkey,
-    pub withdraw_authority: Pubkey,
 }
 
 impl TestPoolWithdrawAuthority {
-    pub fn new(test_pool: &TestPool, withdraw_authority: Pubkey) -> Self {
+    pub fn new(test_pool: &TestPool, withdraw_authority: &Pubkey) -> Self {
         let (pool_withdraw_authority_pubkey, _) = find_pool_withdraw_authority_program_address(
             &everlend_collateral_pool::id(),
             &test_pool.pool_pubkey,
@@ -23,7 +22,6 @@ impl TestPoolWithdrawAuthority {
 
         Self {
             pool_withdraw_authority_pubkey,
-            withdraw_authority,
         }
     }
 
@@ -50,13 +48,14 @@ impl TestPoolWithdrawAuthority {
         context: &mut ProgramTestContext,
         test_pool_market: &TestPoolMarket,
         test_pool: &TestPool,
+        withdraw_authority_pubkey: &Pubkey,
     ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::create_pool_withdraw_authority(
                 &everlend_collateral_pool::id(),
                 &test_pool_market.keypair.pubkey(),
                 &test_pool.pool_pubkey,
-                &self.withdraw_authority,
+                &withdraw_authority_pubkey,
                 &test_pool_market.manager.pubkey(),
             )],
             Some(&context.payer.pubkey()),
@@ -72,13 +71,15 @@ impl TestPoolWithdrawAuthority {
         context: &mut ProgramTestContext,
         test_pool_market: &TestPoolMarket,
         test_pool: &TestPool,
+        withdraw_authority: Option<&Keypair>,
     ) -> BanksClientResult<()> {
+        let withdraw_authority = withdraw_authority.unwrap_or(&context.payer);
         let tx = Transaction::new_signed_with_payer(
             &[instruction::delete_pool_borrow_authority(
                 &everlend_collateral_pool::id(),
                 &test_pool_market.keypair.pubkey(),
                 &test_pool.pool_pubkey,
-                &self.withdraw_authority,
+                &withdraw_authority.pubkey(),
                 &context.payer.pubkey(),
                 &test_pool_market.manager.pubkey(),
             )],

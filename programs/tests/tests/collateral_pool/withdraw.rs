@@ -40,8 +40,12 @@ async fn setup() -> (
         .create(&mut context, &test_pool_market)
         .await
         .unwrap();
-    let withdraw_authority = TestPoolWithdrawAuthority::new(&test_pool, Pubkey::new_unique());
-    withdraw_authority.create(&mut context, &test_pool_market, &test_pool).await.unwrap();
+    let withdraw_authority_pubkey = context.payer.pubkey();
+    let withdraw_authority = TestPoolWithdrawAuthority::new(&test_pool, &withdraw_authority_pubkey);
+    withdraw_authority
+        .create(&mut context, &test_pool_market, &test_pool, &withdraw_authority_pubkey)
+        .await
+        .unwrap();
 
     let user = add_liquidity_provider(
         &mut context,
@@ -63,7 +67,7 @@ async fn success() {
         .await
         .unwrap();
     test_pool
-        .withdraw(&mut context, &test_pool_market, &withdraw_authority, &user, 50)
+        .withdraw(&mut context, &test_pool_market, &withdraw_authority, None, &user, 50)
         .await
         .unwrap();
 
