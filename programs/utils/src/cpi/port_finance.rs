@@ -74,8 +74,9 @@ pub fn deposit<'a>(
     )
 }
 
+/// Requires a refreshed reserve.
 #[allow(clippy::too_many_arguments)]
-pub fn redeem<'a>(
+fn redeem<'a>(
     program_id: &Pubkey,
     source_collateral: AccountInfo<'a>,
     destination_liquidity: AccountInfo<'a>,
@@ -114,6 +115,43 @@ pub fn redeem<'a>(
             authority,
             clock,
         ],
+        signers_seeds,
+    )
+}
+
+pub fn refresh_reserves_and_redeem<'a>(
+    program_id: &Pubkey,
+    reserve_liquidity_oracle: AccountInfo<'a>,
+    source_collateral: AccountInfo<'a>,
+    destination_liquidity: AccountInfo<'a>,
+    reserve: AccountInfo<'a>,
+    reserve_collateral_mint: AccountInfo<'a>,
+    reserve_liquidity_supply: AccountInfo<'a>,
+    lending_market: AccountInfo<'a>,
+    lending_market_authority: AccountInfo<'a>,
+    authority: AccountInfo<'a>,
+    clock: AccountInfo<'a>,
+    amount: u64,
+    signers_seeds: &[&[&[u8]]],
+) -> Result<(), ProgramError> {
+    refresh_reserve(
+        program_id,
+        reserve.clone(),
+        reserve_liquidity_oracle,
+        clock.clone(),
+    )?;
+    redeem(
+        program_id,
+        source_collateral,
+        destination_liquidity,
+        reserve,
+        reserve_collateral_mint,
+        reserve_liquidity_supply,
+        lending_market,
+        lending_market_authority,
+        authority,
+        clock,
+        amount,
         signers_seeds,
     )
 }

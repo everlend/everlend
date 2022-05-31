@@ -68,8 +68,6 @@ pub fn find_internal_mining_program_address(
 
 /// Generates internal mining seed
 pub fn internal_mining_seed() -> String {
-    let mut withdrawal_requests_seed = "internal_mining".to_owned();
-    // withdrawal_requests_seed.push_str(&ACTUAL_VERSION.to_string());
-
+    let withdrawal_requests_seed = "internal_mining".to_owned();
     withdrawal_requests_seed
 }

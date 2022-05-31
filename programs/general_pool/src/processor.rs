@@ -1,11 +1,6 @@
 //! Program state processor
 
 use borsh::BorshDeserialize;
-use everlend_registry::{find_registry_pool_config_program_address, state::RegistryPoolConfig};
-use everlend_utils::{
-    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
-    cpi, find_program_address, EverlendError,
-};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     clock::Clock,
@@ -19,10 +14,13 @@ use solana_program::{
 };
 use spl_token::state::{Account, Mint};
 
-use crate::state::{
-    InitWithdrawalRequestParams, InitWithdrawalRequestsParams,
-    WITHDRAW_DELAY,
+use everlend_registry::{find_registry_pool_config_program_address, state::RegistryPoolConfig};
+use everlend_utils::{
+    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
+    cpi, find_program_address, EverlendError,
 };
+
+use crate::state::{InitWithdrawalRequestParams, InitWithdrawalRequestsParams, WITHDRAW_DELAY};
 use crate::{
     find_pool_borrow_authority_program_address, find_pool_program_address,
     find_transit_program_address, find_transit_sol_unwrap_address,
@@ -990,7 +988,7 @@ impl Processor {
     }
 
     /// Migrate pool market
-    pub fn close_pool_market(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+    pub fn close_pool_market(_program_id: &Pubkey, _accounts: &[AccountInfo]) -> ProgramResult {
         Err(EverlendError::TemporaryUnavailable.into())
     }
 

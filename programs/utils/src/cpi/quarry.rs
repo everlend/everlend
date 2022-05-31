@@ -1,5 +1,5 @@
 use anchor_lang::InstructionData;
-use quarry_mine::instruction::{ClaimRewardsV2, CreateMinerV2, StakeTokens};
+use quarry_mine::instruction::{CreateMinerV2, StakeTokens, WithdrawTokens};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::{AccountMeta, Instruction};
 use solana_program::program::invoke;
@@ -136,10 +136,47 @@ pub fn stake_tokens<'a>(
             AccountMeta::new_readonly(*quarry.key, false),
             AccountMeta::new_readonly(*miner_vault.key, false),
             AccountMeta::new_readonly(*token_account.key, false),
-            AccountMeta::new_readonly(*rewarder.key, false),
             AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(*rewarder.key, false),
         ],
         data: StakeTokens { amount }.data(),
+    };
+
+    invoke(
+        &ix,
+        &[
+            authority,
+            miner,
+            quarry,
+            miner_vault,
+            token_account,
+            rewarder,
+        ],
+    )
+}
+
+pub fn withdraw_tokens<'a>(
+    program_id: &Pubkey,
+    authority: AccountInfo<'a>,
+    miner: AccountInfo<'a>,
+    quarry: AccountInfo<'a>,
+    miner_vault: AccountInfo<'a>,
+    token_account: AccountInfo<'a>,
+    rewarder: AccountInfo<'a>,
+    amount: u64,
+) -> Result<(), ProgramError> {
+    let ix = Instruction {
+        program_id: *program_id,
+        accounts: vec![
+            AccountMeta::new_readonly(*authority.key, true),
+            AccountMeta::new_readonly(*miner.key, false),
+            AccountMeta::new_readonly(*quarry.key, false),
+            AccountMeta::new_readonly(*miner_vault.key, false),
+            AccountMeta::new_readonly(*token_account.key, false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(*rewarder.key, false),
+        ],
+        data: WithdrawTokens { amount }.data(),
     };
 
     invoke(

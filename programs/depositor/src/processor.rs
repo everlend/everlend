@@ -514,7 +514,7 @@ impl Processor {
             return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
         }
 
-        let internal_mining = if internal_mining_info.owner == program_id {
+        let internal_mining_type = if internal_mining_info.owner == program_id {
             let (internal_mining_pubkey, _bump_seed) = find_internal_mining_program_address(
                 program_id,
                 &liquidity_mint_info.key,
@@ -522,12 +522,13 @@ impl Processor {
             );
             assert_account_key(internal_mining_info, &internal_mining_pubkey)?;
 
-            Some(InternalMining::unpack(&internal_mining_info.data.borrow())?)
+            Some(InternalMining::unpack(&internal_mining_info.data.borrow())?.mining_type)
         } else {
             None
         };
-        msg!("Liquidity mint: {}", &liquidity_mint_info.key);
-        msg!("Deposit \n{:?}", step);
+
+        //msg!("Deposit \n{:?}", step);
+        msg!("Deposit");
         let collateral_amount = deposit(
             &programs,
             collateral_pool_market_info.clone(),
@@ -547,7 +548,7 @@ impl Processor {
             step.liquidity_amount,
             &[signers_seeds],
             internal_mining_info.clone(),
-            internal_mining,
+            internal_mining_type,
         )?;
 
         rebalancing.execute_step(
@@ -721,6 +722,19 @@ impl Processor {
             return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
         }
 
+        let internal_mining_type = if internal_mining_info.owner == program_id {
+            let (internal_mining_pubkey, _bump_seed) = find_internal_mining_program_address(
+                program_id,
+                &liquidity_mint_info.key,
+                &money_market_program_info.key,
+            );
+            assert_account_key(internal_mining_info, &internal_mining_pubkey)?;
+
+            Some(InternalMining::unpack(&internal_mining_info.data.borrow())?.mining_type)
+        } else {
+            None
+        };
+
         msg!("Withdraw");
         withdraw(
             &programs,
@@ -737,7 +751,6 @@ impl Processor {
             collateral_mint_info.clone(),
             liquidity_transit_info.clone(),
             liquidity_reserve_transit_info.clone(),
-            liquidity_mint_info.clone(),
             depositor_authority_info.clone(),
             clock_info.clone(),
             money_market_program_info.clone(),
@@ -745,6 +758,8 @@ impl Processor {
             step.collateral_amount.unwrap(),
             step.liquidity_amount,
             &[signers_seeds],
+            internal_mining_info.clone(),
+            internal_mining_type,
         )?;
 
         rebalancing.execute_step(RebalancingOperation::Withdraw, None, clock.slot)?;
@@ -845,7 +860,7 @@ impl Processor {
                 let token_mint_info = next_account_info(account_info_iter)?;
                 let miner_vault_info = next_account_info(account_info_iter)?;
                 assert_account_key(miner_vault_info, &miner_vault)?;
-                let (miner_pubkey, miner_bump) = cpi::quarry::find_miner_program_address(
+                let (miner_pubkey, _miner_bump) = cpi::quarry::find_miner_program_address(
                     &staking_program_id_info.key,
                     &quarry_info.key,
                     &internal_mining_info.key,

@@ -1,15 +1,14 @@
 #![cfg(feature = "test-bpf")]
 
 use solana_program::instruction::InstructionError;
-use solana_program::instruction::InstructionError::InvalidAccountData;
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::*;
 use solana_sdk::signer::Signer;
 use solana_sdk::transaction::{Transaction, TransactionError};
 
-use everlend_registry::state::SetRegistryPoolConfigParams;
 use everlend_depositor::find_transit_program_address;
 use everlend_liquidity_oracle::state::DistributionArray;
+use everlend_registry::state::SetRegistryPoolConfigParams;
 use everlend_registry::state::{DistributionPubkeys, RegistryRootAccounts};
 use everlend_utils::{
     find_program_address,
@@ -62,7 +61,10 @@ async fn setup() -> (
     // 1. Prepare general pool
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
+    general_pool_market
+        .init(&mut context, &registry.keypair.pubkey())
+        .await
+        .unwrap();
 
     let general_pool = TestGeneralPool::new(&general_pool_market, None);
     general_pool
@@ -73,7 +75,10 @@ async fn setup() -> (
         .set_registry_pool_config(
             &mut context,
             &general_pool.pool_pubkey,
-            SetRegistryPoolConfigParams { deposit_minimum: 0, withdraw_minimum: 0 }
+            SetRegistryPoolConfigParams {
+                deposit_minimum: 0,
+                withdraw_minimum: 0,
+            },
         )
         .await
         .unwrap();

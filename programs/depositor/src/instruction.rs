@@ -314,7 +314,7 @@ pub fn deposit(
     let (mm_pool_collateral_transit, _) =
         find_transit_program_address(program_id, depositor, mm_pool_collateral_mint, "");
 
-    let (internal_mining, internal_mining_bump_seed) = crate::find_internal_mining_program_address(
+    let (internal_mining, _internal_mining_bump_seed) = crate::find_internal_mining_program_address(
         program_id,
         liquidity_mint,
         money_market_program_id,
@@ -397,7 +397,7 @@ pub fn withdraw(
     let (liquidity_reserve_transit, _) =
         find_transit_program_address(program_id, depositor, liquidity_mint, "reserve");
 
-    let (internal_mining, internal_mining_bump_seed) = crate::find_internal_mining_program_address(
+    let (internal_mining, _internal_mining_bump_seed) = crate::find_internal_mining_program_address(
         program_id,
         liquidity_mint,
         money_market_program_id,
