@@ -1,52 +1,61 @@
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import {
   PublicKey,
-  SystemProgram,
-  SYSVAR_RENT_PUBKEY,
   Transaction,
   TransactionCtorFields,
   TransactionInstruction,
 } from '@solana/web3.js'
+import BN from 'bn.js'
 import { Borsh } from '@everlend/common'
 import { GeneralPoolsProgram } from '../program'
 
-export class CreatePoolArgs extends Borsh.Data {
-  static readonly SCHEMA = this.struct([['instruction', 'u8']])
+export class BorrowTxData extends Borsh.Data<{ amount: BN }> {
+  static readonly SCHEMA = this.struct([
+    ['instruction', 'u8'],
+    ['amount', 'u64'],
+  ])
 
-  instruction = 1
+  instruction = 7
 }
 
-type CreatePoolParams = {
+type BorrowTxParams = {
   poolMarket: PublicKey
   pool: PublicKey
-  tokenMint: PublicKey
+  poolBorrowAuthority: PublicKey
+  destination: PublicKey
   tokenAccount: PublicKey
-  poolMint: PublicKey
   poolMarketAuthority: PublicKey
-  manager?: PublicKey
+  amount: BN
+  borrowAuthority?: PublicKey
 }
 
-export class CreatePool extends Transaction {
-  constructor(options: TransactionCtorFields, params: CreatePoolParams) {
+export class BorrowTx extends Transaction {
+  constructor(options: TransactionCtorFields, params: BorrowTxParams) {
     super(options)
     const { feePayer } = options
-    const { poolMarket, pool, tokenMint, tokenAccount, poolMint, poolMarketAuthority, manager } =
-      params
+    const {
+      poolMarket,
+      pool,
+      poolBorrowAuthority,
+      destination,
+      tokenAccount,
+      poolMarketAuthority,
+      borrowAuthority,
+      amount,
+    } = params
 
-    const data = CreatePoolArgs.serialize()
+    const data = BorrowTxData.serialize({ amount })
 
     this.add(
       new TransactionInstruction({
         keys: [
           { pubkey: poolMarket, isSigner: false, isWritable: false },
           { pubkey: pool, isSigner: false, isWritable: true },
-          { pubkey: tokenMint, isSigner: false, isWritable: false },
+          { pubkey: poolBorrowAuthority, isSigner: false, isWritable: true },
+          { pubkey: destination, isSigner: false, isWritable: true },
           { pubkey: tokenAccount, isSigner: false, isWritable: true },
-          { pubkey: poolMint, isSigner: false, isWritable: true },
-          { pubkey: manager || feePayer, isSigner: true, isWritable: true },
           { pubkey: poolMarketAuthority, isSigner: false, isWritable: false },
-          { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
-          { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+          { pubkey: borrowAuthority || feePayer, isSigner: true, isWritable: false },
           { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
         ],
         programId: GeneralPoolsProgram.PUBKEY,
