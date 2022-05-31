@@ -1,9 +1,9 @@
 use super::{get_account, BanksClientResult};
 use everlend_registry::{
     find_config_program_address,
-    state::{Registry, RegistryConfig, RegistryPrograms, RegistryRootAccounts, RegistrySettings},
+    state::{Registry, RegistryConfig, RegistryPrograms, RegistryRootAccounts, RegistrySettings, SetRegistryPoolConfigParams, RegistryPoolConfig}, find_registry_pool_config_program_address,
 };
-use solana_program::{program_pack::Pack, system_instruction};
+use solana_program::{program_pack::Pack, system_instruction, pubkey::Pubkey};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{
     signature::{Keypair, Signer},
@@ -122,5 +122,34 @@ impl TestRegistry {
         );
 
         context.banks_client.process_transaction(tx).await
+    }
+
+    pub async fn set_registry_pool_config(
+        &self,
+        context: &mut ProgramTestContext,
+        pool: &Pubkey,
+        params: SetRegistryPoolConfigParams,
+    ) -> BanksClientResult<()> {
+        let tx = Transaction::new_signed_with_payer(
+            &[everlend_registry::instruction::set_registry_pool_config(
+                &everlend_registry::id(),
+                &self.keypair.pubkey(),
+                &self.manager.pubkey(),
+                pool,
+                params,
+            )],
+            Some(&context.payer.pubkey()),
+            &[&context.payer, &self.manager],
+            context.last_blockhash,
+        );
+
+        context.banks_client.process_transaction(tx).await
+    }
+
+    pub async fn get_registry_pool_config(&self, context: &mut ProgramTestContext, pool: &Pubkey) -> RegistryPoolConfig {
+        let (registry_pool_config, _) =
+            find_registry_pool_config_program_address(&everlend_registry::id(), &self.keypair.pubkey(), pool);
+        let account = get_account(context, &registry_pool_config).await;
+        RegistryPoolConfig::unpack_unchecked(&account.data).unwrap()
     }
 }

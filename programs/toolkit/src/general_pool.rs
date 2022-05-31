@@ -1,7 +1,7 @@
 use crate::utils::*;
 use everlend_general_pool::{
     find_pool_borrow_authority_program_address, find_pool_program_address,
-    find_withdrawal_request_program_address, find_withdrawal_requests_program_address,
+    find_withdrawal_requests_program_address,
     general_pool_withdraw_sol_accounts, instruction,
     state::{AccountType, Pool, PoolMarket, WithdrawalRequest, WithdrawalRequests},
 };
@@ -16,6 +16,7 @@ use solana_sdk::{
 pub fn create_market(
     config: &Config,
     pool_market_keypair: Option<Keypair>,
+    registry: &Pubkey,
 ) -> Result<Pubkey, ClientError> {
     let pool_market_keypair = pool_market_keypair.unwrap_or_else(Keypair::new);
 
@@ -40,6 +41,7 @@ pub fn create_market(
                 &everlend_general_pool::id(),
                 &pool_market_keypair.pubkey(),
                 &config.fee_payer.pubkey(),
+                registry,
             ),
         ],
         Some(&config.fee_payer.pubkey()),
@@ -173,6 +175,7 @@ pub fn create_pool_borrow_authority(
 #[allow(clippy::too_many_arguments)]
 pub fn deposit(
     config: &Config,
+    registry_pubkey: &Pubkey,
     pool_market_pubkey: &Pubkey,
     pool_pubkey: &Pubkey,
     source: &Pubkey,
@@ -184,6 +187,7 @@ pub fn deposit(
     let tx = Transaction::new_with_payer(
         &[instruction::deposit(
             &everlend_general_pool::id(),
+            registry_pubkey,
             pool_market_pubkey,
             pool_pubkey,
             source,
@@ -204,6 +208,7 @@ pub fn deposit(
 #[allow(clippy::too_many_arguments)]
 pub fn withdraw_request(
     config: &Config,
+    registry_pubkey: &Pubkey,
     pool_market_pubkey: &Pubkey,
     pool_pubkey: &Pubkey,
     source: &Pubkey,
@@ -223,6 +228,7 @@ pub fn withdraw_request(
     let tx = Transaction::new_with_payer(
         &[instruction::withdraw_request(
             &everlend_general_pool::id(),
+            registry_pubkey,
             pool_market_pubkey,
             pool_pubkey,
             source,
@@ -333,6 +339,24 @@ pub fn migrate_general_pool_account(config: &Config) -> Result<(), ClientError> 
     Ok(())
 }
 
+pub fn close_pool_market_account(
+    config: &Config,
+    pool_market: &Pubkey,
+) -> Result<(), ClientError> {
+    let tx = Transaction::new_with_payer(
+        &[instruction::close_pool_market(
+            &everlend_general_pool::id(),
+            pool_market,
+            &config.fee_payer.pubkey(),
+        )],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+
+    Ok(())
+}
+
 pub fn get_general_pool_market(
     config: &Config,
     pool_market_pubkey: &Pubkey,
@@ -357,22 +381,6 @@ pub fn get_withdrawal_requests(
         WithdrawalRequests::unpack(&withdrawal_requests_account.data).unwrap();
 
     Ok((withdrawal_requests_pubkey, withdrawal_requests))
-}
-
-pub fn get_withdrawal_request(
-    config: &Config,
-    withdrawal_requests_pubkey: &Pubkey,
-    from: &Pubkey,
-) -> Result<(Pubkey, WithdrawalRequest), ClientError> {
-    let (withdrawal_request_pubkey, _) = find_withdrawal_request_program_address(
-        &everlend_general_pool::id(),
-        withdrawal_requests_pubkey,
-        from,
-    );
-    let withdrawal_request_account = config.rpc_client.get_account(&withdrawal_request_pubkey)?;
-    let withdrawal_request = WithdrawalRequest::unpack(&withdrawal_request_account.data).unwrap();
-
-    Ok((withdrawal_request_pubkey, withdrawal_request))
 }
 
 pub fn get_withdrawal_request_accounts(

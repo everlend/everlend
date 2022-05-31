@@ -1,4 +1,4 @@
-import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token'
+import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID, NATIVE_MINT } from '@solana/spl-token'
 import { Connection, Keypair, PublicKey, SystemProgram, Transaction } from '@solana/web3.js'
 import BN from 'bn.js'
 import {
@@ -9,8 +9,21 @@ import {
   WithdrawalRequests,
 } from './accounts'
 import { GeneralPoolsProgram } from './program'
-import { CreateAssociatedTokenAccount, findAssociatedTokenAccount } from '@everlend/common'
-import { Borrow, CreatePool, Deposit, InitPoolMarket, Repay, WithdrawRequest } from './transactions'
+import {
+  CreateAssociatedTokenAccount,
+  findAssociatedTokenAccount,
+  findRegistryPoolConfigAccount,
+} from '@everlend/common'
+import {
+  Borrow,
+  CreatePool,
+  Deposit,
+  InitPoolMarket,
+  Repay,
+  WithdrawRequest,
+  Withdraw,
+  UnwrapParams,
+} from './transactions'
 import { Buffer } from 'buffer'
 
 export type ActionResult = {
@@ -106,6 +119,7 @@ export const createPool = async (
 export const deposit = async (
   { connection, payerPublicKey }: ActionOptions,
   pool: PublicKey,
+  registry: PublicKey,
   amount: BN,
   source: PublicKey,
   destination?: PublicKey,
@@ -117,6 +131,7 @@ export const deposit = async (
   const poolMarketAuthority = await GeneralPoolsProgram.findProgramAddress([poolMarket.toBuffer()])
 
   const tx = new Transaction()
+  const registryPoolConfig = await findRegistryPoolConfigAccount(registry, pool)
 
   // Create destination account for pool mint if doesn't exist
   destination = destination ?? (await findAssociatedTokenAccount(payerPublicKey, poolMint))
@@ -135,6 +150,8 @@ export const deposit = async (
     new Deposit(
       { feePayer: payerPublicKey },
       {
+        registryPoolConfig,
+        registry,
         poolMarket,
         pool,
         source,
@@ -153,6 +170,7 @@ export const deposit = async (
 export const withdrawRequest = async (
   { connection, payerPublicKey }: ActionOptions,
   pool: PublicKey,
+  registry: PublicKey,
   collateralAmount: BN,
   source: PublicKey,
   destination?: PublicKey,
@@ -172,6 +190,7 @@ export const withdrawRequest = async (
 
   const tx = new Transaction()
 
+  const registryPoolConfig = await findRegistryPoolConfigAccount(registry, pool)
   // Create destination account for token mint if doesn't exist
   destination = destination ?? (await findAssociatedTokenAccount(payerPublicKey, tokenMint))
   !(await connection.getAccountInfo(destination)) &&
@@ -189,6 +208,8 @@ export const withdrawRequest = async (
     new WithdrawRequest(
       { feePayer: payerPublicKey },
       {
+        registry,
+        registryPoolConfig,
         poolMarket,
         pool,
         withdrawRequests,
@@ -199,6 +220,73 @@ export const withdrawRequest = async (
         collateralTransit,
         poolMint,
         collateralAmount,
+      },
+    ),
+  )
+
+  return { tx }
+}
+
+export const withdraw = async (
+  { connection, payerPublicKey }: ActionOptions,
+  withdrawalRequest: PublicKey,
+): Promise<ActionResult> => {
+  const {
+    data: { from, destination, pool },
+  } = await WithdrawalRequest.load(connection, withdrawalRequest)
+
+  const {
+    data: { tokenMint, poolMarket, poolMint, tokenAccount },
+  } = await Pool.load(connection, pool)
+
+  const withdrawalRequests = await WithdrawalRequests.getPDA(poolMarket, tokenMint)
+  const poolMarketAuthority = await GeneralPoolsProgram.findProgramAddress([poolMarket.toBuffer()])
+
+  const collateralTransit = await GeneralPoolsProgram.findProgramAddress([
+    Buffer.from('transit'),
+    poolMarket.toBuffer(),
+    poolMint.toBuffer(),
+  ])
+
+  let unwrapAccounts: UnwrapParams = undefined
+  if (tokenMint.equals(NATIVE_MINT)) {
+    const unwrapTokenAccount = await WithdrawalRequest.getUnwrapSOLPDA(withdrawalRequest)
+    unwrapAccounts = {
+      tokenMint: tokenMint,
+      unwrapTokenAccount: unwrapTokenAccount,
+      signer: payerPublicKey,
+    }
+  }
+
+  const tx = new Transaction()
+
+  // Create destination account for token mint if doesn't exist
+  !(await connection.getAccountInfo(destination)) &&
+    tx.add(
+      new CreateAssociatedTokenAccount(
+        { feePayer: payerPublicKey },
+        {
+          associatedTokenAddress: destination,
+          tokenMint,
+        },
+      ),
+    )
+
+  tx.add(
+    new Withdraw(
+      { feePayer: payerPublicKey },
+      {
+        poolMarket,
+        pool,
+        poolMarketAuthority,
+        poolMint,
+        withdrawalRequests,
+        withdrawalRequest,
+        destination,
+        tokenAccount,
+        collateralTransit,
+        from,
+        unwrapAccounts,
       },
     ),
   )

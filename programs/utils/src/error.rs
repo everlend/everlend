@@ -77,6 +77,14 @@ pub enum EverlendError {
     /// Temporary unavailable for migration
     #[error("Instruction temporary unavailable")]
     TemporaryUnavailable,
+
+    /// Deposit amount below allowed minimum
+    #[error("Deposit amount too small")]
+    DepositAmountTooSmall,
+
+    /// Withdraw request amount below allowed minimum
+    #[error("Withdraw amount too small")]
+    WithdrawAmountTooSmall,
 }
 
 impl PrintProgramError for EverlendError {

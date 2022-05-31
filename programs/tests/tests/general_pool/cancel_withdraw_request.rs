@@ -1,6 +1,7 @@
 #![cfg(feature = "test-bpf")]
 
 use everlend_general_pool::find_transit_program_address;
+use everlend_registry::state::SetRegistryPoolConfigParams;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::*;
 use solana_sdk::signer::Signer;
@@ -13,19 +14,34 @@ async fn setup(
     token_mint: Option<Pubkey>,
 ) -> (
     ProgramTestContext,
+    TestRegistry,
     TestGeneralPoolMarket,
     TestGeneralPool,
     TestGeneralPoolBorrowAuthority,
     LiquidityProvider,
 ) {
-    let mut context = presetup().await.0;
+    let (mut context, _, _, registry) = presetup().await;
 
     let test_pool_market = TestGeneralPoolMarket::new();
-    test_pool_market.init(&mut context).await.unwrap();
+    test_pool_market
+        .init(&mut context, &registry.keypair.pubkey())
+        .await
+        .unwrap();
 
     let test_pool = TestGeneralPool::new(&test_pool_market, token_mint);
     test_pool
         .create(&mut context, &test_pool_market)
+        .await
+        .unwrap();
+    registry
+        .set_registry_pool_config(
+            &mut context,
+            &test_pool.pool_pubkey,
+            SetRegistryPoolConfigParams {
+                deposit_minimum: 0,
+                withdraw_minimum: 0,
+            },
+        )
         .await
         .unwrap();
 
@@ -56,12 +72,13 @@ async fn setup(
         .unwrap();
 
     test_pool
-        .deposit(&mut context, &test_pool_market, &user, 100)
+        .deposit(&mut context, &registry, &test_pool_market, &user, 100)
         .await
         .unwrap();
 
     (
         context,
+        registry,
         test_pool_market,
         test_pool,
         test_pool_borrow_authority,
@@ -71,11 +88,11 @@ async fn setup(
 
 #[tokio::test]
 async fn success() {
-    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user) =
+    let (mut context, registry, test_pool_market, test_pool, _pool_borrow_authority, user) =
         setup(None).await;
 
     test_pool
-        .withdraw_request(&mut context, &test_pool_market, &user, 45)
+        .withdraw_request(&mut context, &registry, &test_pool_market, &user, 45)
         .await
         .unwrap();
 

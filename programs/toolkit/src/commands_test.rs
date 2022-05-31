@@ -36,7 +36,7 @@ pub async fn command_run_test(
     println!("default_accounts = {:#?}", default_accounts);
 
     let InitializedAccounts {
-        payer,
+        payer: _,
         registry,
         general_pool_market,
         income_pool_market,
@@ -227,6 +227,7 @@ pub async fn command_run_test(
         println!("Deposit liquidity");
         general_pool::deposit(
             config,
+            &registry,
             &general_pool_market,
             &sol.general_pool,
             &sol.liquidity_token_account,
@@ -241,6 +242,7 @@ pub async fn command_run_test(
         println!("Withdraw request");
         general_pool::withdraw_request(
             config,
+            &registry,
             &general_pool_market,
             &sol.general_pool,
             &sol.collateral_token_account,

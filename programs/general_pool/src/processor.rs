@@ -1,6 +1,7 @@
 //! Program state processor
 
 use borsh::BorshDeserialize;
+use everlend_registry::{find_registry_pool_config_program_address, state::RegistryPoolConfig};
 use everlend_utils::{
     assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
     cpi, find_program_address, EverlendError,
@@ -18,7 +19,10 @@ use solana_program::{
 };
 use spl_token::state::{Account, Mint};
 
-use crate::state::{InitWithdrawalRequestParams, InitWithdrawalRequestsParams, WITHDRAW_DELAY};
+use crate::state::{
+    InitWithdrawalRequestParams, InitWithdrawalRequestsParams,
+    WITHDRAW_DELAY,
+};
 use crate::{
     find_pool_borrow_authority_program_address, find_pool_program_address,
     find_transit_program_address, find_transit_sol_unwrap_address,
@@ -41,6 +45,7 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
         let pool_market_info = next_account_info(account_info_iter)?;
         let manager_info = next_account_info(account_info_iter)?;
+        let registry_info = next_account_info(account_info_iter)?;
         let rent_info = next_account_info(account_info_iter)?;
         let rent = &Rent::from_account_info(rent_info)?;
 
@@ -55,6 +60,7 @@ impl Processor {
 
         pool_market.init(InitPoolMarketParams {
             manager: *manager_info.key,
+            registry: *registry_info.key,
         });
 
         PoolMarket::pack(pool_market, *pool_market_info.data.borrow_mut())?;
@@ -375,6 +381,8 @@ impl Processor {
     /// Process Deposit instruction
     pub fn deposit(program_id: &Pubkey, amount: u64, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
+        let registry_info = next_account_info(account_info_iter)?;
+        let registry_pool_config_info = next_account_info(account_info_iter)?;
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_info = next_account_info(account_info_iter)?;
         let source_info = next_account_info(account_info_iter)?;
@@ -386,7 +394,7 @@ impl Processor {
         let _token_program_info = next_account_info(account_info_iter)?;
 
         assert_signer(user_transfer_authority_info)?;
-
+        assert_owned_by(registry_pool_config_info, &everlend_registry::id())?;
         assert_owned_by(pool_market_info, program_id)?;
         assert_owned_by(pool_info, program_id)?;
 
@@ -411,6 +419,19 @@ impl Processor {
                 .checked_div(total_incoming as u128)
                 .ok_or(ProgramError::InvalidArgument)? as u64
         };
+        let (registry_pool_config_pubkey, _) = find_registry_pool_config_program_address(
+            &everlend_registry::id(),
+            registry_info.key,
+            pool_info.key,
+        );
+        assert_account_key(registry_pool_config_info, &registry_pool_config_pubkey)?;
+        let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+        assert_account_key(registry_info, &pool_market.registry)?;
+        let registry_pool_config =
+            RegistryPoolConfig::unpack(&registry_pool_config_info.data.borrow())?;
+        if mint_amount < registry_pool_config.deposit_minimum {
+            return Err(EverlendError::DepositAmountTooSmall.into());
+        }
 
         // Transfer token from source to token account
         cpi::spl_token::transfer(
@@ -614,6 +635,8 @@ impl Processor {
         accounts: &[AccountInfo],
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
+        let registry_info = next_account_info(account_info_iter)?;
+        let registry_pool_config_info = next_account_info(account_info_iter)?;
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_info = next_account_info(account_info_iter)?;
         let pool_mint_info = next_account_info(account_info_iter)?;
@@ -633,7 +656,7 @@ impl Processor {
 
         assert_signer(user_transfer_authority_info)?;
 
-        // Check programs
+        assert_owned_by(registry_pool_config_info, &everlend_registry::id())?;
         assert_owned_by(pool_market_info, program_id)?;
         assert_owned_by(pool_info, program_id)?;
         assert_owned_by(withdrawal_requests_info, program_id)?;
@@ -682,7 +705,21 @@ impl Processor {
             .checked_div(total_minted as u128)
             .ok_or(EverlendError::MathOverflow)? as u64;
 
-        // Transfer to collateral transit
+        let (registry_pool_config_pubkey, _) = find_registry_pool_config_program_address(
+            &everlend_registry::id(),
+            registry_info.key,
+            pool_info.key,
+        );
+        assert_account_key(registry_pool_config_info, &registry_pool_config_pubkey)?;
+        let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+        assert_account_key(registry_info, &pool_market.registry)?;
+        let registry_pool_config =
+            RegistryPoolConfig::unpack(&registry_pool_config_info.data.borrow())?;
+        if liquidity_amount < registry_pool_config.withdraw_minimum {
+            return Err(EverlendError::WithdrawAmountTooSmall.into());
+        }
+
+        // Transfer
         cpi::spl_token::transfer(
             source_info.clone(),
             collateral_transit_info.clone(),
@@ -952,6 +989,11 @@ impl Processor {
         Err(EverlendError::TemporaryUnavailable.into())
     }
 
+    /// Migrate pool market
+    pub fn close_pool_market(_program_id: &Pubkey, _accounts: &[AccountInfo]) -> ProgramResult {
+        Err(EverlendError::TemporaryUnavailable.into())
+    }
+
     /// Instruction processing router
     pub fn process_instruction(
         program_id: &Pubkey,
@@ -959,7 +1001,6 @@ impl Processor {
         input: &[u8],
     ) -> ProgramResult {
         let instruction = LiquidityPoolsInstruction::try_from_slice(input)?;
-
         match instruction {
             LiquidityPoolsInstruction::InitPoolMarket => {
                 msg!("LiquidityPoolsInstruction: InitPoolMarket");
@@ -1017,6 +1058,11 @@ impl Processor {
             } => {
                 msg!("LiquidityPoolsInstruction: Repay");
                 Self::repay(program_id, amount, interest_amount, accounts)
+            }
+
+            LiquidityPoolsInstruction::ClosePoolMarket => {
+                msg!("LiquidityPoolsInstruction: ClosePoolMarket");
+                Self::close_pool_market(program_id, accounts)
             }
 
             LiquidityPoolsInstruction::MigrationInstruction => {

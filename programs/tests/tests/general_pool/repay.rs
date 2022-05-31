@@ -8,19 +8,21 @@ use solana_program_test::*;
 use solana_sdk::{
     pubkey::Pubkey, signer::Signer, transaction::Transaction, transaction::TransactionError,
 };
+use everlend_registry::state::SetRegistryPoolConfigParams;
 use spl_token::error::TokenError;
 
 async fn setup() -> (
     ProgramTestContext,
+    TestRegistry,
     TestGeneralPoolMarket,
     TestGeneralPool,
     TestGeneralPoolBorrowAuthority,
     LiquidityProvider,
 ) {
-    let mut context = presetup().await.0;
+    let (mut context, _, _, registry) = presetup().await;
 
     let test_pool_market = TestGeneralPoolMarket::new();
-    test_pool_market.init(&mut context).await.unwrap();
+    test_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let test_pool = TestGeneralPool::new(&test_pool_market, None);
     test_pool
@@ -39,6 +41,14 @@ async fn setup() -> (
         )
         .await
         .unwrap();
+    registry
+        .set_registry_pool_config(
+            &mut context,
+            &test_pool.pool_pubkey,
+            SetRegistryPoolConfigParams { deposit_minimum: 0, withdraw_minimum: 0 }
+        )
+        .await
+        .unwrap();
 
     let user = add_liquidity_provider(
         &mut context,
@@ -50,12 +60,13 @@ async fn setup() -> (
     .unwrap();
 
     test_pool
-        .deposit(&mut context, &test_pool_market, &user, 100)
+        .deposit(&mut context, &registry, &test_pool_market, &user, 100)
         .await
         .unwrap();
 
     (
         context,
+        registry,
         test_pool_market,
         test_pool,
         test_pool_borrow_authority,
@@ -65,7 +76,7 @@ async fn setup() -> (
 
 #[tokio::test]
 async fn success() {
-    let (mut context, test_pool_market, test_pool, test_pool_borrow_authority, user) =
+    let (mut context, _, test_pool_market, test_pool, test_pool_borrow_authority, user) =
         setup().await;
     let amount_allowed = test_pool_borrow_authority
         .get_amount_allowed(&mut context)
@@ -107,7 +118,7 @@ async fn success() {
 
 #[tokio::test]
 async fn fail_with_invalid_pool_market_pubkey_argument() {
-    let (mut context, _test_pool_market, test_pool, test_pool_borrow_authority, user) =
+    let (mut context, _, _test_pool_market, test_pool, test_pool_borrow_authority, user) =
         setup().await;
 
     let amount = 1;
@@ -147,7 +158,7 @@ async fn fail_with_invalid_pool_market_pubkey_argument() {
 
 #[tokio::test]
 async fn fail_with_invalid_pool_pubkey_argument() {
-    let (mut context, test_pool_market, test_pool, test_pool_borrow_authority, user) =
+    let (mut context, _, test_pool_market, test_pool, test_pool_borrow_authority, user) =
         setup().await;
 
     let amount = 1;
@@ -187,7 +198,7 @@ async fn fail_with_invalid_pool_pubkey_argument() {
 
 #[tokio::test]
 async fn fail_with_invalid_pool_borrow_authority_argument() {
-    let (mut context, test_pool_market, test_pool, _test_pool_borrow_authority, user) =
+    let (mut context, _, test_pool_market, test_pool, _test_pool_borrow_authority, user) =
         setup().await;
 
     let amount = 1;
@@ -227,14 +238,14 @@ async fn fail_with_invalid_pool_borrow_authority_argument() {
 
 #[tokio::test]
 async fn fail_with_invalid_pool_market() {
-    let (mut context, _test_pool_market, test_pool, test_pool_borrow_authority, user) =
+    let (mut context, registry, _test_pool_market, test_pool, test_pool_borrow_authority, user) =
         setup().await;
 
     let amount = 1;
     let interest_amount = 1;
 
     let test_pool_market = TestGeneralPoolMarket::new();
-    test_pool_market.init(&mut context).await.unwrap();
+    test_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::repay(
@@ -266,7 +277,7 @@ async fn fail_with_invalid_pool_market() {
 
 #[tokio::test]
 async fn fail_with_invalid_pool_token_account() {
-    let (mut context, test_pool_market, test_pool, test_pool_borrow_authority, user) =
+    let (mut context, _, test_pool_market, test_pool, test_pool_borrow_authority, user) =
         setup().await;
 
     let amount = 1;
@@ -302,7 +313,7 @@ async fn fail_with_invalid_pool_token_account() {
 
 #[tokio::test]
 async fn fail_with_invalid_repay_amount() {
-    let (mut context, test_pool_market, test_pool, test_pool_borrow_authority, user) =
+    let (mut context, _, test_pool_market, test_pool, test_pool_borrow_authority, user) =
         setup().await;
 
     let amount = 1;
@@ -332,7 +343,7 @@ async fn fail_with_invalid_repay_amount() {
 
 #[tokio::test]
 async fn fail_with_invalid_source() {
-    let (mut context, test_pool_market, test_pool, test_pool_borrow_authority, user) =
+    let (mut context, _, test_pool_market, test_pool, test_pool_borrow_authority, user) =
         setup().await;
 
     let amount = 1;

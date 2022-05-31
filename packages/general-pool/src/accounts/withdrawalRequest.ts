@@ -59,6 +59,13 @@ export class WithdrawalRequest extends Account<WithdrawalRequestData> {
     ])
   }
 
+  static getUnwrapSOLPDA(withdrawalRequest: PublicKey) {
+    return GeneralPoolsProgram.findProgramAddress([
+      Buffer.from(`unwrap`),
+      new PublicKey(withdrawalRequest).toBuffer(),
+    ])
+  }
+
   static async findMany(
     connection: Connection,
     filters: { pool?: PublicKey; from?: PublicKey } = {},

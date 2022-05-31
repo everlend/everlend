@@ -9,6 +9,7 @@ import {
   payerPublicKey,
   POOL_MARKET_PUBKEY,
   POOL_PUBKEY,
+  REGISTRY_PUBKEY,
 } from './utils'
 
 describe('Pool', () => {
@@ -87,6 +88,7 @@ describe('Pool', () => {
       const { tx } = await deposit(
         { connection, payerPublicKey },
         POOL_PUBKEY,
+        REGISTRY_PUBKEY,
         amount,
         source,
         destination,
@@ -112,6 +114,7 @@ describe('Pool', () => {
       const { tx } = await withdrawRequest(
         { connection, payerPublicKey },
         POOL_PUBKEY,
+        REGISTRY_PUBKEY,
         amount,
         destination,
         source,
