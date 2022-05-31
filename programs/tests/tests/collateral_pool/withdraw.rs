@@ -7,7 +7,6 @@ use solana_program_test::*;
 use solana_sdk::{
     pubkey::Pubkey, signer::Signer, transaction::Transaction, transaction::TransactionError 
 };
-use spl_token::error::TokenError;
 
 use crate::utils::{
     presetup,
@@ -23,6 +22,9 @@ use crate::collateral_pool::collateral_pool_utils::{
 };
 // Const amount for all fail tests with invalid arguments
 const AMOUNT: u64 = 100 * EXP;
+const INITIAL_AMOUNT: u64 = 1000;
+const DEPOSIT_AMOUNT: u64 = 100;
+const WITHDRAW_AMOUNT: u64 = 50;
 
 async fn setup() -> (
     ProgramTestContext,
@@ -50,7 +52,7 @@ async fn setup() -> (
     let user = add_liquidity_provider(
         &mut context,
         &test_pool.token_mint_pubkey,
-        9999 * EXP,
+        INITIAL_AMOUNT,
     )
     .await
     .unwrap();
@@ -63,21 +65,21 @@ async fn success() {
     let (mut context, test_pool_market, test_pool, withdraw_authority, user) = setup().await;
 
     test_pool
-        .deposit(&mut context, &test_pool_market, &user, 100)
+        .deposit(&mut context, &test_pool_market, &user, DEPOSIT_AMOUNT)
         .await
         .unwrap();
     test_pool
-        .withdraw(&mut context, &test_pool_market, &withdraw_authority, None, &user, 50)
+        .withdraw(&mut context, &test_pool_market, &withdraw_authority, None, &user, WITHDRAW_AMOUNT)
         .await
         .unwrap();
 
     assert_eq!(
         get_token_balance(&mut context, &user.token_account).await,
-        50
+        INITIAL_AMOUNT - DEPOSIT_AMOUNT + WITHDRAW_AMOUNT,
     );
     assert_eq!(
         get_token_balance(&mut context, &test_pool.token_account.pubkey()).await,
-        50
+        DEPOSIT_AMOUNT - WITHDRAW_AMOUNT, 
     );
 }
 
@@ -115,7 +117,7 @@ async fn fail_with_invalid_token_account_pubkey_argument() {
 
 #[tokio::test]
 async fn fail_invalid_destination_argument() {
-    let (mut context, test_pool_market, test_pool, _withdraw_authority, user) = setup().await;
+    let (mut context, test_pool_market, test_pool, withdraw_authority, user) = setup().await;
 
     // 0. Deposit to 100
     test_pool
@@ -128,9 +130,9 @@ async fn fail_invalid_destination_argument() {
             &everlend_collateral_pool::id(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
-            // Wrong destination
-            &user.token_account,
-            &user.token_account,
+            &withdraw_authority.pool_withdraw_authority_pubkey,
+            // wrong destination
+            &Pubkey::new_unique(),
             &test_pool.token_account.pubkey(),
             &user.owner.pubkey(),
             50,
@@ -149,7 +151,7 @@ async fn fail_invalid_destination_argument() {
             .unwrap(),
         TransactionError::InstructionError(
             0,
-            InstructionError::Custom(TokenError::MintMismatch as u32)
+            InstructionError::InvalidArgument
         )
     );
 }
