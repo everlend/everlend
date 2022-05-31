@@ -1,5 +1,5 @@
 import { sendAndConfirmTransaction } from '@solana/web3.js'
-import { AccountType, initPoolMarket, PoolMarket } from '../src'
+import { AccountType, prepareInitPoolMarketTx, PoolMarket } from '../src'
 import { connection, payer, payerPublicKey, POOL_MARKET_PUBKEY } from './utils'
 
 describe('PoolMarket', () => {
@@ -16,7 +16,7 @@ describe('PoolMarket', () => {
 
   describe('InitPoolMarket', () => {
     test('success', async () => {
-      const { tx, keypairs } = await initPoolMarket({ connection, payerPublicKey })
+      const { tx, keypairs } = await prepareInitPoolMarketTx({ connection, payerPublicKey })
       const poolMarketKeypair = keypairs.poolMarket
 
       await sendAndConfirmTransaction(connection, tx, [payer, poolMarketKeypair], {

@@ -8,24 +8,24 @@ import {
 import { Borsh } from '@everlend/common'
 import { GeneralPoolsProgram } from '../program'
 
-export class InitPoolMarketArgs extends Borsh.Data {
+export class InitPoolMarketTxData extends Borsh.Data {
   static readonly SCHEMA = this.struct([['instruction', 'u8']])
 
   instruction = 0
 }
 
-type InitPoolMarketParams = {
+type InitPoolMarketTxParams = {
   poolMarket: PublicKey
   manager?: PublicKey
 }
 
-export class InitPoolMarket extends Transaction {
-  constructor(options: TransactionCtorFields, params: InitPoolMarketParams) {
+export class InitPoolMarketTx extends Transaction {
+  constructor(options: TransactionCtorFields, params: InitPoolMarketTxParams) {
     super(options)
     const { feePayer } = options
     const { poolMarket, manager } = params
 
-    const data = InitPoolMarketArgs.serialize()
+    const data = InitPoolMarketTxData.serialize()
 
     this.add(
       new TransactionInstruction({

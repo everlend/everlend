@@ -1,16 +1,36 @@
-import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token'
-import { Connection, Keypair, PublicKey, SystemProgram, Transaction } from '@solana/web3.js'
+import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID, NATIVE_MINT, Token } from '@solana/spl-token'
+import {
+  Connection,
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+  TransactionInstruction,
+} from '@solana/web3.js'
 import BN from 'bn.js'
 import {
   Pool,
   PoolBorrowAuthority,
   PoolMarket,
-  WithdrawalRequest,
-  WithdrawalRequests,
+  UserWithdrawalRequest,
+  WithdrawalRequestsState,
 } from './accounts'
 import { GeneralPoolsProgram } from './program'
-import { CreateAssociatedTokenAccount, findAssociatedTokenAccount, findRegistryPoolConfigAccount } from '@everlend/common'
-import { Borrow, CreatePool, Deposit, InitPoolMarket, Repay, WithdrawRequest } from './transactions'
+import {
+  CreateAssociatedTokenAccount,
+  findAssociatedTokenAccount,
+  findRegistryPoolConfigAccount,
+} from '@everlend/common'
+import {
+  BorrowTx,
+  CreatePoolTx,
+  DepositTx,
+  InitPoolMarketTx,
+  RepayTx,
+  WithdrawalRequestTx,
+  WithdrawalTx,
+  UnwrapParams,
+} from './transactions'
 import { Buffer } from 'buffer'
 
 export type ActionResult = {
@@ -23,7 +43,7 @@ export type ActionOptions = {
   payerPublicKey: PublicKey
 }
 
-export const initPoolMarket = async (
+export const prepareInitPoolMarketTx = async (
   { connection, payerPublicKey }: ActionOptions,
   poolMarket = Keypair.generate(),
 ): Promise<ActionResult> => {
@@ -40,7 +60,7 @@ export const initPoolMarket = async (
     }),
   )
   tx.add(
-    new InitPoolMarket(
+    new InitPoolMarketTx(
       { feePayer: payerPublicKey },
       {
         poolMarket: poolMarket.publicKey,
@@ -51,7 +71,7 @@ export const initPoolMarket = async (
   return { tx, keypairs: { poolMarket } }
 }
 
-export const createPool = async (
+export const prepareCreatePoolTx = async (
   { connection, payerPublicKey }: ActionOptions,
   poolMarket: PublicKey,
   tokenMint: PublicKey,
@@ -87,7 +107,7 @@ export const createPool = async (
   const poolMarketAuthority = await GeneralPoolsProgram.findProgramAddress([poolMarket.toBuffer()])
 
   tx.add(
-    new CreatePool(
+    new CreatePoolTx(
       { feePayer: payerPublicKey },
       {
         poolMarket,
@@ -103,7 +123,7 @@ export const createPool = async (
   return { tx, keypairs: { tokenAccount, poolMint } }
 }
 
-export const deposit = async (
+export const prepareDepositTx = async (
   { connection, payerPublicKey }: ActionOptions,
   pool: PublicKey,
   registry: PublicKey,
@@ -112,13 +132,48 @@ export const deposit = async (
   destination?: PublicKey,
 ): Promise<ActionResult> => {
   const {
-    data: { poolMarket, tokenAccount, poolMint },
+    data: { poolMarket, tokenAccount, poolMint, tokenMint },
   } = await Pool.load(connection, pool)
 
   const poolMarketAuthority = await GeneralPoolsProgram.findProgramAddress([poolMarket.toBuffer()])
 
   const tx = new Transaction()
   const registryPoolConfig = await findRegistryPoolConfigAccount(registry, pool)
+
+  // Wrapping SOL
+  let closeTokenAccountIx: TransactionInstruction
+  let SOLDepositKeypair: Keypair
+  let SOLDepositSource: PublicKey
+
+  if (tokenMint.equals(NATIVE_MINT)) {
+    SOLDepositKeypair = Keypair.generate()
+    SOLDepositSource = SOLDepositKeypair.publicKey
+    const rent = await connection.getMinimumBalanceForRentExemption(AccountLayout.span)
+
+    const createTokenAccountIx = SystemProgram.createAccount({
+      fromPubkey: payerPublicKey,
+      newAccountPubkey: SOLDepositSource,
+      programId: TOKEN_PROGRAM_ID,
+      space: AccountLayout.span,
+      lamports: amount.addn(rent).toNumber(),
+    })
+    const initTokenAccountIx = Token.createInitAccountInstruction(
+      TOKEN_PROGRAM_ID,
+      NATIVE_MINT,
+      SOLDepositSource,
+      payerPublicKey,
+    )
+    closeTokenAccountIx = Token.createCloseAccountInstruction(
+      TOKEN_PROGRAM_ID,
+      SOLDepositSource,
+      payerPublicKey,
+      payerPublicKey,
+      [],
+    )
+
+    tx.add(createTokenAccountIx, initTokenAccountIx)
+    source = SOLDepositSource
+  }
 
   // Create destination account for pool mint if doesn't exist
   destination = destination ?? (await findAssociatedTokenAccount(payerPublicKey, poolMint))
@@ -134,7 +189,7 @@ export const deposit = async (
     )
 
   tx.add(
-    new Deposit(
+    new DepositTx(
       { feePayer: payerPublicKey },
       {
         registryPoolConfig,
@@ -151,10 +206,12 @@ export const deposit = async (
     ),
   )
 
-  return { tx }
+  closeTokenAccountIx && tx.add(closeTokenAccountIx)
+
+  return { tx, keypairs: { SOLDepositKeypair } }
 }
 
-export const withdrawRequest = async (
+export const prepareWithdrawalRequestTx = async (
   { connection, payerPublicKey }: ActionOptions,
   pool: PublicKey,
   registry: PublicKey,
@@ -166,8 +223,8 @@ export const withdrawRequest = async (
     data: { tokenMint, poolMarket, tokenAccount, poolMint },
   } = await Pool.load(connection, pool)
 
-  const withdrawRequests = await WithdrawalRequests.getPDA(poolMarket, tokenMint)
-  const withdrawalRequest = await WithdrawalRequest.getPDA(withdrawRequests, payerPublicKey)
+  const withdrawRequests = await WithdrawalRequestsState.getPDA(poolMarket, tokenMint)
+  const withdrawalRequest = await UserWithdrawalRequest.getPDA(withdrawRequests, payerPublicKey)
 
   const collateralTransit = await GeneralPoolsProgram.findProgramAddress([
     Buffer.from('transit'),
@@ -192,7 +249,7 @@ export const withdrawRequest = async (
     )
 
   tx.add(
-    new WithdrawRequest(
+    new WithdrawalRequestTx(
       { feePayer: payerPublicKey },
       {
         registry,
@@ -214,7 +271,74 @@ export const withdrawRequest = async (
   return { tx }
 }
 
-export const borrow = async (
+export const prepareWithdrawalTx = async (
+  { connection, payerPublicKey }: ActionOptions,
+  withdrawalRequest: PublicKey,
+): Promise<ActionResult> => {
+  const {
+    data: { from, destination, pool },
+  } = await UserWithdrawalRequest.load(connection, withdrawalRequest)
+
+  const {
+    data: { tokenMint, poolMarket, poolMint, tokenAccount },
+  } = await Pool.load(connection, pool)
+
+  const withdrawalRequests = await WithdrawalRequestsState.getPDA(poolMarket, tokenMint)
+  const poolMarketAuthority = await GeneralPoolsProgram.findProgramAddress([poolMarket.toBuffer()])
+
+  const collateralTransit = await GeneralPoolsProgram.findProgramAddress([
+    Buffer.from('transit'),
+    poolMarket.toBuffer(),
+    poolMint.toBuffer(),
+  ])
+
+  let unwrapAccounts: UnwrapParams = undefined
+  if (tokenMint.equals(NATIVE_MINT)) {
+    const unwrapTokenAccount = await UserWithdrawalRequest.getUnwrapSOLPDA(withdrawalRequest)
+    unwrapAccounts = {
+      tokenMint: tokenMint,
+      unwrapTokenAccount: unwrapTokenAccount,
+      signer: payerPublicKey,
+    }
+  }
+
+  const tx = new Transaction()
+
+  // Create destination account for token mint if doesn't exist
+  !(await connection.getAccountInfo(destination)) &&
+    tx.add(
+      new CreateAssociatedTokenAccount(
+        { feePayer: payerPublicKey },
+        {
+          associatedTokenAddress: destination,
+          tokenMint,
+        },
+      ),
+    )
+
+  tx.add(
+    new WithdrawalTx(
+      { feePayer: payerPublicKey },
+      {
+        poolMarket,
+        pool,
+        poolMarketAuthority,
+        poolMint,
+        withdrawalRequests,
+        withdrawalRequest,
+        destination,
+        tokenAccount,
+        collateralTransit,
+        from,
+        unwrapAccounts,
+      },
+    ),
+  )
+
+  return { tx }
+}
+
+export const prepareBorrowTx = async (
   { connection, payerPublicKey }: ActionOptions,
   pool: PublicKey,
   amount: BN,
@@ -243,7 +367,7 @@ export const borrow = async (
     )
 
   tx.add(
-    new Borrow(
+    new BorrowTx(
       { feePayer: payerPublicKey },
       {
         poolMarket,
@@ -260,7 +384,7 @@ export const borrow = async (
   return { tx }
 }
 
-export const repay = async (
+export const prepareRepayTx = async (
   { connection, payerPublicKey }: ActionOptions,
   pool: PublicKey,
   amount: BN,
@@ -273,7 +397,7 @@ export const repay = async (
 
   const poolBorrowAuthority = await PoolBorrowAuthority.getPDA(pool, payerPublicKey)
 
-  const tx = new Repay(
+  const tx = new RepayTx(
     { feePayer: payerPublicKey },
     {
       poolMarket,

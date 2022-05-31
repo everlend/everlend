@@ -366,6 +366,31 @@ async fn command_run_migrate_pool_market(
     Ok(())
 }
 
+// TODO remove after setup
+async fn command_create_income_pool_safety_fund_token_account(
+    config: &Config,
+    accounts_path: &str,
+    case: Option<String>,
+) -> anyhow::Result<()> {
+    let initialiazed_accounts = InitializedAccounts::load(accounts_path).unwrap_or_default();
+
+    if case.is_none() {
+        println!("Token mint not presented");
+        return Ok(());
+    }
+
+    let token = initialiazed_accounts
+        .token_accounts
+        .get(&case.unwrap())
+        .unwrap();
+
+    println!("Create income pool safety fund token account");
+    income_pools::create_income_pool_safety_fund_token_account(config, &initialiazed_accounts.income_pool_market, &token.mint)?;
+    println!("Finished!");
+
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let matches = App::new(crate_name!())
@@ -828,6 +853,25 @@ async fn main() -> anyhow::Result<()> {
                     ),
                 ),
         )
+        .subcommand(
+            SubCommand::with_name("create-safety-fund-token-account")
+                .about("Run  create income pool safety fund token account")
+                .arg(
+                    Arg::with_name("case")
+                        .value_name("NAME")
+                        .takes_value(true)
+                        .index(1)
+                        .help("Case"),
+                )
+                .arg(
+                    Arg::with_name("accounts")
+                        .short("A")
+                        .long("accounts")
+                        .value_name("PATH")
+                        .takes_value(true)
+                        .help("Accounts file"),
+                ),
+        )
         .get_matches();
 
     let mut wallet_manager = None;
@@ -1064,6 +1108,12 @@ async fn main() -> anyhow::Result<()> {
                 exit(1);
             });
             Ok(())
+        }
+        /// TODO remove after migration
+        ("create-safety-fund-token-account", Some(arg_matches)) => {
+            let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
+            let case = value_of::<String>(arg_matches, "case");
+            command_create_income_pool_safety_fund_token_account(&config, accounts_path, case).await
         }
         _ => unreachable!(),
     }

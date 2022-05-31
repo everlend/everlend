@@ -7,25 +7,25 @@ import {
 import { Borsh } from '@everlend/common'
 import { GeneralPoolsProgram } from '../program'
 
-export class DeletePoolBorrowAuthorityArgs extends Borsh.Data {
+export class DeletePoolBorrowAuthorityTxData extends Borsh.Data {
   static readonly SCHEMA = this.struct([['instruction', 'u8']])
 
   instruction = 4
 }
 
-type DeletePoolBorrowAuthorityParams = {
+type DeletePoolBorrowAuthorityTxParams = {
   poolBorrowAuthority: PublicKey
   receiver: PublicKey
   manager?: PublicKey
 }
 
-export class DeletePoolBorrowAuthority extends Transaction {
-  constructor(options: TransactionCtorFields, params: DeletePoolBorrowAuthorityParams) {
+export class DeletePoolBorrowAuthorityTx extends Transaction {
+  constructor(options: TransactionCtorFields, params: DeletePoolBorrowAuthorityTxParams) {
     super(options)
     const { feePayer } = options
     const { poolBorrowAuthority, receiver, manager } = params
 
-    const data = DeletePoolBorrowAuthorityArgs.serialize()
+    const data = DeletePoolBorrowAuthorityTxData.serialize()
 
     this.add(
       new TransactionInstruction({
