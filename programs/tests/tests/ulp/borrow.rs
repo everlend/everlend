@@ -18,10 +18,7 @@ use crate::utils::{
     get_token_balance,
     LiquidityProvider,
 };
-use crate::ulp::ulp_utils::{
-    get_amount_allowed,
-    ULP_SHARE_ALLOWED,
-};
+pub const ULP_SHARE_ALLOWED: u16 = 10_000;
 
 async fn setup() -> (
     ProgramTestContext,
@@ -163,8 +160,16 @@ async fn fail_invalid_destination() {
 async fn fail_invalid_token_account() {
     let (mut context, test_pool_market, test_pool, test_pool_borrow_authority, user) =
         setup().await;
-    let amount_allowed =
-        get_amount_allowed(&mut context, &test_pool, &test_pool_borrow_authority).await;
+
+    let token_amount = get_token_balance(&mut context, &test_pool.token_account.pubkey()).await;
+    let total_amount_borrowed = test_pool.get_data(&mut context).await.total_amount_borrowed;
+    let total_pool_amount = token_amount + total_amount_borrowed;
+
+    let amount_allowed = test_pool_borrow_authority
+        .get_data(&mut context)
+        .await
+        .get_amount_allowed(total_pool_amount)
+        .unwrap();
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::borrow(
@@ -197,8 +202,15 @@ async fn fail_invalid_token_account() {
 async fn fail_invalid_pool_market() {
     let (mut context, _test_pool_market, test_pool, test_pool_borrow_authority, user) =
         setup().await;
-    let amount_allowed =
-        get_amount_allowed(&mut context, &test_pool, &test_pool_borrow_authority).await;
+    let token_amount = get_token_balance(&mut context, &test_pool.token_account.pubkey()).await;
+    let total_amount_borrowed = test_pool.get_data(&mut context).await.total_amount_borrowed;
+    let total_pool_amount = token_amount + total_amount_borrowed;
+
+    let amount_allowed = test_pool_borrow_authority
+        .get_data(&mut context)
+        .await
+        .get_amount_allowed(total_pool_amount)
+        .unwrap();
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::borrow(
@@ -234,8 +246,15 @@ async fn fail_invalid_pool_market() {
 async fn fail_invalid_pool() {
     let (mut context, test_pool_market, test_pool, test_pool_borrow_authority, user) =
         setup().await;
-    let amount_allowed =
-        get_amount_allowed(&mut context, &test_pool, &test_pool_borrow_authority).await;
+    let token_amount = get_token_balance(&mut context, &test_pool.token_account.pubkey()).await;
+    let total_amount_borrowed = test_pool.get_data(&mut context).await.total_amount_borrowed;
+    let total_pool_amount = token_amount + total_amount_borrowed;
+
+    let amount_allowed = test_pool_borrow_authority
+        .get_data(&mut context)
+        .await
+        .get_amount_allowed(total_pool_amount)
+        .unwrap();
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::borrow(
@@ -271,8 +290,15 @@ async fn fail_invalid_pool() {
 async fn fail_invalid_pool_borrow_authority() {
     let (mut context, test_pool_market, test_pool, test_pool_borrow_authority, user) =
         setup().await;
-    let amount_allowed =
-        get_amount_allowed(&mut context, &test_pool, &test_pool_borrow_authority).await;
+    let token_amount = get_token_balance(&mut context, &test_pool.token_account.pubkey()).await;
+    let total_amount_borrowed = test_pool.get_data(&mut context).await.total_amount_borrowed;
+    let total_pool_amount = token_amount + total_amount_borrowed;
+
+    let amount_allowed = test_pool_borrow_authority
+        .get_data(&mut context)
+        .await
+        .get_amount_allowed(total_pool_amount)
+        .unwrap();
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::borrow(

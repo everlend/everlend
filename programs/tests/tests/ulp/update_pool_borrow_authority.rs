@@ -8,9 +8,7 @@ use crate::utils::{
     UniversalLiquidityPool,
     UniversalLiquidityPoolBorrowAuthority,
 };
-use crate::ulp::ulp_utils::{
-    ULP_SHARE_ALLOWED,
-};
+pub const ULP_SHARE_ALLOWED: u16 = 10_000;
 
 async fn setup() -> (ProgramTestContext, UlpMarket, UniversalLiquidityPool) {
     let mut context = presetup().await.0;
