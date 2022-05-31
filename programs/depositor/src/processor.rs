@@ -4,6 +4,7 @@ use std::cmp::Ordering;
 
 use borsh::BorshDeserialize;
 use everlend_collateral_pool::find_pool_withdraw_authority_program_address;
+use everlend_income_pools::utils::IncomePoolAccounts;
 use solana_program::program_error::ProgramError;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -29,6 +30,7 @@ use everlend_utils::{
     assert_account_key, assert_owned_by, assert_rent_exempt, assert_uninitialized, cpi,
     find_program_address, EverlendError,
 };
+use everlend_collateral_pool::utils::CollateralPoolAccounts;
 
 use crate::{
     find_rebalancing_program_address, find_transit_program_address,
@@ -394,6 +396,12 @@ impl Processor {
         let collateral_pool_market_authority_info = next_account_info(account_info_iter)?;
         let collateral_pool_info = next_account_info(account_info_iter)?;
         let collateral_pool_token_account_info = next_account_info(account_info_iter)?;
+        let collateral_pool_accounts = CollateralPoolAccounts {
+            pool_market: collateral_pool_market_info.clone(),
+            pool_market_authority: collateral_pool_market_authority_info.clone(),
+            pool: collateral_pool_info.clone(),
+            token_account: collateral_pool_token_account_info.clone(),
+        };
 
         let liquidity_transit_info = next_account_info(account_info_iter)?;
         let liquidity_mint_info = next_account_info(account_info_iter)?;
@@ -504,10 +512,7 @@ impl Processor {
         msg!("Deposit");
         let collateral_amount = deposit(
             &programs,
-            collateral_pool_market_info.clone(),
-            collateral_pool_market_authority_info.clone(),
-            collateral_pool_info.clone(),
-            collateral_pool_token_account_info.clone(),
+            collateral_pool_accounts,
             collateral_transit_info.clone(),
             collateral_mint_info.clone(),
             liquidity_transit_info.clone(),
@@ -544,12 +549,23 @@ impl Processor {
         let income_pool_market_info = next_account_info(account_info_iter)?;
         let income_pool_info = next_account_info(account_info_iter)?;
         let income_pool_token_account_info = next_account_info(account_info_iter)?;
+        let income_pool_accounts = IncomePoolAccounts {
+            pool_market: income_pool_market_info.clone(),
+            pool: income_pool_info.clone(),
+            token_account: income_pool_token_account_info.clone(),
+        };
 
         let collateral_pool_market_info = next_account_info(account_info_iter)?;
         let collateral_pool_market_authority_info = next_account_info(account_info_iter)?;
         let collateral_pool_info = next_account_info(account_info_iter)?;
         let collateral_pool_token_account_info = next_account_info(account_info_iter)?;
         let collateral_pool_withdraw_authority_info = next_account_info(account_info_iter)?;
+        let collateral_pool_accounts = CollateralPoolAccounts {
+            pool_market: collateral_pool_market_info.clone(),
+            pool_market_authority: collateral_pool_market_authority_info.clone(),
+            pool: collateral_pool_info.clone(),
+            token_account: collateral_pool_token_account_info.clone(),
+        };
 
         let collateral_transit_info = next_account_info(account_info_iter)?;
         let collateral_mint_info = next_account_info(account_info_iter)?;
@@ -682,13 +698,8 @@ impl Processor {
         msg!("Withdraw");
         withdraw(
             &programs,
-            income_pool_market_info.clone(),
-            income_pool_info.clone(),
-            income_pool_token_account_info.clone(),
-            collateral_pool_market_info.clone(),
-            collateral_pool_market_authority_info.clone(),
-            collateral_pool_info.clone(),
-            collateral_pool_token_account_info.clone(),
+            income_pool_accounts,
+            collateral_pool_accounts,
             collateral_pool_withdraw_authority_info.clone(),
             collateral_transit_info.clone(),
             collateral_mint_info.clone(),
