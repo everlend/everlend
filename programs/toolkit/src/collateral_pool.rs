@@ -12,8 +12,8 @@ use solana_sdk::{
 };
 
 pub struct PoolPubkeys {
-    pool: Pubkey,
-    token_account: Pubkey,
+    pub pool: Pubkey,
+    pub token_account: Pubkey,
 }
 
 pub fn create_market(
@@ -76,7 +76,7 @@ pub fn create_pool(
         .value;
     if account_info.is_some() {
         let pool = config.get_account_unpack::<Pool>(&pool_pubkey)?;
-        return Ok((pool_pubkey, pool.token_account, pool.pool_mint));
+        return Ok(PoolPubkeys {pool: pool_pubkey, token_account: pool.token_account});
     }
 
     let token_account = Keypair::new();

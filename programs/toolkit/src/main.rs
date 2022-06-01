@@ -283,8 +283,8 @@ async fn command_create(
 }
 
 async fn command_create_collateral_pools(
-    accounts_path: &str,
     config: &Config,
+    accounts_path: &str,
 ) -> anyhow::Result<()> {
     let mm_pool_markets = vec![
         collateral_pool::create_market(config, None)?,
@@ -299,7 +299,8 @@ async fn command_create_collateral_pools(
     let (mint_map, collateral_mint_map) = get_asset_maps(default_accounts.clone());
 
     let mut collateral_pool_markets: [Pubkey; TOTAL_DISTRIBUTIONS] = Default::default();
-    collateral_pool_markets[..mm_pool_markets.len()].copy_from_slice(&mm_pool_markets);
+    collateral_pool_markets[..initialized_accounts.mm_pool_markets.len()]
+        .copy_from_slice(&initialized_accounts.mm_pool_markets);
     let roots = RegistryRootAccounts {
         general_pool_market: initialized_accounts.general_pool_market,
         income_pool_market: initialized_accounts.income_pool_market,
@@ -329,19 +330,20 @@ async fn command_create_collateral_pools(
             refresh_income_interval: REFRESH_INCOME_INTERVAL,
         },
     )?;
-    let mut token_accounts = initialized_accounts.token_accounts.iter_mut();
+    let token_accounts = initialized_accounts.token_accounts.iter_mut();
+    let depositor_pubkey = &initialized_accounts.depositor;
     for pair in token_accounts {
         let mint = mint_map.get(pair.0).unwrap();
         let collateral_mints: Vec<(Pubkey, Pubkey)> = collateral_mint_map
             .get(pair.0)
             .unwrap()
             .iter()
-            .zip(mm_pool_markets.iter())
+            .zip(initialized_accounts.mm_pool_markets.iter())
             .filter_map(|(collateral_mint, mm_pool_market_pubkey)| {
                 collateral_mint.map(|coll_mint| (coll_mint, *mm_pool_market_pubkey))
             })
             .collect();
-        let mm_pool_pubkeys = collateral_mints
+        let mm_pool_collection = collateral_mints
             .iter()
             .map(|(collateral_mint, mm_pool_market_pubkey)| {
                 println!("MM Pool: {}", collateral_mint);
@@ -351,7 +353,7 @@ async fn command_create_collateral_pools(
         collateral_mints
             .iter()
             .map(|(collateral_mint, _mm_pool_market_pubkey)| {
-                depositor::create_transit(config, &depositor_pubkey, collateral_mint, None)
+                depositor::create_transit(config, depositor_pubkey, collateral_mint, None)
             })
             .collect::<Result<Vec<Pubkey>, ClientError>>()?;
 
@@ -1212,7 +1214,7 @@ async fn main() -> anyhow::Result<()> {
             });
             Ok(())
         }
-        /// TODO remove after migration
+        // TODO remove after migration
         ("create-safety-fund-token-account", Some(arg_matches)) => {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
             let case = value_of::<String>(arg_matches, "case");
