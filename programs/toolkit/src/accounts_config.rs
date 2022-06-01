@@ -170,8 +170,6 @@ pub struct MoneyMarketAccounts {
     pub pool_token_account: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
     pub token_mint: Pubkey,
-    #[serde_as(as = "DisplayFromStr")]
-    pub pool_mint: Pubkey,
 }
 
 impl InitializedAccounts {

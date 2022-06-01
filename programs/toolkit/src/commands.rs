@@ -17,6 +17,7 @@ use everlend_registry::{
 use everlend_utils::integrations::MoneyMarket;
 
 use crate::accounts_config::InitializedAccounts;
+use crate::collateral_pool;
 use crate::registry::close_registry_config;
 use crate::{
     accounts_config::{MoneyMarketAccounts, TokenAccounts},
@@ -193,7 +194,7 @@ pub async fn command_create_income_pool_market(
     Ok(())
 }
 
-pub async fn command_create_mm_pool_market(
+pub async fn command_create_ulp_market(
     config: &Config,
     keypair: Option<Keypair>,
     money_market: MoneyMarket,
@@ -201,6 +202,24 @@ pub async fn command_create_mm_pool_market(
     let mut initialiazed_accounts = config.get_initialized_accounts();
 
     let mm_pool_market_pubkey = ulp::create_market(config, keypair)?;
+
+    initialiazed_accounts.mm_pool_markets[money_market as usize] = mm_pool_market_pubkey;
+
+    initialiazed_accounts
+        .save(&format!("accounts.{}.yaml", config.network))
+        .unwrap();
+
+    Ok(())
+}
+
+pub async fn command_create_collateral_pool_market(
+    config: &Config,
+    keypair: Option<Keypair>,
+    money_market: MoneyMarket,
+) -> anyhow::Result<()> {
+    let mut initialiazed_accounts = config.get_initialized_accounts();
+
+    let mm_pool_market_pubkey = collateral_pool::create_market(config, keypair)?;
 
     initialiazed_accounts.mm_pool_markets[money_market as usize] = mm_pool_market_pubkey;
 
@@ -253,6 +272,59 @@ pub async fn command_create_depositor(
 }
 
 pub async fn command_create_mm_pool(
+    config: &Config,
+    money_market: MoneyMarket,
+    required_mints: Vec<&str>,
+) -> anyhow::Result<()> {
+    let default_accounts = config.get_default_accounts();
+    let mut initialiazed_accounts = config.get_initialized_accounts();
+
+    let (_, collateral_mint_map) = get_asset_maps(default_accounts);
+    let money_market_index = money_market as usize;
+    let mm_pool_market_pubkey = initialiazed_accounts.mm_pool_markets[money_market_index];
+
+    for key in required_mints {
+        let collateral_mint = collateral_mint_map.get(key).unwrap()[money_market_index].unwrap();
+
+        let (mm_pool_pubkey, mm_pool_token_account, mm_pool_mint) =
+            ulp::create_pool(config, &mm_pool_market_pubkey, &collateral_mint)?;
+
+        depositor::create_transit(
+            config,
+            &initialiazed_accounts.depositor,
+            &collateral_mint,
+            None,
+        )?;
+
+        depositor::create_transit(
+            config,
+            &initialiazed_accounts.depositor,
+            &mm_pool_mint,
+            None,
+        )?;
+
+        let money_market_accounts = MoneyMarketAccounts {
+            pool: mm_pool_pubkey,
+            pool_token_account: mm_pool_token_account,
+            token_mint: collateral_mint,
+            pool_mint: mm_pool_mint,
+        };
+
+        initialiazed_accounts
+            .token_accounts
+            .get_mut(key)
+            .unwrap()
+            .mm_pools[money_market_index] = money_market_accounts;
+    }
+
+    initialiazed_accounts
+        .save(&format!("accounts.{}.yaml", config.network))
+        .unwrap();
+
+    Ok(())
+}
+
+pub async fn command_create_collateral_pool(
     config: &Config,
     money_market: MoneyMarket,
     required_mints: Vec<&str>,
