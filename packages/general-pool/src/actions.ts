@@ -33,13 +33,19 @@ import {
 } from './transactions'
 import { Buffer } from 'buffer'
 
+/** The type is returned by actions, e.g. [[prepareDepositTx]] or [[prepareWithdrawalRequestTx]]. */
 export type ActionResult = {
+  /** the prepared transaction, ready for signing and sending. */
   tx: Transaction
+  /** the additional key pairs which may be needed for signing and sending transactions. */
   keypairs?: Record<string, Keypair>
 }
 
+/** The type is used for actions params, e.g. [[prepareDepositTx]] or [[prepareWithdrawalRequestTx]]. */
 export type ActionOptions = {
+  /** the JSON RPC connection instance. */
   connection: Connection
+  /** the fee payer public key, can be user's SOL address (owner address). */
   payerPublicKey: PublicKey
 }
 
@@ -123,6 +129,22 @@ export const prepareCreatePoolTx = async (
   return { tx, keypairs: { tokenAccount, poolMint } }
 }
 
+/**
+ * Creates a transaction object for depositing to a general pool.
+ * Also adds an extra instruction for creating a collateral token ATA (pool mint ATA) if a destination account doesn't exist.
+ * If depositing SOL, the wrapping process takes place.
+ *
+ * @param actionOptions
+ * @param pool the general pool public key for a specific token, e.g. there can be a general pool for USDT or USDC etc.
+ * @param registry the public key of the registry (the program that stores a registry config).
+ * @param amount the amount of tokens in lamports to deposit.
+ * @param source the public key which represents user's token ATA (token mint ATA) from which the token amount will be taken.
+ * When depositing native SOL it will be replaced by a newly generated ATA for wrapped SOL, created by `payerPublicKey` from [[ActionOptions]].
+ * @param destination the public key which represents user's collateral token ATA (pool mint ATA) where collateral tokens
+ * will be sent after a deposit.
+ *
+ * @returns the object with a prepared deposit transaction and generated keypair if depositing SOL.
+ */
 export const prepareDepositTx = async (
   { connection, payerPublicKey }: ActionOptions,
   pool: PublicKey,
@@ -211,6 +233,26 @@ export const prepareDepositTx = async (
   return { tx, keypairs: { SOLDepositKeypair } }
 }
 
+/**
+ * Creates a transaction object for a withdrawal request from a general pool.
+ * Also adds an extra instruction for creating a token ATA (token mint ATA) if a destination account doesn't exist.
+ *
+ * **NB! Everlend has a 2-step withdrawal process. The first one is creating a withdrawal request, the second one is an
+ * actual token transfer from a general pool to user's account.**
+ *
+ * This function generates a transaction for the first step.
+ *
+ * @param actionOptions
+ * @param pool the general pool public key for a specific token, e.g. there can be a general pool for USDT or USDC etc.
+ * @param registry the public key of the registry (the program that stores a registry config).
+ * @param collateralAmount the amount of collateral tokens in lamports which will be taken from a user.
+ * @param source the public key which represents user's collateral token ATA (pool mint ATA) from which the collateral tokens will be taken.
+ * @param destination the public key which represents user's token ATA (token mint ATA) to which the withdrawn from
+ * a general pool tokens will be sent. The param isn't used when withdrawing SOL. There is wrapped SOL unwrapping logic
+ * during the process, thus SOL is sent directly to user's native SOL address (owner address).
+ *
+ * @returns the object with a prepared withdrawal request transaction.
+ */
 export const prepareWithdrawalRequestTx = async (
   { connection, payerPublicKey }: ActionOptions,
   pool: PublicKey,
@@ -271,6 +313,22 @@ export const prepareWithdrawalRequestTx = async (
   return { tx }
 }
 
+/**
+ * Creates a transaction object for a withdrawal from a general pool.
+ * Also adds an extra instruction for creating a token ATA (token mint ATA) if a destination account doesn't exist.
+ *
+ * **NB! Everlend has a 2-step withdrawal process. The first one is creating a withdrawal request, the second one is an
+ * actual token transfer from a general pool to user's account.**
+ *
+ * This function generates a transaction for the second step. Generally the second step is automatic but there can be a case when
+ * a user deletes their token ATA right after creating a withdrawal request. In such a case the second step cannot be
+ * finished automatically. This function allows re-opening the token ATA and finish the withdrawal process.
+ *
+ * @param actionOptions
+ * @param withdrawalRequest the withdrawal request public key.
+ *
+ * @returns the object with a prepared withdrawal transaction.
+ */
 export const prepareWithdrawalTx = async (
   { connection, payerPublicKey }: ActionOptions,
   withdrawalRequest: PublicKey,
@@ -338,6 +396,9 @@ export const prepareWithdrawalTx = async (
   return { tx }
 }
 
+/**
+ * Creates a transaction object for borrowing from a general pool.
+ */
 export const prepareBorrowTx = async (
   { connection, payerPublicKey }: ActionOptions,
   pool: PublicKey,
