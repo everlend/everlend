@@ -2,6 +2,7 @@
 name = "everlend-toolkit"
 version = "0.1.0"
 edition = "2018"
+authors = ["everlend"]
 
 [dependencies]
 anyhow = "1.0.42"

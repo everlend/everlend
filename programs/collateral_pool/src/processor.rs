@@ -85,7 +85,6 @@ impl Processor {
             &token_mint_info.key.to_bytes()[..32],
             &[bump_seed],
         ];
-
         cpi::system::create_account::<Pool>(
             program_id,
             manager_info.clone(),
@@ -94,9 +93,12 @@ impl Processor {
             rent,
         )?;
 
+        msg!("1");
         let mut pool = Pool::unpack_unchecked(&pool_info.data.borrow())?;
         assert_uninitialized(&pool)?;
 
+        msg!("token_account_info {}", token_account_info.key);
+        msg!("token_mint_info {}", token_mint_info.key);
         cpi::spl_token::initialize_account(
             token_account_info.clone(),
             token_mint_info.clone(),
@@ -104,6 +106,7 @@ impl Processor {
             rent_info.clone(),
         )?;
 
+        msg!("3");
         pool.init(InitPoolParams {
             pool_market: *pool_market_info.key,
             token_mint: *token_mint_info.key,

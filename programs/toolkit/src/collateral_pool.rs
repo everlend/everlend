@@ -87,9 +87,6 @@ pub fn create_pool(
     let token_account_balance = config
         .rpc_client
         .get_minimum_balance_for_rent_exemption(spl_token::state::Account::LEN)?;
-    let pool_mint_balance = config
-        .rpc_client
-        .get_minimum_balance_for_rent_exemption(spl_token::state::Mint::LEN)?;
 
     let tx = Transaction::new_with_payer(
         &[

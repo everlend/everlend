@@ -102,7 +102,7 @@ pub async fn command_set_registry_config(
 
     let mut programs = RegistryPrograms {
         general_pool_program_id: everlend_general_pool::id(),
-        collateral_pool_program_id: everlend_ulp::id(),
+        collateral_pool_program_id: everlend_collateral_pool::id(),
         liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
         depositor_program_id: everlend_depositor::id(),
         income_pools_program_id: everlend_income_pools::id(),
@@ -194,6 +194,7 @@ pub async fn command_create_income_pool_market(
     Ok(())
 }
 
+#[allow(dead_code)]
 pub async fn command_create_ulp_market(
     config: &Config,
     keypair: Option<Keypair>,
@@ -271,6 +272,7 @@ pub async fn command_create_depositor(
     Ok(())
 }
 
+#[allow(dead_code)]
 pub async fn command_create_mm_pool(
     config: &Config,
     money_market: MoneyMarket,
@@ -307,7 +309,6 @@ pub async fn command_create_mm_pool(
             pool: mm_pool_pubkey,
             pool_token_account: mm_pool_token_account,
             token_mint: collateral_mint,
-            pool_mint: mm_pool_mint,
         };
 
         initialiazed_accounts
@@ -360,7 +361,6 @@ pub async fn command_create_collateral_pool(
             pool: mm_pool_pubkey,
             pool_token_account: mm_pool_token_account,
             token_mint: collateral_mint,
-            pool_mint: mm_pool_mint,
         };
 
         initialiazed_accounts
@@ -496,13 +496,12 @@ pub async fn command_create_token_accounts(
             .map(
                 |(
                     (collateral_mint, _mm_pool_market_pubkey),
-                    (mm_pool_pubkey, mm_pool_token_account, mm_pool_mint),
+                    (mm_pool_pubkey, mm_pool_token_account, _),
                 )| {
                     MoneyMarketAccounts {
                         pool: mm_pool_pubkey,
                         pool_token_account: mm_pool_token_account,
                         token_mint: *collateral_mint,
-                        pool_mint: mm_pool_mint,
                     }
                 },
             )

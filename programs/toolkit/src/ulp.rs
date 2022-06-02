@@ -11,6 +11,7 @@ use solana_sdk::{
     transaction::Transaction,
 };
 
+#[allow(dead_code)]
 pub fn create_market(
     config: &Config,
     pool_market_keypair: Option<Keypair>,

@@ -151,7 +151,6 @@ pub async fn command_run_test(
             &sol.mm_pools[i].pool_token_account,
             &sol.mint,
             &sol.mm_pools[i].token_mint,
-            &sol.mm_pools[i].pool_mint,
             &programs.money_market_program_ids[i],
             integrations::deposit_accounts(&programs.money_market_program_ids[i], &pubkeys),
         )
@@ -176,7 +175,6 @@ pub async fn command_run_test(
             &sol.mm_pools[i].pool_token_account,
             &sol.mm_pools[i].token_mint,
             &sol.mint,
-            &sol.mm_pools[i].pool_mint,
             &programs.money_market_program_ids[i],
             integrations::withdraw_accounts(&programs.money_market_program_ids[i], &pubkeys),
         )

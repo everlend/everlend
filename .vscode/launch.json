@@ -8,9 +8,9 @@
             "type": "lldb",
             "request": "launch",
             "name": "Debug",
-            "program": "${workspaceFolder}/<your program>",
-            "args": [],
-            "cwd": "${workspaceFolder}"
+            "program": "${workspaceFolder}/programs/target/debug/everlend-toolkit",
+            "args": ["create-collateral-pools"],
+            "cwd": "${workspaceFolder}/programs/toolkit"
         }
     ]
 }

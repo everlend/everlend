@@ -296,44 +296,15 @@ async fn command_create_collateral_pools(
 
     let default_accounts = config.get_default_accounts();
 
-    let (mint_map, collateral_mint_map) = get_asset_maps(default_accounts.clone());
+    let (_, collateral_mint_map) = get_asset_maps(default_accounts.clone());
 
     let mut collateral_pool_markets: [Pubkey; TOTAL_DISTRIBUTIONS] = Default::default();
     collateral_pool_markets[..initialized_accounts.mm_pool_markets.len()]
         .copy_from_slice(&initialized_accounts.mm_pool_markets);
-    let roots = RegistryRootAccounts {
-        general_pool_market: initialized_accounts.general_pool_market,
-        income_pool_market: initialized_accounts.income_pool_market,
-        collateral_pool_markets,
-        liquidity_oracle: initialized_accounts.liquidity_oracle,
-    };
 
-    println!("roots = {:#?}", &roots);
-
-    let mut programs = RegistryPrograms {
-        general_pool_program_id: everlend_general_pool::id(),
-        collateral_pool_program_id: everlend_collateral_pool::id(),
-        liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
-        depositor_program_id: everlend_depositor::id(),
-        income_pools_program_id: everlend_income_pools::id(),
-        money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
-    };
-    programs.money_market_program_ids[0] = default_accounts.port_finance_program_id;
-    programs.money_market_program_ids[1] = default_accounts.larix_program_id;
-    programs.money_market_program_ids[2] = default_accounts.solend_program_id;
-    registry::set_registry_config(
-        config,
-        &initialized_accounts.registry,
-        programs,
-        roots,
-        RegistrySettings {
-            refresh_income_interval: REFRESH_INCOME_INTERVAL,
-        },
-    )?;
     let token_accounts = initialized_accounts.token_accounts.iter_mut();
     let depositor_pubkey = &initialized_accounts.depositor;
     for pair in token_accounts {
-        let mint = mint_map.get(pair.0).unwrap();
         let collateral_mints: Vec<(Pubkey, Pubkey)> = collateral_mint_map
             .get(pair.0)
             .unwrap()
