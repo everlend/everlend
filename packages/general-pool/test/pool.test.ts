@@ -1,7 +1,13 @@
 import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import { Keypair, PublicKey, sendAndConfirmTransaction } from '@solana/web3.js'
 import BN from 'bn.js'
-import { AccountType, createPool, deposit, Pool, withdrawRequest } from '../src'
+import {
+  AccountType,
+  prepareCreatePoolTx,
+  prepareDepositTx,
+  Pool,
+  prepareWithdrawalRequestTx,
+} from '../src'
 import {
   connection,
   createMint,
@@ -59,7 +65,7 @@ describe('Pool', () => {
     })
 
     test('success', async () => {
-      const { tx, keypairs } = await createPool(
+      const { tx, keypairs } = await prepareCreatePoolTx(
         { connection, payerPublicKey },
         POOL_MARKET_PUBKEY,
         tokenMint.publicKey,
@@ -85,7 +91,7 @@ describe('Pool', () => {
   describe('Deposit', () => {
     test('success', async () => {
       const amount = new BN(1000)
-      const { tx } = await deposit(
+      const { tx } = await prepareDepositTx(
         { connection, payerPublicKey },
         POOL_PUBKEY,
         REGISTRY_PUBKEY,
@@ -111,7 +117,7 @@ describe('Pool', () => {
   describe('Withdraw request', () => {
     test('success', async () => {
       const amount = new BN(1000)
-      const { tx } = await withdrawRequest(
+      const { tx } = await prepareWithdrawalRequestTx(
         { connection, payerPublicKey },
         POOL_PUBKEY,
         REGISTRY_PUBKEY,

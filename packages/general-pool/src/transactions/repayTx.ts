@@ -9,42 +9,34 @@ import BN from 'bn.js'
 import { Borsh } from '@everlend/common'
 import { GeneralPoolsProgram } from '../program'
 
-export class BorrowArgs extends Borsh.Data<{ amount: BN }> {
+export class RepayTxData extends Borsh.Data<{ amount: BN; interestAmount: BN }> {
   static readonly SCHEMA = this.struct([
     ['instruction', 'u8'],
     ['amount', 'u64'],
+    ['interestAmount', 'u64'],
   ])
 
-  instruction = 7
+  instruction = 8
 }
 
-type BorrowParams = {
+type RepayTxParams = {
   poolMarket: PublicKey
   pool: PublicKey
   poolBorrowAuthority: PublicKey
-  destination: PublicKey
+  source: PublicKey
   tokenAccount: PublicKey
-  poolMarketAuthority: PublicKey
   amount: BN
-  borrowAuthority?: PublicKey
+  interestAmount: BN
 }
 
-export class Borrow extends Transaction {
-  constructor(options: TransactionCtorFields, params: BorrowParams) {
+export class RepayTx extends Transaction {
+  constructor(options: TransactionCtorFields, params: RepayTxParams) {
     super(options)
     const { feePayer } = options
-    const {
-      poolMarket,
-      pool,
-      poolBorrowAuthority,
-      destination,
-      tokenAccount,
-      poolMarketAuthority,
-      borrowAuthority,
-      amount,
-    } = params
+    const { poolMarket, pool, poolBorrowAuthority, source, tokenAccount, amount, interestAmount } =
+      params
 
-    const data = BorrowArgs.serialize({ amount })
+    const data = RepayTxData.serialize({ amount, interestAmount })
 
     this.add(
       new TransactionInstruction({
@@ -52,10 +44,9 @@ export class Borrow extends Transaction {
           { pubkey: poolMarket, isSigner: false, isWritable: false },
           { pubkey: pool, isSigner: false, isWritable: true },
           { pubkey: poolBorrowAuthority, isSigner: false, isWritable: true },
-          { pubkey: destination, isSigner: false, isWritable: true },
+          { pubkey: source, isSigner: false, isWritable: true },
           { pubkey: tokenAccount, isSigner: false, isWritable: true },
-          { pubkey: poolMarketAuthority, isSigner: false, isWritable: false },
-          { pubkey: borrowAuthority || feePayer, isSigner: true, isWritable: false },
+          { pubkey: feePayer, isSigner: true, isWritable: false },
           { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
         ],
         programId: GeneralPoolsProgram.PUBKEY,

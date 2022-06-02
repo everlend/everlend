@@ -11,7 +11,7 @@ type Args = {
   liquiditySupply: BN
 }
 
-export class WithdrawalRequestsData extends Borsh.Data<Args> {
+export class WithdrawalRequestsStateData extends Borsh.Data<Args> {
   static readonly SCHEMA = this.struct([
     ['accountType', 'u8'],
     ['accountVersion', 'u8'],
@@ -26,7 +26,7 @@ export class WithdrawalRequestsData extends Borsh.Data<Args> {
   liquiditySupply: BN
 }
 
-export class WithdrawalRequests extends Account<WithdrawalRequestsData> {
+export class WithdrawalRequestsState extends Account<WithdrawalRequestsStateData> {
   static readonly LEN = 74
   static readonly VERSION = 'V0'
 
@@ -37,12 +37,12 @@ export class WithdrawalRequests extends Account<WithdrawalRequestsData> {
       throw Errors.ERROR_INVALID_OWNER()
     }
 
-    this.data = WithdrawalRequestsData.deserialize(this.info.data)
+    this.data = WithdrawalRequestsStateData.deserialize(this.info.data)
   }
 
   static getPDA(poolMarket: PublicKey, tokenMint: PublicKey) {
     return GeneralPoolsProgram.findProgramAddress([
-      Buffer.from(`withdrawals${WithdrawalRequests.VERSION}`),
+      Buffer.from(`withdrawals${WithdrawalRequestsState.VERSION}`),
       new PublicKey(poolMarket).toBuffer(),
       new PublicKey(tokenMint).toBuffer(),
     ])

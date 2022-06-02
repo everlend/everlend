@@ -16,7 +16,7 @@ type Args = {
   ticket: BN
 }
 
-export class WithdrawalRequestData extends Borsh.Data<Args> {
+export class UserWithdrawalRequestData extends Borsh.Data<Args> {
   static readonly SCHEMA = this.struct([
     ['accountType', 'u8'],
     ['pool', 'publicKey'],
@@ -38,7 +38,7 @@ export class WithdrawalRequestData extends Borsh.Data<Args> {
   ticket: BN
 }
 
-export class WithdrawalRequest extends Account<WithdrawalRequestData> {
+export class UserWithdrawalRequest extends Account<UserWithdrawalRequestData> {
   static readonly LEN = 153
 
   constructor(key: PublicKey, info: AccountInfo<Buffer>) {
@@ -48,7 +48,7 @@ export class WithdrawalRequest extends Account<WithdrawalRequestData> {
       throw Errors.ERROR_INVALID_OWNER()
     }
 
-    this.data = WithdrawalRequestData.deserialize(this.info.data)
+    this.data = UserWithdrawalRequestData.deserialize(this.info.data)
   }
 
   static getPDA(withdrawalRequests: PublicKey, from: PublicKey) {
@@ -99,7 +99,7 @@ export class WithdrawalRequest extends Account<WithdrawalRequestData> {
     )
       .map((account) => {
         try {
-          return WithdrawalRequest.from(account)
+          return UserWithdrawalRequest.from(account)
         } catch (err) {}
       })
       .filter(Boolean)

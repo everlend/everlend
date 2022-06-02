@@ -12,13 +12,13 @@ import {
 import { Borsh } from '@everlend/common'
 import { GeneralPoolsProgram } from '../program'
 
-export class WithdrawArgs extends Borsh.Data {
+export class WithdrawalTxData extends Borsh.Data {
   static readonly SCHEMA = this.struct([['instruction', 'u8']])
 
   instruction = 6
 }
 
-type WithdrawParams = {
+type WithdrawalTxParams = {
   poolMarket: PublicKey
   pool: PublicKey
   poolMarketAuthority: PublicKey
@@ -38,8 +38,8 @@ export type UnwrapParams = {
   signer: PublicKey
 }
 
-export class Withdraw extends Transaction {
-  constructor(options: TransactionCtorFields, params: WithdrawParams) {
+export class WithdrawalTx extends Transaction {
+  constructor(options: TransactionCtorFields, params: WithdrawalTxParams) {
     super(options)
     const {
       poolMarket,
@@ -55,7 +55,7 @@ export class Withdraw extends Transaction {
       unwrapAccounts,
     } = params
 
-    const data = WithdrawArgs.serialize()
+    const data = WithdrawalTxData.serialize()
 
     let keys: Array<AccountMeta> = [
       { pubkey: poolMarket, isSigner: false, isWritable: false },
