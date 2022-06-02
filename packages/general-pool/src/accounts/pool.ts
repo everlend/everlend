@@ -55,7 +55,19 @@ export class Pool extends Account<PoolData> {
     ])
   }
 
-  static async findMany(connection: Connection, filters: { poolMarket?: PublicKey } = {}) {
+  /**
+   * Finds general pools. Also, can filter them.
+   *
+   * @param connection the JSON RPC connection instance.
+   * @param filters the filter config object.
+   */
+  static async findMany(
+    connection: Connection,
+    filters: {
+      /** the public key which represents the main manager root account which is used for generating PDAs. */
+      poolMarket?: PublicKey
+    } = {},
+  ) {
     return (
       await GeneralPoolsProgram.getProgramAccounts(connection, {
         filters: [
@@ -82,5 +94,23 @@ export class Pool extends Account<PoolData> {
         } catch (err) {}
       })
       .filter(Boolean)
+  }
+
+  /**
+   * Calculates e-token rate.
+   *
+   * @param amounts the amount values needed for the calculation.
+   */
+  static calcETokenRate(amounts: {
+    /** the total supply of a pool collateral token mint. */
+    poolMintSupply: number
+    /** the amount of tokens borrowed from a pool. */
+    totalAmountBorrowed: number
+    /** the amount of tokens left in a pool. */
+    tokenAccountAmount: number
+  }) {
+    const { poolMintSupply, totalAmountBorrowed, tokenAccountAmount } = amounts
+
+    return poolMintSupply / (totalAmountBorrowed + tokenAccountAmount)
   }
 }
