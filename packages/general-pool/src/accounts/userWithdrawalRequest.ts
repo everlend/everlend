@@ -66,9 +66,20 @@ export class UserWithdrawalRequest extends Account<UserWithdrawalRequestData> {
     ])
   }
 
+  /**
+   * Finds user's unfinished withdrawal requests. Also, can filter them.
+   *
+   * @param connection the JSON RPC connection instance.
+   * @param filters the filter config object.
+   */
   static async findMany(
     connection: Connection,
-    filters: { pool?: PublicKey; from?: PublicKey } = {},
+    filters: {
+      /** the public key which represents a general pool address. */
+      pool?: PublicKey
+      /** the public key which initialized withdrawal requests, usually user's SOL account (owner address). */
+      from?: PublicKey
+    } = {},
   ) {
     return (
       await GeneralPoolsProgram.getProgramAccounts(connection, {

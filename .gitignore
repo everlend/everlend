@@ -46,3 +46,6 @@ target/
 # Env
 *keypair.json
 .keypairs/
+
+# Docs
+docs/
