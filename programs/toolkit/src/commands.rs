@@ -490,7 +490,7 @@ pub async fn command_create_token_accounts(
             })
             .collect::<Result<Vec<Pubkey>, ClientError>>()?;
 
-        let mm_pools = collateral_mints
+        let collateral_pools = collateral_mints
             .iter()
             .zip(mm_pool_pubkeys)
             .map(
@@ -527,7 +527,8 @@ pub async fn command_create_token_accounts(
                 general_pool_mint,
                 income_pool: income_pool_pubkey,
                 income_pool_token_account,
-                mm_pools,
+                mm_pools: Vec::new(),
+                collateral_pools,
                 liquidity_transit: liquidity_transit_pubkey,
             },
         );

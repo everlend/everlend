@@ -223,7 +223,7 @@ async fn command_create(
             })
             .collect::<Result<Vec<Pubkey>, ClientError>>()?;
 
-        let mm_pools = collateral_mints
+        let collateral_pools = collateral_mints
             .iter()
             .zip(mm_pool_collection)
             .map(
@@ -260,7 +260,8 @@ async fn command_create(
                 general_pool_mint,
                 income_pool: income_pool_pubkey,
                 income_pool_token_account,
-                mm_pools,
+                mm_pools: Vec::new(),
+                collateral_pools: collateral_pools,
                 liquidity_transit: liquidity_transit_pubkey,
             },
         );
@@ -311,9 +312,12 @@ async fn command_create_collateral_pools(
             .iter()
             .zip(initialized_accounts.mm_pool_markets.iter())
             .filter_map(|(collateral_mint, mm_pool_market_pubkey)| {
-                collateral_mint.map(|coll_mint| (coll_mint, *mm_pool_market_pubkey))
+                collateral_mint
+                    .filter(|mint| { !mint.eq(&Pubkey::from_str("11111111111111111111111111111111").unwrap()) })
+                    .map(|coll_mint| (coll_mint, *mm_pool_market_pubkey))
             })
             .collect();
+        
         let mm_pool_collection = collateral_mints
             .iter()
             .map(|(collateral_mint, mm_pool_market_pubkey)| {
@@ -328,7 +332,7 @@ async fn command_create_collateral_pools(
             })
             .collect::<Result<Vec<Pubkey>, ClientError>>()?;
 
-        let mm_pools = collateral_mints
+        let collateral_pools = collateral_mints
             .iter()
             .zip(mm_pool_collection)
             .map(
@@ -346,7 +350,7 @@ async fn command_create_collateral_pools(
             .collect();
 
         let mut accounts = pair.1;
-        accounts.mm_pools = mm_pools;
+        accounts.collateral_pools = collateral_pools;
     }
     initialized_accounts.save(accounts_path).unwrap();
     Ok(())

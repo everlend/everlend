@@ -156,6 +156,7 @@ pub struct TokenAccounts {
     pub income_pool_token_account: Pubkey,
 
     pub mm_pools: Vec<MoneyMarketAccounts>,
+    pub collateral_pools: Vec<MoneyMarketAccounts>,
 
     #[serde_as(as = "DisplayFromStr")]
     pub liquidity_transit: Pubkey,
