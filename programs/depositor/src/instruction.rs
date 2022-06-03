@@ -82,14 +82,13 @@ pub enum DepositorInstruction {
     /// [R] MM Pool market authority
     /// [R] MM Pool
     /// [W] MM Pool token account (for collateral mint)
-    /// [W] MM Pool collateral mint
     /// [W] Liquidity transit account
     /// [R] Liquidity mint
     /// [W] Collateral transit account
     /// [W] Collateral mint
     /// [R] Clock sysvar
     /// [R] Token program id
-    /// [R] Everlend ULP program id
+    /// [R] Everlend collateral pool program id
     /// [R] Money market program id
     Deposit,
 
@@ -109,14 +108,14 @@ pub enum DepositorInstruction {
     /// [R] MM Pool
     /// [W] MM Pool token account (for collateral mint)
     /// [W] MM Pool withdraw authority
-    /// [W] MM Pool collateral mint
     /// [W] Collateral transit account
     /// [W] Collateral mint
     /// [W] Liquidity transit account
+    /// [W] Liquidity reserve transit account
     /// [R] Liquidity mint
     /// [R] Clock sysvar
     /// [R] Token program id
-    /// [R] Everlend ULP program id
+    /// [R] Everlend collateral program id
     /// [R] Money market program id
     Withdraw,
 
