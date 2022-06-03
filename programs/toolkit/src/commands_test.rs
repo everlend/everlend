@@ -32,7 +32,7 @@ pub async fn command_run_test(
     println!("Run {:?}", case);
 
     let default_accounts = config.get_default_accounts();
-    let initialiazed_accounts = InitializedAccounts::load(accounts_path).unwrap_or_default();
+    let initialized_accounts = InitializedAccounts::load(accounts_path).unwrap_or_default();
     println!("default_accounts = {:#?}", default_accounts);
 
     let InitializedAccounts {
@@ -40,11 +40,12 @@ pub async fn command_run_test(
         registry,
         general_pool_market,
         income_pool_market,
-        mm_pool_markets,
+        mm_pool_markets: _,
+        collateral_pool_markets,
         token_accounts,
         liquidity_oracle,
         depositor,
-    } = initialiazed_accounts;
+    } = initialized_accounts;
 
     let (registry_config_pubkey, _) =
         find_config_program_address(&everlend_registry::id(), &registry);
@@ -147,7 +148,7 @@ pub async fn command_run_test(
             config,
             &registry,
             &depositor,
-            &mm_pool_markets[i],
+            &collateral_pool_markets[i],
             &sol.mm_pools[i].pool_token_account,
             &sol.mint,
             &sol.mm_pools[i].token_mint,
@@ -171,7 +172,7 @@ pub async fn command_run_test(
             &depositor,
             &income_pool_market,
             &sol.income_pool_token_account,
-            &mm_pool_markets[i],
+            &collateral_pool_markets[i],
             &sol.mm_pools[i].pool_token_account,
             &sol.mm_pools[i].token_mint,
             &sol.mint,

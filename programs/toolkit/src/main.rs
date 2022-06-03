@@ -95,7 +95,7 @@ async fn command_create(
     let income_pool_market_pubkey =
         income_pools::create_market(config, None, &general_pool_market_pubkey)?;
 
-    let mm_pool_markets = vec![
+    let mm_collateral_pool_markets = vec![
         collateral_pool::create_market(config, None)?,
         collateral_pool::create_market(config, None)?,
         collateral_pool::create_market(config, None)?,
@@ -125,7 +125,7 @@ async fn command_create(
     println!("programs = {:#?}", programs);
 
     let mut collateral_pool_markets: [Pubkey; TOTAL_DISTRIBUTIONS] = Default::default();
-    collateral_pool_markets[..mm_pool_markets.len()].copy_from_slice(&mm_pool_markets);
+    collateral_pool_markets[..mm_collateral_pool_markets.len()].copy_from_slice(&mm_collateral_pool_markets);
 
     let roots = RegistryRootAccounts {
         general_pool_market: general_pool_market_pubkey,
@@ -165,7 +165,7 @@ async fn command_create(
             .get(key)
             .unwrap()
             .iter()
-            .zip(mm_pool_markets.iter())
+            .zip(mm_collateral_pool_markets.iter())
             .filter_map(|(collateral_mint, mm_pool_market_pubkey)| {
                 collateral_mint.map(|coll_mint| (coll_mint, *mm_pool_market_pubkey))
             })
@@ -272,7 +272,8 @@ async fn command_create(
         registry: registry_pubkey,
         general_pool_market: general_pool_market_pubkey,
         income_pool_market: income_pool_market_pubkey,
-        mm_pool_markets,
+        mm_pool_markets: Vec::new(),
+        collateral_pool_markets: mm_collateral_pool_markets,
         token_accounts,
         liquidity_oracle: liquidity_oracle_pubkey,
         depositor: depositor_pubkey,
@@ -287,21 +288,21 @@ async fn command_create_collateral_pools(
     config: &Config,
     accounts_path: &str,
 ) -> anyhow::Result<()> {
-    let mm_pool_markets = vec![
+    let collateral_pool_markets = vec![
         collateral_pool::create_market(config, None)?,
         collateral_pool::create_market(config, None)?,
         collateral_pool::create_market(config, None)?,
     ];
     let mut initialized_accounts = InitializedAccounts::load(accounts_path).unwrap();
-    initialized_accounts.mm_pool_markets = mm_pool_markets;
+    initialized_accounts.collateral_pool_markets = collateral_pool_markets;
 
     let default_accounts = config.get_default_accounts();
 
     let (_, collateral_mint_map) = get_asset_maps(default_accounts.clone());
 
     let mut collateral_pool_markets: [Pubkey; TOTAL_DISTRIBUTIONS] = Default::default();
-    collateral_pool_markets[..initialized_accounts.mm_pool_markets.len()]
-        .copy_from_slice(&initialized_accounts.mm_pool_markets);
+    collateral_pool_markets[..initialized_accounts.collateral_pool_markets.len()]
+        .copy_from_slice(&initialized_accounts.collateral_pool_markets);
 
     let token_accounts = initialized_accounts.token_accounts.iter_mut();
     let depositor_pubkey = &initialized_accounts.depositor;
@@ -310,10 +311,9 @@ async fn command_create_collateral_pools(
             .get(pair.0)
             .unwrap()
             .iter()
-            .zip(initialized_accounts.mm_pool_markets.iter())
+            .zip(initialized_accounts.collateral_pool_markets.iter())
             .filter_map(|(collateral_mint, mm_pool_market_pubkey)| {
                 collateral_mint
-                    .filter(|mint| { !mint.eq(&Pubkey::from_str("11111111111111111111111111111111").unwrap()) })
                     .map(|coll_mint| (coll_mint, *mm_pool_market_pubkey))
             })
             .collect();
@@ -321,14 +321,25 @@ async fn command_create_collateral_pools(
         let mm_pool_collection = collateral_mints
             .iter()
             .map(|(collateral_mint, mm_pool_market_pubkey)| {
-                println!("MM Pool: {}", collateral_mint);
-                collateral_pool::create_pool(config, mm_pool_market_pubkey, collateral_mint)
+                if !collateral_mint.eq(&Pubkey::from_str("11111111111111111111111111111111").unwrap()) {
+                    println!("MM Pool: {}", collateral_mint);
+                    collateral_pool::create_pool(config, mm_pool_market_pubkey, collateral_mint)
+                } else {
+                    Ok(PoolPubkeys {
+                        pool: Pubkey::from_str("11111111111111111111111111111111").unwrap(),
+                        token_account: Pubkey::from_str("11111111111111111111111111111111").unwrap(),
+                    })
+                }
             })
             .collect::<Result<Vec<PoolPubkeys>, ClientError>>()?;
         collateral_mints
             .iter()
             .map(|(collateral_mint, _mm_pool_market_pubkey)| {
-                depositor::create_transit(config, depositor_pubkey, collateral_mint, None)
+                if !collateral_mint.eq(&Pubkey::from_str("11111111111111111111111111111111").unwrap()) {
+                    depositor::create_transit(config, depositor_pubkey, collateral_mint, None)
+                } else {
+                    Ok(Pubkey::from_str("11111111111111111111111111111111").unwrap())
+                }
             })
             .collect::<Result<Vec<Pubkey>, ClientError>>()?;
 
