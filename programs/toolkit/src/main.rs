@@ -5,6 +5,7 @@ use std::{process::exit, str::FromStr};
 use clap::{
     crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
 };
+use everlend_utils::find_program_address;
 use regex::Regex;
 use solana_clap_utils::{
     fee_payer::fee_payer_arg,
@@ -367,6 +368,36 @@ async fn command_create_collateral_pools(
     Ok(())
 }
 
+async fn create_pool_withdraw_authority(config: &Config, accounts_path: &str) -> anyhow::Result<()> {
+    let mut initialized_accounts = InitializedAccounts::load(accounts_path).unwrap_or_default();
+    let pool_markets = initialized_accounts.collateral_pool_markets;
+    let depositor = initialized_accounts.depositor;
+    let token_accounts = initialized_accounts.token_accounts.iter_mut();
+    for pair in token_accounts {
+        pair.1.collateral_pools
+            .iter()
+            .zip(pool_markets.clone())
+            .filter(|(keyset, _)| {
+                !keyset.pool.eq(&Pubkey::from_str("11111111111111111111111111111111").unwrap())
+            })
+            .map(|(keyset, market)| {
+                let (depositor_authority, _) = find_program_address(
+                    &everlend_depositor::id(),
+                    &depositor,
+                );
+                collateral_pool::create_pool_withdraw_authority(
+                    config,
+                    &market,
+                    &keyset.pool,
+                    &depositor_authority,
+                    &config.fee_payer.pubkey(),
+                )
+            })
+            .collect::<Result<Vec<Pubkey>, ClientError>>()?;
+    }
+    Ok(())
+}
+
 async fn command_info(config: &Config, accounts_path: &str) -> anyhow::Result<()> {
     let initialized_accounts = InitializedAccounts::load(accounts_path).unwrap_or_default();
     let default_accounts = config.get_default_accounts();
@@ -661,6 +692,18 @@ async fn main() -> anyhow::Result<()> {
         .subcommand(
             SubCommand::with_name("create-collateral-pools")
                 .about("Create collateral pools")
+                .arg(
+                    Arg::with_name("accounts")
+                        .short("A")
+                        .long("accounts")
+                        .value_name("PATH")
+                        .takes_value(true)
+                        .help("Accounts file"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("create-pool-withdraw-authority")
+                .about("Create pool withdraw authority")
                 .arg(
                     Arg::with_name("accounts")
                         .short("A")
@@ -1075,6 +1118,10 @@ async fn main() -> anyhow::Result<()> {
         ("create-collateral-pools", Some(arg_matches)) => {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
             command_create_collateral_pools(&config, accounts_path).await
+        }
+        ("create-pool-withdraw-authority", Some(arg_matches)) => {
+            let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
+            create_pool_withdraw_authority(&config, accounts_path).await
         }
         ("create-token-accounts", Some(arg_matches)) => {
             let mints: Vec<_> = arg_matches.values_of("mints").unwrap().collect();

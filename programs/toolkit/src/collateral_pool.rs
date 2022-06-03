@@ -1,10 +1,11 @@
 use crate::utils::*;
+use anchor_lang::prelude::AccountMeta;
 use everlend_collateral_pool::{
-    find_pool_program_address, instruction,
-    state::{Pool, PoolMarket},
+    find_pool_program_address, instruction::{self, LiquidityPoolsInstruction},
+    state::{Pool, PoolMarket}, find_pool_withdraw_authority_program_address,
 };
 use solana_client::client_error::ClientError;
-use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
+use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction, sysvar, system_program, instruction::Instruction};
 use solana_sdk::{
     signature::{write_keypair_file, Keypair},
     signer::Signer,
@@ -113,4 +114,42 @@ pub fn create_pool(
     )?;
 
     Ok(PoolPubkeys {pool: pool_pubkey, token_account: token_account.pubkey()})
+}
+
+pub fn create_pool_withdraw_authority(
+    config: &Config,
+    pool_market: &Pubkey,
+    pool: &Pubkey,
+    withdraw_authority: &Pubkey,
+    manager: &Pubkey,
+) -> Result<Pubkey, ClientError> {
+    let (pool_withdraw_authority, _) =
+        find_pool_withdraw_authority_program_address(&everlend_collateral_pool::id(), pool, withdraw_authority);
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*pool_market, false),
+        AccountMeta::new_readonly(*pool, false),
+        AccountMeta::new(pool_withdraw_authority, false),
+        AccountMeta::new_readonly(*withdraw_authority, false),
+        AccountMeta::new(*manager, true),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+        AccountMeta::new_readonly(system_program::id(), false),
+    ];
+
+    let instruction = Instruction::new_with_borsh(
+        everlend_collateral_pool::id(),
+        &LiquidityPoolsInstruction::CreatePoolWithdrawAuthority,
+        accounts,
+    );
+    let tx = Transaction::new_with_payer(
+        &[instruction],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    config.sign_and_send_and_confirm_transaction(
+        tx,
+        vec![config.fee_payer.as_ref()],
+    )?;
+    println!("Pool: {} Withdraw authority: {}", pool, pool_withdraw_authority);
+    Ok(pool_withdraw_authority)
 }

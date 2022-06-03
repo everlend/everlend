@@ -9,7 +9,7 @@
             "request": "launch",
             "name": "Debug",
             "program": "${workspaceFolder}/programs/target/debug/everlend-toolkit",
-            "args": ["create-collateral-pools"],
+            "args": ["create-pool-withdraw-authority"],
             "cwd": "${workspaceFolder}/programs/toolkit"
         }
     ]

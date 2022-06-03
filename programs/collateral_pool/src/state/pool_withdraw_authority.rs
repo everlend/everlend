@@ -1,9 +1,7 @@
 //! PoolBorrowAuthority state definitions
 use super::*;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-use everlend_utils::EverlendError;
 use solana_program::{
-    entrypoint::ProgramResult,
     msg,
     program_error::ProgramError,
     program_pack::{IsInitialized, Pack, Sealed},
@@ -20,8 +18,6 @@ pub struct PoolWithdrawAuthority {
     pub pool: Pubkey,
     /// Withdraw authority
     pub withdraw_authority: Pubkey,
-    /// Amount withdrawn
-    pub amount_withdrawn: u64,
 }
 
 impl PoolWithdrawAuthority {
@@ -30,23 +26,13 @@ impl PoolWithdrawAuthority {
         self.account_type = AccountType::PoolWithdrawAuthority;
         self.pool = pool;
         self.withdraw_authority = withdraw_authority;
-        self.amount_withdrawn = 0;
-    }
-
-    /// Withdraw collateral
-    pub fn withdraw(&mut self, amount: u64) -> ProgramResult {
-        self.amount_withdrawn = self
-            .amount_withdrawn
-            .checked_add(amount)
-            .ok_or(EverlendError::MathOverflow)?;
-        Ok(())
     }
 }
 
 impl Sealed for PoolWithdrawAuthority {}
 impl Pack for PoolWithdrawAuthority {
-    // 1 + 32 + 32 + 8
-    const LEN: usize = 73;
+    // 1 + 32 + 32
+    const LEN: usize = 65;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;
