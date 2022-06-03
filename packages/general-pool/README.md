@@ -1,8 +1,24 @@
 # Everlend general-pool package
 
-Everlend is a lending aggregator and optimizer. Get the best rates on your liquidity loans, always.
+### What's Everlend?
 
-The SDK allows interacting with Everlend general pools.
+Everlend is a lending aggregator and optimizer. Get the best rates on your deposits and loans, always.
+
+### What's a general pool?
+
+A general pool is an implementation of Solana pool program, which is responsible for storing users' liquidity and
+minting collateral tokens. There’s a general pool for every token supported by Everlend. When users interact with
+Everlend, they actually work with general pools, e.g. users' deposits and withdrawals are made via them.
+
+The SDK allows interacting with Everlend general pools, specifically:
+
+* getting general pools for tokens, e.g. there's a general pool for USDT, USDC etc.
+* getting user's withdrawal requests
+* preparing deposit transactions to a general pool
+* preparing withdrawal request transactions from a general pool
+* preparing withdrawal transactions from a general pool
+
+It's still work in progress. In the future the SDK will be expanded with other useful features such as getting APYs for tokens etc.
 
 ## Installation
 
