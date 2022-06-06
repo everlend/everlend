@@ -1109,7 +1109,7 @@ async fn main() -> anyhow::Result<()> {
             });
             Ok(())
         }
-        /// TODO remove after migration
+        // TODO remove after migration
         ("create-safety-fund-token-account", Some(arg_matches)) => {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
             let case = value_of::<String>(arg_matches, "case");

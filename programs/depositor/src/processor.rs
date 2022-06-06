@@ -830,7 +830,7 @@ impl Processor {
                 let staking_program_id_info = next_account_info(account_info_iter)?;
                 let staking_pool_info = next_account_info(account_info_iter)?;
                 let staking_account_info = next_account_info(account_info_iter)?;
-                let account_seed = hashv(&[
+                let _account_seed = hashv(&[
                     internal_mining_pubkey.as_ref(),
                     staking_pool_info.key.as_ref(),
                     staking_program_id_info.key.as_ref(),
