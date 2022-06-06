@@ -7,6 +7,7 @@ mm_pool_markets:
   - FpdTMvB1YBR33QUNUhzPkFn6MkEqvLoYt7DdRWV1SPSB
   - 5a4wzW2jxba6XK78eRSqkML25c1qNazKwjPNhddRQhuH
   - 89TUywSqef4h24cXQPB33H1oxfLeoPQiSor6qbepozyG
+collateral_pool_markets: []
 token_accounts:
   ETHw:
     mint: 7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs
@@ -30,6 +31,7 @@ token_accounts:
         pool_token_account: 7KESALxyDdK4BEwNAP71pibJBYnaxn6GekrZobNS8ZB2
         token_mint: FbKvdbx5h6F86h1pZuEqv7FxwmsVhJ88cDuSqHvLm6Xf
         pool_mint: HxFxANazSPMUju18osZP1ga5x4brskUyWqhMCi3cPB5o
+    collateral_pools: []
     liquidity_transit: 7UM6SnXLDGG7fEg2n19cazDCTo2JmNwZhZWyoCAF9FND
   FTTw:
     mint: EzfgjvkSwthhgHaceR3LnKXUoRkP6NUhfghdaHAj1tUv
@@ -53,6 +55,7 @@ token_accounts:
         pool_token_account: DzpYYpwLDcW4sKVjRtQCg17kjKBGFvd9xN77U8gzzgtJ
         token_mint: DiMx1n2dJmxqFtENRPhYWsqi8Mhg2p39MpTzsm6phzMP
         pool_mint: VTJ4tW8m5F8zCjxH3aRWoAVzCjmQ7iJNz7NVMyrnFrK
+    collateral_pools: []
     liquidity_transit: 7YgKNuZFPwbTgv6Rvy1hgyTU1VzYRQMuhQGuCXyd3Gdg
   RAY:
     mint: 4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R
@@ -76,6 +79,7 @@ token_accounts:
         pool_token_account: 6TA9sCnzW9PvV3yhiKo1d3Kp2yojYWVaBWCq8FGwR4z9
         token_mint: 2d95ZC8L5XP6xCnaKx8D5U5eX6rKbboBBAwuBLxaFmmJ
         pool_mint: GTw6u8hDdEwT8BqE4BXyg9dmTrsTXN9XgqJiBckT79Qc
+    collateral_pools: []
     liquidity_transit: 9vXXzbdKc1qdZPC7CiaoknBsjogwksLL7c3WuFhh2kXH
   SOL:
     mint: So11111111111111111111111111111111111111112
@@ -99,6 +103,7 @@ token_accounts:
         pool_token_account: BCJpH4trYERqhQKtkiKiP1QzLausHkC3FfjYwb8LcZgT
         token_mint: 5h6ssFpeDeRbzsEHDbTQNH7nVGgsKrZydxdSTnLm6QdV
         pool_mint: 8gLXAthf9DHbsKjoZL6Vu6YXfNXFQa2Xxks7CP5RvJYk
+    collateral_pools: []
     liquidity_transit: 4dZvmoQWrhd3Z8bQ91FTL7hnKmUr3A4c5kTKohj7apHy
   SRM:
     mint: SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt
@@ -122,6 +127,7 @@ token_accounts:
         pool_token_account: 7ESPtwc5oragN6Ut9ZA3M4H3v39M5tg4RN4bmfqYsTsh
         token_mint: 4CxGuD2NMr6zM8f18gr6kRhgd748pnmkAhkY1YJtkup1
         pool_mint: CsZVQjbUZyVc5Msazg7Ekiad9Btp45Lohd4UNPf7RWGi
+    collateral_pools: []
     liquidity_transit: 5WHMxM9faY2tFvxq9pPnS2KW5PjkKpseMmrhPY7Qcftg
   USDC:
     mint: EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
@@ -145,6 +151,7 @@ token_accounts:
         pool_token_account: 64F3cdsTQBm3PcXudFWuCtf5Fdte8V7mggiU1vDcxKvY
         token_mint: 993dVFL2uXWYeoXuEBFXR4BijeXdTv4s6BzsCjJZuwqk
         pool_mint: 9tzmEih9LtK1fzqk1WGfN48KJ5HBAEicZyPf6KGkuBW
+    collateral_pools: []
     liquidity_transit: F9WQos3dnFDBergh1nVR9shxtT5TaTFRJka8wQHQVp14
   USDT:
     mint: Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB
@@ -168,6 +175,7 @@ token_accounts:
         pool_token_account: 5euEcbsZYvd9zZSytB3hjTReTqDtybyJRP6PrwZ8vk7e
         token_mint: BTsbZDV7aCMRJ3VNy9ygV4Q2UeEo9GpR8D6VvmMZzNr8
         pool_mint: FP9MqGdhy5YXqdH1bRjUFhWhtaqbEy9gtw2FWJmRSJnL
+    collateral_pools: []
     liquidity_transit: 4PhiKSaEmFjGoibcKH2axDomRHxyDETwz8E9FG3LCaWW
   USTw:
     mint: 9vMJfxuKxXBoEa7rM12mYLMwTacLMLDJqHozw96WQL8i
@@ -191,6 +199,7 @@ token_accounts:
         pool_token_account: AG3LVC3fXmLmp5sw5Jf7BjLUbhgKXt7st9sb4h2L7bN7
         token_mint: nZtL8HKX3aQtk3VpdvtdwPpXF2uMia522Pnan2meqdf
         pool_mint: FCS3MthDma1Z1ZouRx2ThEr9p7UFhXeVUat4tvz1T4ZK
+    collateral_pools: []
     liquidity_transit: AWc9wnvVvEaLYrMmUpEy9SMUcXRpjkrVWV5dPYcgnRc5
   mSOL:
     mint: mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So
@@ -214,6 +223,7 @@ token_accounts:
         pool_token_account: 5ouwxMBAzC9hsV4PNQG1uYtaY2ncTvbEShRiYcgSWZT6
         token_mint: 3JFC4cB56Er45nWVe29Bhnn5GnwQzSmHVf6eUq9ac91h
         pool_mint: 744Rgt9km6EiitAPKTJTwiskAUD8Xbi4WmFdnkKfoJqf
+    collateral_pools: []
     liquidity_transit: 8D2Z4n9Y2984eTDSzovSD5ayZJt2KbEYrsiF6ZE1aZeb
   soBTC:
     mint: 9n4nbM75f5Ui33ZbPYXn59EwSgE8CGsHtAeTH5YFeJ9E
@@ -237,6 +247,7 @@ token_accounts:
         pool_token_account: GQ5wP1mMZSGedTdcYCNG4UDtpUeSoKFHwFv3HYNhW4Vm
         token_mint: Gqu3TFmJXfnfSX84kqbZ5u9JjSBVoesaHjfTsaPjRSnZ
         pool_mint: 4xFhxTkUE9nyrZQEMzB1UW1RpjrLkdwDGBmxnmRh4cgB
+    collateral_pools: []
     liquidity_transit: EswBbBFMPaWh4pbLgycjKBRZkkyAFBsi85km84TSqbXS
   stSOL:
     mint: 7dHbWXmci3dT8UFYWYZweBLXgycu7Y3iL6trKn1Y7ARj
@@ -260,6 +271,7 @@ token_accounts:
         pool_token_account: 24Gi9shFFFRqfjmDzY9YieJKNZc316niFQbswzLdHaxY
         token_mint: QQ6WK86aUCBvNPkGeYBKikk15sUg6aMUEi5PTL6eB4i
         pool_mint: BYzdP17P9SSoZwaMMCzNz8WBhNhJergF38sdmjFgCvTY
+    collateral_pools: []
     liquidity_transit: 16wXXYU9BBM8LVkgZ3gv4CWdepnfPheAWgAkkQLHu94
 liquidity_oracle: 7ow9UCNZZpyEyELAhshi5Ar27QgNkwf5aQXpHSW4ZEew
 depositor: AjuLiFJuDynJTZFvy1bhU4xPLt8aSVuXifUunJV1fW1J
