@@ -82,7 +82,7 @@ pub enum LiquidityPoolsInstruction {
     /// [R] Rent sysvar
     /// [R] System program
     CreatePoolWithdrawAuthority,
-    
+
     /// Delete a pool withdraw authority
     ///
     /// Accounts:
@@ -395,7 +395,7 @@ pub fn withdraw(
     let accounts = vec![
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new_readonly(*pool, false),
-        AccountMeta::new(*pool_withdraw_authority, false),
+        AccountMeta::new_readonly(*pool_withdraw_authority, false),
         AccountMeta::new(*destination, false),
         AccountMeta::new(*token_account, false),
         AccountMeta::new_readonly(pool_market_authority, false),
