@@ -318,7 +318,7 @@ async fn command_create_collateral_pools(
                     .map(|coll_mint| (coll_mint, *mm_pool_market_pubkey))
             })
             .collect();
-        
+
         let mm_pool_collection = collateral_mints
             .iter()
             .map(|(collateral_mint, mm_pool_market_pubkey)| {

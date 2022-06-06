@@ -93,7 +93,7 @@ pub async fn command_set_registry_config(
 ) -> anyhow::Result<()> {
     let default_accounts = config.get_default_accounts();
     let initialized_accounts = config.get_initialized_accounts();
-    let mm_pool_markets = initialized_accounts.mm_pool_markets;
+    let mm_pool_markets = initialized_accounts.collateral_pool_markets;
 
     let (registry_config_pubkey, _) =
         find_config_program_address(&everlend_registry::id(), &registry_pubkey);
