@@ -25,12 +25,15 @@ token_accounts:
       - pool: Cu83bvH9okz6EWiLmJ95sgtZpbannBp4uNVfdhsR4wXW
         pool_token_account: 3wF5PYmxjPfxBu46HTzEdKAiTdwZU4gSBQ7L1en3L3Nc
         token_mint: Hk4Rp3kaPssB6hnjah3Mrqpt5CAXWGoqFT5dVsWA3TaM
+        pool_mint: 5mSBCBHAtD4iT6f6xpVWxumqWgWj32uLncGLS1fQE5o8
       - pool: A3dqYk2WJ9yWfbBos6ArWSLwmkY46rJ5se9hG6Z4UwTB
         pool_token_account: Bgjyw9hAahUQa7J9YViBZf7pfstpsDUr8Y1daaqQseut
         token_mint: qy9PvM4J3ZdJJ7cyEFymotHrA1hTWspccA9RhDsQa24
+        pool_mint: 9CRXpr83hbKHnYFWNc1pcDTUqyn6ySJgd6CnoH86Y2v9
       - pool: 52bGyPDW3CYEifYrTrcx6FzfYc3RCnwQSz4vedTwwD8z
         pool_token_account: HswyoyBDWN6zctMtXKqxzb79iAg1VNYrreihNzZkZWVA
         token_mint: FzwZWRMc3GCqjSrcpVX3ueJc6UpcV6iWWb7ZMsTXE3Gf
+        pool_mint: ARS13BRjUfqVvvDv8s248unV3yvARPNagxLPQH49haka
     collateral_pools:
       - pool: 2GmhCmt5ms31yVQyqckvkHDp2s66DMXtVhGz8SjT69JD
         pool_token_account: 5kBThaCptnye4zD4RPPbvdno22fxMMowrQgvFERn2nv
@@ -55,12 +58,15 @@ token_accounts:
       - pool: 3pCgmw5KAv6C9Au1ZLFEyjTvk5S3G1idZwZh8VmLgV6H
         pool_token_account: Gwsoyv8vFCeyuu5KqcaLPSoj43cD8zBUp5KyxFBnVPSZ
         token_mint: HyxraiKfdajDbYTC6MVRToEUBdevBN5M5gfyR4LC3WSF
+        pool_mint: 8wFoSPcxvp2oaCMi6CUt3Se7CKU23z37j8Hw5jiAAewM
       - pool: 9zPBCMjGRrq9kVRWmXxX53uKhzYbE7HVXvHGg8VKCXch
         pool_token_account: 3CvNZAMMNmhfaemzhGFzy8pFDmKwfEkgDuELcZD8Tu5c
         token_mint: CLgRwCmZ49wbKxQjqEs5tHrNvx8ZoXjybN8hsiRwEVPm
+        pool_mint: DLe3Cya2wws3Ki81T16GWZJ7R1AEjZHEy641geagrWHL
       - pool: "11111111111111111111111111111111"
         pool_token_account: "11111111111111111111111111111111"
         token_mint: "11111111111111111111111111111111"
+        pool_mint: "11111111111111111111111111111111"
     collateral_pools:
       - pool: 7hwt3muXfJi9dAtrHshkt5Q8pvMx1NDiJ6Vd95WQ2Noo
         pool_token_account: CMETG1wSmE8xrAi5mSLbf46CPV6CKwYNW6wc5kYHp72v
@@ -85,12 +91,15 @@ token_accounts:
       - pool: 7UsHrzwdXymG7cJDwGKjJhbPFHkdyH9u1FvDiiGZGFsP
         pool_token_account: E7iTNV89yG8PSdZpXaUTrkgHKpjkKoMW8SsBZe2WCJvC
         token_mint: 4xEXmSfLFPkZaxdL98XkoxKpXEvchPVs21GYqa8DvbAm
+        pool_mint: HDSWc7cHKrLGTryxiD9tyv7CYV28UmqhXnz3eQaYTJZh
       - pool: J39Zqpw9yPqgFz2XgWtdJtHBjfWYPG6tEmuvfdmdqKLN
         pool_token_account: 6VSdX9UyG34bHfGnA9NxJ1nN7AMeYiFTEZ1Cft5R4rzg
         token_mint: BQ4wqguD9D2dyzraCW7R4sV5fxUdXaVteT8bL2w4uPbV
+        pool_mint: 2n15cy864zrUKv5b6wJahuHX4mf8uNDAStpndKaDvq6b
       - pool: "11111111111111111111111111111111"
         pool_token_account: "11111111111111111111111111111111"
         token_mint: "11111111111111111111111111111111"
+        pool_mint: "11111111111111111111111111111111"
     collateral_pools:
       - pool: FXMR5xngEvWLu582YEgAXuj8u8syLdNzfHzc7iRtkDig
         pool_token_account: 3di3YA5TzeTpQdMb9e62GCP9PSmkhSfWw36QLkqtErH5

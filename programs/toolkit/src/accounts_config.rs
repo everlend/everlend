@@ -159,7 +159,7 @@ pub struct TokenAccounts {
     pub income_pool_token_account: Pubkey,
 
     pub mm_pools: Vec<MoneyMarketAccounts>,
-    pub collateral_pools: Vec<MoneyMarketAccounts>,
+    pub collateral_pools: Vec<CollateralPoolAccounts>,
 
     #[serde_as(as = "DisplayFromStr")]
     pub liquidity_transit: Pubkey,
@@ -168,6 +168,19 @@ pub struct TokenAccounts {
 #[serde_as]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Default)]
 pub struct MoneyMarketAccounts {
+    #[serde_as(as = "DisplayFromStr")]
+    pub pool: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub pool_token_account: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub token_mint: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub pool_mint: Pubkey,
+}
+
+#[serde_as]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Default)]
+pub struct CollateralPoolAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub pool: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
