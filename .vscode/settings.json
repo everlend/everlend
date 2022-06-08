@@ -4,29 +4,4 @@
     "program",
     "api"
   ],
-  "cSpell.words": [
-    "blockhash",
-    "borsh",
-    "Borsh",
-    "everlend",
-    "keypair",
-    "keypairs",
-    "lamports",
-    "larix",
-    "msol",
-    "Pnan",
-    "presetup",
-    "pubkey",
-    "Pubkey",
-    "Pubkeys",
-    "Pyth",
-    "rebalancing",
-    "Rebalancing",
-    "sobtc",
-    "solana",
-    "solend",
-    "stsol",
-    "sysvar",
-    "thiserror"
-  ]
 }
