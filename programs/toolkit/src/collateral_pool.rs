@@ -1,7 +1,7 @@
 use crate::utils::*;
 use anchor_lang::prelude::AccountMeta;
 use everlend_collateral_pool::{
-    find_pool_program_address, instruction::{self, LiquidityPoolsInstruction},
+    find_pool_program_address, instruction::{self, CollateralPoolsInstruction},
     state::{Pool, PoolMarket}, find_pool_withdraw_authority_program_address,
 };
 use solana_client::client_error::ClientError;
@@ -138,7 +138,7 @@ pub fn create_pool_withdraw_authority(
 
     let instruction = Instruction::new_with_borsh(
         everlend_collateral_pool::id(),
-        &LiquidityPoolsInstruction::CreatePoolWithdrawAuthority,
+        &CollateralPoolsInstruction::CreatePoolWithdrawAuthority,
         accounts,
     );
     let tx = Transaction::new_with_payer(

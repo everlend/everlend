@@ -17,7 +17,7 @@ use solana_program::{
 
 use crate::{
     find_pool_borrow_authority_program_address, find_pool_program_address,
-    instruction::LiquidityPoolsInstruction,
+    instruction::CollateralPoolsInstruction,
     state::{
         InitPoolBorrowAuthorityParams, InitPoolMarketParams, InitPoolParams, Pool,
         PoolBorrowAuthority, PoolMarket, PoolWithdrawAuthority 
@@ -93,12 +93,9 @@ impl Processor {
             rent,
         )?;
 
-        msg!("1");
         let mut pool = Pool::unpack_unchecked(&pool_info.data.borrow())?;
         assert_uninitialized(&pool)?;
 
-        msg!("token_account_info {}", token_account_info.key);
-        msg!("token_mint_info {}", token_mint_info.key);
         cpi::spl_token::initialize_account(
             token_account_info.clone(),
             token_mint_info.clone(),
@@ -106,7 +103,6 @@ impl Processor {
             rent_info.clone(),
         )?;
 
-        msg!("3");
         pool.init(InitPoolParams {
             pool_market: *pool_market_info.key,
             token_mint: *token_mint_info.key,
@@ -593,61 +589,61 @@ impl Processor {
         accounts: &[AccountInfo],
         input: &[u8],
     ) -> ProgramResult {
-        let instruction = LiquidityPoolsInstruction::try_from_slice(input)?;
+        let instruction = CollateralPoolsInstruction::try_from_slice(input)?;
 
         match instruction {
-            LiquidityPoolsInstruction::InitPoolMarket => {
+            CollateralPoolsInstruction::InitPoolMarket => {
                 msg!("CollateralPoolsInstruction: InitPoolMarket");
                 Self::init_pool_market(program_id, accounts)
             }
 
-            LiquidityPoolsInstruction::CreatePool => {
+            CollateralPoolsInstruction::CreatePool => {
                 msg!("CollateralPoolsInstruction: CreatePool");
                 Self::create_pool(program_id, accounts)
             }
 
-            LiquidityPoolsInstruction::CreatePoolBorrowAuthority { share_allowed } => {
+            CollateralPoolsInstruction::CreatePoolBorrowAuthority { share_allowed } => {
                 msg!("CollateralPoolsInstruction: CreatePoolBorrowAuthority");
                 Self::create_pool_borrow_authority(program_id, share_allowed, accounts)
             }
 
-            LiquidityPoolsInstruction::UpdatePoolBorrowAuthority { share_allowed } => {
+            CollateralPoolsInstruction::UpdatePoolBorrowAuthority { share_allowed } => {
                 msg!("CollateralPoolsInstruction: UpdatePoolBorrowAuthority");
                 Self::update_pool_borrow_authority(program_id, share_allowed, accounts)
             }
 
-            LiquidityPoolsInstruction::DeletePoolBorrowAuthority => {
+            CollateralPoolsInstruction::DeletePoolBorrowAuthority => {
                 msg!("CollateralPoolsInstruction: DeletePoolBorrowAuthority");
                 Self::delete_pool_borrow_authority(program_id, accounts)
             }
 
-            LiquidityPoolsInstruction::CreatePoolWithdrawAuthority => {
+            CollateralPoolsInstruction::CreatePoolWithdrawAuthority => {
                 msg!("CollateralPoolsInstruction: CreatePoolWithdrawAuthority");
                 Self::create_pool_withdraw_authority(program_id, accounts)
             }
 
-            LiquidityPoolsInstruction::DeletePoolWithdrawAuthority => {
+            CollateralPoolsInstruction::DeletePoolWithdrawAuthority => {
                 msg!("CollateralPoolsInstruction: DeletePoolWithdrawAuthority");
                 Self::delete_pool_withdraw_authority(program_id, accounts)
             }
 
 
-            LiquidityPoolsInstruction::Deposit { amount } => {
+            CollateralPoolsInstruction::Deposit { amount } => {
                 msg!("CollateralPoolsInstruction: Deposit");
                 Self::deposit(program_id, amount, accounts)
             }
 
-            LiquidityPoolsInstruction::Withdraw { amount } => {
+            CollateralPoolsInstruction::Withdraw { amount } => {
                 msg!("CollateralPoolsInstruction: Withdraw");
                 Self::withdraw(program_id, amount, accounts)
             }
 
-            LiquidityPoolsInstruction::Borrow { amount } => {
+            CollateralPoolsInstruction::Borrow { amount } => {
                 msg!("CollateralPoolsInstruction: Borrow");
                 Self::borrow(program_id, amount, accounts)
             }
 
-            LiquidityPoolsInstruction::Repay {
+            CollateralPoolsInstruction::Repay {
                 amount,
                 interest_amount,
             } => {

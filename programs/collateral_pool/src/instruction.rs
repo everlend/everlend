@@ -13,7 +13,7 @@ use crate::{find_pool_borrow_authority_program_address, find_pool_program_addres
 
 /// Instructions supported by the program
 #[derive(Debug, BorshDeserialize, BorshSerialize, PartialEq)]
-pub enum LiquidityPoolsInstruction {
+pub enum CollateralPoolsInstruction {
     /// Initializes a new pool market
     ///
     /// Accounts:
@@ -171,7 +171,7 @@ pub fn init_pool_market(
 
     Instruction::new_with_borsh(
         *program_id,
-        &LiquidityPoolsInstruction::InitPoolMarket,
+        &CollateralPoolsInstruction::InitPoolMarket,
         accounts,
     )
 }
@@ -202,7 +202,7 @@ pub fn create_pool(
 
     Instruction::new_with_borsh(
         *program_id,
-        &LiquidityPoolsInstruction::CreatePool,
+        &CollateralPoolsInstruction::CreatePool,
         accounts,
     )
 }
@@ -232,7 +232,7 @@ pub fn create_pool_borrow_authority(
 
     Instruction::new_with_borsh(
         *program_id,
-        &LiquidityPoolsInstruction::CreatePoolBorrowAuthority { share_allowed },
+        &CollateralPoolsInstruction::CreatePoolBorrowAuthority { share_allowed },
         accounts,
     )
 }
@@ -259,7 +259,7 @@ pub fn update_pool_borrow_authority(
 
     Instruction::new_with_borsh(
         *program_id,
-        &LiquidityPoolsInstruction::UpdatePoolBorrowAuthority { share_allowed },
+        &CollateralPoolsInstruction::UpdatePoolBorrowAuthority { share_allowed },
         accounts,
     )
 }
@@ -287,7 +287,7 @@ pub fn delete_pool_borrow_authority(
 
     Instruction::new_with_borsh(
         *program_id,
-        &LiquidityPoolsInstruction::DeletePoolBorrowAuthority,
+        &CollateralPoolsInstruction::DeletePoolBorrowAuthority,
         accounts,
     )
 }
@@ -316,7 +316,7 @@ pub fn create_pool_withdraw_authority(
 
     Instruction::new_with_borsh(
         *program_id,
-        &LiquidityPoolsInstruction::CreatePoolWithdrawAuthority,
+        &CollateralPoolsInstruction::CreatePoolWithdrawAuthority,
         accounts,
     )
 }
@@ -344,7 +344,7 @@ pub fn delete_pool_withdraw_authority(
 
     Instruction::new_with_borsh(
         *program_id,
-        &LiquidityPoolsInstruction::DeletePoolWithdrawAuthority,
+        &CollateralPoolsInstruction::DeletePoolWithdrawAuthority,
         accounts,
     )
 }
@@ -373,7 +373,7 @@ pub fn deposit(
 
     Instruction::new_with_borsh(
         *program_id,
-        &LiquidityPoolsInstruction::Deposit { amount },
+        &CollateralPoolsInstruction::Deposit { amount },
         accounts,
     )
 }
@@ -405,7 +405,7 @@ pub fn withdraw(
 
     Instruction::new_with_borsh(
         *program_id,
-        &LiquidityPoolsInstruction::Withdraw { amount },
+        &CollateralPoolsInstruction::Withdraw { amount },
         accounts,
     )
 }
@@ -437,7 +437,7 @@ pub fn borrow(
 
     Instruction::new_with_borsh(
         *program_id,
-        &LiquidityPoolsInstruction::Borrow { amount },
+        &CollateralPoolsInstruction::Borrow { amount },
         accounts,
     )
 }
@@ -467,7 +467,7 @@ pub fn repay(
 
     Instruction::new_with_borsh(
         *program_id,
-        &LiquidityPoolsInstruction::Repay {
+        &CollateralPoolsInstruction::Repay {
             amount,
             interest_amount,
         },
