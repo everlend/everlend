@@ -16,12 +16,12 @@ use everlend_registry::{
 };
 use everlend_utils::integrations::MoneyMarket;
 
-use crate::accounts_config::InitializedAccounts;
-use crate::collateral_pool;
+use crate::accounts_config::{InitializedAccounts, CollateralPoolAccounts};
+use crate::collateral_pool::{self, PoolPubkeys};
 use crate::registry::close_registry_config;
 use crate::{
-    accounts_config::{MoneyMarketAccounts, TokenAccounts},
-    depositor, general_pool, income_pools, liquidity_oracle, registry, ulp,
+    accounts_config::{TokenAccounts},
+    depositor, general_pool, income_pools, liquidity_oracle, registry,
     utils::{
         get_asset_maps, spl_create_associated_token_account, spl_token_transfer, Config,
         REFRESH_INCOME_INTERVAL,
@@ -194,25 +194,6 @@ pub async fn command_create_income_pool_market(
     Ok(())
 }
 
-#[allow(dead_code)]
-pub async fn command_create_ulp_market(
-    config: &Config,
-    keypair: Option<Keypair>,
-    money_market: MoneyMarket,
-) -> anyhow::Result<()> {
-    let mut initialiazed_accounts = config.get_initialized_accounts();
-
-    let mm_pool_market_pubkey = ulp::create_market(config, keypair)?;
-
-    initialiazed_accounts.mm_pool_markets[money_market as usize] = mm_pool_market_pubkey;
-
-    initialiazed_accounts
-        .save(&format!("accounts.{}.yaml", config.network))
-        .unwrap();
-
-    Ok(())
-}
-
 pub async fn command_create_collateral_pool_market(
     config: &Config,
     keypair: Option<Keypair>,
@@ -288,8 +269,8 @@ pub async fn command_create_mm_pool(
     for key in required_mints {
         let collateral_mint = collateral_mint_map.get(key).unwrap()[money_market_index].unwrap();
 
-        let (mm_pool_pubkey, mm_pool_token_account, mm_pool_mint) =
-            ulp::create_pool(config, &mm_pool_market_pubkey, &collateral_mint)?;
+        let pool_pubkeys =
+            collateral_pool::create_pool(config, &mm_pool_market_pubkey, &collateral_mint)?;
 
         depositor::create_transit(
             config,
@@ -298,16 +279,9 @@ pub async fn command_create_mm_pool(
             None,
         )?;
 
-        depositor::create_transit(
-            config,
-            &initialiazed_accounts.depositor,
-            &mm_pool_mint,
-            None,
-        )?;
-
-        let money_market_accounts = MoneyMarketAccounts {
-            pool: mm_pool_pubkey,
-            pool_token_account: mm_pool_token_account,
+        let money_market_accounts = CollateralPoolAccounts {
+            pool: pool_pubkeys.pool,
+            pool_token_account: pool_pubkeys.token_account,
             token_mint: collateral_mint,
         };
 
@@ -315,7 +289,7 @@ pub async fn command_create_mm_pool(
             .token_accounts
             .get_mut(key)
             .unwrap()
-            .mm_pools[money_market_index] = money_market_accounts;
+            .collateral_pools[money_market_index] = money_market_accounts;
     }
 
     initialiazed_accounts
@@ -340,8 +314,8 @@ pub async fn command_create_collateral_pool(
     for key in required_mints {
         let collateral_mint = collateral_mint_map.get(key).unwrap()[money_market_index].unwrap();
 
-        let (mm_pool_pubkey, mm_pool_token_account, mm_pool_mint) =
-            ulp::create_pool(config, &mm_pool_market_pubkey, &collateral_mint)?;
+        let pool_pubkeys =
+            collateral_pool::create_pool(config, &mm_pool_market_pubkey, &collateral_mint)?;
 
         depositor::create_transit(
             config,
@@ -350,16 +324,9 @@ pub async fn command_create_collateral_pool(
             None,
         )?;
 
-        depositor::create_transit(
-            config,
-            &initialiazed_accounts.depositor,
-            &mm_pool_mint,
-            None,
-        )?;
-
-        let money_market_accounts = MoneyMarketAccounts {
-            pool: mm_pool_pubkey,
-            pool_token_account: mm_pool_token_account,
+        let money_market_accounts = CollateralPoolAccounts {
+            pool: pool_pubkeys.pool,
+            pool_token_account: pool_pubkeys.token_account,
             token_mint: collateral_mint,
         };
 
@@ -367,7 +334,7 @@ pub async fn command_create_collateral_pool(
             .token_accounts
             .get_mut(key)
             .unwrap()
-            .mm_pools[money_market_index] = money_market_accounts;
+            .collateral_pools[money_market_index] = money_market_accounts;
     }
 
     initialiazed_accounts
@@ -435,12 +402,15 @@ pub async fn command_create_token_accounts(
                 println!("MM Pool: {}", collateral_mint);
                 if collateral_mint.eq(&Pubkey::default()) {
                     // We can't skip cuz of mm pools is indexed
-                    Ok((Pubkey::default(), Pubkey::default(), Pubkey::default()))
+                    Ok(PoolPubkeys {
+                        pool: Pubkey::default(),
+                        token_account: Pubkey::default(),
+                    })
                 } else {
-                    ulp::create_pool(config, mm_pool_market_pubkey, collateral_mint)
+                    collateral_pool::create_pool(config, mm_pool_market_pubkey, collateral_mint)
                 }
             })
-            .collect::<Result<Vec<(Pubkey, Pubkey, Pubkey)>, ClientError>>()?;
+            .collect::<Result<Vec<PoolPubkeys>, ClientError>>()?;
 
         liquidity_oracle::create_token_distribution(
             config,
@@ -476,31 +446,17 @@ pub async fn command_create_token_accounts(
             })
             .collect::<Result<Vec<Pubkey>, ClientError>>()?;
 
-        println!("MM Collateral transits");
-        mm_pool_pubkeys
-            .iter()
-            .filter(|(_, _, pk)| !pk.eq(&Pubkey::default()))
-            .map(|(_, _, mm_pool_mint)| {
-                depositor::create_transit(
-                    config,
-                    &initialiazed_accounts.depositor,
-                    mm_pool_mint,
-                    None,
-                )
-            })
-            .collect::<Result<Vec<Pubkey>, ClientError>>()?;
-
         let collateral_pools = collateral_mints
             .iter()
             .zip(mm_pool_pubkeys)
             .map(
                 |(
                     (collateral_mint, _mm_pool_market_pubkey),
-                    (mm_pool_pubkey, mm_pool_token_account, _),
+                    pubkeys,
                 )| {
-                    MoneyMarketAccounts {
-                        pool: mm_pool_pubkey,
-                        pool_token_account: mm_pool_token_account,
+                    CollateralPoolAccounts {
+                        pool: pubkeys.pool,
+                        pool_token_account: pubkeys.token_account,
                         token_mint: *collateral_mint,
                     }
                 },

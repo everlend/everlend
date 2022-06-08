@@ -43,7 +43,6 @@ mod income_pools;
 mod liquidity_oracle;
 mod multisig;
 mod registry;
-mod ulp;
 mod collateral_pool;
 mod utils;
 
@@ -232,7 +231,7 @@ async fn command_create(
                     (collateral_mint, _mm_pool_market_pubkey),
                     mm_pool_pubkeys
                 )| {
-                    MoneyMarketAccounts {
+                    CollateralPoolAccounts {
                         pool: mm_pool_pubkeys.pool,
                         pool_token_account: mm_pool_pubkeys.token_account,
                         token_mint: *collateral_mint,
@@ -352,7 +351,7 @@ async fn command_create_collateral_pools(
                     (collateral_mint, _mm_pool_market_pubkey),
                     mm_pool_pubkeys
                 )| {
-                    MoneyMarketAccounts {
+                    CollateralPoolAccounts {
                         pool: mm_pool_pubkeys.pool,
                         pool_token_account: mm_pool_pubkeys.token_account,
                         token_mint: *collateral_mint,
