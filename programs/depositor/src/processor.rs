@@ -3,6 +3,8 @@
 use std::cmp::Ordering;
 
 use borsh::BorshDeserialize;
+use everlend_registry::state::Registry;
+use solana_program::hash::hashv;
 use solana_program::program_error::ProgramError;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -26,9 +28,11 @@ use everlend_registry::{
 };
 use everlend_utils::{
     assert_account_key, assert_owned_by, assert_rent_exempt, assert_uninitialized, cpi,
-    find_program_address, EverlendError,
+    find_program_address, EverlendError, assert_signer,
 };
 
+use crate::find_internal_mining_program_address;
+use crate::state::{InternalMining, MiningType};
 use crate::{
     find_rebalancing_program_address, find_transit_program_address,
     instruction::DepositorInstruction,
@@ -407,12 +411,12 @@ impl Processor {
         let _everlend_ulp_info = next_account_info(account_info_iter)?;
 
         let money_market_program_info = next_account_info(account_info_iter)?;
+        let internal_mining_info = next_account_info(account_info_iter)?;
 
         // Check programs
         assert_owned_by(registry_config_info, &everlend_registry::id())?;
         assert_owned_by(depositor_info, program_id)?;
         assert_owned_by(rebalancing_info, program_id)?;
-
         let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
 
         // Check registry config
@@ -458,6 +462,7 @@ impl Processor {
             &collateral_pool.pool_mint,
         )?;
 
+        msg!("7");
         // Check rebalancing
         let (rebalancing_pubkey, _) = find_rebalancing_program_address(
             program_id,
@@ -508,6 +513,7 @@ impl Processor {
 
         msg!("Deposit");
         let collateral_amount = deposit(
+            program_id,
             &programs,
             collateral_pool_market_info.clone(),
             collateral_pool_market_authority_info.clone(),
@@ -522,17 +528,20 @@ impl Processor {
             depositor_authority_info.clone(),
             clock_info.clone(),
             money_market_program_info.clone(),
+            internal_mining_info.clone(),
             account_info_iter,
             step.liquidity_amount,
             &[signers_seeds],
         )?;
 
+        msg!("13");
         rebalancing.execute_step(
             RebalancingOperation::Deposit,
             Some(collateral_amount),
             clock.slot,
         )?;
 
+        msg!("14");
         Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
 
         Ok(())
@@ -572,6 +581,8 @@ impl Processor {
         let _everlend_income_pools_info = next_account_info(account_info_iter)?;
 
         let money_market_program_info = next_account_info(account_info_iter)?;
+
+        let internal_mining_info = next_account_info(account_info_iter)?;
 
         assert_owned_by(registry_config_info, &everlend_registry::id())?;
         assert_owned_by(depositor_info, program_id)?;
@@ -698,6 +709,7 @@ impl Processor {
 
         msg!("Withdraw");
         withdraw(
+            program_id,
             &programs,
             income_pool_market_info.clone(),
             income_pool_info.clone(),
@@ -716,6 +728,7 @@ impl Processor {
             depositor_authority_info.clone(),
             clock_info.clone(),
             money_market_program_info.clone(),
+            internal_mining_info.clone(),
             account_info_iter,
             step.collateral_amount.unwrap(),
             step.liquidity_amount,
@@ -732,6 +745,115 @@ impl Processor {
     /// Process MigrateDepositor instruction
     pub fn migrate_depositor(_program_id: &Pubkey, _accounts: &[AccountInfo]) -> ProgramResult {
         Err(EverlendError::TemporaryUnavailable.into())
+    }
+
+    /// Process InitMiningAccounts instruction
+    pub fn init_mining_accounts(
+        program_id: &Pubkey,
+        accounts: &[AccountInfo],
+        internal_mining_bump_seed: u8,
+        mining_type: MiningType,
+    ) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+
+        let internal_mining_info = next_account_info(account_info_iter)?;
+        let collateral_mint_info = next_account_info(account_info_iter)?;
+        let money_market_program_id_info = next_account_info(account_info_iter)?;
+        let depositor_info = next_account_info(account_info_iter)?;
+        let registry_info = next_account_info(account_info_iter)?;
+        let manager_info = next_account_info(account_info_iter)?;
+
+        assert_signer(&manager_info)?;
+        assert_owned_by(registry_info, &everlend_registry::id())?;
+        assert_owned_by(depositor_info, program_id)?;
+
+        let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
+        assert_account_key(registry_info, &depositor.registry)?;
+
+        let registry = Registry::unpack(&registry_info.data.borrow())?;
+        assert_account_key(manager_info, &registry.manager)?;
+
+        let signer_seed = [
+            "internal_mining".as_bytes(),
+            collateral_mint_info.key.as_ref(),
+            money_market_program_id_info.key.as_ref(),
+            &[internal_mining_bump_seed],
+        ];
+
+        let internal_mining_pubkey =
+            Pubkey::create_program_address(signer_seed.as_ref(), &program_id)?;
+        assert_account_key(internal_mining_info, &internal_mining_pubkey)?;
+
+        match mining_type {
+            MiningType::Larix { mining_account } => {
+                let mining_account_info = next_account_info(account_info_iter)?;
+                let lending_market_info = next_account_info(account_info_iter)?;
+                assert_account_key(mining_account_info, &mining_account)?;
+                cpi::larix::init_mining(
+                    &money_market_program_id_info.key,
+                    mining_account_info.clone(),
+                    internal_mining_info.clone(),
+                    lending_market_info.clone(),
+                    &[signer_seed.as_ref()],
+                )?
+            }
+            MiningType::PortFinance => {
+                let staking_program_id_info = next_account_info(account_info_iter)?;
+                let staking_pool_info = next_account_info(account_info_iter)?;
+                let staking_account_info = next_account_info(account_info_iter)?;
+                let _account_seed = hashv(&[
+                    internal_mining_pubkey.as_ref(),
+                    staking_pool_info.key.as_ref(),
+                    staking_program_id_info.key.as_ref(),
+                ]);
+                cpi::port_finance::create_stake_account(
+                    &staking_program_id_info.key,
+                    staking_account_info.clone(),
+                    staking_pool_info.clone(),
+                    internal_mining_info.clone(),
+                )?;
+            }
+            MiningType::PortFinanceQuarry {
+                quarry_mining_program_id,
+                quarry,
+                rewarder,
+                miner_vault,
+            } => {
+                let staking_program_id_info = next_account_info(account_info_iter)?;
+                assert_account_key(staking_program_id_info, &quarry_mining_program_id)?;
+                let miner_info = next_account_info(account_info_iter)?;
+                let quarry_info = next_account_info(account_info_iter)?;
+                assert_account_key(quarry_info, &quarry)?;
+                let rewarder_info = next_account_info(account_info_iter)?;
+                assert_account_key(rewarder_info, &rewarder)?;
+                let token_mint_info = next_account_info(account_info_iter)?;
+                let miner_vault_info = next_account_info(account_info_iter)?;
+                assert_account_key(miner_vault_info, &miner_vault)?;
+                let (miner_pubkey, _miner_bump) = cpi::quarry::find_miner_program_address(
+                    &staking_program_id_info.key,
+                    &quarry_info.key,
+                    &internal_mining_info.key,
+                );
+                assert_account_key(miner_info, &miner_pubkey)?;
+                cpi::quarry::create_miner(
+                    &staking_program_id_info.key,
+                    internal_mining_info.clone(),
+                    quarry_info.clone(),
+                    quarry_info.clone(),
+                    rewarder_info.clone(),
+                    manager_info.clone(),
+                    token_mint_info.clone(),
+                    miner_vault_info.clone(),
+                )?;
+            }
+        }
+
+        let mut internal_mining =
+            InternalMining::unpack_unchecked(&internal_mining_info.data.borrow())?;
+        internal_mining.init(mining_type);
+
+        InternalMining::pack(internal_mining, *internal_mining_info.data.borrow_mut())?;
+        Ok(())
     }
 
     /// Instruction processing router
@@ -771,6 +893,19 @@ impl Processor {
             DepositorInstruction::MigrateDepositor => {
                 msg!("DepositorInstruction: MigrateDepositor");
                 Self::migrate_depositor(program_id, accounts)
+            }
+
+            DepositorInstruction::InitMiningAccounts {
+                internal_mining_bump_seed,
+                mining_type,
+            } => {
+                msg!("DepositorInstruction: InitMiningAccounts");
+                Self::init_mining_accounts(
+                    program_id,
+                    accounts,
+                    internal_mining_bump_seed,
+                    mining_type,
+                )
             }
         }
     }

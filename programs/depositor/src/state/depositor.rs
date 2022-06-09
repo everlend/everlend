@@ -48,8 +48,8 @@ pub struct InitDepositorParams {
 
 impl Sealed for Depositor {}
 impl Pack for Depositor {
-    // 1 + 1 + 32 + 63
-    const LEN: usize = 97;
+    // 1 + 1 + 32
+    const LEN: usize = 34;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = Vec::with_capacity(DEPOSITOR_LEN);
