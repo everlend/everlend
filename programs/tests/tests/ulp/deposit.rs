@@ -1,6 +1,5 @@
 #![cfg(feature = "test-bpf")]
 
-use crate::utils::*;
 use everlend_ulp::instruction;
 use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
@@ -9,19 +8,30 @@ use solana_sdk::{
     pubkey::Pubkey, signer::Signer, transaction::Transaction, transaction::TransactionError,
 };
 use spl_token::error::TokenError;
+use crate::utils::{
+    presetup,
+    UlpMarket,
+    UniversalLiquidityPool,
+    LiquidityProvider,
+    add_liquidity_provider,
+    EXP,
+    get_token_balance,
+    mint_tokens,
+    users::*,
+};
 
 async fn setup() -> (
     ProgramTestContext,
-    TestPoolMarket,
-    TestPool,
+    UlpMarket,
+    UniversalLiquidityPool,
     LiquidityProvider,
 ) {
     let (mut context, _, _, _) = presetup().await;
 
-    let test_pool_market = TestPoolMarket::new();
+    let test_pool_market = UlpMarket::new();
     test_pool_market.init(&mut context).await.unwrap();
 
-    let test_pool = TestPool::new(&test_pool_market, None);
+    let test_pool = UniversalLiquidityPool::new(&test_pool_market, None);
     test_pool
         .create(&mut context, &test_pool_market)
         .await
@@ -159,44 +169,6 @@ async fn fail_with_invalid_token_account_pubkey_argument() {
             .unwrap_err()
             .unwrap(),
         TransactionError::InstructionError(0, InstructionError::InvalidArgument)
-    );
-}
-
-#[tokio::test]
-async fn fail_with_invalid_destination_argument() {
-    let (mut context, test_pool_market, test_pool, user) = setup().await;
-
-    // Create new pool
-
-    let tx = Transaction::new_signed_with_payer(
-        &[instruction::deposit(
-            &everlend_ulp::id(),
-            &test_pool_market.keypair.pubkey(),
-            &test_pool.pool_pubkey,
-            &user.token_account,
-            // Wrong destination
-            &user.token_account,
-            &test_pool.token_account.pubkey(),
-            &test_pool.pool_mint.pubkey(),
-            &user.pubkey(),
-            AMOUNT,
-        )],
-        Some(&context.payer.pubkey()),
-        &[&context.payer, &user.owner],
-        context.last_blockhash,
-    );
-
-    assert_eq!(
-        context
-            .banks_client
-            .process_transaction(tx)
-            .await
-            .unwrap_err()
-            .unwrap(),
-        TransactionError::InstructionError(
-            0,
-            InstructionError::Custom(TokenError::MintMismatch as u32)
-        )
     );
 }
 

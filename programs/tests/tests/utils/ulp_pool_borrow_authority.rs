@@ -1,4 +1,4 @@
-use super::{get_account, get_token_balance, BanksClientResult, TestPool, TestPoolMarket};
+use super::{get_account, get_token_balance, BanksClientResult, UniversalLiquidityPool, UlpMarket};
 use everlend_ulp::{
     find_pool_borrow_authority_program_address, instruction,
     state::{Pool, PoolBorrowAuthority},
@@ -10,13 +10,13 @@ use solana_sdk::{signature::Signer, transaction::Transaction};
 pub const ULP_SHARE_ALLOWED: u16 = 10_000; // 100% of the total pool
 
 #[derive(Debug)]
-pub struct TestPoolBorrowAuthority {
+pub struct UniversalLiquidityPoolBorrowAuthority {
     pub pool_borrow_authority_pubkey: Pubkey,
     pub borrow_authority: Pubkey,
 }
 
-impl TestPoolBorrowAuthority {
-    pub fn new(test_pool: &TestPool, borrow_authority: Pubkey) -> Self {
+impl UniversalLiquidityPoolBorrowAuthority {
+    pub fn new(test_pool: &UniversalLiquidityPool, borrow_authority: Pubkey) -> Self {
         let (pool_borrow_authority_pubkey, _) = find_pool_borrow_authority_program_address(
             &everlend_ulp::id(),
             &test_pool.pool_pubkey,
@@ -50,8 +50,8 @@ impl TestPoolBorrowAuthority {
     pub async fn create(
         &self,
         context: &mut ProgramTestContext,
-        test_pool_market: &TestPoolMarket,
-        test_pool: &TestPool,
+        test_pool_market: &UlpMarket,
+        test_pool: &UniversalLiquidityPool,
         share_allowed: u16,
     ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
@@ -74,8 +74,8 @@ impl TestPoolBorrowAuthority {
     pub async fn update(
         &self,
         context: &mut ProgramTestContext,
-        test_pool_market: &TestPoolMarket,
-        test_pool: &TestPool,
+        test_pool_market: &UlpMarket,
+        test_pool: &UniversalLiquidityPool,
         share_allowed: u16,
     ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
@@ -98,8 +98,8 @@ impl TestPoolBorrowAuthority {
     pub async fn delete(
         &self,
         context: &mut ProgramTestContext,
-        test_pool_market: &TestPoolMarket,
-        test_pool: &TestPool,
+        test_pool_market: &UlpMarket,
+        test_pool: &UniversalLiquidityPool,
     ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::delete_pool_borrow_authority(

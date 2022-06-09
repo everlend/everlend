@@ -31,7 +31,7 @@ pub enum RegistryInstruction {
     /// [W] Registry config
     /// [WS] Manager
     /// [R] Rent sysvar
-    /// [R] Sytem program
+    /// [R] System program
     SetRegistryConfig {
         /// Programs
         programs: RegistryPrograms,
@@ -47,7 +47,7 @@ pub enum RegistryInstruction {
     /// [R] Registry
     /// [W] Registry config
     /// [WS] Manager
-    /// [R] Sytem program
+    /// [R] System program
     SetRegistryRootAccounts {
         /// Root accounts
         roots: RegistryRootAccounts,

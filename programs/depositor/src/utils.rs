@@ -1,5 +1,6 @@
 //! Utils
 
+use everlend_income_pools::utils::IncomePoolAccounts;
 use everlend_registry::state::RegistryPrograms;
 use everlend_utils::{cpi, integrations, EverlendError};
 use solana_program::{
@@ -9,19 +10,16 @@ use solana_program::{
     program_error::ProgramError,
     program_pack::Pack,
 };
+use everlend_collateral_pool::utils::CollateralPoolAccounts;
 use spl_token::state::Account;
 use std::{cmp::Ordering, slice::Iter};
+
 
 /// Deposit
 #[allow(clippy::too_many_arguments)]
 pub fn deposit<'a>(
     registry_programs: &RegistryPrograms,
-    mm_pool_market: AccountInfo<'a>,
-    mm_pool_market_authority: AccountInfo<'a>,
-    mm_pool: AccountInfo<'a>,
-    mm_pool_token_account: AccountInfo<'a>,
-    mm_pool_collateral_transit: AccountInfo<'a>,
-    mm_pool_collateral_mint: AccountInfo<'a>,
+    collateral_pool_accounts: CollateralPoolAccounts<'a>,
     collateral_transit: AccountInfo<'a>,
     collateral_mint: AccountInfo<'a>,
     liquidity_transit: AccountInfo<'a>,
@@ -51,14 +49,9 @@ pub fn deposit<'a>(
     let collateral_amount = Account::unpack_unchecked(&collateral_transit.data.borrow())?.amount;
 
     msg!("Collect collateral tokens to MM Pool");
-    everlend_ulp::cpi::deposit(
-        mm_pool_market.clone(),
-        mm_pool_market_authority.clone(),
-        mm_pool.clone(),
+    everlend_collateral_pool::cpi::deposit(
+        collateral_pool_accounts,
         collateral_transit.clone(),
-        mm_pool_collateral_transit.clone(),
-        mm_pool_token_account.clone(),
-        mm_pool_collateral_mint.clone(),
         authority.clone(),
         collateral_amount,
         signers_seeds,
@@ -71,15 +64,9 @@ pub fn deposit<'a>(
 #[allow(clippy::too_many_arguments)]
 pub fn withdraw<'a>(
     registry_programs: &RegistryPrograms,
-    income_pool_market: AccountInfo<'a>,
-    income_pool: AccountInfo<'a>,
-    income_pool_token_account: AccountInfo<'a>,
-    mm_pool_market: AccountInfo<'a>,
-    mm_pool_market_authority: AccountInfo<'a>,
-    mm_pool: AccountInfo<'a>,
-    mm_pool_token_account: AccountInfo<'a>,
-    mm_pool_collateral_transit: AccountInfo<'a>,
-    mm_pool_collateral_mint: AccountInfo<'a>,
+    income_pool_accounts: IncomePoolAccounts<'a>,
+    collateral_pool_accounts: CollateralPoolAccounts<'a>,
+    collateral_pool_withdraw_authority: AccountInfo<'a>,
     collateral_transit: AccountInfo<'a>,
     collateral_mint: AccountInfo<'a>,
     liquidity_transit: AccountInfo<'a>,
@@ -96,14 +83,10 @@ pub fn withdraw<'a>(
     let liquidity_transit_supply = Account::unpack(&liquidity_transit.data.borrow())?.amount;
 
     msg!("Withdraw collateral tokens from MM Pool");
-    everlend_ulp::cpi::withdraw(
-        mm_pool_market.clone(),
-        mm_pool_market_authority.clone(),
-        mm_pool.clone(),
-        mm_pool_collateral_transit.clone(),
+    everlend_collateral_pool::cpi::withdraw(
+        collateral_pool_accounts,
+        collateral_pool_withdraw_authority,
         collateral_transit.clone(),
-        mm_pool_token_account.clone(),
-        mm_pool_collateral_mint.clone(),
         authority.clone(),
         collateral_amount,
         signers_seeds,
@@ -142,10 +125,8 @@ pub fn withdraw<'a>(
     match income_amount.cmp(&0) {
         Ordering::Greater => {
             everlend_income_pools::cpi::deposit(
-                income_pool_market.clone(),
-                income_pool.clone(),
+                income_pool_accounts,
                 liquidity_transit.clone(),
-                income_pool_token_account.clone(),
                 authority.clone(),
                 income_amount as u64,
                 signers_seeds,

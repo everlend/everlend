@@ -33,7 +33,7 @@ pub enum LiquidityPoolsInstruction {
     /// [WS] Market manager
     /// [R] Pool market authority
     /// [R] Rent sysvar
-    /// [R] Sytem program
+    /// [R] System program
     /// [R] Token program id
     CreatePool,
 
@@ -46,7 +46,7 @@ pub enum LiquidityPoolsInstruction {
     /// [R] Borrow authority
     /// [WS] Market manager
     /// [R] Rent sysvar
-    /// [R] Sytem program
+    /// [R] System program
     CreatePoolBorrowAuthority {
         /// Share allowed
         share_allowed: u16,

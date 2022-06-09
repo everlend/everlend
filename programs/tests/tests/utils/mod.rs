@@ -23,6 +23,11 @@ pub mod income_pool_market;
 pub mod liquidity_oracle;
 pub mod money_market;
 pub mod registry;
+pub mod collateral_pool;
+pub mod collateral_pool_borrow_authority;
+pub mod collateral_pool_withdraw_authority;
+pub mod collateral_pool_market;
+pub mod collateral_pool_liquidity_provider;
 pub mod ulp_pool;
 pub mod ulp_pool_borrow_authority;
 pub mod ulp_pool_market;
@@ -37,6 +42,10 @@ pub use income_pool_market::*;
 pub use liquidity_oracle::*;
 pub use money_market::*;
 pub use registry::*;
+pub use collateral_pool::*;
+pub use collateral_pool_borrow_authority::*;
+pub use collateral_pool_withdraw_authority::*;
+pub use collateral_pool_market::*;
 pub use ulp_pool::*;
 pub use ulp_pool_borrow_authority::*;
 pub use ulp_pool_market::*;
@@ -49,6 +58,11 @@ pub type BanksClientResult<T> = transport::Result<T>;
 
 pub fn program_test() -> ProgramTest {
     let mut program = ProgramTest::new(
+        "everlend_collateral_pool",
+        everlend_collateral_pool::id(),
+        processor!(everlend_collateral_pool::processor::Processor::process_instruction),
+    );
+    program.add_program(
         "everlend_ulp",
         everlend_ulp::id(),
         processor!(everlend_ulp::processor::Processor::process_instruction),
@@ -145,7 +159,7 @@ pub async fn presetup() -> (
 
     let mut programs = RegistryPrograms {
         general_pool_program_id: everlend_general_pool::id(),
-        ulp_program_id: everlend_ulp::id(),
+        collateral_pool_program_id: everlend_collateral_pool::id(),
         liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
         depositor_program_id: everlend_depositor::id(),
         income_pools_program_id: everlend_income_pools::id(),

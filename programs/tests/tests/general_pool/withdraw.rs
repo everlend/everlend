@@ -11,8 +11,6 @@ use solana_program_test::*;
 use solana_sdk::signer::Signer;
 use solana_sdk::transaction::{Transaction, TransactionError};
 
-use crate::utils::*;
-
 const INITIAL_USER_BALANCE: u64 = 5000000;
 const WITHDRAW_REQUEST_RENT: u64 = 1955760;
 const WITHDRAW_AMOUNT: u64 = 45;
@@ -53,7 +51,7 @@ async fn setup(
             &mut context,
             &test_pool_market,
             &test_pool,
-            ULP_SHARE_ALLOWED,
+            COLLATERAL_POOL_SHARE_ALLOWED,
         )
         .await
         .unwrap();
