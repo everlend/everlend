@@ -137,7 +137,7 @@ pub fn deposit_mining<'a>(
     source_collateral: AccountInfo<'a>,
     // Contains is reserve account ...bonus.unCollSupply
     reserve_bonus: AccountInfo<'a>,
-    mining_info: AccountInfo<'a>,
+    mining: AccountInfo<'a>,
     reserve: AccountInfo<'a>,
     lending_market: AccountInfo<'a>,
     mining_owner: AccountInfo<'a>,
@@ -150,7 +150,7 @@ pub fn deposit_mining<'a>(
         accounts: vec![
             AccountMeta::new(*source_collateral.key, false),
             AccountMeta::new(*reserve_bonus.key, false),
-            AccountMeta::new(*mining_info.key, false),
+            AccountMeta::new(*mining.key, false),
             AccountMeta::new_readonly(*reserve.key, false),
             AccountMeta::new_readonly(*lending_market.key, false),
             AccountMeta::new_readonly(*mining_owner.key, true),
@@ -165,7 +165,7 @@ pub fn deposit_mining<'a>(
         &[
             source_collateral,
             reserve_bonus,
-            mining_info,
+            mining,
             reserve,
             lending_market,
             mining_owner,
