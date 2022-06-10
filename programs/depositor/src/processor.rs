@@ -34,7 +34,6 @@ use everlend_utils::{
 };
 use everlend_collateral_pool::utils::CollateralPoolAccounts;
 
-use crate::find_internal_mining_program_address;
 use crate::state::{InternalMining, MiningType};
 use crate::{
     find_rebalancing_program_address, find_transit_program_address,

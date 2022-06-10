@@ -315,7 +315,7 @@ async fn setup() -> (
 }
 
 #[tokio::test]
-async fn success() {
+async fn success2() {
     let (
         mut context,
         money_market,
