@@ -34,8 +34,8 @@ const SETTINGS_LEN: usize = 8;
 pub struct RegistryPrograms {
     /// General pool program
     pub general_pool_program_id: Pubkey,
-    /// ULP program
-    pub ulp_program_id: Pubkey,
+    /// Collateral pool program
+    pub collateral_pool_program_id: Pubkey,
     /// Liquidity oracle program
     pub liquidity_oracle_program_id: Pubkey,
     /// Depositor program

@@ -144,7 +144,6 @@ pub fn deposit(
     mm_pool_token_account: &Pubkey,
     liquidity_mint: &Pubkey,
     collateral_mint: &Pubkey,
-    mm_pool_collateral_mint: &Pubkey,
     money_market_program_id: &Pubkey,
     money_market_accounts: Vec<AccountMeta>,
 ) -> Result<(), ClientError> {
@@ -155,7 +154,6 @@ pub fn deposit(
             depositor_pubkey,
             mm_pool_market_pubkey,
             mm_pool_token_account,
-            mm_pool_collateral_mint,
             liquidity_mint,
             collateral_mint,
             money_market_program_id,
@@ -180,7 +178,6 @@ pub fn withdraw(
     mm_pool_token_account: &Pubkey,
     collateral_mint: &Pubkey,
     liquidity_mint: &Pubkey,
-    mm_pool_collateral_mint: &Pubkey,
     money_market_program_id: &Pubkey,
     money_market_accounts: Vec<AccountMeta>,
 ) -> Result<(), ClientError> {
@@ -193,7 +190,6 @@ pub fn withdraw(
             income_pool_token_account,
             mm_pool_market_pubkey,
             mm_pool_token_account,
-            mm_pool_collateral_mint,
             collateral_mint,
             liquidity_mint,
             money_market_program_id,

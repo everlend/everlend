@@ -1,6 +1,5 @@
 #![cfg(feature = "test-bpf")]
 
-use crate::utils::*;
 use everlend_ulp::instruction;
 use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
@@ -9,19 +8,30 @@ use solana_sdk::{
     pubkey::Pubkey, signer::Signer, transaction::Transaction, transaction::TransactionError,
 };
 use spl_token::error::TokenError;
+use crate::utils::{
+    presetup,
+    UlpMarket,
+    UniversalLiquidityPool,
+    LiquidityProvider,
+    add_liquidity_provider,
+    get_token_balance,
+    mint_tokens,
+    EXP,
+    users::*,
+};
 
 async fn setup() -> (
     ProgramTestContext,
-    TestPoolMarket,
-    TestPool,
+    UlpMarket,
+    UniversalLiquidityPool,
     LiquidityProvider,
 ) {
     let (mut context, _, _, _) = presetup().await;
 
-    let test_pool_market = TestPoolMarket::new();
+    let test_pool_market = UlpMarket::new();
     test_pool_market.init(&mut context).await.unwrap();
 
-    let test_pool = TestPool::new(&test_pool_market, None);
+    let test_pool = UniversalLiquidityPool::new(&test_pool_market, None);
     test_pool
         .create(&mut context, &test_pool_market)
         .await

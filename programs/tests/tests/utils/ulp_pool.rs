@@ -1,6 +1,6 @@
 use super::{
-    get_account, get_liquidity_mint, ulp_pool_borrow_authority::TestPoolBorrowAuthority,
-    BanksClientResult, LiquidityProvider, TestPoolMarket, User,
+    get_account, get_liquidity_mint, ulp_pool_borrow_authority::UniversalLiquidityPoolBorrowAuthority,
+    BanksClientResult, LiquidityProvider, UlpMarket, User,
 };
 use everlend_ulp::{find_pool_program_address, instruction, state::Pool};
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
@@ -11,15 +11,15 @@ use solana_sdk::{
 };
 
 #[derive(Debug)]
-pub struct TestPool {
+pub struct UniversalLiquidityPool {
     pub pool_pubkey: Pubkey,
     pub token_mint_pubkey: Pubkey,
     pub token_account: Keypair,
     pub pool_mint: Keypair,
 }
 
-impl TestPool {
-    pub fn new(test_pool_market: &TestPoolMarket, token_mint_pubkey: Option<Pubkey>) -> Self {
+impl UniversalLiquidityPool {
+    pub fn new(test_pool_market: &UlpMarket, token_mint_pubkey: Option<Pubkey>) -> Self {
         let token_mint_pubkey = token_mint_pubkey.unwrap_or(get_liquidity_mint().1);
 
         let (pool_pubkey, _) = find_pool_program_address(
@@ -44,7 +44,7 @@ impl TestPool {
     pub async fn create(
         &self,
         context: &mut ProgramTestContext,
-        test_pool_market: &TestPoolMarket,
+        test_pool_market: &UlpMarket,
     ) -> BanksClientResult<()> {
         let rent = context.banks_client.get_rent().await.unwrap();
         let tx = Transaction::new_signed_with_payer(
@@ -88,7 +88,7 @@ impl TestPool {
     pub async fn deposit(
         &self,
         context: &mut ProgramTestContext,
-        test_pool_market: &TestPoolMarket,
+        test_pool_market: &UlpMarket,
         user: &LiquidityProvider,
         amount: u64,
     ) -> BanksClientResult<()> {
@@ -115,7 +115,7 @@ impl TestPool {
     pub async fn withdraw(
         &self,
         context: &mut ProgramTestContext,
-        test_pool_market: &TestPoolMarket,
+        test_pool_market: &UlpMarket,
         user: &LiquidityProvider,
         amount: u64,
     ) -> BanksClientResult<()> {
@@ -142,8 +142,8 @@ impl TestPool {
     pub async fn borrow(
         &self,
         context: &mut ProgramTestContext,
-        test_pool_market: &TestPoolMarket,
-        test_pool_borrow_authority: &TestPoolBorrowAuthority,
+        test_pool_market: &UlpMarket,
+        test_pool_borrow_authority: &UniversalLiquidityPoolBorrowAuthority,
         borrow_authority: Option<&Keypair>,
         destination: &Pubkey,
         amount: u64,
@@ -172,8 +172,8 @@ impl TestPool {
     pub async fn repay(
         &self,
         context: &mut ProgramTestContext,
-        test_pool_market: &TestPoolMarket,
-        test_pool_borrow_authority: &TestPoolBorrowAuthority,
+        test_pool_market: &UlpMarket,
+        test_pool_borrow_authority: &UniversalLiquidityPoolBorrowAuthority,
         user: &LiquidityProvider,
         amount: u64,
         interest_amount: u64,

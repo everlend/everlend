@@ -1,15 +1,21 @@
 use crate::utils::*;
-use everlend_ulp::{
-    find_pool_program_address, instruction,
-    state::{Pool, PoolMarket},
+use anchor_lang::prelude::AccountMeta;
+use everlend_collateral_pool::{
+    find_pool_program_address, instruction::{self, CollateralPoolsInstruction},
+    state::{Pool, PoolMarket}, find_pool_withdraw_authority_program_address,
 };
 use solana_client::client_error::ClientError;
-use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
+use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction, sysvar, system_program, instruction::Instruction};
 use solana_sdk::{
     signature::{write_keypair_file, Keypair},
     signer::Signer,
     transaction::Transaction,
 };
+
+pub struct PoolPubkeys {
+    pub pool: Pubkey,
+    pub token_account: Pubkey,
+}
 
 pub fn create_market(
     config: &Config,
@@ -31,11 +37,11 @@ pub fn create_market(
                 &pool_market_keypair.pubkey(),
                 balance,
                 PoolMarket::LEN as u64,
-                &everlend_ulp::id(),
+                &everlend_collateral_pool::id(),
             ),
             // Initialize pool market account
             instruction::init_pool_market(
-                &everlend_ulp::id(),
+                &everlend_collateral_pool::id(),
                 &pool_market_keypair.pubkey(),
                 &config.fee_payer.pubkey(),
             ),
@@ -61,9 +67,9 @@ pub fn create_pool(
     config: &Config,
     pool_market_pubkey: &Pubkey,
     token_mint: &Pubkey,
-) -> Result<(Pubkey, Pubkey, Pubkey), ClientError> {
+) -> Result<PoolPubkeys, ClientError> {
     let (pool_pubkey, _) =
-        find_pool_program_address(&everlend_ulp::id(), pool_market_pubkey, token_mint);
+        find_pool_program_address(&everlend_collateral_pool::id(), pool_market_pubkey, token_mint);
 
     let account_info = config
         .rpc_client
@@ -71,24 +77,17 @@ pub fn create_pool(
         .value;
     if account_info.is_some() {
         let pool = config.get_account_unpack::<Pool>(&pool_pubkey)?;
-        return Ok((pool_pubkey, pool.token_account, pool.pool_mint));
+        return Ok(PoolPubkeys {pool: pool_pubkey, token_account: pool.token_account});
     }
 
-    // Generate new accounts
     let token_account = Keypair::new();
-    let pool_mint = Keypair::new();
 
     println!("Pool: {}", &pool_pubkey);
     println!("Token account: {}", &token_account.pubkey());
-    println!("Pool mint: {}", &pool_mint.pubkey());
 
     let token_account_balance = config
         .rpc_client
         .get_minimum_balance_for_rent_exemption(spl_token::state::Account::LEN)?;
-    let pool_mint_balance = config
-        .rpc_client
-        .get_minimum_balance_for_rent_exemption(spl_token::state::Mint::LEN)?;
-
     let tx = Transaction::new_with_payer(
         &[
             system_instruction::create_account(
@@ -98,19 +97,11 @@ pub fn create_pool(
                 spl_token::state::Account::LEN as u64,
                 &spl_token::id(),
             ),
-            system_instruction::create_account(
-                &config.fee_payer.pubkey(),
-                &pool_mint.pubkey(),
-                pool_mint_balance,
-                spl_token::state::Mint::LEN as u64,
-                &spl_token::id(),
-            ),
             instruction::create_pool(
-                &everlend_ulp::id(),
+                &everlend_collateral_pool::id(),
                 pool_market_pubkey,
                 token_mint,
                 &token_account.pubkey(),
-                &pool_mint.pubkey(),
                 &config.fee_payer.pubkey(),
             ),
         ],
@@ -119,8 +110,46 @@ pub fn create_pool(
 
     config.sign_and_send_and_confirm_transaction(
         tx,
-        vec![config.fee_payer.as_ref(), &token_account, &pool_mint],
+        vec![config.fee_payer.as_ref(), &token_account],
     )?;
 
-    Ok((pool_pubkey, token_account.pubkey(), pool_mint.pubkey()))
+    Ok(PoolPubkeys {pool: pool_pubkey, token_account: token_account.pubkey()})
+}
+
+pub fn create_pool_withdraw_authority(
+    config: &Config,
+    pool_market: &Pubkey,
+    pool: &Pubkey,
+    withdraw_authority: &Pubkey,
+    manager: &Pubkey,
+) -> Result<Pubkey, ClientError> {
+    let (pool_withdraw_authority, _) =
+        find_pool_withdraw_authority_program_address(&everlend_collateral_pool::id(), pool, withdraw_authority);
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*pool_market, false),
+        AccountMeta::new_readonly(*pool, false),
+        AccountMeta::new(pool_withdraw_authority, false),
+        AccountMeta::new_readonly(*withdraw_authority, false),
+        AccountMeta::new(*manager, true),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+        AccountMeta::new_readonly(system_program::id(), false),
+    ];
+
+    let instruction = Instruction::new_with_borsh(
+        everlend_collateral_pool::id(),
+        &CollateralPoolsInstruction::CreatePoolWithdrawAuthority,
+        accounts,
+    );
+    let tx = Transaction::new_with_payer(
+        &[instruction],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    config.sign_and_send_and_confirm_transaction(
+        tx,
+        vec![config.fee_payer.as_ref()],
+    )?;
+    println!("Pool: {} Withdraw authority: {}", pool, pool_withdraw_authority);
+    Ok(pool_withdraw_authority)
 }
