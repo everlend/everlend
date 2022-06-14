@@ -33,39 +33,39 @@ async fn setup() -> (
     TestTokenDistribution,
     DistributionArray,
 ) {
-    let (mut context, money_market, pyth_oracle, registry) = presetup().await;
+    let env = presetup().await;
+    let mut context = env.context;
 
     let payer_pubkey = context.payer.pubkey();
 
-    // 0. Prepare lending
-    let reserve = money_market.get_reserve_data(&mut context).await;
-    // println!("{:#?}", reserve);
+    // 1. Prepare lending
+    let reserve = env.spl_token_lending.get_reserve_data(&mut context).await;
 
-    let account = get_account(&mut context, &money_market.market_pubkey).await;
+    let account = get_account(&mut context, &env.spl_token_lending.market_pubkey).await;
     let lending_market =
         spl_token_lending::state::LendingMarket::unpack_from_slice(account.data.as_slice())
             .unwrap();
 
     let authority_signer_seeds = &[
-        &money_market.market_pubkey.to_bytes()[..32],
+        &env.spl_token_lending.market_pubkey.to_bytes()[..32],
         &[lending_market.bump_seed],
     ];
     let _lending_market_authority_pubkey =
         Pubkey::create_program_address(authority_signer_seeds, &spl_token_lending::id()).unwrap();
 
-    let _collateral_mint = get_mint_data(&mut context, &reserve.collateral.mint_pubkey).await;
+    get_mint_data(&mut context, &reserve.collateral.mint_pubkey).await;
 
-    // 1. Prepare general pool
+    // 2.1 Prepare general pool
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
+    general_pool_market.init(&mut context, &env.registry.keypair.pubkey()).await.unwrap();
 
     let general_pool = TestGeneralPool::new(&general_pool_market, None);
     general_pool
         .create(&mut context, &general_pool_market)
         .await
         .unwrap();
-    registry
+    env.registry
         .set_registry_pool_config(
             &mut context,
             &general_pool.pool_pubkey,
@@ -74,7 +74,7 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    // 1.1 Add liquidity to general pool
+    // 2.2 Add liquidity to general pool
 
     let liquidity_provider = add_liquidity_provider(
         &mut context,
@@ -88,7 +88,7 @@ async fn setup() -> (
     general_pool
         .deposit(
             &mut context,
-            &registry,
+            &env.registry,
             &general_pool_market,
             &liquidity_provider,
             100 * EXP,
@@ -96,14 +96,14 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    // 2. Prepare income pool
+    // 3. Prepare income pool
     let income_pool_market = TestIncomePoolMarket::new();
     income_pool_market
         .init(&mut context, &general_pool_market)
         .await
         .unwrap();
 
-    // 3. Prepare money market pool
+    // 4. Prepare money market pool
 
     let mm_pool_market = TestPoolMarket::new();
     mm_pool_market.init(&mut context).await.unwrap();
@@ -111,9 +111,9 @@ async fn setup() -> (
     let mm_pool = TestPool::new(&mm_pool_market, Some(reserve.collateral.mint_pubkey));
     mm_pool.create(&mut context, &mm_pool_market).await.unwrap();
 
-    // 4. Prepare depositor
+    // 5. Prepare depositor
 
-    // 4.1. Prepare liquidity oracle
+    // 5.1. Prepare liquidity oracle
 
     let test_liquidity_oracle = TestLiquidityOracle::new();
     test_liquidity_oracle.init(&mut context).await.unwrap();
@@ -140,21 +140,21 @@ async fn setup() -> (
         .unwrap();
 
     let test_depositor = TestDepositor::new();
-    test_depositor.init(&mut context, &registry).await.unwrap();
+    test_depositor.init(&mut context, &env.registry).await.unwrap();
 
-    // 4.2 Create transit account for liquidity token
+    // 5.2 Create transit account for liquidity token
     test_depositor
         .create_transit(&mut context, &general_pool.token_mint_pubkey, None)
         .await
         .unwrap();
 
-    // 4.3 Create transit account for collateral token
+    // 5.3 Create transit account for collateral token
     test_depositor
         .create_transit(&mut context, &mm_pool.token_mint_pubkey, None)
         .await
         .unwrap();
 
-    // 5. Prepare borrow authority
+    // 6. Prepare borrow authority
     let (depositor_authority, _) = find_program_address(
         &everlend_depositor::id(),
         &test_depositor.depositor.pubkey(),
@@ -178,16 +178,16 @@ async fn setup() -> (
         liquidity_oracle: test_liquidity_oracle.keypair.pubkey(),
     };
     roots.collateral_pool_markets[0] = mm_pool_market.keypair.pubkey();
-    registry
+    env.registry
         .set_registry_root_accounts(&mut context, roots)
         .await
         .unwrap();
 
-    // 6. Start rebalancing
+    // 7. Start rebalancing
     test_depositor
         .start_rebalancing(
             &mut context,
-            &registry,
+            &env.registry,
             &general_pool_market,
             &general_pool,
             &test_liquidity_oracle,
@@ -198,9 +198,9 @@ async fn setup() -> (
 
     (
         context,
-        money_market,
-        pyth_oracle,
-        registry,
+        env.spl_token_lending,
+        env.pyth_oracle,
+        env.registry,
         general_pool_market,
         general_pool,
         general_pool_borrow_authority,

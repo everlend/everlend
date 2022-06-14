@@ -29,6 +29,9 @@ use everlend_registry::state::{
 use everlend_utils::integrations::MoneyMarket;
 use general_pool::get_withdrawal_requests;
 use utils::*;
+use solana_program_test::{find_file, read_file};
+use solana_program::program_pack::Pack;
+use download_account::download_account;
 
 use crate::collateral_pool::PoolPubkeys;
 use crate::general_pool::get_general_pool_market;
@@ -45,6 +48,7 @@ mod multisig;
 mod registry;
 mod collateral_pool;
 mod utils;
+mod download_account;
 
 pub fn url_to_moniker(url: &str) -> String {
     let re = Regex::new(r"devnet|mainnet|localhost|testnet").unwrap();
@@ -564,6 +568,10 @@ async fn main() -> anyhow::Result<()> {
                 ),
         )
         .subcommand(
+            SubCommand::with_name("save-larix-accounts")
+                .about("Set a new registry config")
+        )
+        .subcommand(
             SubCommand::with_name("set-registry-pool-config")
                 .about("Set a new registry pool config")
                 .arg(
@@ -1078,6 +1086,9 @@ async fn main() -> anyhow::Result<()> {
         ("set-registry-config", Some(arg_matches)) => {
             let registry_pubkey = pubkey_of(arg_matches, "registry").unwrap();
             command_set_registry_config(&config, registry_pubkey).await
+        }
+        ("save-larix-accounts", Some(_)) => {
+            command_save_larix_accounts("../tests/tests/fixtures/larix/larix_reserve_sol.bin").await
         }
         ("set-registry-pool-config", Some(arg_matches)) => {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");

@@ -20,32 +20,32 @@ async fn setup() -> (
     TestIncomePool,
     TestGeneralPool,
 ) {
-    let (mut context, _, _, registry) = presetup().await;
+    let mut env = presetup().await;
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
+    general_pool_market.init(&mut env.context, &env.registry.keypair.pubkey()).await.unwrap();
 
     let test_income_pool_market = TestIncomePoolMarket::new();
     test_income_pool_market
-        .init(&mut context, &general_pool_market)
+        .init(&mut env.context, &general_pool_market)
         .await
         .unwrap();
 
     let test_general_pool = TestGeneralPool::new(&general_pool_market, None);
     test_general_pool
-        .create(&mut context, &general_pool_market)
+        .create(&mut env.context, &general_pool_market)
         .await
         .unwrap();
 
     let test_income_pool = TestIncomePool::new(&test_income_pool_market, None);
     test_income_pool
-        .create(&mut context, &test_income_pool_market)
+        .create(&mut env.context, &test_income_pool_market)
         .await
         .unwrap();
 
     test_income_pool
         .create_safety_fund_token_account(
-            &mut context,
+            &mut env.context,
             &test_income_pool_market,
             &test_general_pool,
         )
@@ -53,7 +53,7 @@ async fn setup() -> (
         .unwrap();
 
     mint_tokens(
-        &mut context,
+        &mut env.context,
         &test_income_pool.token_mint_pubkey,
         &test_income_pool.token_account.pubkey(),
         TOKEN_AMOUNT,
@@ -62,7 +62,7 @@ async fn setup() -> (
     .unwrap();
 
     (
-        context,
+        env.context,
         test_income_pool_market,
         test_income_pool,
         test_general_pool,

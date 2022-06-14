@@ -19,25 +19,25 @@ async fn setup() -> (
     TestIncomePool,
     TokenHolder,
 ) {
-    let (mut context, _, _, registry) = presetup().await;
+    let mut env = presetup().await;
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
+    general_pool_market.init(&mut env.context, &env.registry.keypair.pubkey()).await.unwrap();
 
     let test_income_pool_market = TestIncomePoolMarket::new();
     test_income_pool_market
-        .init(&mut context, &general_pool_market)
+        .init(&mut env.context, &general_pool_market)
         .await
         .unwrap();
 
     let test_income_pool = TestIncomePool::new(&test_income_pool_market, None);
     test_income_pool
-        .create(&mut context, &test_income_pool_market)
+        .create(&mut env.context, &test_income_pool_market)
         .await
         .unwrap();
 
     let user = add_token_holder(
-        &mut context,
+        &mut env.context,
         &test_income_pool.token_mint_pubkey,
         9999 * EXP,
     )
@@ -45,7 +45,7 @@ async fn setup() -> (
     .unwrap();
 
     (
-        context,
+        env.context,
         general_pool_market,
         test_income_pool_market,
         test_income_pool,

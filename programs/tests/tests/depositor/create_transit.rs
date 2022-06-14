@@ -12,24 +12,24 @@ use everlend_utils::find_program_address;
 use crate::utils::*;
 
 async fn setup() -> (ProgramTestContext, TestDepositor) {
-    let (mut context, _, _, registry) = presetup().await;
+    let mut env = presetup().await;
 
     let test_liquidity_oracle = TestLiquidityOracle::new();
-    test_liquidity_oracle.init(&mut context).await.unwrap();
+    test_liquidity_oracle.init(&mut env.context).await.unwrap();
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
+    general_pool_market.init(&mut env.context, &env.registry.keypair.pubkey()).await.unwrap();
 
     let income_pool_market = TestIncomePoolMarket::new();
     income_pool_market
-        .init(&mut context, &general_pool_market)
+        .init(&mut env.context, &general_pool_market)
         .await
         .unwrap();
 
     let test_depositor = TestDepositor::new();
-    test_depositor.init(&mut context, &registry).await.unwrap();
+    test_depositor.init(&mut env.context, &env.registry).await.unwrap();
 
-    (context, test_depositor)
+    (env.context, test_depositor)
 }
 
 #[tokio::test]

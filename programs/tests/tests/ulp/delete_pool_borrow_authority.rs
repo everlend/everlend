@@ -14,7 +14,7 @@ use crate::utils::{
 pub const ULP_SHARE_ALLOWED: u16 = 10_000;
 
 async fn setup() -> (ProgramTestContext, UlpMarket, UniversalLiquidityPool) {
-    let mut context = presetup().await.0;
+    let mut context = presetup().await.context;
 
     let test_pool_market = UlpMarket::new();
     test_pool_market.init(&mut context).await.unwrap();

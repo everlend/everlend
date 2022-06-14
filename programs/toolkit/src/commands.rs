@@ -2,8 +2,10 @@ use anyhow::bail;
 use solana_client::client_error::ClientError;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
+use solana_program_test::{read_file, find_file};
 use solana_sdk::signature::Keypair;
 use spl_associated_token_account::get_associated_token_address;
+use larix_lending::state::reserve::Reserve;
 
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::state::{DeprecatedRegistryConfig, Registry, SetRegistryPoolConfigParams};
@@ -18,6 +20,7 @@ use everlend_utils::integrations::MoneyMarket;
 
 use crate::accounts_config::{InitializedAccounts, CollateralPoolAccounts};
 use crate::collateral_pool::{self, PoolPubkeys};
+use crate::download_account::download_account;
 use crate::registry::close_registry_config;
 use crate::{
     accounts_config::{TokenAccounts},
@@ -138,6 +141,19 @@ pub async fn command_set_registry_config(
         },
     )?;
 
+    Ok(())
+}
+
+pub async fn command_save_larix_accounts(reserve_filepath: &str) -> anyhow::Result<()> {
+    let mut reserve_data = read_file(
+        find_file(reserve_filepath).unwrap()
+    );
+    let reserve = Reserve::unpack_from_slice(reserve_data.as_mut_slice()).unwrap();
+
+    download_account(&reserve.liquidity.supply_pubkey, "liquidity_supply").await;
+    download_account(&reserve.liquidity.fee_receiver, "liquidity_fee_receiver").await;
+    download_account(&reserve.collateral.mint_pubkey, "collateral_mint").await;
+    download_account(&reserve.collateral.supply_pubkey, "collateral_supply").await;
     Ok(())
 }
 

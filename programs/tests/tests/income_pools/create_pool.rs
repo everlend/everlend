@@ -18,18 +18,18 @@ use everlend_utils::EverlendError;
 use crate::utils::*;
 
 async fn setup() -> (ProgramTestContext, TestIncomePoolMarket) {
-    let (mut context, _, _, registry) = presetup().await;
+    let mut env = presetup().await;
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
+    general_pool_market.init(&mut env.context, &env.registry.keypair.pubkey()).await.unwrap();
 
     let test_income_pool_market = TestIncomePoolMarket::new();
     test_income_pool_market
-        .init(&mut context, &general_pool_market)
+        .init(&mut env.context, &general_pool_market)
         .await
         .unwrap();
 
-    (context, test_income_pool_market)
+    (env.context, test_income_pool_market)
 }
 
 #[tokio::test]

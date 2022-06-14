@@ -19,19 +19,19 @@ async fn setup() -> (
     TestGeneralPool,
     LiquidityProvider,
 ) {
-    let (mut context, _, _, registry) = presetup().await;
+    let mut env = presetup().await;
 
     let test_pool_market = TestGeneralPoolMarket::new();
-    test_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
+    test_pool_market.init(&mut env.context, &env.registry.keypair.pubkey()).await.unwrap();
 
     let test_pool = TestGeneralPool::new(&test_pool_market, None);
     test_pool
-        .create(&mut context, &test_pool_market)
+        .create(&mut env.context, &test_pool_market)
         .await
         .unwrap();
-    registry
+    env.registry
         .set_registry_pool_config(
-            &mut context,
+            &mut env.context,
             &test_pool.pool_pubkey,
             SetRegistryPoolConfigParams { deposit_minimum: 0, withdraw_minimum: 0 }
         )
@@ -39,7 +39,7 @@ async fn setup() -> (
         .unwrap();
 
     let user = add_liquidity_provider(
-        &mut context,
+        &mut env.context,
         &test_pool.token_mint_pubkey,
         &test_pool.pool_mint.pubkey(),
         9999 * EXP,
@@ -47,7 +47,7 @@ async fn setup() -> (
     .await
     .unwrap();
 
-    (context, registry, test_pool_market, test_pool, user)
+    (env.context, env.registry, test_pool_market, test_pool, user)
 }
 
 #[tokio::test]

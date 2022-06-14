@@ -9,7 +9,7 @@ use crate::utils::{
 };
 
 async fn setup() -> (ProgramTestContext, UlpMarket) {
-    let mut context = presetup().await.0;
+    let mut context = presetup().await.context;
 
     let test_pool_market = UlpMarket::new();
     test_pool_market.init(&mut context).await.unwrap();

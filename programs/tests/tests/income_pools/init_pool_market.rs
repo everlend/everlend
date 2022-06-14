@@ -12,36 +12,36 @@ use crate::utils::*;
 
 #[tokio::test]
 async fn success() {
-    let (mut context, _, _, registry) = presetup().await;
+    let mut env = presetup().await;
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
+    general_pool_market.init(&mut env.context, &env.registry.keypair.pubkey()).await.unwrap();
 
     let test_income_pool_market = TestIncomePoolMarket::new();
     test_income_pool_market
-        .init(&mut context, &general_pool_market)
+        .init(&mut env.context, &general_pool_market)
         .await
         .unwrap();
 
-    let pool_market = test_income_pool_market.get_data(&mut context).await;
+    let pool_market = test_income_pool_market.get_data(&mut env.context).await;
 
     assert_eq!(pool_market.account_type, AccountType::IncomePoolMarket);
 }
 
 #[tokio::test]
 async fn fail_second_time_init() {
-    let (mut context, _, _, registry) = presetup().await;
+    let mut env = presetup().await;
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
+    general_pool_market.init(&mut env.context, &env.registry.keypair.pubkey()).await.unwrap();
 
     let test_income_pool_market = TestIncomePoolMarket::new();
     test_income_pool_market
-        .init(&mut context, &general_pool_market)
+        .init(&mut env.context, &general_pool_market)
         .await
         .unwrap();
 
-    let pool_market = test_income_pool_market.get_data(&mut context).await;
+    let pool_market = test_income_pool_market.get_data(&mut env.context).await;
 
     assert_eq!(pool_market.account_type, AccountType::IncomePoolMarket);
 
@@ -52,13 +52,13 @@ async fn fail_second_time_init() {
             &test_income_pool_market.manager.pubkey(),
             &general_pool_market.keypair.pubkey(),
         )],
-        Some(&context.payer.pubkey()),
-        &[&context.payer],
-        context.last_blockhash,
+        Some(&env.context.payer.pubkey()),
+        &[&env.context.payer],
+        env.context.last_blockhash,
     );
 
     assert_eq!(
-        context
+        env.context
             .banks_client
             .process_transaction(tx)
             .await
