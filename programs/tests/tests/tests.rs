@@ -20,6 +20,18 @@ mod ulp {
     mod withdraw;
 }
 
+mod collateral_pool {
+    mod borrow;
+    mod create_pool_borrow_authority;
+    mod create_pool;
+    mod delete_pool_borrow_authority;
+    mod deposit;
+    mod init_pool_market;
+    mod repay;
+    mod update_pool_borrow_authority;
+    mod withdraw;
+}
+
 mod general_pool {
     mod borrow;
     mod cancel_withdraw_request;

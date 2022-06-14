@@ -1,6 +1,6 @@
 #![cfg(feature = "test-bpf")]
 
-use everlend_registry::state::{DistributionPubkeys, RegistryRootAccounts};
+use everlend_registry::state::{RegistryRootAccounts};
 use solana_program::instruction::InstructionError;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::*;
@@ -177,12 +177,6 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    // 4.4 Create transit account for mm pool collateral token
-    test_depositor
-        .create_transit(&mut context, &mm_pool.pool_mint.pubkey(), None)
-        .await
-        .unwrap();
-
     // 5. Prepare borrow authority
     let (depositor_authority, _) = find_program_address(
         &everlend_depositor::id(),
@@ -195,22 +189,28 @@ async fn setup() -> (
             &mut context,
             &general_pool_market,
             &general_pool,
-            ULP_SHARE_ALLOWED,
+            COLLATERAL_POOL_SHARE_ALLOWED,
         )
         .await
         .unwrap();
 
+    let ten = [1,2,3,4,5,6,7,8,9,0];
+    let collateral_pool_markets = ten.map(|_| { mm_pool_market.keypair.pubkey().clone() });
     let mut roots = RegistryRootAccounts {
         general_pool_market: general_pool_market.keypair.pubkey(),
         income_pool_market: income_pool_market.keypair.pubkey(),
-        collateral_pool_markets: DistributionPubkeys::default(),
         liquidity_oracle: test_liquidity_oracle.keypair.pubkey(),
+        collateral_pool_markets,
     };
     roots.collateral_pool_markets[0] = mm_pool_market.keypair.pubkey();
     registry
         .set_registry_root_accounts(&mut context, roots)
         .await
         .unwrap();
+
+    // 6. Prepare withdraw authority
+    let withdraw_authority = TestPoolWithdrawAuthority::new(&mm_pool, &depositor_authority);
+    withdraw_authority.create(&mut context, &mm_pool_market, &mm_pool, &depositor_authority).await.unwrap();
 
     (
         context,

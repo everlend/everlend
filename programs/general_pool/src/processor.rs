@@ -990,7 +990,7 @@ impl Processor {
     }
 
     /// Migrate pool market
-    pub fn close_pool_market(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+    pub fn close_pool_market(_program_id: &Pubkey, _accounts: &[AccountInfo]) -> ProgramResult {
         Err(EverlendError::TemporaryUnavailable.into())
     }
 

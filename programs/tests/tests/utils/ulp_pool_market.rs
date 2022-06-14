@@ -8,12 +8,12 @@ use solana_sdk::{
 };
 
 #[derive(Debug)]
-pub struct TestPoolMarket {
+pub struct UlpMarket {
     pub keypair: Keypair,
     pub manager: Keypair,
 }
 
-impl TestPoolMarket {
+impl UlpMarket {
     pub fn new() -> Self {
         Self {
             keypair: Keypair::new(),

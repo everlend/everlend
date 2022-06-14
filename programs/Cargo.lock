@@ -1010,10 +1010,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "everlend-collateral-pool"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "everlend-utils",
+ "num-derive",
+ "num-traits",
+ "solana-program",
+ "solana-program-test",
+ "solana-sdk",
+ "spl-token 3.2.0",
+ "thiserror",
+]
+
+[[package]]
 name = "everlend-depositor"
 version = "0.1.0"
 dependencies = [
  "borsh",
+ "everlend-collateral-pool",
  "everlend-general-pool",
  "everlend-income-pools",
  "everlend-liquidity-oracle",
@@ -1095,6 +1111,7 @@ dependencies = [
 name = "everlend-tests"
 version = "0.1.0"
 dependencies = [
+ "everlend-collateral-pool",
  "everlend-depositor",
  "everlend-general-pool",
  "everlend-income-pools",
@@ -1118,12 +1135,12 @@ dependencies = [
  "bs58 0.2.5",
  "clap",
  "dirs-next",
+ "everlend-collateral-pool",
  "everlend-depositor",
  "everlend-general-pool",
  "everlend-income-pools",
  "everlend-liquidity-oracle",
  "everlend-registry",
- "everlend-ulp",
  "everlend-utils",
  "port-variable-rate-lending-instructions",
  "regex",
