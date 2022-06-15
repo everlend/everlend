@@ -218,7 +218,7 @@ async fn setup() -> (
 async fn success() {
     let (
         mut context,
-        money_market,
+        spl_token_lending,
         pyth_oracle,
         registry,
         _general_pool_market,
@@ -233,7 +233,7 @@ async fn success() {
         _,
     ) = setup().await;
 
-    let reserve = money_market.get_reserve_data(&mut context).await;
+    let reserve = spl_token_lending.get_reserve_data(&mut context).await;
     let reserve_balance_before =
         get_token_balance(&mut context, &reserve.liquidity.supply_pubkey).await;
 
@@ -249,10 +249,10 @@ async fn success() {
 
     let money_market_pubkeys =
         MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
-            reserve: money_market.reserve_pubkey,
+            reserve: spl_token_lending.reserve_pubkey,
             reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
             reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
-            lending_market: money_market.market_pubkey,
+            lending_market: spl_token_lending.market_pubkey,
         });
 
     test_depositor

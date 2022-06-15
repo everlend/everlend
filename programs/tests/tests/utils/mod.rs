@@ -52,7 +52,7 @@ pub use ulp_pool_borrow_authority::*;
 pub use ulp_pool_market::*;
 pub use users::*;
 
-use self::larix::add_larix;
+use self::larix::{add_larix, TestLarix};
 
 pub const EXP: u64 = 1_000_000_000;
 pub const REFRESH_INCOME_INTERVAL: u64 = 300; // About 2.5 min
@@ -64,6 +64,7 @@ pub struct TestEnvironment {
     pub spl_token_lending: TestSPLTokenLending,
     pub pyth_oracle: TestPythOracle,
     pub registry: TestRegistry,
+    pub larix: TestLarix,
 }
 
 pub fn program_test() -> ProgramTest {
@@ -151,7 +152,7 @@ pub async fn presetup() -> TestEnvironment {
     let mut test = program_test();
     let pyth_oracle = add_sol_oracle(&mut test);
     let spl_token_lending = add_spl_token_lending(&mut test);
-    let _larix = add_larix(&mut test);
+    let larix = add_larix(&mut test);
 
     let mut context = test.start_with_context().await;
     let payer_pubkey = context.payer.pubkey();
@@ -191,6 +192,7 @@ pub async fn presetup() -> TestEnvironment {
         spl_token_lending,
         pyth_oracle,
         registry,
+        larix,
     }
 }
 
