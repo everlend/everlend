@@ -378,8 +378,6 @@ impl Processor {
             )?;
         }
 
-        // msg!("Steps = {:?}", rebalancing.steps);
-
         Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
 
         Ok(())
@@ -464,7 +462,6 @@ impl Processor {
             &collateral_pool.token_account,
         )?;
 
-        msg!("7");
         // Check rebalancing
         let (rebalancing_pubkey, _) = find_rebalancing_program_address(
             program_id,
