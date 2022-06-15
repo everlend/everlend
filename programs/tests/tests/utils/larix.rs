@@ -5,8 +5,6 @@ use solana_program_test::{find_file, read_file, ProgramTest};
 use larix_lending::state::reserve::Reserve;
 use solana_sdk::account::Account;
 
-use super::SPL_TOKEN_LENDING_RESERVE;
-
 pub const LARIX_PROGRAM_ID: &str = "7Zb1bGi32pfsrBkzWdqd4dFhUXwp5Nybr1zuaEwN34hy";
 pub const LARIX_LENDING_MARKET: &str = "5geyZJdffDBNoMqEbogbPvdgH9ue7NREobtW8M3C1qfe";
 pub const LARIX_RESERVE_SOL: &str = "2RcrbkGNcfy9mbarLCCRYdW3hxph7pSbP38x35MR2Bjt";
@@ -19,12 +17,12 @@ pub struct TestLarix {
 
 pub fn add_larix(test: &mut ProgramTest) -> TestLarix {
     let market_pubkey = Pubkey::from_str(LARIX_LENDING_MARKET).unwrap();
-    let reserve_pubkey = Pubkey::from_str(SPL_TOKEN_LENDING_RESERVE).unwrap();
+    let reserve_pubkey = Pubkey::from_str(LARIX_RESERVE_SOL).unwrap();
 
     test.add_account_with_file_data(
         market_pubkey,
         u32::MAX as u64,
-        spl_token_lending::id(),
+        larix_lending::id(),
         &format!("larix/lending_market.bin"),
     );
 
@@ -34,25 +32,25 @@ pub fn add_larix(test: &mut ProgramTest) -> TestLarix {
     test.add_account_with_file_data(
         reserve.liquidity.supply_pubkey,
         u32::MAX as u64,
-        spl_token::id(),
+        larix_lending::id(),
         "larix/liquidity_supply.bin"
     );
     test.add_account_with_file_data(
         reserve.liquidity.fee_receiver,
         u32::MAX as u64,
-        spl_token::id(),
+        larix_lending::id(),
         "larix/liquidity_fee_receiver.bin"
     );
     test.add_account_with_file_data(
         reserve.collateral.mint_pubkey,
         u32::MAX as u64,
-        spl_token::id(),
+        larix_lending::id(),
         "larix/collateral_mint.bin"
     );
     test.add_account_with_file_data(
         reserve.collateral.supply_pubkey,
         u32::MAX as u64,
-        spl_token::id(),
+        larix_lending::id(),
         "larix/collateral_supply.bin"
     );
 
@@ -64,7 +62,7 @@ pub fn add_larix(test: &mut ProgramTest) -> TestLarix {
         Account {
             lamports: u32::MAX as u64,
             data: reserve_data,
-            owner: spl_token_lending::id(),
+            owner: larix_lending::id(),
             executable: false,
             rent_epoch: 0,
         },
