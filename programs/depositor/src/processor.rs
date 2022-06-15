@@ -528,14 +528,12 @@ impl Processor {
             &[signers_seeds],
         )?;
 
-        msg!("13");
         rebalancing.execute_step(
             RebalancingOperation::Deposit,
             Some(collateral_amount),
             clock.slot,
         )?;
 
-        msg!("14");
         Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
 
         Ok(())
