@@ -12,10 +12,7 @@ use crate::state::AccountType;
 #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, PartialEq)]
 pub enum MiningType {
     ///
-    Larix {
-        ///
-        mining_account: Pubkey,
-    },
+    Larix,
     ///
     PortFinance,
     ///

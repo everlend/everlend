@@ -450,42 +450,60 @@ pub fn migrate_depositor(
     )
 }
 
+/// Argument to init_mining_accounts
+pub struct InitMiningAccountsPubkeys {
+    /// Collateral mint
+    pub collateral_mint: Pubkey,
+    /// Money market program id
+    pub money_market_program_id: Pubkey,
+    /// Depositor
+    pub depositor: Pubkey,
+    /// Registry
+    pub registry: Pubkey,
+    /// Manager
+    pub manager: Pubkey,
+    /// Mining account
+    pub mining_account: Option<Pubkey>,
+    /// Lending market
+    pub lending_market: Option<Pubkey>,
+    /// Staking program id
+    pub staking_program_id: Option<Pubkey>,
+    /// Staking pool
+    pub staking_pool: Option<Pubkey>,
+    /// Staking account
+    pub staking_account: Option<Pubkey>,
+}
+
 /// Inint ming accounts
-pub fn init_mining_accounts(
+pub fn init_mining_accounts<'a>(
     program_id: &Pubkey,
-    collateral_mint: &Pubkey,
-    money_market_program_id: &Pubkey,
-    depositor: &Pubkey,
-    registry: &Pubkey,
-    manager: &Pubkey,
+    pubkeys: InitMiningAccountsPubkeys,
     mining_type: MiningType,
-    larix_pubkeys: Vec<Pubkey>,
-    port_finance_pubkeys: Vec<Pubkey>,
 ) -> Instruction {
     let (internal_mining, internal_mining_bump_seed) = crate::find_internal_mining_program_address(
         program_id,
-        collateral_mint,
-        money_market_program_id,
+        &pubkeys.collateral_mint,
+        &pubkeys.money_market_program_id,
     );
 
     let mut accounts = vec![
         AccountMeta::new(internal_mining, false),
-        AccountMeta::new_readonly(*collateral_mint, false),
-        AccountMeta::new_readonly(*money_market_program_id, false),
-        AccountMeta::new_readonly(*depositor, false),
-        AccountMeta::new_readonly(*registry, false),
-        AccountMeta::new_readonly(*manager, true),
+        AccountMeta::new_readonly(pubkeys.collateral_mint, false),
+        AccountMeta::new_readonly(pubkeys.money_market_program_id, false),
+        AccountMeta::new_readonly(pubkeys.depositor, false),
+        AccountMeta::new_readonly(pubkeys.registry, false),
+        AccountMeta::new_readonly(pubkeys.manager, true),
     ];
 
     match mining_type {
-        MiningType::Larix { .. } => {
-            accounts.push(AccountMeta::new_readonly(larix_pubkeys[0], false));
-            accounts.push(AccountMeta::new_readonly(larix_pubkeys[1], false));
+        MiningType::Larix => {
+            accounts.push(AccountMeta::new_readonly(pubkeys.mining_account.unwrap(), false));
+            accounts.push(AccountMeta::new_readonly(pubkeys.lending_market.unwrap(), false));
         }
         MiningType::PortFinance => {
-            accounts.push(AccountMeta::new_readonly(port_finance_pubkeys[0], false));
-            accounts.push(AccountMeta::new_readonly(port_finance_pubkeys[1], false));
-            accounts.push(AccountMeta::new(port_finance_pubkeys[2], false));
+            accounts.push(AccountMeta::new_readonly(pubkeys.staking_program_id.unwrap(), false));
+            accounts.push(AccountMeta::new_readonly(pubkeys.staking_pool.unwrap(), false));
+            accounts.push(AccountMeta::new(pubkeys.staking_account.unwrap(), false));
         }
         _ => {}
     }
@@ -494,7 +512,7 @@ pub fn init_mining_accounts(
         *program_id,
         &DepositorInstruction::InitMiningAccounts {
             internal_mining_bump_seed,
-            mining_type,
+            mining_type: MiningType::Larix,
         },
         accounts,
     )

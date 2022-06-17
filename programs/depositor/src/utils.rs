@@ -72,10 +72,9 @@ pub fn deposit<'a>(
     let collateral_amount = Account::unpack_unchecked(&collateral_transit.data.borrow())?.amount;
 
     match internal_mining_type {
-        Some(MiningType::Larix { mining_account }) => {
+        Some(MiningType::Larix) => {
             let reserve_bonus_info = next_account_info(money_market_account_info_iter)?;
             let mining_info = next_account_info(money_market_account_info_iter)?;
-            assert_account_key(mining_info, &mining_account)?;
             cpi::larix::deposit_mining(
                 &money_market_program.key,
                 collateral_transit.clone(),
@@ -178,10 +177,9 @@ pub fn withdraw<'a>(
     };
 
     match internal_mining_type {
-        Some(MiningType::Larix { mining_account }) => {
+        Some(MiningType::Larix) => {
             let reserve_bonus_info = next_account_info(money_market_account_info_iter)?;
             let mining_info = next_account_info(money_market_account_info_iter)?;
-            assert_account_key(mining_info, &mining_account)?;
             cpi::larix::withdraw_mining(
                 &money_market_program.key,
                 reserve_bonus_info.clone(),

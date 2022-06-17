@@ -5,6 +5,8 @@ use std::{process::exit, str::FromStr};
 use clap::{
     crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
 };
+use everlend_depositor::instruction::InitMiningAccountsPubkeys;
+use everlend_depositor::state::MiningType;
 use everlend_utils::find_program_address;
 use regex::Regex;
 use solana_clap_utils::{
@@ -569,7 +571,20 @@ async fn main() -> anyhow::Result<()> {
         )
         .subcommand(
             SubCommand::with_name("save-larix-accounts")
-                .about("Set a new registry config")
+        )
+        .subcommand(
+            SubCommand::with_name("init-larix-mining")
+                .arg(
+                    Arg::with_name("accounts")
+                        .short("A")
+                        .long("accounts")
+                        .value_name("PATH")
+                        .takes_value(true)
+                        .help("Accounts file"),
+                )
+        )
+        .subcommand(
+            SubCommand::with_name("init-larix-mining-raw")
         )
         .subcommand(
             SubCommand::with_name("set-registry-pool-config")
@@ -1089,6 +1104,32 @@ async fn main() -> anyhow::Result<()> {
         }
         ("save-larix-accounts", Some(_)) => {
             command_save_larix_accounts("../tests/tests/fixtures/larix/larix_reserve_sol.bin").await
+        }
+        ("init-larix-mining", Some(arg_matches)) => {
+            let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
+            let default_accounts = config.get_default_accounts();
+            let lending_market = Pubkey::from_str("HpshZh3hw9265EBSDAwopDHR5VegdEFyjxpNf9ZKH8m3")?;
+            let initialized_accounts = InitializedAccounts::load(accounts_path).unwrap();
+            let pubkeys = InitMiningAccountsPubkeys {
+                collateral_mint: Pubkey::new_unique(),
+                money_market_program_id: default_accounts.larix_program_id,
+                depositor: initialized_accounts.depositor,
+                registry: initialized_accounts.registry,
+                manager: config.fee_payer.pubkey(),
+                mining_account: Some(Pubkey::new_unique()),
+                lending_market: Some(lending_market),
+                staking_program_id: None,
+                staking_pool: None,
+                staking_account: None
+            };
+            depositor::init_mining_accounts(&config, pubkeys, MiningType::Larix)?;
+            Ok(())
+        }
+        ("init-larix-mining-raw", Some(_)) => {
+            let mining_account = Keypair::new();
+            let lending_market = Pubkey::from_str("HpshZh3hw9265EBSDAwopDHR5VegdEFyjxpNf9ZKH8m3")?;
+            depositor::init_mining_accounts_larix(&config, &lending_market, mining_account)?;
+            Ok(())
         }
         ("set-registry-pool-config", Some(arg_matches)) => {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");

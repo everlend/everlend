@@ -772,10 +772,9 @@ impl Processor {
         assert_account_key(internal_mining_info, &internal_mining_pubkey)?;
 
         match mining_type {
-            MiningType::Larix { mining_account } => {
+            MiningType::Larix => {
                 let mining_account_info = next_account_info(account_info_iter)?;
                 let lending_market_info = next_account_info(account_info_iter)?;
-                assert_account_key(mining_account_info, &mining_account)?;
                 cpi::larix::init_mining(
                     &money_market_program_id_info.key,
                     mining_account_info.clone(),
