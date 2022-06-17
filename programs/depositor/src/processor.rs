@@ -842,6 +842,37 @@ impl Processor {
         Ok(())
     }
 
+    /// Process InitMiningAccounts instruction
+    pub fn claim_mine(
+        _program_id: &Pubkey,
+        accounts: &[AccountInfo],
+        _mining_type: MiningType,
+    ) -> ProgramResult {
+        let _account_info_iter = &mut accounts.iter();
+        // match mining_type {
+        //     MiningType::Larix => {
+        //         cpi::larix::claim_mine(
+        //         )?
+        //     }
+        //     MiningType::PortFinance => {
+        //         cpi::port_finance::claim_mine(
+        //         )?;
+        //     }
+        //     MiningType::PortFinanceQuarry {
+        //         quarry_mining_program_id,
+        //         quarry,
+        //         rewarder,
+        //         miner_vault,
+        //     } => {
+        //         cpi::quarry::claim_mine(
+        //         )?;
+        //     }
+        // }
+
+        Ok(())
+    }
+
+
     /// Instruction processing router
     pub fn process_instruction(
         program_id: &Pubkey,
