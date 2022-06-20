@@ -895,7 +895,11 @@ impl Processor {
                     authority_info.clone(),
                 )
             }
-            MiningType::PortFinance { staking_account, staking_pool, staking_program_id } => {
+            MiningType::PortFinance {
+                staking_account,
+                staking_pool,
+                staking_program_id,
+            } => {
                 let stake_account_owner = next_account_info(account_info_iter)?;
                 let stake_account = next_account_info(account_info_iter)?;
                 let staking_pool = next_account_info(account_info_iter)?;

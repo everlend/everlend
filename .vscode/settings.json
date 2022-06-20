@@ -4,4 +4,8 @@
     "program",
     "api"
   ],
+  "[rust]": {
+    "editor.formatOnSave": true,
+    "editor.tabSize": 4,
+  },
 }
