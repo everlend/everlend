@@ -2,9 +2,11 @@ use anchor_lang::prelude::AccountMeta;
 use larix_lending::instruction::LendingInstruction;
 use solana_program::{
     account_info::AccountInfo,
+    entrypoint::ProgramResult,
+    instruction::Instruction,
     program::{invoke, invoke_signed},
     program_error::ProgramError,
-    pubkey::Pubkey, instruction::Instruction, entrypoint::ProgramResult,
+    pubkey::Pubkey,
 };
 
 pub fn refresh_reserve<'a>(
@@ -132,6 +134,7 @@ pub fn init_mining<'a>(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn deposit_mining<'a>(
     program_id: &Pubkey,
     source_collateral: AccountInfo<'a>,
@@ -174,14 +177,7 @@ pub fn deposit_mining<'a>(
     )
 }
 
-/// [writable] Source account
-/// [writable] UnColl deposit supply SPL Token account.
-/// [writable] Mining account
-/// [writable] Reserve account
-/// [] Lending market account.
-/// [] Derived lending market authority.
-/// [] Mining owner.
-/// [] Token program id.
+#[allow(clippy::too_many_arguments)]
 pub fn withdraw_mining<'a>(
     program_id: &Pubkey,
     source_collateral: AccountInfo<'a>,
@@ -245,7 +241,6 @@ pub fn claim_mine<'a>(
     lending_market_authority: AccountInfo<'a>,
     authority: AccountInfo<'a>,
 ) -> ProgramResult {
-
     let accounts_meta = vec![
         AccountMeta::new_readonly(spl_token::id(), false),
         AccountMeta::new_readonly(*lending_market.key, false),

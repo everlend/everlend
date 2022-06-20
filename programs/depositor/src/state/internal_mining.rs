@@ -14,10 +14,19 @@ pub enum MiningType {
     ///
     Larix,
     ///
-    PortFinance,
+    PortFinance {
+        ///
+        // TODO move to config
+        staking_program_id: Pubkey,
+        ///
+        staking_account: Pubkey,
+        ///
+        staking_pool: Pubkey,
+    },
     ///
     PortFinanceQuarry {
         ///
+        // TODO move to config
         quarry_mining_program_id: Pubkey,
         ///
         quarry: Pubkey,

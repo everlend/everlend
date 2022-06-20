@@ -31,7 +31,7 @@ tokio = "1.9.0"
 spl-associated-token-account = { version = "1.0.3", features = [ "no-entrypoint" ] }
 spl-token = { version = "3.1", features = [ "no-entrypoint" ] }
 spl-token-lending = { git = "https://github.com/everlend/solana-program-library", features = [ "no-entrypoint" ] }
-larix-lending = { git = "https://github.com/ProjectLarix/larix-lending", features = [ "no-entrypoint" ] }
+larix-lending = { git = "https://github.com/everlend/larix-lending", features = [ "no-entrypoint" ] }
 everlend-registry = { path = "../registry", features = [ "no-entrypoint" ] }
 everlend-general-pool = { path = "../general_pool", features = [ "no-entrypoint" ] }
 everlend-collateral-pool = { path = "../collateral_pool", features = [ "no-entrypoint" ] }

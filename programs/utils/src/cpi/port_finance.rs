@@ -133,3 +133,39 @@ pub fn create_stake_account<'a>(
 
     invoke(&ix, &[stake_account, staking_pool, stake_account_owner])
 }
+
+pub fn deposit_staking<'a>(
+    program_id: &Pubkey,
+    stake_account: AccountInfo<'a>,
+    staking_pool: AccountInfo<'a>,
+    stake_account_owner: AccountInfo<'a>,
+    amount: u64,
+) -> Result<(), ProgramError> {
+    let ix = port_finance_staking::instruction::deposit(
+        *program_id,
+        amount,
+        *stake_account_owner.key,
+        *stake_account.key,
+        *staking_pool.key,
+    );
+
+    invoke(&ix, &[stake_account_owner, stake_account, staking_pool])
+}
+
+pub fn withdraw_staking<'a>(
+    program_id: &Pubkey,
+    stake_account: AccountInfo<'a>,
+    staking_pool: AccountInfo<'a>,
+    stake_account_owner: AccountInfo<'a>,
+    amount: u64,
+) -> Result<(), ProgramError> {
+    let ix = port_finance_staking::instruction::withdraw(
+        *program_id,
+        amount,
+        *stake_account_owner.key,
+        *stake_account.key,
+        *staking_pool.key,
+    );
+
+    invoke(&ix, &[stake_account_owner, stake_account, staking_pool])
+}

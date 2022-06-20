@@ -1,7 +1,10 @@
 use larix_lending::instruction::LendingInstruction;
 use solana_client::client_error::ClientError;
 use solana_program::{
-    instruction::{AccountMeta, Instruction}, program_pack::Pack, pubkey::Pubkey, system_instruction,
+    instruction::{AccountMeta, Instruction},
+    program_pack::Pack,
+    pubkey::Pubkey,
+    system_instruction,
 };
 use solana_sdk::{
     signature::{write_keypair_file, Keypair},
@@ -9,10 +12,13 @@ use solana_sdk::{
     transaction::Transaction,
 };
 
-use everlend_depositor::{state::{DeprecatedDepositor, MiningType}, instruction::InitMiningAccountsPubkeys};
 use everlend_depositor::{
     find_rebalancing_program_address, find_transit_program_address,
     state::{Depositor, Rebalancing},
+};
+use everlend_depositor::{
+    instruction::InitMiningAccountsPubkeys,
+    state::{DeprecatedDepositor, MiningType},
 };
 
 use crate::utils::*;
@@ -241,7 +247,7 @@ pub fn init_mining_accounts(
         &[everlend_depositor::instruction::init_mining_accounts(
             &everlend_depositor::id(),
             pubkeys,
-            mining_type
+            mining_type,
         )],
         Some(&config.fee_payer.pubkey()),
     );
@@ -254,12 +260,13 @@ pub fn init_mining_accounts(
 #[allow(clippy::too_many_arguments)]
 pub fn init_mining_accounts_larix(
     config: &Config,
-    lending_market: &Pubkey,
     mining_account: Keypair,
 ) -> Result<(), ClientError> {
     let default_accounts = config.get_default_accounts();
-    let mining_account_size = 560u64;
-    let rent = config.rpc_client.get_minimum_balance_for_rent_exemption(mining_account_size as usize)?;
+    let mining_account_size = (1 + 32 + 32 + 1 + 16 + 560) as u64;
+    let rent = config
+        .rpc_client
+        .get_minimum_balance_for_rent_exemption(mining_account_size as usize)?;
     let create_account_instruction = system_instruction::create_account(
         &config.fee_payer.pubkey(),
         &mining_account.pubkey(),
@@ -272,21 +279,18 @@ pub fn init_mining_accounts_larix(
         accounts: vec![
             AccountMeta::new(mining_account.pubkey(), false),
             AccountMeta::new_readonly(config.fee_payer.pubkey(), true),
-            AccountMeta::new_readonly(*lending_market, false),
+            AccountMeta::new_readonly(default_accounts.larix_lending_market, false),
         ],
         data: LendingInstruction::InitMining.pack(),
     };
     let tx = Transaction::new_with_payer(
-        &[
-            create_account_instruction,
-            init_mining_instruction
-        ],
+        &[create_account_instruction, init_mining_instruction],
         Some(&config.fee_payer.pubkey()),
     );
 
     config.sign_and_send_and_confirm_transaction(
         tx,
-        vec![config.fee_payer.as_ref(), &mining_account]
+        vec![config.fee_payer.as_ref(), &mining_account],
     )?;
 
     Ok(())

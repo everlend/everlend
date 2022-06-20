@@ -1,20 +1,24 @@
 //! Utils
 
+use everlend_collateral_pool::utils::CollateralPoolAccounts;
 use everlend_income_pools::utils::IncomePoolAccounts;
 use everlend_registry::state::RegistryPrograms;
-use everlend_utils::{cpi, integrations, EverlendError, assert_account_key};
+use everlend_utils::{assert_account_key, cpi, integrations, EverlendError};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
     msg,
     program_error::ProgramError,
-    program_pack::Pack, pubkey::Pubkey,
+    program_pack::Pack,
+    pubkey::Pubkey,
 };
-use everlend_collateral_pool::utils::CollateralPoolAccounts;
 use spl_token::state::Account;
 use std::{cmp::Ordering, slice::Iter};
 
-use crate::{find_internal_mining_program_address, state::{InternalMining, MiningType}};
+use crate::{
+    find_internal_mining_program_address,
+    state::{InternalMining, MiningType},
+};
 
 /// Deposit
 #[allow(clippy::too_many_arguments)]
@@ -119,7 +123,28 @@ pub fn deposit<'a>(
                 collateral_amount,
             )?;
         }
-        Some(MiningType::PortFinance) | None => {
+        Some(MiningType::PortFinance {
+            staking_program_id,
+            staking_account,
+            staking_pool,
+        }) => {
+            let staking_program_id_info = next_account_info(money_market_account_info_iter)?;
+            let staking_account_info = next_account_info(money_market_account_info_iter)?;
+            let staking_pool_info = next_account_info(money_market_account_info_iter)?;
+
+            assert_account_key(staking_program_id_info, &staking_program_id)?;
+            assert_account_key(staking_account_info, &staking_account)?;
+            assert_account_key(staking_pool_info, &staking_pool)?;
+
+            cpi::port_finance::deposit_staking(
+                &staking_program_id,
+                staking_account_info.clone(),
+                staking_pool_info.clone(),
+                internal_mining,
+                collateral_amount,
+            )?;
+        }
+        None => {
             msg!("Collect collateral tokens to MM Pool");
             everlend_collateral_pool::cpi::deposit(
                 collateral_pool_accounts,
@@ -223,7 +248,28 @@ pub fn withdraw<'a>(
                 collateral_amount,
             )?;
         }
-        Some(MiningType::PortFinance) | None => {
+        Some(MiningType::PortFinance {
+            staking_program_id,
+            staking_account,
+            staking_pool,
+        }) => {
+            let staking_program_id_info = next_account_info(money_market_account_info_iter)?;
+            let staking_account_info = next_account_info(money_market_account_info_iter)?;
+            let staking_pool_info = next_account_info(money_market_account_info_iter)?;
+
+            assert_account_key(staking_program_id_info, &staking_program_id)?;
+            assert_account_key(staking_account_info, &staking_account)?;
+            assert_account_key(staking_pool_info, &staking_pool)?;
+
+            cpi::port_finance::withdraw_staking(
+                &staking_program_id,
+                staking_account_info.clone(),
+                staking_pool_info.clone(),
+                internal_mining,
+                collateral_amount,
+            )?;
+        }
+        None => {
             msg!("Withdraw collateral tokens from MM Pool");
             everlend_collateral_pool::cpi::withdraw(
                 collateral_pool_accounts,

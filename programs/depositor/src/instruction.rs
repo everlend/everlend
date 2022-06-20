@@ -291,7 +291,8 @@ pub fn deposit(
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
 
     // MM pool
-    let (mm_pool_market_authority, _) = find_program_address(&everlend_collateral_pool::id(), mm_pool_market);
+    let (mm_pool_market_authority, _) =
+        find_program_address(&everlend_collateral_pool::id(), mm_pool_market);
     let (mm_pool, _) = everlend_collateral_pool::find_pool_program_address(
         &everlend_collateral_pool::id(),
         mm_pool_market,
@@ -366,7 +367,8 @@ pub fn withdraw(
     );
 
     // MM pool
-    let (mm_pool_market_authority, _) = find_program_address(&everlend_collateral_pool::id(), mm_pool_market);
+    let (mm_pool_market_authority, _) =
+        find_program_address(&everlend_collateral_pool::id(), mm_pool_market);
     let (mm_pool, _) = everlend_collateral_pool::find_pool_program_address(
         &everlend_collateral_pool::id(),
         mm_pool_market,
@@ -381,14 +383,15 @@ pub fn withdraw(
     let (liquidity_reserve_transit, _) =
         find_transit_program_address(program_id, depositor, liquidity_mint, "reserve");
 
-    let (internal_mining, _internal_mining_bump_seed) = crate::find_internal_mining_program_address( program_id,
+    let (internal_mining, _internal_mining_bump_seed) = crate::find_internal_mining_program_address(
+        program_id,
         liquidity_mint,
         money_market_program_id,
     );
     let (mm_pool_withdraw_authority, _) = find_pool_withdraw_authority_program_address(
         &everlend_collateral_pool::id(),
         &mm_pool,
-        &depositor_authority, 
+        &depositor_authority,
     );
 
     let mut accounts = vec![
@@ -466,12 +469,6 @@ pub struct InitMiningAccountsPubkeys {
     pub mining_account: Option<Pubkey>,
     /// Lending market
     pub lending_market: Option<Pubkey>,
-    /// Staking program id
-    pub staking_program_id: Option<Pubkey>,
-    /// Staking pool
-    pub staking_pool: Option<Pubkey>,
-    /// Staking account
-    pub staking_account: Option<Pubkey>,
 }
 
 /// Inint ming accounts
@@ -497,13 +494,23 @@ pub fn init_mining_accounts<'a>(
 
     match mining_type {
         MiningType::Larix => {
-            accounts.push(AccountMeta::new_readonly(pubkeys.mining_account.unwrap(), false));
-            accounts.push(AccountMeta::new_readonly(pubkeys.lending_market.unwrap(), false));
+            accounts.push(AccountMeta::new_readonly(
+                pubkeys.mining_account.unwrap(),
+                false,
+            ));
+            accounts.push(AccountMeta::new_readonly(
+                pubkeys.lending_market.unwrap(),
+                false,
+            ));
         }
-        MiningType::PortFinance => {
-            accounts.push(AccountMeta::new_readonly(pubkeys.staking_program_id.unwrap(), false));
-            accounts.push(AccountMeta::new_readonly(pubkeys.staking_pool.unwrap(), false));
-            accounts.push(AccountMeta::new(pubkeys.staking_account.unwrap(), false));
+        MiningType::PortFinance {
+            staking_program_id,
+            staking_account,
+            staking_pool,
+        } => {
+            accounts.push(AccountMeta::new_readonly(staking_program_id, false));
+            accounts.push(AccountMeta::new_readonly(staking_pool, false));
+            accounts.push(AccountMeta::new(staking_account, false));
         }
         _ => {}
     }
