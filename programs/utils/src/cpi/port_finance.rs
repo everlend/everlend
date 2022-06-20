@@ -21,13 +21,13 @@ pub fn refresh_reserve<'a>(
         account_infos.push(reserve_liquidity_oracle);
     }
 
-    let ix = port_variable_rate_lending_instructions::instruction::refresh_reserve(
+    let instruction = port_variable_rate_lending_instructions::instruction::refresh_reserve(
         *program_id,
         reserve_key,
         liquidity_oracle,
     );
 
-    invoke(&ix, &account_infos)
+    invoke(&instruction, &account_infos)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -45,7 +45,7 @@ pub fn deposit<'a>(
     amount: u64,
     signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
-    let ix = port_variable_rate_lending_instructions::instruction::deposit_reserve_liquidity(
+    let instruction = port_variable_rate_lending_instructions::instruction::deposit_reserve_liquidity(
         *program_id,
         amount,
         *source_liquidity.key,
@@ -58,7 +58,7 @@ pub fn deposit<'a>(
     );
 
     invoke_signed(
-        &ix,
+        &instruction,
         &[
             source_liquidity,
             destination_collateral,
@@ -89,7 +89,7 @@ pub fn redeem<'a>(
     amount: u64,
     signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
-    let ix = port_variable_rate_lending_instructions::instruction::redeem_reserve_collateral(
+    let instruction = port_variable_rate_lending_instructions::instruction::redeem_reserve_collateral(
         *program_id,
         amount,
         *source_collateral.key,
@@ -102,7 +102,7 @@ pub fn redeem<'a>(
     );
 
     invoke_signed(
-        &ix,
+        &instruction,
         &[
             source_collateral,
             destination_liquidity,
@@ -124,14 +124,38 @@ pub fn create_stake_account<'a>(
     staking_pool: AccountInfo<'a>,
     stake_account_owner: AccountInfo<'a>,
 ) -> Result<(), ProgramError> {
-    let ix = port_finance_staking::instruction::create_stake_account(
+    let instruction = port_finance_staking::instruction::create_stake_account(
         *program_id,
         *stake_account.key,
         *staking_pool.key,
         *stake_account_owner.key,
     );
 
-    invoke(&ix, &[stake_account, staking_pool, stake_account_owner])
+    invoke(&instruction, &[stake_account, staking_pool, stake_account_owner])
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn claim_reward<'a>(
+    program_id: &Pubkey,
+    stake_account_owner: AccountInfo<'a>,
+    stake_account: AccountInfo<'a>,
+    staking_pool: AccountInfo<'a>,
+    reward_token_pool: &Pubkey,
+    reward_destination: &Pubkey,
+    sub_reward_token_pool: Option<Pubkey>,
+    sub_reward_destination: Option<Pubkey>,
+) -> Result<(), ProgramError> {
+    let instruction = port_finance_staking::instruction::claim_reward(
+        *program_id,
+        *stake_account_owner.key,
+        *stake_account.key,
+        *staking_pool.key,
+        *reward_token_pool,
+        sub_reward_token_pool,
+        *reward_destination,
+        sub_reward_destination
+    );
+    invoke(&instruction, &[stake_account, staking_pool, stake_account_owner])
 }
 
 pub fn deposit_staking<'a>(

@@ -493,15 +493,9 @@ pub fn init_mining_accounts<'a>(
     ];
 
     match mining_type {
-        MiningType::Larix => {
-            accounts.push(AccountMeta::new_readonly(
-                pubkeys.mining_account.unwrap(),
-                false,
-            ));
-            accounts.push(AccountMeta::new_readonly(
-                pubkeys.lending_market.unwrap(),
-                false,
-            ));
+        MiningType::Larix { mining_account } => {
+            accounts.push(AccountMeta::new_readonly(pubkeys.mining_account.unwrap(), false));
+            accounts.push(AccountMeta::new_readonly(pubkeys.lending_market.unwrap(), false));
         }
         MiningType::PortFinance {
             staking_program_id,
@@ -519,7 +513,7 @@ pub fn init_mining_accounts<'a>(
         *program_id,
         &DepositorInstruction::InitMiningAccounts {
             internal_mining_bump_seed,
-            mining_type: MiningType::Larix,
+            mining_type,
         },
         accounts,
     )

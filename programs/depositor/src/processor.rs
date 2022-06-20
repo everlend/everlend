@@ -780,12 +780,13 @@ impl Processor {
         assert_account_key(internal_mining_info, &internal_mining_pubkey)?;
 
         match mining_type {
-            MiningType::Larix => {
+            MiningType::Larix { mining_account } => {
                 let mining_account_info = next_account_info(account_info_iter)?;
                 if mining_account_info.owner != money_market_program_id_info.key {
                     return Err(EverlendError::InvalidAccountOwner.into());
                 };
                 let lending_market_info = next_account_info(account_info_iter)?;
+                assert_account_key(mining_account_info, &mining_account)?;
                 cpi::larix::init_mining(
                     &money_market_program_id_info.key,
                     mining_account_info.clone(),
@@ -871,33 +872,48 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
         let manager_info = next_account_info(account_info_iter)?;
         let money_market_program_info = next_account_info(account_info_iter)?;
-        let destination_collateral_info = next_account_info(account_info_iter)?;
-        let mining_info = next_account_info(account_info_iter)?;
-        let reserve_info = next_account_info(account_info_iter)?;
-        let lending_market_info = next_account_info(account_info_iter)?;
-        let lending_market_authority_info = next_account_info(account_info_iter)?;
-        let authority_info = next_account_info(account_info_iter)?;
 
         assert_signer(&manager_info)?;
 
         // TODO: Asserts
 
         let result: ProgramResult = match mining_type {
-            MiningType::Larix => cpi::larix::claim_mine(
-                money_market_program_info.key,
-                destination_collateral_info.clone(),
-                mining_info.clone(),
-                reserve_info.clone(),
-                lending_market_info.clone(),
-                lending_market_authority_info.clone(),
-                authority_info.clone(),
-            ),
-            MiningType::PortFinance {
-                // TODO move staking program into config
-                staking_program_id,
-                staking_account,
-                staking_pool,
-            } => Err(EverlendError::TemporaryUnavailable.into()),
+            MiningType::Larix { mining_account } => {
+                let destination_collateral_info = next_account_info(account_info_iter)?;
+                let mining_info = next_account_info(account_info_iter)?;
+                let reserve_info = next_account_info(account_info_iter)?;
+                let lending_market_info = next_account_info(account_info_iter)?;
+                let lending_market_authority_info = next_account_info(account_info_iter)?;
+                let authority_info = next_account_info(account_info_iter)?;
+                cpi::larix::claim_mine(
+                    money_market_program_info.key,
+                    destination_collateral_info.clone(),
+                    mining_info.clone(),
+                    reserve_info.clone(),
+                    lending_market_info.clone(),
+                    lending_market_authority_info.clone(),
+                    authority_info.clone(),
+                )
+            }
+            MiningType::PortFinance { staking_account, staking_pool, staking_program_id } => {
+                let stake_account_owner = next_account_info(account_info_iter)?;
+                let stake_account = next_account_info(account_info_iter)?;
+                let staking_pool = next_account_info(account_info_iter)?;
+                let reward_token_pool = next_account_info(account_info_iter)?;
+                let reward_destination = next_account_info(account_info_iter)?;
+                let sub_reward_token_pool = next_account_info(account_info_iter)?;
+                let sub_reward_destination = next_account_info(account_info_iter)?;
+                cpi::port_finance::claim_reward(
+                    money_market_program_info.key,
+                    stake_account_owner.clone(),
+                    stake_account.clone(),
+                    staking_pool.clone(),
+                    reward_token_pool.key,
+                    reward_destination.key,
+                    Some(*sub_reward_token_pool.key),
+                    Some(*sub_reward_destination.key),
+                )
+            }
             MiningType::PortFinanceQuarry {
                 quarry_mining_program_id,
                 quarry,
