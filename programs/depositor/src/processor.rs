@@ -923,7 +923,21 @@ impl Processor {
                 quarry,
                 rewarder,
                 miner_vault,
-            } => Err(EverlendError::TemporaryUnavailable.into()),
+            } => {
+                let mint_wrapper = next_account_info(account_info_iter)?;
+                let minter = next_account_info(account_info_iter)?;
+                let rewards_token_mint = next_account_info(account_info_iter)?;
+                let rewards_token_account = next_account_info(account_info_iter)?;
+                let claim_fee_token_account = next_account_info(account_info_iter)?;
+                cpi::quarry::claim_rewards(
+                    money_market_program_info.key,
+                    mint_wrapper.clone(),
+                    minter.clone(),
+                    rewards_token_mint.clone(),
+                    rewards_token_account.clone(),
+                    claim_fee_token_account.clone(),
+                )
+            }
         };
 
         result

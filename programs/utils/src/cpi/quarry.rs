@@ -1,5 +1,5 @@
 use anchor_lang::InstructionData;
-use quarry_mine::instruction::{CreateMinerV2, StakeTokens, WithdrawTokens};
+use quarry_mine::instruction::{ClaimRewardsV2, CreateMinerV2, StakeTokens, WithdrawTokens};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::{AccountMeta, Instruction};
 use solana_program::program::invoke;
@@ -39,7 +39,7 @@ pub fn create_miner<'a>(
     token_mint: AccountInfo<'a>,
     miner_vault: AccountInfo<'a>,
 ) -> Result<(), ProgramError> {
-    let ix = Instruction {
+    let instruction = Instruction {
         program_id: *program_id,
         accounts: vec![
             AccountMeta::new_readonly(*authority.key, true),
@@ -56,7 +56,7 @@ pub fn create_miner<'a>(
     };
 
     invoke(
-        &ix,
+        &instruction,
         &[
             authority,
             miner,
@@ -80,7 +80,7 @@ pub fn stake_tokens<'a>(
     rewarder: AccountInfo<'a>,
     amount: u64,
 ) -> Result<(), ProgramError> {
-    let ix = Instruction {
+    let instruction = Instruction {
         program_id: *program_id,
         accounts: vec![
             AccountMeta::new_readonly(*authority.key, true),
@@ -95,7 +95,7 @@ pub fn stake_tokens<'a>(
     };
 
     invoke(
-        &ix,
+        &instruction,
         &[
             authority,
             miner,
@@ -118,7 +118,7 @@ pub fn withdraw_tokens<'a>(
     rewarder: AccountInfo<'a>,
     amount: u64,
 ) -> Result<(), ProgramError> {
-    let ix = Instruction {
+    let instruction = Instruction {
         program_id: *program_id,
         accounts: vec![
             AccountMeta::new_readonly(*authority.key, true),
@@ -133,7 +133,7 @@ pub fn withdraw_tokens<'a>(
     };
 
     invoke(
-        &ix,
+        &instruction,
         &[
             authority,
             miner,
@@ -141,6 +141,39 @@ pub fn withdraw_tokens<'a>(
             miner_vault,
             token_account,
             rewarder,
+        ],
+    )
+}
+
+/// Claim rewards
+pub fn claim_rewards<'a>(
+    program_id: &Pubkey,
+    mint_wrapper: AccountInfo<'a>,
+    minter: AccountInfo<'a>,
+    rewards_token_mint: AccountInfo<'a>,
+    rewards_token_account: AccountInfo<'a>,
+    claim_fee_token_account: AccountInfo<'a>,
+) -> Result<(), ProgramError> {
+    let instruction = Instruction {
+        program_id: *program_id,
+        accounts: vec![
+            AccountMeta::new(*mint_wrapper.key, true),
+            AccountMeta::new(*minter.key, true),
+            AccountMeta::new(*rewards_token_mint.key, true),
+            AccountMeta::new(*rewards_token_account.key, true),
+            AccountMeta::new(*claim_fee_token_account.key, true),
+        ],
+        data: ClaimRewardsV2 {}.data(),
+    };
+
+    invoke(
+        &instruction,
+        &[
+            mint_wrapper,
+            minter,
+            rewards_token_mint,
+            rewards_token_account,
+            claim_fee_token_account,
         ],
     )
 }
