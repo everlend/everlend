@@ -4,7 +4,7 @@ use solana_program::{
     account_info::AccountInfo,
     program::{invoke, invoke_signed},
     program_error::ProgramError,
-    pubkey::Pubkey, instruction::Instruction,
+    pubkey::Pubkey, instruction::Instruction, entrypoint::ProgramResult,
 };
 
 pub fn refresh_reserve<'a>(
@@ -225,4 +225,57 @@ pub fn withdraw_mining<'a>(
             clock,
         ],
     )
+}
+
+pub struct ClaimMineAccounts<'a> {
+    pub destination_collateral: AccountInfo<'a>,
+    pub mining: AccountInfo<'a>,
+    pub reserve: AccountInfo<'a>,
+    pub lending_market: AccountInfo<'a>,
+    pub lending_market_authority: AccountInfo<'a>,
+    pub authority: AccountInfo<'a>,
+}
+
+pub fn claim_mine<'a>(
+    program_id: &Pubkey,
+    destination_collateral: AccountInfo<'a>,
+    mining: AccountInfo<'a>,
+    reserve: AccountInfo<'a>,
+    lending_market: AccountInfo<'a>,
+    lending_market_authority: AccountInfo<'a>,
+    authority: AccountInfo<'a>,
+) -> ProgramResult {
+
+    let accounts_meta = vec![
+        AccountMeta::new_readonly(spl_token::id(), false),
+        AccountMeta::new_readonly(*lending_market.key, false),
+        AccountMeta::new_readonly(*lending_market_authority.key, false),
+        AccountMeta::new_readonly(*authority.key, true),
+        AccountMeta::new(*mining.key, false),
+        AccountMeta::new(*destination_collateral.key, false),
+        AccountMeta::new_readonly(*reserve.key, false),
+    ];
+
+    let accounts = vec![
+        lending_market,
+        lending_market_authority,
+        authority,
+        mining,
+        destination_collateral,
+        reserve,
+    ];
+
+    let ix = Instruction {
+        program_id: *program_id,
+        accounts: accounts_meta,
+        data: LendingInstruction::ClaimMine {
+            // claim times of user expected got: 100 equals 100%
+            claim_times: 100,
+            // the ratio of claim user's all mine token 10000 equals 100%
+            claim_ratio: 10000,
+        }
+        .pack(),
+    };
+
+    invoke(&ix, &accounts)
 }

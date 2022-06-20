@@ -846,30 +846,48 @@ impl Processor {
     pub fn claim_mine(
         _program_id: &Pubkey,
         accounts: &[AccountInfo],
-        _mining_type: MiningType,
+        mining_type: MiningType,
     ) -> ProgramResult {
-        let _account_info_iter = &mut accounts.iter();
-        // match mining_type {
-        //     MiningType::Larix => {
-        //         cpi::larix::claim_mine(
-        //         )?
-        //     }
-        //     MiningType::PortFinance => {
-        //         cpi::port_finance::claim_mine(
-        //         )?;
-        //     }
-        //     MiningType::PortFinanceQuarry {
-        //         quarry_mining_program_id,
-        //         quarry,
-        //         rewarder,
-        //         miner_vault,
-        //     } => {
-        //         cpi::quarry::claim_mine(
-        //         )?;
-        //     }
-        // }
+        let account_info_iter = &mut accounts.iter();
+        let manager_info = next_account_info(account_info_iter)?;
+        let money_market_program_info = next_account_info(account_info_iter)?;
+        let destination_collateral_info = next_account_info(account_info_iter)?;
+        let mining_info = next_account_info(account_info_iter)?;
+        let reserve_info = next_account_info(account_info_iter)?;
+        let lending_market_info = next_account_info(account_info_iter)?;
+        let lending_market_authority_info = next_account_info(account_info_iter)?;
+        let authority_info = next_account_info(account_info_iter)?;
 
-        Ok(())
+        assert_signer(&manager_info)?;
+
+        // TODO: Asserts
+
+        let result: ProgramResult = match mining_type {
+            MiningType::Larix => {
+                cpi::larix::claim_mine(
+                    money_market_program_info.key,
+                    destination_collateral_info.clone(),
+                    mining_info.clone(),
+                    reserve_info.clone(),
+                    lending_market_info.clone(),
+                    lending_market_authority_info.clone(),
+                    authority_info.clone(),
+                )
+            }
+            MiningType::PortFinance => {
+                Err(EverlendError::TemporaryUnavailable.into())
+            }
+            MiningType::PortFinanceQuarry {
+                quarry_mining_program_id,
+                quarry,
+                rewarder,
+                miner_vault,
+            } => {
+                Err(EverlendError::TemporaryUnavailable.into())
+            }
+        };
+
+        result
     }
 
 
