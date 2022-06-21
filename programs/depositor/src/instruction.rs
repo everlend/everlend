@@ -497,7 +497,6 @@ pub struct InitMiningAccountsPubkeys {
     /// Manager
     pub manager: Pubkey,
     /// Mining account
-    pub mining_account: Option<Pubkey>,
     /// Lending market
     pub lending_market: Option<Pubkey>,
 }
@@ -520,15 +519,12 @@ pub fn init_mining_accounts<'a>(
         AccountMeta::new_readonly(pubkeys.money_market_program_id, false),
         AccountMeta::new_readonly(pubkeys.depositor, false),
         AccountMeta::new_readonly(pubkeys.registry, false),
-        AccountMeta::new_readonly(pubkeys.manager, true),
+        AccountMeta::new(pubkeys.manager, true),
     ];
 
     match mining_type {
-        MiningType::Larix { mining_account: _ } => {
-            accounts.push(AccountMeta::new_readonly(
-                pubkeys.mining_account.unwrap(),
-                false,
-            ));
+        MiningType::Larix { mining_account } => {
+            accounts.push(AccountMeta::new_readonly(mining_account, false));
             accounts.push(AccountMeta::new_readonly(
                 pubkeys.lending_market.unwrap(),
                 false,

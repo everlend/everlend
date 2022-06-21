@@ -20,6 +20,7 @@ use solana_client::rpc_client::RpcClient;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::signature::Keypair;
+use solana_sdk::signer::Signer;
 use spl_associated_token_account::get_associated_token_address;
 
 use accounts_config::*;
@@ -265,6 +266,9 @@ async fn command_create(
         );
     }
 
+    let mining_account = Keypair::new();
+    depositor::create_mining_account(config, &mining_account)?;
+
     let initialized_accounts = InitializedAccounts {
         payer: payer_pubkey,
         registry: registry_pubkey,
@@ -275,6 +279,7 @@ async fn command_create(
         token_accounts,
         liquidity_oracle: liquidity_oracle_pubkey,
         depositor: depositor_pubkey,
+        larix_mining: mining_account.pubkey(),
     };
 
     initialized_accounts.save(accounts_path).unwrap();
@@ -1101,31 +1106,7 @@ async fn main() -> anyhow::Result<()> {
         }
         ("init-larix-mining", Some(arg_matches)) => {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
-            let default_accounts = config.get_default_accounts();
-            let initialized_accounts = InitializedAccounts::load(accounts_path).unwrap();
-            let mining_pubkey = Pubkey::new_unique();
-
-            // TODO move to func and add create staking account instruction
-            let pubkeys = InitMiningAccountsPubkeys {
-                collateral_mint: Pubkey::new_unique(),
-                money_market_program_id: default_accounts.larix_program_id,
-                depositor: initialized_accounts.depositor,
-                registry: initialized_accounts.registry,
-                manager: config.fee_payer.pubkey(),
-                // TODO change to real account
-                mining_account: Some(mining_pubkey),
-                lending_market: Some(default_accounts.larix_lending_market),
-            };
-            depositor::init_mining_accounts(
-                &config,
-                pubkeys,
-                MiningType::Larix {
-                    mining_account: mining_pubkey,
-                },
-            )?;
-
-            // TODO save changes to account file
-            Ok(())
+            command_init_larix_mining(&config, accounts_path).await
         }
         ("init-larix-mining-raw", Some(_)) => {
             let mining_account = Keypair::new();

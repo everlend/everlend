@@ -994,6 +994,7 @@ impl Processor {
             }
 
             DepositorInstruction::ClaimMiningReward { mining_type } => {
+                msg!("DepositorInstruction: ClaimMiningReward");
                 Self::claim_mining_reward(program_id, accounts, mining_type)
             }
         }

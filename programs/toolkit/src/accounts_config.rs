@@ -114,10 +114,13 @@ pub struct DefaultAccounts {
 pub struct InitializedAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub payer: Pubkey,
+
     #[serde_as(as = "DisplayFromStr")]
     pub registry: Pubkey,
+
     #[serde_as(as = "DisplayFromStr")]
     pub general_pool_market: Pubkey,
+
     #[serde_as(as = "DisplayFromStr")]
     pub income_pool_market: Pubkey,
 
@@ -131,8 +134,12 @@ pub struct InitializedAccounts {
 
     #[serde_as(as = "DisplayFromStr")]
     pub liquidity_oracle: Pubkey,
+
     #[serde_as(as = "DisplayFromStr")]
     pub depositor: Pubkey,
+
+    #[serde_as(as = "DisplayFromStr")]
+    pub larix_mining: Pubkey,
 }
 
 #[serde_as]

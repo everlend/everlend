@@ -23,6 +23,8 @@ use everlend_depositor::{
 
 use crate::utils::*;
 
+const LARIX_MINING_SIZE: u64 = 1 + 32 + 32 + 1 + 16 + 560;
+
 pub fn init(
     config: &Config,
     registry_pubkey: &Pubkey,
@@ -237,22 +239,27 @@ pub fn migrate_depositor(
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
-pub fn init_mining_accounts(
-    config: &Config,
-    pubkeys: InitMiningAccountsPubkeys,
-    mining_type: MiningType,
-) -> Result<(), ClientError> {
+pub fn create_mining_account(config: &Config, mining_account: &Keypair) -> Result<(), ClientError> {
+    let default_accounts = config.get_default_accounts();
+    let rent = config
+        .rpc_client
+        .get_minimum_balance_for_rent_exemption(LARIX_MINING_SIZE as usize)?;
+    let create_account_instruction = system_instruction::create_account(
+        &config.fee_payer.pubkey(),
+        &mining_account.pubkey(),
+        rent,
+        LARIX_MINING_SIZE,
+        &default_accounts.larix_program_id,
+    );
     let tx = Transaction::new_with_payer(
-        &[everlend_depositor::instruction::init_mining_accounts(
-            &everlend_depositor::id(),
-            pubkeys,
-            mining_type,
-        )],
+        &[create_account_instruction],
         Some(&config.fee_payer.pubkey()),
     );
 
-    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+    config.sign_and_send_and_confirm_transaction(
+        tx,
+        vec![config.fee_payer.as_ref(), mining_account],
+    )?;
 
     Ok(())
 }
@@ -263,15 +270,14 @@ pub fn init_mining_accounts_larix(
     mining_account: Keypair,
 ) -> Result<(), ClientError> {
     let default_accounts = config.get_default_accounts();
-    let mining_account_size = (1 + 32 + 32 + 1 + 16 + 560) as u64;
     let rent = config
         .rpc_client
-        .get_minimum_balance_for_rent_exemption(mining_account_size as usize)?;
+        .get_minimum_balance_for_rent_exemption(LARIX_MINING_SIZE as usize)?;
     let create_account_instruction = system_instruction::create_account(
         &config.fee_payer.pubkey(),
         &mining_account.pubkey(),
         rent,
-        mining_account_size,
+        LARIX_MINING_SIZE,
         &default_accounts.larix_program_id,
     );
     let init_mining_instruction = Instruction {
@@ -292,6 +298,32 @@ pub fn init_mining_accounts_larix(
         tx,
         vec![config.fee_payer.as_ref(), &mining_account],
     )?;
+
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn init_larix_mining_with_depositor(
+    config: &Config,
+    pubkeys: InitMiningAccountsPubkeys,
+    mining_account: &Keypair,
+    mining_type: MiningType,
+) -> Result<(), ClientError> {
+    create_mining_account(config, mining_account)?;
+    let init_mining_instruction = everlend_depositor::instruction::init_mining_accounts(
+        &everlend_depositor::id(),
+        pubkeys,
+        mining_type,
+    );
+    let tx = Transaction::new_with_payer(
+        &[everlend_depositor::instruction::init_mining_accounts(
+            &everlend_depositor::id(),
+            pubkeys,
+            mining_type,
+        )],
+        Some(&config.fee_payer.pubkey()),
+    );
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
     Ok(())
 }

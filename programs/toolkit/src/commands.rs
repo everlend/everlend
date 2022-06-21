@@ -1,11 +1,14 @@
 use anyhow::bail;
+use everlend_depositor::instruction::InitMiningAccountsPubkeys;
+use everlend_depositor::state::MiningType;
+use larix_lending::state::reserve::Reserve;
 use solana_client::client_error::ClientError;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
-use solana_program_test::{read_file, find_file};
+use solana_program_test::{find_file, read_file};
 use solana_sdk::signature::Keypair;
+use solana_sdk::signer::Signer;
 use spl_associated_token_account::get_associated_token_address;
-use larix_lending::state::reserve::Reserve;
 
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::state::{DeprecatedRegistryConfig, Registry, SetRegistryPoolConfigParams};
@@ -18,12 +21,12 @@ use everlend_registry::{
 };
 use everlend_utils::integrations::MoneyMarket;
 
-use crate::accounts_config::{InitializedAccounts, CollateralPoolAccounts};
+use crate::accounts_config::{CollateralPoolAccounts, InitializedAccounts};
 use crate::collateral_pool::{self, PoolPubkeys};
 use crate::download_account::download_account;
 use crate::registry::close_registry_config;
 use crate::{
-    accounts_config::{TokenAccounts},
+    accounts_config::TokenAccounts,
     depositor, general_pool, income_pools, liquidity_oracle, registry,
     utils::{
         get_asset_maps, spl_create_associated_token_account, spl_token_transfer, Config,
@@ -145,15 +148,40 @@ pub async fn command_set_registry_config(
 }
 
 pub async fn command_save_larix_accounts(reserve_filepath: &str) -> anyhow::Result<()> {
-    let mut reserve_data = read_file(
-        find_file(reserve_filepath).unwrap()
-    );
+    let mut reserve_data = read_file(find_file(reserve_filepath).unwrap());
     let reserve = Reserve::unpack_from_slice(reserve_data.as_mut_slice()).unwrap();
 
     download_account(&reserve.liquidity.supply_pubkey, "liquidity_supply").await;
     download_account(&reserve.liquidity.fee_receiver, "liquidity_fee_receiver").await;
     download_account(&reserve.collateral.mint_pubkey, "collateral_mint").await;
     download_account(&reserve.collateral.supply_pubkey, "collateral_supply").await;
+    Ok(())
+}
+
+pub async fn command_init_larix_mining(config: &Config, accounts_path: &str) -> anyhow::Result<()> {
+    let default_accounts = config.get_default_accounts();
+    let mut initialized_accounts = InitializedAccounts::load(accounts_path).unwrap();
+    let mining_account = Keypair::new();
+    let mining_pubkey = mining_account.pubkey();
+    initialized_accounts.larix_mining = mining_pubkey;
+    initialized_accounts.save(accounts_path).unwrap();
+
+    let pubkeys = InitMiningAccountsPubkeys {
+        collateral_mint: Pubkey::new_unique(),
+        money_market_program_id: default_accounts.larix_program_id,
+        depositor: initialized_accounts.depositor,
+        registry: initialized_accounts.registry,
+        manager: config.fee_payer.pubkey(),
+        lending_market: Some(default_accounts.larix_lending_market),
+    };
+    depositor::init_larix_mining_with_depositor(
+        &config,
+        pubkeys,
+        &mining_account,
+        MiningType::Larix {
+            mining_account: mining_pubkey,
+        },
+    )?;
     Ok(())
 }
 
@@ -466,15 +494,10 @@ pub async fn command_create_token_accounts(
             .iter()
             .zip(mm_pool_pubkeys)
             .map(
-                |(
-                    (collateral_mint, _mm_pool_market_pubkey),
-                    pubkeys,
-                )| {
-                    CollateralPoolAccounts {
-                        pool: pubkeys.pool,
-                        pool_token_account: pubkeys.token_account,
-                        token_mint: *collateral_mint,
-                    }
+                |((collateral_mint, _mm_pool_market_pubkey), pubkeys)| CollateralPoolAccounts {
+                    pool: pubkeys.pool,
+                    pool_token_account: pubkeys.token_account,
+                    token_mint: *collateral_mint,
                 },
             )
             .collect();
