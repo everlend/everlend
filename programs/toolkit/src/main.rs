@@ -46,6 +46,7 @@ mod depositor;
 mod download_account;
 mod general_pool;
 mod income_pools;
+mod liquidity_mining;
 mod liquidity_oracle;
 mod multisig;
 mod registry;
@@ -267,7 +268,7 @@ async fn command_create(
     }
 
     let mining_account = Keypair::new();
-    depositor::create_mining_account(config, &mining_account)?;
+    liquidity_mining::create_mining_account(config, &mining_account)?;
 
     let initialized_accounts = InitializedAccounts {
         payer: payer_pubkey,
@@ -1110,7 +1111,7 @@ async fn main() -> anyhow::Result<()> {
         }
         ("init-larix-mining-raw", Some(_)) => {
             let mining_account = Keypair::new();
-            depositor::init_mining_accounts_larix(&config, mining_account)?;
+            liquidity_mining::init_mining_accounts_larix(&config, mining_account)?;
             Ok(())
         }
         ("set-registry-pool-config", Some(arg_matches)) => {

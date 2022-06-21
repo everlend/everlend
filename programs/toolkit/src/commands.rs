@@ -24,6 +24,7 @@ use everlend_utils::integrations::MoneyMarket;
 use crate::accounts_config::{CollateralPoolAccounts, InitializedAccounts};
 use crate::collateral_pool::{self, PoolPubkeys};
 use crate::download_account::download_account;
+use crate::liquidity_mining;
 use crate::registry::close_registry_config;
 use crate::{
     accounts_config::TokenAccounts,
@@ -174,7 +175,7 @@ pub async fn command_init_larix_mining(config: &Config, accounts_path: &str) -> 
         manager: config.fee_payer.pubkey(),
         lending_market: Some(default_accounts.larix_lending_market),
     };
-    depositor::init_larix_mining_with_depositor(
+    liquidity_mining::init_larix_mining_with_depositor(
         &config,
         pubkeys,
         &mining_account,
