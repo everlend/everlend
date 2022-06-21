@@ -157,11 +157,11 @@ pub fn claim_rewards<'a>(
     let instruction = Instruction {
         program_id: *program_id,
         accounts: vec![
-            AccountMeta::new(*mint_wrapper.key, true),
-            AccountMeta::new(*minter.key, true),
-            AccountMeta::new(*rewards_token_mint.key, true),
-            AccountMeta::new(*rewards_token_account.key, true),
-            AccountMeta::new(*claim_fee_token_account.key, true),
+            AccountMeta::new(*mint_wrapper.key, false),
+            AccountMeta::new(*minter.key, false),
+            AccountMeta::new(*rewards_token_mint.key, false),
+            AccountMeta::new(*rewards_token_account.key, false),
+            AccountMeta::new(*claim_fee_token_account.key, false),
         ],
         data: ClaimRewardsV2 {}.data(),
     };

@@ -150,6 +150,37 @@ pub enum DepositorInstruction {
         /// Type of mining
         mining_type: MiningType,
     },
+
+    /// Claim mining reward
+    ///
+    /// Accounts:
+    /// [S] Manager
+    /// [R] Money market program id
+    /// For larix mining:
+    /// [W] Destination collateral
+    /// [W] Mining
+    /// [R] Reserve
+    /// [R] Lending market
+    /// [R] Lending market authority
+    /// [S] Authority
+    /// For PortFinance mining:
+    /// [R] Stake account owner
+    /// [W] Stake account
+    /// [W] Staking pool
+    /// [W] Reward token pool
+    /// [W] Reward destination
+    /// [R] Sub reward token pool
+    /// [R] Sub reward destination
+    /// For Quarry mining:
+    /// [W] Mint wrapper
+    /// [W] Minter
+    /// [W] Rewards token mint
+    /// [W] Rewards token account
+    /// [W] Claim fee token account
+    ClaimMiningReward {
+        /// Mining type
+        mining_type: MiningType,
+    },
 }
 
 /// Creates 'Init' instruction.
@@ -493,9 +524,15 @@ pub fn init_mining_accounts<'a>(
     ];
 
     match mining_type {
-        MiningType::Larix { mining_account } => {
-            accounts.push(AccountMeta::new_readonly(pubkeys.mining_account.unwrap(), false));
-            accounts.push(AccountMeta::new_readonly(pubkeys.lending_market.unwrap(), false));
+        MiningType::Larix { mining_account: _ } => {
+            accounts.push(AccountMeta::new_readonly(
+                pubkeys.mining_account.unwrap(),
+                false,
+            ));
+            accounts.push(AccountMeta::new_readonly(
+                pubkeys.lending_market.unwrap(),
+                false,
+            ));
         }
         MiningType::PortFinance {
             staking_program_id,

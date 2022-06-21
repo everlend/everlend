@@ -864,7 +864,7 @@ impl Processor {
     }
 
     /// Process InitMiningAccounts instruction
-    pub fn claim_mine(
+    pub fn claim_mining_reward(
         _program_id: &Pubkey,
         accounts: &[AccountInfo],
         mining_type: MiningType,
@@ -875,10 +875,8 @@ impl Processor {
 
         assert_signer(&manager_info)?;
 
-        // TODO: Asserts
-
         let result: ProgramResult = match mining_type {
-            MiningType::Larix { mining_account } => {
+            MiningType::Larix { mining_account: _ } => {
                 let destination_collateral_info = next_account_info(account_info_iter)?;
                 let mining_info = next_account_info(account_info_iter)?;
                 let reserve_info = next_account_info(account_info_iter)?;
@@ -896,9 +894,9 @@ impl Processor {
                 )
             }
             MiningType::PortFinance {
-                staking_account,
-                staking_pool,
-                staking_program_id,
+                staking_account: _,
+                staking_pool: _,
+                staking_program_id: _,
             } => {
                 let stake_account_owner = next_account_info(account_info_iter)?;
                 let stake_account = next_account_info(account_info_iter)?;
@@ -919,10 +917,10 @@ impl Processor {
                 )
             }
             MiningType::PortFinanceQuarry {
-                quarry_mining_program_id,
-                quarry,
-                rewarder,
-                miner_vault,
+                quarry_mining_program_id: _,
+                quarry: _,
+                rewarder: _,
+                miner_vault: _,
             } => {
                 let mint_wrapper = next_account_info(account_info_iter)?;
                 let minter = next_account_info(account_info_iter)?;
@@ -993,6 +991,10 @@ impl Processor {
                     internal_mining_bump_seed,
                     mining_type,
                 )
+            }
+
+            DepositorInstruction::ClaimMiningReward { mining_type } => {
+                Self::claim_mining_reward(program_id, accounts, mining_type)
             }
         }
     }

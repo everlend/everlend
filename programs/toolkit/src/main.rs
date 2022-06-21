@@ -24,7 +24,6 @@ use spl_associated_token_account::get_associated_token_address;
 
 use accounts_config::*;
 use commands::*;
-use download_account::download_account;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::state::{
     DistributionPubkeys, RegistryPrograms, RegistryRootAccounts, RegistrySettings,
@@ -32,8 +31,6 @@ use everlend_registry::state::{
 };
 use everlend_utils::integrations::MoneyMarket;
 use general_pool::get_withdrawal_requests;
-use solana_program::program_pack::Pack;
-use solana_program_test::{find_file, read_file};
 use utils::*;
 
 use crate::collateral_pool::PoolPubkeys;
@@ -1106,6 +1103,7 @@ async fn main() -> anyhow::Result<()> {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
             let default_accounts = config.get_default_accounts();
             let initialized_accounts = InitializedAccounts::load(accounts_path).unwrap();
+            let mining_pubkey = Pubkey::new_unique();
 
             // TODO move to func and add create staking account instruction
             let pubkeys = InitMiningAccountsPubkeys {
@@ -1115,10 +1113,16 @@ async fn main() -> anyhow::Result<()> {
                 registry: initialized_accounts.registry,
                 manager: config.fee_payer.pubkey(),
                 // TODO change to real account
-                mining_account: Some(Pubkey::new_unique()),
+                mining_account: Some(mining_pubkey),
                 lending_market: Some(default_accounts.larix_lending_market),
             };
-            depositor::init_mining_accounts(&config, pubkeys, MiningType::Larix)?;
+            depositor::init_mining_accounts(
+                &config,
+                pubkeys,
+                MiningType::Larix {
+                    mining_account: mining_pubkey,
+                },
+            )?;
 
             // TODO save changes to account file
             Ok(())
