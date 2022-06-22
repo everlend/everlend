@@ -2,7 +2,7 @@ use anchor_lang::InstructionData;
 use quarry_mine::instruction::{ClaimRewardsV2, CreateMinerV2, StakeTokens, WithdrawTokens};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::{AccountMeta, Instruction};
-use solana_program::program::invoke;
+use solana_program::program::{invoke, invoke_signed};
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::system_program;
@@ -38,6 +38,7 @@ pub fn create_miner<'a>(
     payer: AccountInfo<'a>,
     token_mint: AccountInfo<'a>,
     miner_vault: AccountInfo<'a>,
+    signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
     let instruction = Instruction {
         program_id: *program_id,
@@ -55,7 +56,7 @@ pub fn create_miner<'a>(
         data: CreateMinerV2.data(),
     };
 
-    invoke(
+    invoke_signed(
         &instruction,
         &[
             authority,
@@ -66,6 +67,7 @@ pub fn create_miner<'a>(
             token_mint,
             miner_vault,
         ],
+        signers_seeds,
     )
 }
 
@@ -79,6 +81,7 @@ pub fn stake_tokens<'a>(
     token_account: AccountInfo<'a>,
     rewarder: AccountInfo<'a>,
     amount: u64,
+    signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
     let instruction = Instruction {
         program_id: *program_id,
@@ -94,7 +97,7 @@ pub fn stake_tokens<'a>(
         data: StakeTokens { amount }.data(),
     };
 
-    invoke(
+    invoke_signed(
         &instruction,
         &[
             authority,
@@ -104,9 +107,11 @@ pub fn stake_tokens<'a>(
             token_account,
             rewarder,
         ],
+        signers_seeds,
     )
 }
 
+// TODO add signer seeds
 /// Withdraw tokens
 pub fn withdraw_tokens<'a>(
     program_id: &Pubkey,
@@ -117,6 +122,7 @@ pub fn withdraw_tokens<'a>(
     token_account: AccountInfo<'a>,
     rewarder: AccountInfo<'a>,
     amount: u64,
+    signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
     let instruction = Instruction {
         program_id: *program_id,
@@ -132,7 +138,7 @@ pub fn withdraw_tokens<'a>(
         data: WithdrawTokens { amount }.data(),
     };
 
-    invoke(
+    invoke_signed(
         &instruction,
         &[
             authority,
@@ -142,9 +148,11 @@ pub fn withdraw_tokens<'a>(
             token_account,
             rewarder,
         ],
+        signers_seeds,
     )
 }
 
+// TODO Check Instruction looks like uncomplited
 /// Claim rewards
 pub fn claim_rewards<'a>(
     program_id: &Pubkey,

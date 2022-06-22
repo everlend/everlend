@@ -20,7 +20,7 @@ use crate::{
     instruction::CollateralPoolsInstruction,
     state::{
         InitPoolBorrowAuthorityParams, InitPoolMarketParams, InitPoolParams, Pool,
-        PoolBorrowAuthority, PoolMarket, PoolWithdrawAuthority 
+        PoolBorrowAuthority, PoolMarket, PoolWithdrawAuthority
     },
     utils::*, find_pool_withdraw_authority_program_address,
 };

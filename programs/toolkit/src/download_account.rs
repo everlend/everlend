@@ -21,7 +21,7 @@ pub async fn download_account(pubkey: &Pubkey, account_name: &str) {
                 \"encoding\": \"base64\"
                 }}
             ]
-        }} 
+        }}
         ", pubkey.to_string()))
         .send()
         .await

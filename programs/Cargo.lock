@@ -1873,7 +1873,7 @@ checksum = "f9b7d56ba4a8344d6be9729995e6b06f928af29998cdf79fe390cbf6b1fee838"
 [[package]]
 name = "larix-lending"
 version = "0.1.0"
-source = "git+https://github.com/everlend/larix-lending#28fe261cd7168302d9cbc77eca5855db56b381e0"
+source = "git+https://github.com/everlend/larix-lending#19b0d76278830e07515013ce5b8ac958f8056c21"
 dependencies = [
  "anchor-lang",
  "arrayref",

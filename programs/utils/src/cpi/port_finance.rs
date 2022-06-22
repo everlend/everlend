@@ -45,17 +45,18 @@ pub fn deposit<'a>(
     amount: u64,
     signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
-    let instruction = port_variable_rate_lending_instructions::instruction::deposit_reserve_liquidity(
-        *program_id,
-        amount,
-        *source_liquidity.key,
-        *destination_collateral.key,
-        *reserve.key,
-        *reserve_liquidity_supply.key,
-        *reserve_collateral_mint.key,
-        *lending_market.key,
-        *authority.key,
-    );
+    let instruction =
+        port_variable_rate_lending_instructions::instruction::deposit_reserve_liquidity(
+            *program_id,
+            amount,
+            *source_liquidity.key,
+            *destination_collateral.key,
+            *reserve.key,
+            *reserve_liquidity_supply.key,
+            *reserve_collateral_mint.key,
+            *lending_market.key,
+            *authority.key,
+        );
 
     invoke_signed(
         &instruction,
@@ -89,17 +90,18 @@ pub fn redeem<'a>(
     amount: u64,
     signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
-    let instruction = port_variable_rate_lending_instructions::instruction::redeem_reserve_collateral(
-        *program_id,
-        amount,
-        *source_collateral.key,
-        *destination_liquidity.key,
-        *reserve.key,
-        *reserve_collateral_mint.key,
-        *reserve_liquidity_supply.key,
-        *lending_market.key,
-        *authority.key,
-    );
+    let instruction =
+        port_variable_rate_lending_instructions::instruction::redeem_reserve_collateral(
+            *program_id,
+            amount,
+            *source_collateral.key,
+            *destination_liquidity.key,
+            *reserve.key,
+            *reserve_collateral_mint.key,
+            *reserve_liquidity_supply.key,
+            *lending_market.key,
+            *authority.key,
+        );
 
     invoke_signed(
         &instruction,
@@ -131,7 +133,10 @@ pub fn create_stake_account<'a>(
         *stake_account_owner.key,
     );
 
-    invoke(&instruction, &[stake_account, staking_pool, stake_account_owner])
+    invoke(
+        &instruction,
+        &[stake_account, staking_pool, stake_account_owner],
+    )
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -144,6 +149,7 @@ pub fn claim_reward<'a>(
     reward_destination: &Pubkey,
     sub_reward_token_pool: Option<Pubkey>,
     sub_reward_destination: Option<Pubkey>,
+    signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
     let instruction = port_finance_staking::instruction::claim_reward(
         *program_id,
@@ -153,9 +159,13 @@ pub fn claim_reward<'a>(
         *reward_token_pool,
         sub_reward_token_pool,
         *reward_destination,
-        sub_reward_destination
+        sub_reward_destination,
     );
-    invoke(&instruction, &[stake_account, staking_pool, stake_account_owner])
+    invoke_signed(
+        &instruction,
+        &[stake_account, staking_pool, stake_account_owner],
+        signers_seeds,
+    )
 }
 
 pub fn deposit_staking<'a>(
@@ -182,6 +192,7 @@ pub fn withdraw_staking<'a>(
     staking_pool: AccountInfo<'a>,
     stake_account_owner: AccountInfo<'a>,
     amount: u64,
+    signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
     let ix = port_finance_staking::instruction::withdraw(
         *program_id,
@@ -191,5 +202,9 @@ pub fn withdraw_staking<'a>(
         *staking_pool.key,
     );
 
-    invoke(&ix, &[stake_account_owner, stake_account, staking_pool])
+    invoke_signed(
+        &ix,
+        &[stake_account_owner, stake_account, staking_pool],
+        signers_seeds,
+    )
 }

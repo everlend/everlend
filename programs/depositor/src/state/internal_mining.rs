@@ -14,36 +14,28 @@ pub enum MiningType {
     ///
     Larix {
         ///
-        #[allow(dead_code)]
         mining_account: Pubkey,
     },
     ///
     PortFinance {
         ///
         // TODO move to config
-        #[allow(dead_code)]
         staking_program_id: Pubkey,
         ///
-        #[allow(dead_code)]
         staking_account: Pubkey,
         ///
-        #[allow(dead_code)]
         staking_pool: Pubkey,
     },
     ///
     PortFinanceQuarry {
         ///
         // TODO move to config
-        #[allow(dead_code)]
         quarry_mining_program_id: Pubkey,
         ///
-        #[allow(dead_code)]
         quarry: Pubkey,
         ///
-        #[allow(dead_code)]
         rewarder: Pubkey,
         ///
-        #[allow(dead_code)]
         miner_vault: Pubkey,
     },
 }
@@ -75,8 +67,9 @@ impl InternalMining {
 impl Sealed for InternalMining {}
 
 impl Pack for InternalMining {
-    // 1 + 1 + 65
-    const LEN: usize = 67;
+    // 1 + 1 + 1 + 4 * 32
+    // TODO think about len
+    const LEN: usize = 131;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;

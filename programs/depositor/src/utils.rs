@@ -29,7 +29,6 @@ pub fn deposit<'a>(
     collateral_transit: AccountInfo<'a>,
     collateral_mint: AccountInfo<'a>,
     liquidity_transit: AccountInfo<'a>,
-    liquidity_mint: AccountInfo<'a>,
     authority: AccountInfo<'a>,
     clock: AccountInfo<'a>,
     money_market_program: AccountInfo<'a>,
@@ -43,13 +42,6 @@ pub fn deposit<'a>(
     let lending_market_info = next_account_info(money_market_account_info_iter)?;
     let lending_market_authority_info = next_account_info(money_market_account_info_iter)?;
     let internal_mining_type = if internal_mining.owner == program_id {
-        let (internal_mining_pubkey, _bump_seed) = find_internal_mining_program_address(
-            program_id,
-            &liquidity_mint.key,
-            &money_market_program.key,
-        );
-        assert_account_key(&internal_mining, &internal_mining_pubkey)?;
-
         Some(InternalMining::unpack(&internal_mining.data.borrow())?.mining_type)
     } else {
         None
@@ -59,7 +51,6 @@ pub fn deposit<'a>(
         registry_programs,
         money_market_program.clone(),
         liquidity_transit.clone(),
-        liquidity_mint.clone(),
         collateral_transit.clone(),
         collateral_mint.clone(),
         authority.clone(),
@@ -87,9 +78,10 @@ pub fn deposit<'a>(
                 mining_info.clone(),
                 reserve_info.clone(),
                 lending_market_info.clone(),
-                internal_mining.clone(),
-                internal_mining,
+                authority.clone(),
+                authority,
                 u64::MAX,
+                signers_seeds,
             )?;
         }
         Some(MiningType::PortFinanceQuarry {
@@ -115,13 +107,14 @@ pub fn deposit<'a>(
             assert_account_key(miner_info, &miner_pubkey)?;
             cpi::quarry::stake_tokens(
                 &quarry_mining_program_id,
-                internal_mining.clone(),
+                authority.clone(),
                 miner_info.clone(),
                 quarry_info.clone(),
                 miner_vault_info.clone(),
                 collateral_transit.clone(),
                 rewarder_info.clone(),
                 collateral_amount,
+                signers_seeds,
             )?;
         }
         Some(MiningType::PortFinance {
@@ -141,7 +134,7 @@ pub fn deposit<'a>(
                 &staking_program_id,
                 staking_account_info.clone(),
                 staking_pool_info.clone(),
-                internal_mining,
+                authority.clone(),
                 collateral_amount,
             )?;
         }
@@ -172,7 +165,6 @@ pub fn withdraw<'a>(
     collateral_mint: AccountInfo<'a>,
     liquidity_transit: AccountInfo<'a>,
     liquidity_reserve_transit: AccountInfo<'a>,
-    liquidity_mint: AccountInfo<'a>,
     authority: AccountInfo<'a>,
     clock: AccountInfo<'a>,
     money_market_program: AccountInfo<'a>,
@@ -190,13 +182,6 @@ pub fn withdraw<'a>(
     let liquidity_transit_supply = Account::unpack(&liquidity_transit.data.borrow())?.amount;
 
     let internal_mining_type = if internal_mining.owner == program_id {
-        let (internal_mining_pubkey, _bump_seed) = find_internal_mining_program_address(
-            program_id,
-            &liquidity_mint.key,
-            &money_market_program.key,
-        );
-        assert_account_key(&internal_mining, &internal_mining_pubkey)?;
-
         Some(InternalMining::unpack(&internal_mining.data.borrow())?.mining_type)
     } else {
         None
@@ -215,9 +200,10 @@ pub fn withdraw<'a>(
                 reserve_info.clone(),
                 lending_market_info.clone(),
                 lending_market_authority_info.clone(),
-                internal_mining,
+                authority.clone(),
                 clock.clone(),
                 u64::MAX,
+                signers_seeds,
             )?;
         }
         Some(MiningType::PortFinanceQuarry {
@@ -241,13 +227,14 @@ pub fn withdraw<'a>(
             assert_account_key(miner_info, &miner_pubkey)?;
             cpi::quarry::withdraw_tokens(
                 &quarry_mining_program_id,
-                internal_mining.clone(),
+                authority.clone(),
                 miner_info.clone(),
                 quarry_info.clone(),
                 miner_vault_info.clone(),
                 collateral_transit.clone(),
                 rewarder_info.clone(),
                 collateral_amount,
+                signers_seeds,
             )?;
         }
         Some(MiningType::PortFinance {
@@ -267,8 +254,9 @@ pub fn withdraw<'a>(
                 &staking_program_id,
                 staking_account_info.clone(),
                 staking_pool_info.clone(),
-                internal_mining,
+                authority.clone(),
                 collateral_amount,
+                signers_seeds,
             )?;
         }
         None => {
@@ -350,7 +338,6 @@ pub fn money_market_deposit<'a>(
     registry_programs: &RegistryPrograms,
     money_market_program: AccountInfo<'a>,
     source_liquidity: AccountInfo<'a>,
-    _liquidity_mint: AccountInfo<'a>,
     destination_collateral: AccountInfo<'a>,
     collateral_mint: AccountInfo<'a>,
     authority: AccountInfo<'a>,

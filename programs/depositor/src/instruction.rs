@@ -126,13 +126,15 @@ pub enum DepositorInstruction {
     /// [R] Registry
     /// [R] Registry config
     MigrateDepositor,
-    /// Initialize accounts for mining LM rewards/
+
+    /// Initialize accounts for mining LM rewards
     ///
     /// Accounts:
-    /// [] Collateral mint (collateral of liquidity asset)
-    /// [] Money market program id
+    /// [R] Collateral mint (collateral of liquidity asset)
+    /// [R] Money market program id
     /// [W] Internal mining account
     /// [R] Depositor
+    /// [R] Depositor authority
     /// [R] Registry
     /// [S] Manager
     /// For larix mining:
@@ -145,8 +147,6 @@ pub enum DepositorInstruction {
     /// For PortFinanceQuarry:
     ///
     InitMiningAccounts {
-        /// Bump seed of pda
-        internal_mining_bump_seed: u8,
         /// Type of mining
         mining_type: MiningType,
     },
@@ -154,15 +154,18 @@ pub enum DepositorInstruction {
     /// Claim mining reward
     ///
     /// Accounts:
-    /// [S] Manager
+    /// [R] Depositor
+    /// [R] Depositor authority
     /// [R] Money market program id
+    /// [R] Collateral mint
+    /// [R] Internal mining account
+    /// [R] Staking program id
     /// For larix mining:
     /// [W] Destination collateral
-    /// [W] Mining
+    /// [W] Mining account
     /// [R] Reserve
     /// [R] Lending market
     /// [R] Lending market authority
-    /// [S] Authority
     /// For PortFinance mining:
     /// [R] Stake account owner
     /// [W] Stake account
@@ -177,10 +180,7 @@ pub enum DepositorInstruction {
     /// [W] Rewards token mint
     /// [W] Rewards token account
     /// [W] Claim fee token account
-    ClaimMiningReward {
-        /// Mining type
-        mining_type: MiningType,
-    },
+    ClaimMiningReward,
 }
 
 /// Creates 'Init' instruction.
@@ -335,9 +335,10 @@ pub fn deposit(
     let (collateral_transit, _) =
         find_transit_program_address(program_id, depositor, collateral_mint, "");
 
-    let (internal_mining, _internal_mining_bump_seed) = crate::find_internal_mining_program_address(
+    let (internal_mining, _) = crate::find_internal_mining_program_address(
         program_id,
-        liquidity_mint,
+        collateral_mint,
+        depositor,
         money_market_program_id,
     );
 
@@ -416,7 +417,8 @@ pub fn withdraw(
 
     let (internal_mining, _internal_mining_bump_seed) = crate::find_internal_mining_program_address(
         program_id,
-        liquidity_mint,
+        collateral_mint,
+        depositor,
         money_market_program_id,
     );
     let (mm_pool_withdraw_authority, _) = find_pool_withdraw_authority_program_address(
@@ -507,17 +509,21 @@ pub fn init_mining_accounts<'a>(
     pubkeys: InitMiningAccountsPubkeys,
     mining_type: MiningType,
 ) -> Instruction {
-    let (internal_mining, internal_mining_bump_seed) = crate::find_internal_mining_program_address(
+    let (internal_mining, _) = crate::find_internal_mining_program_address(
         program_id,
         &pubkeys.collateral_mint,
+        &pubkeys.depositor,
         &pubkeys.money_market_program_id,
     );
+
+    let (depositor_authority, _) = find_program_address(program_id, &pubkeys.depositor);
 
     let mut accounts = vec![
         AccountMeta::new(internal_mining, false),
         AccountMeta::new_readonly(pubkeys.collateral_mint, false),
         AccountMeta::new_readonly(pubkeys.money_market_program_id, false),
         AccountMeta::new_readonly(pubkeys.depositor, false),
+        AccountMeta::new_readonly(depositor_authority, false),
         AccountMeta::new_readonly(pubkeys.registry, false),
         AccountMeta::new(pubkeys.manager, true),
     ];
@@ -544,10 +550,7 @@ pub fn init_mining_accounts<'a>(
 
     Instruction::new_with_borsh(
         *program_id,
-        &DepositorInstruction::InitMiningAccounts {
-            internal_mining_bump_seed,
-            mining_type,
-        },
+        &DepositorInstruction::InitMiningAccounts { mining_type },
         accounts,
     )
 }

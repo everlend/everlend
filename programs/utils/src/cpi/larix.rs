@@ -147,6 +147,7 @@ pub fn deposit_mining<'a>(
     authority: AccountInfo<'a>,
     // Use u64::MAX for depositing 100% of available amount
     amount: u64,
+    signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
     let ix = Instruction {
         program_id: *program_id,
@@ -156,14 +157,14 @@ pub fn deposit_mining<'a>(
             AccountMeta::new(*mining.key, false),
             AccountMeta::new_readonly(*reserve.key, false),
             AccountMeta::new_readonly(*lending_market.key, false),
-            AccountMeta::new_readonly(*mining_owner.key, true),
+            AccountMeta::new_readonly(*mining_owner.key, false),
             AccountMeta::new_readonly(*authority.key, true),
             AccountMeta::new_readonly(spl_token::id(), false),
         ],
         data: LendingInstruction::DepositMining { amount }.pack(),
     };
 
-    invoke(
+    invoke_signed(
         &ix,
         &[
             source_collateral,
@@ -174,6 +175,7 @@ pub fn deposit_mining<'a>(
             mining_owner,
             authority,
         ],
+        signers_seeds,
     )
 }
 
@@ -191,6 +193,7 @@ pub fn withdraw_mining<'a>(
     clock: AccountInfo<'a>,
     // Use u64::MAX for depositing 100% of available amount
     amount: u64,
+    signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
     let ix = Instruction {
         program_id: *program_id,
@@ -208,7 +211,7 @@ pub fn withdraw_mining<'a>(
         data: LendingInstruction::WithdrawMining { amount }.pack(),
     };
 
-    invoke(
+    invoke_signed(
         &ix,
         &[
             source_collateral,
@@ -220,6 +223,7 @@ pub fn withdraw_mining<'a>(
             mining_owner,
             clock,
         ],
+        signers_seeds,
     )
 }
 
@@ -232,14 +236,16 @@ pub struct ClaimMineAccounts<'a> {
     pub authority: AccountInfo<'a>,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn claim_mine<'a>(
     program_id: &Pubkey,
-    destination_collateral: AccountInfo<'a>,
+    destination: AccountInfo<'a>,
     mining: AccountInfo<'a>,
     reserve: AccountInfo<'a>,
     lending_market: AccountInfo<'a>,
     lending_market_authority: AccountInfo<'a>,
     authority: AccountInfo<'a>,
+    signers_seeds: &[&[&[u8]]],
 ) -> ProgramResult {
     let accounts_meta = vec![
         AccountMeta::new_readonly(spl_token::id(), false),
@@ -247,7 +253,8 @@ pub fn claim_mine<'a>(
         AccountMeta::new_readonly(*lending_market_authority.key, false),
         AccountMeta::new_readonly(*authority.key, true),
         AccountMeta::new(*mining.key, false),
-        AccountMeta::new(*destination_collateral.key, false),
+        // TODO ??? *Obligation account. After accounts pop if this account can not provided*
+        AccountMeta::new(*destination.key, false),
         AccountMeta::new_readonly(*reserve.key, false),
     ];
 
@@ -256,7 +263,7 @@ pub fn claim_mine<'a>(
         lending_market_authority,
         authority,
         mining,
-        destination_collateral,
+        destination,
         reserve,
     ];
 
@@ -272,5 +279,5 @@ pub fn claim_mine<'a>(
         .pack(),
     };
 
-    invoke(&ix, &accounts)
+    invoke_signed(&ix, &accounts, signers_seeds)
 }

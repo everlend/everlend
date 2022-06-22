@@ -186,7 +186,7 @@ pub async fn presetup() -> TestEnvironment {
         )
         .await
         .unwrap();
-    
+
     TestEnvironment {
         context,
         spl_token_lending,

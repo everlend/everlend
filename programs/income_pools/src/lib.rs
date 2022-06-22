@@ -49,6 +49,6 @@ pub fn find_safety_fund_token_account_address(
 }
 
 /// Generate safety fund token account seed
-pub fn safety_fund_token_account_seed() -> String{
-    return "safety_fund".to_owned()
+pub fn safety_fund_token_account_seed() -> String {
+    return "safety_fund".to_owned();
 }
