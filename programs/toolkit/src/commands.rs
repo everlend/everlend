@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use anyhow::bail;
 use everlend_depositor::instruction::InitMiningAccountsPubkeys;
 use everlend_depositor::state::MiningType;
@@ -182,6 +184,33 @@ pub async fn command_init_larix_mining(config: &Config, accounts_path: &str) -> 
         MiningType::Larix {
             mining_account: mining_pubkey,
         },
+    )?;
+    Ok(())
+}
+
+pub async fn command_larix_deposit_mining(
+    config: &Config,
+    accounts_path: &str,
+) -> anyhow::Result<()> {
+    let mining_account = Keypair::new();
+    let source_sol = Pubkey::from_str("44mZcJKT4HaaP2jWzdW1DHgu182Tk21ep6qVUJYYXh6q").unwrap();
+    liquidity_mining::init_mining_accounts_larix(&config, &mining_account)?;
+    println!("init mining accounts finished");
+    let destination_collateral = Keypair::new();
+    liquidity_mining::deposit_larix(
+        &config,
+        accounts_path,
+        2_000_000,
+        &source_sol,
+        &destination_collateral.pubkey(),
+    )?;
+    liquidity_mining::deposit_mining_larix(
+        &config,
+        accounts_path,
+        2_000_000,
+        &destination_collateral.pubkey(),
+        &mining_account.pubkey(),
+        &destination_collateral.pubkey(),
     )?;
     Ok(())
 }

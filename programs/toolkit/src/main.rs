@@ -5,8 +5,6 @@ use std::{process::exit, str::FromStr};
 use clap::{
     crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
 };
-use everlend_depositor::instruction::InitMiningAccountsPubkeys;
-use everlend_depositor::state::MiningType;
 use everlend_utils::find_program_address;
 use regex::Regex;
 use solana_clap_utils::{
@@ -587,6 +585,14 @@ async fn main() -> anyhow::Result<()> {
         )
         .subcommand(SubCommand::with_name("init-larix-mining-raw"))
         .subcommand(
+            SubCommand::with_name("deposit-larix-mining-raw").arg(
+                Arg::with_name("accounts")
+                    .long("accounts")
+                    .value_name("PATH")
+                    .takes_value(true),
+            ),
+        )
+        .subcommand(
             SubCommand::with_name("set-registry-pool-config")
                 .about("Set a new registry pool config")
                 .arg(
@@ -1109,9 +1115,13 @@ async fn main() -> anyhow::Result<()> {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
             command_init_larix_mining(&config, accounts_path).await
         }
+        ("deposit-larix-mining-raw", Some(arg_matches)) => {
+            let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
+            command_larix_deposit_mining(&config, accounts_path).await
+        }
         ("init-larix-mining-raw", Some(_)) => {
             let mining_account = Keypair::new();
-            liquidity_mining::init_mining_accounts_larix(&config, mining_account)?;
+            liquidity_mining::init_mining_accounts_larix(&config, &mining_account)?;
             Ok(())
         }
         ("set-registry-pool-config", Some(arg_matches)) => {

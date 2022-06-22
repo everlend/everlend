@@ -498,7 +498,6 @@ pub struct InitMiningAccountsPubkeys {
     pub registry: Pubkey,
     /// Manager
     pub manager: Pubkey,
-    /// Mining account
     /// Lending market
     pub lending_market: Option<Pubkey>,
 }

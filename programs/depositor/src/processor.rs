@@ -887,7 +887,7 @@ impl Processor {
         Ok(())
     }
 
-    /// Process InitMiningAccounts instruction
+    /// Process ClaimMiningReward instruction
     pub fn claim_mining_reward(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
 
