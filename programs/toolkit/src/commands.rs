@@ -1,8 +1,6 @@
 use std::str::FromStr;
 
 use anyhow::bail;
-use everlend_depositor::instruction::InitMiningAccountsPubkeys;
-use everlend_depositor::state::MiningType;
 use larix_lending::state::reserve::Reserve;
 use solana_client::client_error::ClientError;
 use solana_program::program_pack::Pack;
@@ -161,57 +159,21 @@ pub async fn command_save_larix_accounts(reserve_filepath: &str) -> anyhow::Resu
     Ok(())
 }
 
-pub async fn command_init_larix_mining(config: &Config, accounts_path: &str) -> anyhow::Result<()> {
-    let default_accounts = config.get_default_accounts();
-    let mut initialized_accounts = InitializedAccounts::load(accounts_path).unwrap();
-    let mining_account = Keypair::new();
-    let mining_pubkey = mining_account.pubkey();
-    initialized_accounts.larix_mining = mining_pubkey;
-    initialized_accounts.save(accounts_path).unwrap();
-
-    let pubkeys = InitMiningAccountsPubkeys {
-        collateral_mint: Pubkey::new_unique(),
-        money_market_program_id: default_accounts.larix_program_id,
-        depositor: initialized_accounts.depositor,
-        registry: initialized_accounts.registry,
-        manager: config.fee_payer.pubkey(),
-        lending_market: Some(default_accounts.larix_lending_market),
-    };
-    liquidity_mining::init_larix_mining_with_depositor(
-        &config,
-        pubkeys,
-        &mining_account,
-        MiningType::Larix {
-            mining_account: mining_pubkey,
-        },
-    )?;
-    Ok(())
-}
-
-pub async fn command_larix_deposit_mining(
-    config: &Config,
-    accounts_path: &str,
-) -> anyhow::Result<()> {
+pub async fn command_larix_deposit_mining(config: &Config) -> anyhow::Result<()> {
     let mining_account = Keypair::new();
     let source_sol = Pubkey::from_str("44mZcJKT4HaaP2jWzdW1DHgu182Tk21ep6qVUJYYXh6q").unwrap();
     liquidity_mining::init_mining_accounts_larix(&config, &mining_account)?;
     println!("init mining accounts finished");
-    let destination_collateral = Keypair::new();
-    liquidity_mining::deposit_larix(
-        &config,
-        accounts_path,
-        2_000_000,
-        &source_sol,
-        &destination_collateral.pubkey(),
-    )?;
+    let collateral_transit = Keypair::new();
+    liquidity_mining::deposit_larix(&config, 200_000_000, &source_sol, &collateral_transit)?;
+    println!("deposit liquidity finished");
     liquidity_mining::deposit_mining_larix(
         &config,
-        accounts_path,
-        2_000_000,
-        &destination_collateral.pubkey(),
+        200_000_000,
         &mining_account.pubkey(),
-        &destination_collateral.pubkey(),
+        &collateral_transit.pubkey(),
     )?;
+    println!("deposit collateral finished");
     Ok(())
 }
 

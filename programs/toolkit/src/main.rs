@@ -574,18 +574,7 @@ async fn main() -> anyhow::Result<()> {
         )
         .subcommand(SubCommand::with_name("save-larix-accounts"))
         .subcommand(
-            SubCommand::with_name("init-larix-mining").arg(
-                Arg::with_name("accounts")
-                    .short("A")
-                    .long("accounts")
-                    .value_name("PATH")
-                    .takes_value(true)
-                    .help("Accounts file"),
-            ),
-        )
-        .subcommand(SubCommand::with_name("init-larix-mining-raw"))
-        .subcommand(
-            SubCommand::with_name("deposit-larix-mining-raw").arg(
+            SubCommand::with_name("test-larix-mining-raw").arg(
                 Arg::with_name("accounts")
                     .long("accounts")
                     .value_name("PATH")
@@ -1111,19 +1100,7 @@ async fn main() -> anyhow::Result<()> {
         ("save-larix-accounts", Some(_)) => {
             command_save_larix_accounts("../tests/tests/fixtures/larix/larix_reserve_sol.bin").await
         }
-        ("init-larix-mining", Some(arg_matches)) => {
-            let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
-            command_init_larix_mining(&config, accounts_path).await
-        }
-        ("deposit-larix-mining-raw", Some(arg_matches)) => {
-            let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
-            command_larix_deposit_mining(&config, accounts_path).await
-        }
-        ("init-larix-mining-raw", Some(_)) => {
-            let mining_account = Keypair::new();
-            liquidity_mining::init_mining_accounts_larix(&config, &mining_account)?;
-            Ok(())
-        }
+        ("test-larix-mining-raw", Some(_)) => command_larix_deposit_mining(&config).await,
         ("set-registry-pool-config", Some(arg_matches)) => {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
             let general_pool = pubkey_of(arg_matches, "general-pool").unwrap();

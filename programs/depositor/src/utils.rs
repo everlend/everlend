@@ -15,10 +15,7 @@ use solana_program::{
 use spl_token::state::Account;
 use std::{cmp::Ordering, slice::Iter};
 
-use crate::{
-    find_internal_mining_program_address,
-    state::{InternalMining, MiningType},
-};
+use crate::state::{InternalMining, MiningType};
 
 /// Deposit
 #[allow(clippy::too_many_arguments)]
