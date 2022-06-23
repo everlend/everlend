@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use everlend_utils::find_program_address;
 use larix_lending::instruction::LendingInstruction;
 use solana_client::client_error::ClientError;
@@ -32,19 +30,14 @@ pub fn create_mining_account(config: &Config, mining_account: &Keypair) -> Resul
         &[create_account_instruction],
         Some(&config.fee_payer.pubkey()),
     );
-
     config.sign_and_send_and_confirm_transaction(
         tx,
         vec![config.fee_payer.as_ref(), mining_account],
     )?;
-
     Ok(())
 }
 
-pub fn init_mining_accounts_larix(
-    config: &Config,
-    mining_account: &Keypair,
-) -> Result<(), ClientError> {
+pub fn init_mining_accounts(config: &Config, mining_account: &Keypair) -> Result<(), ClientError> {
     let default_accounts = config.get_default_accounts();
     let rent = config
         .rpc_client
@@ -69,17 +62,15 @@ pub fn init_mining_accounts_larix(
         &[create_account_instruction, init_mining_instruction],
         Some(&config.fee_payer.pubkey()),
     );
-
     config.sign_and_send_and_confirm_transaction(
         tx,
         vec![config.fee_payer.as_ref(), mining_account],
     )?;
-
     Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn deposit_larix(
+pub fn deposit_liquidity(
     config: &Config,
     liquidity_amount: u64,
     source: &Pubkey,
@@ -100,7 +91,6 @@ pub fn deposit_larix(
         spl_token::state::Account::LEN as u64,
         &spl_token::id(),
     );
-
     let init_account_instruction = spl_token::instruction::initialize_account(
         &spl_token::id(),
         &collateral_transit.pubkey(),
@@ -108,7 +98,6 @@ pub fn deposit_larix(
         &config.fee_payer.pubkey(),
     )
     .unwrap();
-
     let refresh_instruction = Instruction {
         program_id: default_accounts.larix_program_id,
         accounts: vec![
@@ -117,7 +106,6 @@ pub fn deposit_larix(
         ],
         data: LendingInstruction::RefreshReserves {}.pack(),
     };
-
     let deposit_instruction = Instruction {
         program_id: default_accounts.larix_program_id,
         accounts: vec![
@@ -142,30 +130,27 @@ pub fn deposit_larix(
         ],
         Some(&config.fee_payer.pubkey()),
     );
-
     config.sign_and_send_and_confirm_transaction(
         transaction,
         vec![config.fee_payer.as_ref(), collateral_transit],
     )?;
-
     let balance = config
         .rpc_client
         .get_token_account_balance(&collateral_transit.pubkey())
         .unwrap();
     println!("balance {:?}", balance);
-
     Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn deposit_mining_larix(
+pub fn deposit_collateral(
     config: &Config,
     amount: u64,
     mining: &Pubkey,
     collateral_transit: &Pubkey,
+    un_coll_supply: &Pubkey,
 ) -> Result<(), ClientError> {
     let default_accounts = config.get_default_accounts();
-    let un_coll_supply = Pubkey::from_str("D7DeVCr4LSvPkD5zr9XV7RBkGZcybCZBa64k81Ev73Pd").unwrap();
     let refresh_instruction = Instruction {
         program_id: default_accounts.larix_program_id,
         accounts: vec![
@@ -178,7 +163,7 @@ pub fn deposit_mining_larix(
         program_id: default_accounts.larix_program_id,
         accounts: vec![
             AccountMeta::new(*collateral_transit, false),
-            AccountMeta::new(un_coll_supply, false),
+            AccountMeta::new(*un_coll_supply, false),
             AccountMeta::new(*mining, false),
             AccountMeta::new_readonly(default_accounts.larix_reserve_sol, false),
             AccountMeta::new_readonly(default_accounts.larix_lending_market, false),
@@ -192,8 +177,35 @@ pub fn deposit_mining_larix(
         &[refresh_instruction, deposit_mining_instruction],
         Some(&config.fee_payer.pubkey()),
     );
-
     config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+    Ok(())
+}
 
+#[allow(clippy::too_many_arguments)]
+pub fn claim_mining(
+    config: &Config,
+    mining: &Pubkey,
+    mine_supply: &Pubkey,
+    destination: &Pubkey,
+) -> Result<(), ClientError> {
+    let default_accounts = config.get_default_accounts();
+    let lending_market = default_accounts.larix_lending_market;
+    let (lending_market_authority, _) =
+        find_program_address(&default_accounts.larix_program_id, &lending_market);
+    let transaction = Instruction {
+        program_id: default_accounts.larix_program_id,
+        accounts: vec![
+            AccountMeta::new(*mining, false),
+            AccountMeta::new_readonly(*mine_supply, false),
+            AccountMeta::new_readonly(*destination, false),
+            AccountMeta::new_readonly(config.fee_payer.pubkey(), true),
+            AccountMeta::new_readonly(lending_market, false),
+            AccountMeta::new_readonly(lending_market_authority, false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+        ],
+        data: LendingInstruction::ClaimMiningMine.pack(),
+    };
+    let tx = Transaction::new_with_payer(&[transaction], Some(&config.fee_payer.pubkey()));
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
     Ok(())
 }

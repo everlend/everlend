@@ -44,7 +44,7 @@ mod depositor;
 mod download_account;
 mod general_pool;
 mod income_pools;
-mod liquidity_mining;
+mod larix_liquidity_mining;
 mod liquidity_oracle;
 mod multisig;
 mod registry;
@@ -266,7 +266,7 @@ async fn command_create(
     }
 
     let mining_account = Keypair::new();
-    liquidity_mining::create_mining_account(config, &mining_account)?;
+    larix_liquidity_mining::create_mining_account(config, &mining_account)?;
 
     let initialized_accounts = InitializedAccounts {
         payer: payer_pubkey,
@@ -1100,7 +1100,7 @@ async fn main() -> anyhow::Result<()> {
         ("save-larix-accounts", Some(_)) => {
             command_save_larix_accounts("../tests/tests/fixtures/larix/larix_reserve_sol.bin").await
         }
-        ("test-larix-mining-raw", Some(_)) => command_larix_deposit_mining(&config).await,
+        ("test-larix-mining-raw", Some(_)) => command_test_larix_mining_raw(&config).await,
         ("set-registry-pool-config", Some(arg_matches)) => {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
             let general_pool = pubkey_of(arg_matches, "general-pool").unwrap();

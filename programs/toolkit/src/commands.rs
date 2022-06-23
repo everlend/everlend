@@ -1,4 +1,6 @@
+use core::time;
 use std::str::FromStr;
+use std::thread::{self};
 
 use anyhow::bail;
 use larix_lending::state::reserve::Reserve;
@@ -24,7 +26,7 @@ use everlend_utils::integrations::MoneyMarket;
 use crate::accounts_config::{CollateralPoolAccounts, InitializedAccounts};
 use crate::collateral_pool::{self, PoolPubkeys};
 use crate::download_account::download_account;
-use crate::liquidity_mining;
+use crate::larix_liquidity_mining;
 use crate::registry::close_registry_config;
 use crate::{
     accounts_config::TokenAccounts,
@@ -159,21 +161,40 @@ pub async fn command_save_larix_accounts(reserve_filepath: &str) -> anyhow::Resu
     Ok(())
 }
 
-pub async fn command_larix_deposit_mining(config: &Config) -> anyhow::Result<()> {
+pub async fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()> {
     let mining_account = Keypair::new();
     let source_sol = Pubkey::from_str("44mZcJKT4HaaP2jWzdW1DHgu182Tk21ep6qVUJYYXh6q").unwrap();
-    liquidity_mining::init_mining_accounts_larix(&config, &mining_account)?;
+    larix_liquidity_mining::init_mining_accounts(&config, &mining_account)?;
     println!("init mining accounts finished");
     let collateral_transit = Keypair::new();
-    liquidity_mining::deposit_larix(&config, 200_000_000, &source_sol, &collateral_transit)?;
+    larix_liquidity_mining::deposit_liquidity(
+        &config,
+        200_000_000,
+        &source_sol,
+        &collateral_transit,
+    )?;
     println!("deposit liquidity finished");
-    liquidity_mining::deposit_mining_larix(
+    let un_coll_supply = Pubkey::from_str("D7DeVCr4LSvPkD5zr9XV7RBkGZcybCZBa64k81Ev73Pd").unwrap();
+    larix_liquidity_mining::deposit_collateral(
         &config,
         200_000_000,
         &mining_account.pubkey(),
         &collateral_transit.pubkey(),
+        &un_coll_supply,
     )?;
     println!("deposit collateral finished");
+
+    thread::sleep(time::Duration::from_secs(2));
+
+    let devidends_account = Keypair::new();
+
+    larix_liquidity_mining::claim_mining(
+        &config,
+        &mining_account.pubkey(),
+        &un_coll_supply,
+        &devidends_account.pubkey(),
+    )?;
+    println!("claim dividends finished");
     Ok(())
 }
 
