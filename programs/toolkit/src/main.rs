@@ -1099,7 +1099,7 @@ async fn main() -> anyhow::Result<()> {
             command_set_registry_config(&config, registry_pubkey).await
         }
         ("save-larix-accounts", Some(_)) => {
-            command_save_larix_accounts("../tests/tests/fixtures/larix/larix_reserve_sol.bin").await
+            command_save_larix_accounts("../tests/tests/fixtures/larix/reserve_sol.bin").await
         }
         ("test-larix-mining-raw", Some(_)) => command_test_larix_mining_raw(&config).await,
         ("set-registry-pool-config", Some(arg_matches)) => {
