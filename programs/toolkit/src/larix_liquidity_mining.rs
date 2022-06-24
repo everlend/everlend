@@ -187,13 +187,13 @@ pub fn deposit_collateral(
 #[allow(clippy::too_many_arguments)]
 pub fn claim_mining(
     config: &Config,
+    destination: &Keypair,
+    mint: &Pubkey,
+    reserve: &Pubkey,
     mining: &Pubkey,
     mine_supply: &Pubkey,
-    destination: &Keypair,
 ) -> Result<(), ClientError> {
     let default_accounts = config.get_default_accounts();
-    let mint = Pubkey::from_str("3TbdYH9oK7eowN37HZmNE3V88Wa6RFCwE4RwKgL4wELr").unwrap();
-    let reserve = Pubkey::from_str("j5V5dqeLGgTwackNwtmxDw9YYPZhYUBixtgh66ZKJWe").unwrap();
     let lending_market = default_accounts.larix_lending_market;
     let (lending_market_authority, _) =
         find_program_address(&default_accounts.larix_program_id, &lending_market);
@@ -210,7 +210,7 @@ pub fn claim_mining(
     let init_account_instruction = spl_token::instruction::initialize_account(
         &spl_token::id(),
         &destination.pubkey(),
-        &mint,
+        mint,
         &config.fee_payer.pubkey(),
     )
     .unwrap();
@@ -224,7 +224,7 @@ pub fn claim_mining(
             AccountMeta::new_readonly(lending_market, false),
             AccountMeta::new_readonly(lending_market_authority, false),
             AccountMeta::new_readonly(spl_token::id(), false),
-            AccountMeta::new_readonly(reserve, false),
+            AccountMeta::new_readonly(*reserve, false),
         ],
         data: LendingInstruction::ClaimMiningMine.pack(),
     };

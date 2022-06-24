@@ -441,8 +441,13 @@ pub async fn command_run_test(
 }
 
 pub async fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()> {
-    let mining_account = Keypair::new();
     let source_sol = Pubkey::from_str("44mZcJKT4HaaP2jWzdW1DHgu182Tk21ep6qVUJYYXh6q").unwrap();
+    let un_coll_supply = Pubkey::from_str("D7DeVCr4LSvPkD5zr9XV7RBkGZcybCZBa64k81Ev73Pd").unwrap();
+    let mint = Pubkey::from_str("3TbdYH9oK7eowN37HZmNE3V88Wa6RFCwE4RwKgL4wELr").unwrap();
+    let reserve = Pubkey::from_str("j5V5dqeLGgTwackNwtmxDw9YYPZhYUBixtgh66ZKJWe").unwrap();
+    let mine_supply = Pubkey::from_str("8EuRmZu5hTAJfxRSRoV4H1AMgQhUhddAuBkimDSDBPTC").unwrap();
+    let mining_account = Keypair::new();
+    let devidends_account = Keypair::new();
     larix_liquidity_mining::init_mining_accounts(&config, &mining_account)?;
     println!("init mining accounts finished");
     let collateral_transit = Keypair::new();
@@ -453,7 +458,6 @@ pub async fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()
         &collateral_transit,
     )?;
     println!("deposit liquidity finished");
-    let un_coll_supply = Pubkey::from_str("D7DeVCr4LSvPkD5zr9XV7RBkGZcybCZBa64k81Ev73Pd").unwrap();
     larix_liquidity_mining::deposit_collateral(
         &config,
         200_000_000,
@@ -465,13 +469,13 @@ pub async fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()
 
     thread::sleep(time::Duration::from_secs(2));
 
-    let devidends_account = Keypair::new();
-    let mine_supply = Pubkey::from_str("8EuRmZu5hTAJfxRSRoV4H1AMgQhUhddAuBkimDSDBPTC").unwrap();
     larix_liquidity_mining::claim_mining(
         &config,
+        &devidends_account,
+        &mint,
+        &reserve,
         &mining_account.pubkey(),
         &mine_supply,
-        &devidends_account,
     )?;
     println!("claim dividends finished");
     Ok(())
