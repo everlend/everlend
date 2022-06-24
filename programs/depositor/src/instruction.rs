@@ -161,11 +161,12 @@ pub enum DepositorInstruction {
     /// [R] Internal mining account
     /// [R] Staking program id
     /// For larix mining:
-    /// [W] Destination collateral
     /// [W] Mining account
-    /// [R] Reserve
+    /// [W] Mine supply
+    /// [W] Destination collateral
     /// [R] Lending market
     /// [R] Lending market authority
+    /// [R] Reserve
     /// For PortFinance mining:
     /// [R] Stake account owner
     /// [W] Stake account

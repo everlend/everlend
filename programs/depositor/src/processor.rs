@@ -921,21 +921,23 @@ impl Processor {
 
         match internal_mining_type {
             MiningType::Larix { mining_account } => {
-                let destination_info = next_account_info(account_info_iter)?;
                 let mining_account_info = next_account_info(account_info_iter)?;
                 assert_account_key(mining_account_info, &mining_account)?;
 
-                let reserve_info = next_account_info(account_info_iter)?;
+                let mine_supply_info = next_account_info(account_info_iter)?;
+                let destination_info = next_account_info(account_info_iter)?;
                 let lending_market_info = next_account_info(account_info_iter)?;
                 let lending_market_authority_info = next_account_info(account_info_iter)?;
+                let reserve_info = next_account_info(account_info_iter)?;
                 cpi::larix::claim_mine(
                     staking_program_id_info.key,
-                    destination_info.clone(),
                     mining_account_info.clone(),
-                    reserve_info.clone(),
+                    mine_supply_info.clone(),
+                    destination_info.clone(),
+                    depositor_authority_info.clone(),
                     lending_market_info.clone(),
                     lending_market_authority_info.clone(),
-                    depositor_authority_info.clone(),
+                    reserve_info.clone(),
                     &[signers_seeds.as_ref()],
                 )?;
             }

@@ -240,5 +240,10 @@ pub fn claim_mining(
         transaction,
         vec![config.fee_payer.as_ref(), destination],
     )?;
+    let balance = config
+        .rpc_client
+        .get_token_account_balance(&destination.pubkey())
+        .unwrap();
+    println!("balance {:?}", balance);
     Ok(())
 }

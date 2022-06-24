@@ -239,22 +239,23 @@ pub struct ClaimMineAccounts<'a> {
 #[allow(clippy::too_many_arguments)]
 pub fn claim_mine<'a>(
     program_id: &Pubkey,
-    destination: AccountInfo<'a>,
     mining: AccountInfo<'a>,
-    reserve: AccountInfo<'a>,
+    mine_supply: AccountInfo<'a>,
+    destination: AccountInfo<'a>,
+    authority: AccountInfo<'a>,
     lending_market: AccountInfo<'a>,
     lending_market_authority: AccountInfo<'a>,
-    authority: AccountInfo<'a>,
+    reserve: AccountInfo<'a>,
     signers_seeds: &[&[&[u8]]],
 ) -> ProgramResult {
     let accounts_meta = vec![
-        AccountMeta::new_readonly(spl_token::id(), false),
+        AccountMeta::new(*mining.key, false),
+        AccountMeta::new(*mine_supply.key, false),
+        AccountMeta::new(*destination.key, false),
+        AccountMeta::new_readonly(*authority.key, true),
         AccountMeta::new_readonly(*lending_market.key, false),
         AccountMeta::new_readonly(*lending_market_authority.key, false),
-        AccountMeta::new_readonly(*authority.key, true),
-        AccountMeta::new(*mining.key, false),
-        // TODO ??? *Obligation account. After accounts pop if this account can not provided*
-        AccountMeta::new(*destination.key, false),
+        AccountMeta::new_readonly(spl_token::id(), false),
         AccountMeta::new_readonly(*reserve.key, false),
     ];
 
@@ -270,13 +271,7 @@ pub fn claim_mine<'a>(
     let ix = Instruction {
         program_id: *program_id,
         accounts: accounts_meta,
-        data: LendingInstruction::ClaimMine {
-            // claim times of user expected got: 100 equals 100%
-            claim_times: 100,
-            // the ratio of claim user's all mine token 10000 equals 100%
-            claim_ratio: 10000,
-        }
-        .pack(),
+        data: LendingInstruction::ClaimMiningMine.pack(),
     };
 
     invoke_signed(&ix, &accounts, signers_seeds)

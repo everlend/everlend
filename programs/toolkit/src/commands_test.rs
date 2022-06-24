@@ -453,14 +453,14 @@ pub async fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()
     let collateral_transit = Keypair::new();
     larix_liquidity_mining::deposit_liquidity(
         &config,
-        200_000_000,
+        20_000_000,
         &source_sol,
         &collateral_transit,
     )?;
     println!("deposit liquidity finished");
     larix_liquidity_mining::deposit_collateral(
         &config,
-        200_000_000,
+        20_000_000,
         &mining_account.pubkey(),
         &collateral_transit.pubkey(),
         &un_coll_supply,
