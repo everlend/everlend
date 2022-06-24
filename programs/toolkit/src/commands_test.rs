@@ -14,13 +14,14 @@ use everlend_utils::integrations::{self, MoneyMarketPubkeys};
 use solana_account_decoder::parse_token::UiTokenAmount;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
-use std::thread;
+use solana_sdk::{signature::Keypair, signer::Signer};
+use std::{str::FromStr, thread};
 
 use crate::{
     accounts_config::InitializedAccounts,
     depositor, distribution,
     general_pool::{self, get_withdrawal_request_accounts},
-    liquidity_oracle,
+    larix_liquidity_mining, liquidity_oracle,
     utils::Config,
 };
 
@@ -436,5 +437,42 @@ pub async fn command_run_test(
 
     println!("Finished!");
 
+    Ok(())
+}
+
+pub async fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()> {
+    let mining_account = Keypair::new();
+    let source_sol = Pubkey::from_str("44mZcJKT4HaaP2jWzdW1DHgu182Tk21ep6qVUJYYXh6q").unwrap();
+    larix_liquidity_mining::init_mining_accounts(&config, &mining_account)?;
+    println!("init mining accounts finished");
+    let collateral_transit = Keypair::new();
+    larix_liquidity_mining::deposit_liquidity(
+        &config,
+        200_000_000,
+        &source_sol,
+        &collateral_transit,
+    )?;
+    println!("deposit liquidity finished");
+    let un_coll_supply = Pubkey::from_str("D7DeVCr4LSvPkD5zr9XV7RBkGZcybCZBa64k81Ev73Pd").unwrap();
+    larix_liquidity_mining::deposit_collateral(
+        &config,
+        200_000_000,
+        &mining_account.pubkey(),
+        &collateral_transit.pubkey(),
+        &un_coll_supply,
+    )?;
+    println!("deposit collateral finished");
+
+    thread::sleep(time::Duration::from_secs(2));
+
+    let devidends_account = Keypair::new();
+    let mine_supply = Pubkey::from_str("Lrxqnh6ZHKbGy3dcrCED43nsoLkM1LTzU2jRfWe8qUC").unwrap();
+    larix_liquidity_mining::claim_mining(
+        &config,
+        &mining_account.pubkey(),
+        &mine_supply,
+        &devidends_account,
+    )?;
+    println!("claim dividends finished");
     Ok(())
 }

@@ -1,15 +1,11 @@
-use core::time;
-use std::str::FromStr;
-use std::thread::{self};
-
 use anyhow::bail;
+use larix_lending::state::lending_market;
 use larix_lending::state::reserve::Reserve;
 use solana_client::client_error::ClientError;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::{find_file, read_file};
 use solana_sdk::signature::Keypair;
-use solana_sdk::signer::Signer;
 use spl_associated_token_account::get_associated_token_address;
 
 use everlend_liquidity_oracle::state::DistributionArray;
@@ -153,48 +149,10 @@ pub async fn command_set_registry_config(
 pub async fn command_save_larix_accounts(reserve_filepath: &str) -> anyhow::Result<()> {
     let mut reserve_data = read_file(find_file(reserve_filepath).unwrap());
     let reserve = Reserve::unpack_from_slice(reserve_data.as_mut_slice()).unwrap();
-
     download_account(&reserve.liquidity.supply_pubkey, "liquidity_supply").await;
     download_account(&reserve.liquidity.fee_receiver, "liquidity_fee_receiver").await;
     download_account(&reserve.collateral.mint_pubkey, "collateral_mint").await;
     download_account(&reserve.collateral.supply_pubkey, "collateral_supply").await;
-    Ok(())
-}
-
-pub async fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()> {
-    let mining_account = Keypair::new();
-    let source_sol = Pubkey::from_str("44mZcJKT4HaaP2jWzdW1DHgu182Tk21ep6qVUJYYXh6q").unwrap();
-    larix_liquidity_mining::init_mining_accounts(&config, &mining_account)?;
-    println!("init mining accounts finished");
-    let collateral_transit = Keypair::new();
-    larix_liquidity_mining::deposit_liquidity(
-        &config,
-        200_000_000,
-        &source_sol,
-        &collateral_transit,
-    )?;
-    println!("deposit liquidity finished");
-    let un_coll_supply = Pubkey::from_str("D7DeVCr4LSvPkD5zr9XV7RBkGZcybCZBa64k81Ev73Pd").unwrap();
-    larix_liquidity_mining::deposit_collateral(
-        &config,
-        200_000_000,
-        &mining_account.pubkey(),
-        &collateral_transit.pubkey(),
-        &un_coll_supply,
-    )?;
-    println!("deposit collateral finished");
-
-    thread::sleep(time::Duration::from_secs(2));
-
-    let devidends_account = Keypair::new();
-
-    larix_liquidity_mining::claim_mining(
-        &config,
-        &mining_account.pubkey(),
-        &un_coll_supply,
-        &devidends_account.pubkey(),
-    )?;
-    println!("claim dividends finished");
     Ok(())
 }
 

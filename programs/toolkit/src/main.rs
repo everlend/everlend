@@ -5,6 +5,7 @@ use std::{process::exit, str::FromStr};
 use clap::{
     crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
 };
+use commands_test::command_test_larix_mining_raw;
 use everlend_utils::find_program_address;
 use regex::Regex;
 use solana_clap_utils::{
