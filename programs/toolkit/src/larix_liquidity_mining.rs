@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use anchor_lang::Key;
 use everlend_utils::find_program_address;
 use larix_lending::instruction::LendingInstruction;
@@ -190,7 +192,8 @@ pub fn claim_mining(
     destination: &Keypair,
 ) -> Result<(), ClientError> {
     let default_accounts = config.get_default_accounts();
-    let collateral_mint = default_accounts.sol_collateral.get(1).unwrap().unwrap();
+    let mint = Pubkey::from_str("3TbdYH9oK7eowN37HZmNE3V88Wa6RFCwE4RwKgL4wELr").unwrap();
+    let reserve = Pubkey::from_str("j5V5dqeLGgTwackNwtmxDw9YYPZhYUBixtgh66ZKJWe").unwrap();
     let lending_market = default_accounts.larix_lending_market;
     let (lending_market_authority, _) =
         find_program_address(&default_accounts.larix_program_id, &lending_market);
@@ -207,7 +210,7 @@ pub fn claim_mining(
     let init_account_instruction = spl_token::instruction::initialize_account(
         &spl_token::id(),
         &destination.pubkey(),
-        &collateral_mint,
+        &mint,
         &config.fee_payer.pubkey(),
     )
     .unwrap();
@@ -215,12 +218,13 @@ pub fn claim_mining(
         program_id: default_accounts.larix_program_id,
         accounts: vec![
             AccountMeta::new(*mining, false),
-            AccountMeta::new_readonly(*mine_supply, false),
-            AccountMeta::new_readonly(destination.pubkey(), false),
+            AccountMeta::new(*mine_supply, false),
+            AccountMeta::new(destination.pubkey(), false),
             AccountMeta::new_readonly(config.fee_payer.pubkey(), true),
             AccountMeta::new_readonly(lending_market, false),
             AccountMeta::new_readonly(lending_market_authority, false),
             AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(reserve, false),
         ],
         data: LendingInstruction::ClaimMiningMine.pack(),
     };

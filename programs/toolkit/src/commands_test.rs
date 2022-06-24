@@ -466,7 +466,7 @@ pub async fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()
     thread::sleep(time::Duration::from_secs(2));
 
     let devidends_account = Keypair::new();
-    let mine_supply = Pubkey::from_str("Lrxqnh6ZHKbGy3dcrCED43nsoLkM1LTzU2jRfWe8qUC").unwrap();
+    let mine_supply = Pubkey::from_str("8EuRmZu5hTAJfxRSRoV4H1AMgQhUhddAuBkimDSDBPTC").unwrap();
     larix_liquidity_mining::claim_mining(
         &config,
         &mining_account.pubkey(),
