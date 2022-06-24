@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{default, str::FromStr};
 
 use anchor_lang::Key;
 use everlend_utils::find_program_address;
@@ -151,7 +151,6 @@ pub fn deposit_collateral(
     amount: u64,
     mining: &Pubkey,
     collateral_transit: &Pubkey,
-    un_coll_supply: &Pubkey,
 ) -> Result<(), ClientError> {
     let default_accounts = config.get_default_accounts();
     let refresh_instruction = Instruction {
@@ -166,7 +165,7 @@ pub fn deposit_collateral(
         program_id: default_accounts.larix_program_id,
         accounts: vec![
             AccountMeta::new(*collateral_transit, false),
-            AccountMeta::new(*un_coll_supply, false),
+            AccountMeta::new(default_accounts.larix_uncollateralized_ltoken_supply, false),
             AccountMeta::new(*mining, false),
             AccountMeta::new_readonly(default_accounts.larix_reserve_sol, false),
             AccountMeta::new_readonly(default_accounts.larix_lending_market, false),
@@ -185,13 +184,48 @@ pub fn deposit_collateral(
 }
 
 #[allow(clippy::too_many_arguments)]
+pub fn withdraw_collateral(
+    config: &Config,
+    amount: u64,
+    source: &Pubkey,
+    mining: &Pubkey,
+) -> Result<(), ClientError> {
+    let default_accounts = config.get_default_accounts();
+    let lending_market = default_accounts.larix_lending_market;
+    let (lending_market_authority, _) =
+        find_program_address(&default_accounts.larix_program_id, &lending_market);
+    let deposit_mining_instruction = Instruction {
+        program_id: default_accounts.larix_program_id,
+        accounts: vec![
+            AccountMeta::new(*source, false),
+            AccountMeta::new(default_accounts.larix_uncollateralized_ltoken_supply, false),
+            AccountMeta::new(*mining, false),
+            AccountMeta::new_readonly(default_accounts.larix_reserve_sol, false),
+            AccountMeta::new_readonly(lending_market, false),
+            AccountMeta::new_readonly(lending_market_authority, false),
+            AccountMeta::new_readonly(config.fee_payer.pubkey(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+        ],
+        data: LendingInstruction::WithdrawMining { amount }.pack(),
+    };
+    let transaction = Transaction::new_with_payer(
+        &[deposit_mining_instruction],
+        Some(&config.fee_payer.pubkey()),
+    );
+    config.sign_and_send_and_confirm_transaction(transaction, vec![config.fee_payer.as_ref()])?;
+    let balance = config
+        .rpc_client
+        .get_token_account_balance(&source)
+        .unwrap();
+    println!("balance {:?}", balance);
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
 pub fn claim_mining(
     config: &Config,
     destination: &Keypair,
-    mint: &Pubkey,
-    reserve: &Pubkey,
     mining: &Pubkey,
-    mine_supply: &Pubkey,
 ) -> Result<(), ClientError> {
     let default_accounts = config.get_default_accounts();
     let lending_market = default_accounts.larix_lending_market;
@@ -210,7 +244,7 @@ pub fn claim_mining(
     let init_account_instruction = spl_token::instruction::initialize_account(
         &spl_token::id(),
         &destination.pubkey(),
-        mint,
+        &default_accounts.larix_ltoken_mint,
         &config.fee_payer.pubkey(),
     )
     .unwrap();
@@ -218,13 +252,13 @@ pub fn claim_mining(
         program_id: default_accounts.larix_program_id,
         accounts: vec![
             AccountMeta::new(*mining, false),
-            AccountMeta::new(*mine_supply, false),
+            AccountMeta::new(default_accounts.larix_mining_supply, false),
             AccountMeta::new(destination.pubkey(), false),
             AccountMeta::new_readonly(config.fee_payer.pubkey(), true),
             AccountMeta::new_readonly(lending_market, false),
             AccountMeta::new_readonly(lending_market_authority, false),
             AccountMeta::new_readonly(spl_token::id(), false),
-            AccountMeta::new_readonly(*reserve, false),
+            AccountMeta::new_readonly(default_accounts.larix_reserve_sol, false),
         ],
         data: LendingInstruction::ClaimMiningMine.pack(),
     };
