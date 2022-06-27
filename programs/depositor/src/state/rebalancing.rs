@@ -3,7 +3,7 @@
 use super::{AccountType, RebalancingStep, TOTAL_REBALANCING_STEP};
 use crate::state::RebalancingOperation;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-use everlend_liquidity_oracle::state::TokenDistribution;
+use everlend_liquidity_oracle::state::{DistributionArray, TokenDistribution};
 use everlend_registry::state::{DistributionPubkeys, RegistrySettings, TOTAL_DISTRIBUTIONS};
 use everlend_utils::{math, EverlendError, PRECISION_SCALER};
 use solana_program::{
@@ -184,6 +184,14 @@ impl Rebalancing {
 
         self.income_refreshed_at = income_refreshed_at;
         self.distributed_liquidity = distributed_liquidity;
+
+        Ok(())
+    }
+
+    /// Reset current rebalancing
+    pub fn reset(&mut self) -> Result<(), ProgramError> {
+        self.steps.retain(|&s| s.executed_at.is_some());
+        self.token_distribution.distribution = DistributionArray::default();
 
         Ok(())
     }

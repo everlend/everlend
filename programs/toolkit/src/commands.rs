@@ -1,4 +1,5 @@
 use anyhow::bail;
+use everlend_depositor::state::Rebalancing;
 use solana_client::client_error::ClientError;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
@@ -16,11 +17,11 @@ use everlend_registry::{
 };
 use everlend_utils::integrations::MoneyMarket;
 
-use crate::accounts_config::{InitializedAccounts, CollateralPoolAccounts};
+use crate::accounts_config::{CollateralPoolAccounts, InitializedAccounts};
 use crate::collateral_pool::{self, PoolPubkeys};
 use crate::registry::close_registry_config;
 use crate::{
-    accounts_config::{TokenAccounts},
+    accounts_config::TokenAccounts,
     depositor, general_pool, income_pools, liquidity_oracle, registry,
     utils::{
         get_asset_maps, spl_create_associated_token_account, spl_token_transfer, Config,
@@ -450,15 +451,10 @@ pub async fn command_create_token_accounts(
             .iter()
             .zip(mm_pool_pubkeys)
             .map(
-                |(
-                    (collateral_mint, _mm_pool_market_pubkey),
-                    pubkeys,
-                )| {
-                    CollateralPoolAccounts {
-                        pool: pubkeys.pool,
-                        pool_token_account: pubkeys.token_account,
-                        token_mint: *collateral_mint,
-                    }
+                |((collateral_mint, _mm_pool_market_pubkey), pubkeys)| CollateralPoolAccounts {
+                    pool: pubkeys.pool,
+                    pool_token_account: pubkeys.token_account,
+                    token_mint: *collateral_mint,
                 },
             )
             .collect();
@@ -519,6 +515,24 @@ pub async fn command_cancel_withdraw_request(
         &general_pool.token_mint,
         &general_pool.pool_mint,
         &withdrawal_request.from,
+    )?;
+
+    Ok(())
+}
+
+pub async fn command_reset_rebalancing(
+    config: &Config,
+    rebalancing_pubkey: &Pubkey,
+) -> anyhow::Result<()> {
+    let initialiazed_accounts = config.get_initialized_accounts();
+
+    let rebalancing = config.get_account_unpack::<Rebalancing>(rebalancing_pubkey)?;
+
+    depositor::reset_rebalancing(
+        config,
+        &initialiazed_accounts.registry,
+        &rebalancing.depositor,
+        &rebalancing.mint,
     )?;
 
     Ok(())

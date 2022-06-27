@@ -5,6 +5,7 @@ use std::cmp::Ordering;
 use borsh::BorshDeserialize;
 use everlend_collateral_pool::find_pool_withdraw_authority_program_address;
 use everlend_income_pools::utils::IncomePoolAccounts;
+use everlend_registry::state::Registry;
 use solana_program::program_error::ProgramError;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -18,6 +19,7 @@ use solana_program::{
 };
 use spl_token::state::Account;
 
+use everlend_collateral_pool::utils::CollateralPoolAccounts;
 use everlend_general_pool::{find_withdrawal_requests_program_address, state::WithdrawalRequests};
 use everlend_liquidity_oracle::{
     find_liquidity_oracle_token_distribution_program_address, state::TokenDistribution,
@@ -27,10 +29,9 @@ use everlend_registry::{
     state::{RegistryPrograms, RegistryRootAccounts, RegistrySettings},
 };
 use everlend_utils::{
-    assert_account_key, assert_owned_by, assert_rent_exempt, assert_uninitialized, cpi,
-    find_program_address, EverlendError,
+    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
+    cpi, find_program_address, EverlendError,
 };
-use everlend_collateral_pool::utils::CollateralPoolAccounts;
 
 use crate::{
     find_rebalancing_program_address, find_transit_program_address,
@@ -382,6 +383,63 @@ impl Processor {
         Ok(())
     }
 
+    /// Process ResetRebalancing instruction
+    pub fn reset_rebalancing(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+
+        let registry_info = next_account_info(account_info_iter)?;
+
+        let depositor_info = next_account_info(account_info_iter)?;
+        let rebalancing_info = next_account_info(account_info_iter)?;
+        let liquidity_mint_info = next_account_info(account_info_iter)?;
+        let manager_info = next_account_info(account_info_iter)?;
+
+        let _system_program_info = next_account_info(account_info_iter)?;
+
+        assert_signer(manager_info)?;
+
+        // Check programs
+        assert_owned_by(registry_info, &everlend_registry::id())?;
+        assert_owned_by(depositor_info, program_id)?;
+        assert_owned_by(rebalancing_info, program_id)?;
+
+        // Get depositor state
+        let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
+
+        // Check registry
+        assert_account_key(registry_info, &depositor.registry)?;
+
+        let registry = Registry::unpack(&registry_info.data.borrow())?;
+
+        // Check manager
+        assert_account_key(manager_info, &registry.manager)?;
+
+        // Check rebalancing
+        let (rebalancing_pubkey, _) = find_rebalancing_program_address(
+            program_id,
+            depositor_info.key,
+            liquidity_mint_info.key,
+        );
+        assert_account_key(rebalancing_info, &rebalancing_pubkey)?;
+
+        let mut rebalancing = Rebalancing::unpack(&rebalancing_info.data.borrow())?;
+
+        // Check rebalancing accounts
+        assert_account_key(depositor_info, &rebalancing.depositor)?;
+        assert_account_key(liquidity_mint_info, &rebalancing.mint)?;
+
+        // Check rebalancing is not completed
+        if rebalancing.is_completed() {
+            return Err(EverlendError::RebalancingIsCompleted.into());
+        }
+
+        rebalancing.reset()?;
+
+        Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
+
+        Ok(())
+    }
+
     /// Process Deposit instruction
     pub fn deposit(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
@@ -432,7 +490,10 @@ impl Processor {
             RegistryRootAccounts::unpack_from_slice(&registry_config_info.data.borrow())?;
 
         // Check external programs
-        assert_owned_by(collateral_pool_market_info, &programs.collateral_pool_program_id)?;
+        assert_owned_by(
+            collateral_pool_market_info,
+            &programs.collateral_pool_program_id,
+        )?;
         assert_owned_by(collateral_pool_info, &programs.collateral_pool_program_id)?;
 
         // Check collateral pool market
@@ -599,7 +660,10 @@ impl Processor {
                 .map(Box::new)?;
 
         // Check external programs
-        assert_owned_by(collateral_pool_market_info, &programs.collateral_pool_program_id)?;
+        assert_owned_by(
+            collateral_pool_market_info,
+            &programs.collateral_pool_program_id,
+        )?;
         assert_owned_by(collateral_pool_info, &programs.collateral_pool_program_id)?;
 
         // Check collateral pool market
@@ -631,9 +695,12 @@ impl Processor {
         let (collateral_pool_withdraw_authority, _) = find_pool_withdraw_authority_program_address(
             &programs.collateral_pool_program_id,
             collateral_pool_info.key,
-            depositor_authority_info.key, 
+            depositor_authority_info.key,
         );
-        assert_account_key(collateral_pool_withdraw_authority_info, &collateral_pool_withdraw_authority)?;
+        assert_account_key(
+            collateral_pool_withdraw_authority_info,
+            &collateral_pool_withdraw_authority,
+        )?;
 
         // Check rebalancing
         let (rebalancing_pubkey, _) = find_rebalancing_program_address(
@@ -749,6 +816,11 @@ impl Processor {
             DepositorInstruction::StartRebalancing { refresh_income } => {
                 msg!("DepositorInstruction: StartRebalancing");
                 Self::start_rebalancing(program_id, accounts, refresh_income)
+            }
+
+            DepositorInstruction::ResetRebalancing => {
+                msg!("DepositorInstruction: ResetRebalancing");
+                Self::reset_rebalancing(program_id, accounts)
             }
 
             DepositorInstruction::Deposit => {

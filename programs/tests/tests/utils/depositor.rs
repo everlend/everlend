@@ -125,6 +125,28 @@ impl TestDepositor {
         context.banks_client.process_transaction(tx).await
     }
 
+    pub async fn reset_rebalancing(
+        &self,
+        context: &mut ProgramTestContext,
+        registry: &TestRegistry,
+        liquidity_mint: &Pubkey,
+    ) -> BanksClientResult<()> {
+        let tx = Transaction::new_signed_with_payer(
+            &[everlend_depositor::instruction::reset_rebalancing(
+                &everlend_depositor::id(),
+                &registry.keypair.pubkey(),
+                &self.depositor.pubkey(),
+                liquidity_mint,
+                &registry.manager.pubkey(),
+            )],
+            Some(&context.payer.pubkey()),
+            &[&context.payer, &registry.manager],
+            context.last_blockhash,
+        );
+
+        context.banks_client.process_transaction(tx).await
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub async fn deposit(
         &self,

@@ -126,6 +126,17 @@ pub enum DepositorInstruction {
     /// [R] Registry
     /// [R] Registry config
     MigrateDepositor,
+
+    /// Reset current rebalancing
+    ///
+    /// Accounts:
+    /// [R] Registry
+    /// [R] Depositor
+    /// [W] Rebalancing account
+    /// [R] Token mint
+    /// [WS] Manager
+    /// [R] Sytem program
+    ResetRebalancing,
 }
 
 /// Creates 'Init' instruction.
@@ -248,6 +259,33 @@ pub fn start_rebalancing(
     )
 }
 
+/// Creates 'ResetRebalancing' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn reset_rebalancing(
+    program_id: &Pubkey,
+    registry: &Pubkey,
+    depositor: &Pubkey,
+    liquidity_mint: &Pubkey,
+    manager: &Pubkey,
+) -> Instruction {
+    let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*registry, false),
+        AccountMeta::new_readonly(*depositor, false),
+        AccountMeta::new(rebalancing, false),
+        AccountMeta::new_readonly(*liquidity_mint, false),
+        AccountMeta::new_readonly(*manager, true),
+        AccountMeta::new_readonly(system_program::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &DepositorInstruction::ResetRebalancing,
+        accounts,
+    )
+}
+
 /// Creates 'Deposit' instruction.
 #[allow(clippy::too_many_arguments)]
 pub fn deposit(
@@ -267,7 +305,8 @@ pub fn deposit(
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
 
     // MM pool
-    let (mm_pool_market_authority, _) = find_program_address(&everlend_collateral_pool::id(), mm_pool_market);
+    let (mm_pool_market_authority, _) =
+        find_program_address(&everlend_collateral_pool::id(), mm_pool_market);
     let (mm_pool, _) = everlend_collateral_pool::find_pool_program_address(
         &everlend_collateral_pool::id(),
         mm_pool_market,
@@ -335,7 +374,8 @@ pub fn withdraw(
     );
 
     // MM pool
-    let (mm_pool_market_authority, _) = find_program_address(&everlend_collateral_pool::id(), mm_pool_market);
+    let (mm_pool_market_authority, _) =
+        find_program_address(&everlend_collateral_pool::id(), mm_pool_market);
     let (mm_pool, _) = everlend_collateral_pool::find_pool_program_address(
         &everlend_collateral_pool::id(),
         mm_pool_market,
@@ -353,7 +393,7 @@ pub fn withdraw(
     let (mm_pool_withdraw_authority, _) = find_pool_withdraw_authority_program_address(
         &everlend_collateral_pool::id(),
         &mm_pool,
-        &depositor_authority, 
+        &depositor_authority,
     );
 
     let mut accounts = vec![
