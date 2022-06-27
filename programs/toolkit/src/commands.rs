@@ -313,7 +313,6 @@ pub async fn command_init_mining(
         &everlend_depositor::id(),
         &collateral_mint,
         &initialized_accounts.depositor,
-        &money_market_program_id,
     );
 
     mining_accounts.internal_mining_account = internal_mining_account;

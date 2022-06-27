@@ -338,12 +338,8 @@ pub fn deposit(
     let (collateral_transit, _) =
         find_transit_program_address(program_id, depositor, collateral_mint, "");
 
-    let (internal_mining, _) = crate::find_internal_mining_program_address(
-        program_id,
-        collateral_mint,
-        depositor,
-        money_market_program_id,
-    );
+    let (internal_mining, _) =
+        crate::find_internal_mining_program_address(program_id, collateral_mint, depositor);
 
     let mut accounts = vec![
         AccountMeta::new_readonly(registry_config, false),
@@ -418,12 +414,8 @@ pub fn withdraw(
     let (liquidity_reserve_transit, _) =
         find_transit_program_address(program_id, depositor, liquidity_mint, "reserve");
 
-    let (internal_mining, _internal_mining_bump_seed) = crate::find_internal_mining_program_address(
-        program_id,
-        collateral_mint,
-        depositor,
-        money_market_program_id,
-    );
+    let (internal_mining, _internal_mining_bump_seed) =
+        crate::find_internal_mining_program_address(program_id, collateral_mint, depositor);
     let (mm_pool_withdraw_authority, _) = find_pool_withdraw_authority_program_address(
         &everlend_collateral_pool::id(),
         &mm_pool,
@@ -515,7 +507,6 @@ pub fn init_mining_accounts(
         program_id,
         &pubkeys.collateral_mint,
         &pubkeys.depositor,
-        &pubkeys.money_market_program_id,
     );
 
     let (depositor_authority, _) = find_program_address(program_id, &pubkeys.depositor);
@@ -523,7 +514,6 @@ pub fn init_mining_accounts(
     let mut accounts = vec![
         AccountMeta::new(internal_mining, false),
         AccountMeta::new_readonly(pubkeys.collateral_mint, false),
-        AccountMeta::new_readonly(pubkeys.money_market_program_id, false),
         AccountMeta::new_readonly(pubkeys.depositor, false),
         AccountMeta::new_readonly(depositor_authority, false),
         AccountMeta::new_readonly(pubkeys.registry, false),
@@ -537,6 +527,11 @@ pub fn init_mining_accounts(
             accounts.push(AccountMeta::new_readonly(mining_account, false));
             accounts.push(AccountMeta::new_readonly(
                 pubkeys.lending_market.unwrap(),
+                false,
+            ));
+
+            accounts.push(AccountMeta::new_readonly(
+                pubkeys.money_market_program_id,
                 false,
             ));
         }

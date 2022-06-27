@@ -517,7 +517,6 @@ impl Processor {
             program_id,
             collateral_mint_info.key,
             depositor_info.key,
-            money_market_program_info.key,
         );
         assert_account_key(internal_mining_info, &internal_mining_pubkey)?;
 
@@ -721,7 +720,6 @@ impl Processor {
             program_id,
             collateral_mint_info.key,
             depositor_info.key,
-            money_market_program_info.key,
         );
         assert_account_key(&internal_mining_info, &internal_mining_pubkey)?;
 
@@ -791,7 +789,6 @@ impl Processor {
             program_id,
             collateral_mint_info.key,
             depositor_info.key,
-            money_market_program_id_info.key,
         );
         assert_account_key(internal_mining_info, &internal_mining_pubkey)?;
         assert_owned_by(internal_mining_info, program_id)?;
@@ -914,7 +911,6 @@ impl Processor {
         assert_account_key(depositor_authority_info, &depositor_authority_pubkey)?;
         let signers_seeds = &[&depositor_info.key.to_bytes()[..32], &[bump_seed]];
 
-        let money_market_program_id_info = next_account_info(account_info_iter)?;
         let collateral_mint_info = next_account_info(account_info_iter)?;
 
         let internal_mining_info = next_account_info(account_info_iter)?;
@@ -922,7 +918,6 @@ impl Processor {
             program_id,
             collateral_mint_info.key,
             depositor_info.key,
-            money_market_program_id_info.key,
         );
         assert_account_key(internal_mining_info, &internal_mining_pubkey)?;
         assert_owned_by(internal_mining_info, program_id)?;
