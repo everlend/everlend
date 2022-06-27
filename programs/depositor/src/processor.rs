@@ -938,6 +938,12 @@ impl Processor {
                 let lending_market_info = next_account_info(account_info_iter)?;
                 let lending_market_authority_info = next_account_info(account_info_iter)?;
                 let reserve_info = next_account_info(account_info_iter)?;
+                let reserve_liquidity_oracle = next_account_info(account_info_iter)?;
+                cpi::larix::refresh_reserve(
+                    staking_program_id_info.key,
+                    reserve_info.clone(),
+                    reserve_liquidity_oracle.clone(),
+                )?;
                 cpi::larix::claim_mine(
                     staking_program_id_info.key,
                     mining_account_info.clone(),

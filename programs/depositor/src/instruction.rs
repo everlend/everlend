@@ -169,6 +169,7 @@ pub enum DepositorInstruction {
     /// [R] Lending market
     /// [R] Lending market authority
     /// [R] Reserve
+    /// [R] Reserve liquidity oracle
     /// For PortFinance mining:
     /// [R] Stake account owner
     /// [W] Stake account
