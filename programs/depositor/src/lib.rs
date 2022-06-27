@@ -51,14 +51,12 @@ pub fn find_internal_mining_program_address(
     // Money market collateral mint
     collateral_mint: &Pubkey,
     depositor: &Pubkey,
-    money_market_program_id: &Pubkey,
 ) -> (Pubkey, u8) {
     Pubkey::find_program_address(
         &[
             "internal_mining".as_bytes(),
             &collateral_mint.to_bytes(),
             &depositor.to_bytes(),
-            &money_market_program_id.to_bytes(),
         ],
         program_id,
     )
