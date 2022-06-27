@@ -442,7 +442,7 @@ pub async fn command_run_test(
 
 pub async fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()> {
     // to get this id do "spl-token wrap 1" in your terminal
-    let source_sol = Pubkey::from_str("44mZcJKT4HaaP2jWzdW1DHgu182Tk21ep6qVUJYYXh6q").unwrap();
+    let source_sol = config.fee_payer.pubkey();
     let amount = 20_000_000;
     let mining_account = Keypair::new();
     let collateral_transit = Keypair::new();

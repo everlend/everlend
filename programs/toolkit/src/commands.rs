@@ -1,10 +1,12 @@
 use anyhow::bail;
+use everlend_depositor::{instruction::InitMiningAccountsPubkeys, state::MiningType};
 use larix_lending::state::reserve::Reserve;
 use solana_client::client_error::ClientError;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::{find_file, read_file};
-use solana_sdk::signature::Keypair;
+use solana_sdk::signature::Signer;
+use solana_sdk::signature::{write_keypair_file, Keypair};
 use spl_associated_token_account::get_associated_token_address;
 
 use everlend_liquidity_oracle::state::DistributionArray;
@@ -16,11 +18,12 @@ use everlend_registry::{
         TOTAL_DISTRIBUTIONS,
     },
 };
-use everlend_utils::integrations::MoneyMarket;
+use everlend_utils::integrations::{MoneyMarket, StakingMoneyMarket};
 
 use crate::accounts_config::{CollateralPoolAccounts, InitializedAccounts};
 use crate::collateral_pool::{self, PoolPubkeys};
 use crate::download_account::download_account;
+use crate::liquidity_mining;
 use crate::registry::close_registry_config;
 use crate::{
     accounts_config::TokenAccounts,
@@ -151,6 +154,181 @@ pub async fn command_save_larix_accounts(reserve_filepath: &str) -> anyhow::Resu
     download_account(&reserve.liquidity.fee_receiver, "liquidity_fee_receiver").await;
     download_account(&reserve.collateral.mint_pubkey, "collateral_mint").await;
     download_account(&reserve.collateral.supply_pubkey, "collateral_supply").await;
+    Ok(())
+}
+
+pub async fn command_init_mining(
+    config: &Config,
+    money_market: StakingMoneyMarket,
+    token: String,
+) -> anyhow::Result<()> {
+    let default_accounts = config.get_default_accounts();
+    let mut initialized_accounts = config.get_initialized_accounts();
+
+    let (_, collateral_mint_map) = get_asset_maps(default_accounts.clone());
+    let collateral_mint = collateral_mint_map.get(&token).unwrap()[money_market as usize].unwrap();
+    println!("collateral_mint {}", collateral_mint);
+
+    let mut mining_accounts = initialized_accounts
+        .token_accounts
+        .get_mut(&token)
+        .unwrap()
+        .mining_accounts[money_market as usize];
+
+    // Check that internal mining account already initialized
+    if !mining_accounts
+        .internal_mining_account
+        .eq(&Pubkey::default())
+    {
+        println!("Already initialized native mining");
+        return Ok(());
+    };
+
+    let mut pubkeys: InitMiningAccountsPubkeys = InitMiningAccountsPubkeys {
+        collateral_mint,
+        depositor: initialized_accounts.depositor,
+        registry: initialized_accounts.registry,
+        manager: config.fee_payer.pubkey(),
+        // Default changes below
+        money_market_program_id: Pubkey::default(),
+        lending_market: None,
+    };
+
+    let mut mining_type: Option<MiningType> = None;
+    let mut money_market_program_id: Pubkey = Pubkey::default();
+
+    match money_market {
+        StakingMoneyMarket::Larix => {
+            // Check that mining account is initialized
+            // TODO add as Vec cause 1 mining account can hold up to 10 reserves
+            if initialized_accounts.larix_mining.eq(&Pubkey::default()) {
+                println!("Create and Init larix mining accont");
+                let mining_account_keypair = Keypair::new();
+                println!("Mining account: {}", mining_account_keypair.pubkey());
+                mining_accounts.staking_account = mining_account_keypair.pubkey();
+                initialized_accounts.larix_mining = mining_account_keypair.pubkey();
+
+                liquidity_mining::create_mining_account(
+                    config,
+                    &default_accounts.larix_program_id,
+                    &mining_account_keypair,
+                    money_market,
+                )?;
+
+                write_keypair_file(
+                    &mining_account_keypair,
+                    &format!(
+                        ".keypairs/{}_larix_mining_{}.json",
+                        token,
+                        mining_account_keypair.pubkey()
+                    ),
+                )
+                .unwrap();
+
+                // Save into account file
+                initialized_accounts
+                    .token_accounts
+                    .get_mut(&token)
+                    .unwrap()
+                    .mining_accounts[money_market as usize] = mining_accounts;
+
+                initialized_accounts
+                    .save(&format!("accounts.{}.yaml", config.network))
+                    .unwrap();
+            };
+
+            money_market_program_id = default_accounts.larix_program_id;
+            pubkeys.lending_market = Some(default_accounts.larix_lending_market);
+
+            mining_type = Some(MiningType::Larix {
+                mining_account: initialized_accounts.larix_mining,
+            });
+        }
+        StakingMoneyMarket::PortFinance => {
+            //Native mining
+            println!("Port native staking");
+
+            if mining_accounts.staking_account.eq(&Pubkey::default()) {
+                println!("Create and Init port staking account");
+                let staking_account_keypair = Keypair::new();
+                mining_accounts.staking_account = staking_account_keypair.pubkey();
+                println!("Mining account: {}", mining_accounts.staking_account);
+
+                write_keypair_file(
+                    &staking_account_keypair,
+                    &format!(
+                        ".keypairs/{}_port_staking_{}.json",
+                        token,
+                        staking_account_keypair.pubkey()
+                    ),
+                )
+                .unwrap();
+
+                liquidity_mining::create_mining_account(
+                    config,
+                    &default_accounts.port_finance_staking_program_id,
+                    &staking_account_keypair,
+                    money_market,
+                )?;
+
+                // Save into account file
+                initialized_accounts
+                    .token_accounts
+                    .get_mut(&token)
+                    .unwrap()
+                    .mining_accounts[money_market as usize] = mining_accounts;
+
+                initialized_accounts
+                    .save(&format!("accounts.{}.yaml", config.network))
+                    .unwrap();
+            };
+
+            pubkeys.lending_market = Some(default_accounts.port_finance_lending_market);
+            money_market_program_id = default_accounts.port_finance_program_id;
+
+            let port_accounts = default_accounts.port_accounts.get(&token).unwrap();
+
+            mining_type = Some(MiningType::PortFinance {
+                staking_program_id: default_accounts.port_finance_staking_program_id,
+                staking_account: mining_accounts.staking_account,
+                staking_pool: port_accounts.staking_pool,
+            });
+        }
+        StakingMoneyMarket::Solend => {
+            println!("Solend unsupported protocol");
+            return Ok(());
+        }
+        StakingMoneyMarket::Quarry => {
+            println!("Quarry unsupported protocol");
+            return Ok(());
+        }
+    }
+
+    pubkeys.money_market_program_id = money_market_program_id;
+
+    liquidity_mining::init_depositor_mining(config, pubkeys, mining_type.unwrap())?;
+
+    // Generate internal mining account
+    let (internal_mining_account, _) = everlend_depositor::find_internal_mining_program_address(
+        &everlend_depositor::id(),
+        &collateral_mint,
+        &initialized_accounts.depositor,
+        &money_market_program_id,
+    );
+
+    mining_accounts.internal_mining_account = internal_mining_account;
+
+    // Save into account file
+    initialized_accounts
+        .token_accounts
+        .get_mut(&token)
+        .unwrap()
+        .mining_accounts[money_market as usize] = mining_accounts;
+
+    initialized_accounts
+        .save(&format!("accounts.{}.yaml", config.network))
+        .unwrap();
+
     Ok(())
 }
 
@@ -492,6 +670,7 @@ pub async fn command_create_token_accounts(
                 income_pool: income_pool_pubkey,
                 income_pool_token_account,
                 mm_pools: Vec::new(),
+                mining_accounts: Vec::new(),
                 collateral_pools,
                 liquidity_transit: liquidity_transit_pubkey,
             },

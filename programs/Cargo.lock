@@ -1245,6 +1245,7 @@ dependencies = [
  "everlend-registry",
  "everlend-utils",
  "larix-lending",
+ "port-finance-staking",
  "port-variable-rate-lending-instructions",
  "regex",
  "reqwest",

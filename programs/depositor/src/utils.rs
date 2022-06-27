@@ -190,7 +190,7 @@ pub fn withdraw<'a>(
             let mining_info = next_account_info(money_market_account_info_iter)?;
             assert_account_key(mining_info, &mining_account)?;
             cpi::larix::withdraw_mining(
-                &money_market_program.key,
+                money_market_program.key,
                 reserve_bonus_info.clone(),
                 collateral_transit.clone(),
                 mining_info.clone(),

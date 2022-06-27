@@ -41,11 +41,15 @@ pub struct DefaultAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub port_finance_program_id: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
+    pub port_finance_staking_program_id: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
     pub port_finance_lending_market: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
     pub port_finance_reserve_sol: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
     pub port_finance_reserve_sol_supply: Pubkey,
+
+    pub port_accounts: BTreeMap<String, PortAccounts>,
 
     #[serde_as(as = "DisplayFromStr")]
     pub larix_program_id: Pubkey,
@@ -116,6 +120,13 @@ pub struct DefaultAccounts {
 }
 
 #[serde_as]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default)]
+pub struct PortAccounts {
+    #[serde_as(as = "DisplayFromStr")]
+    pub staking_pool: Pubkey,
+}
+
+#[serde_as]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Default)]
 pub struct InitializedAccounts {
     #[serde_as(as = "DisplayFromStr")]
@@ -176,6 +187,17 @@ pub struct TokenAccounts {
 
     #[serde_as(as = "DisplayFromStr")]
     pub liquidity_transit: Pubkey,
+
+    pub mining_accounts: Vec<MiningAccounts>,
+}
+
+#[serde_as]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Default, Copy, Clone)]
+pub struct MiningAccounts {
+    #[serde_as(as = "DisplayFromStr")]
+    pub staking_account: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub internal_mining_account: Pubkey,
 }
 
 #[serde_as]

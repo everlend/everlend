@@ -10,13 +10,23 @@ pub const SPL_TOKEN_LENDING_PROGRAM_ID: &str = "Bp1MJ1qr4g8t9AQJjm5H6zDB2NmRrkJL
 // pub const PORT_FINANCE_PROGRAM_ID: &str = "pdQ2rQQU5zH2rDgZ7xH2azMBJegUzUyunJ5Jd637hC4";
 // pub const LARIX_PROGRAM_ID: &str = "BDBsJpBPWtMfTgxejekYCWUAJu1mvQshiwrKuTjdEeT3";
 
-#[derive(Debug, IntoPrimitive, FromPrimitive)]
+#[derive(Debug, IntoPrimitive, FromPrimitive, Clone, Copy)]
 #[repr(usize)]
 pub enum MoneyMarket {
     #[num_enum(default)]
     PortFinance,
     Larix,
     Solend,
+}
+
+#[derive(Debug, IntoPrimitive, FromPrimitive, Clone, Copy)]
+#[repr(usize)]
+pub enum StakingMoneyMarket {
+    #[num_enum(default)]
+    PortFinance,
+    Larix,
+    Solend,
+    Quarry,
 }
 
 #[derive(Debug)]

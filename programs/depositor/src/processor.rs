@@ -773,8 +773,11 @@ impl Processor {
         let depositor_authority_info = next_account_info(account_info_iter)?;
         let registry_info = next_account_info(account_info_iter)?;
         let manager_info = next_account_info(account_info_iter)?;
+        let rent_info = next_account_info(account_info_iter)?;
+        let rent = &Rent::from_account_info(rent_info)?;
+        let _system_program_info = next_account_info(account_info_iter)?;
 
-        assert_signer(&manager_info)?;
+        assert_signer(manager_info)?;
         assert_owned_by(registry_info, &everlend_registry::id())?;
         assert_owned_by(depositor_info, program_id)?;
 
@@ -801,6 +804,17 @@ impl Processor {
         assert_account_key(depositor_authority_info, &depositor_authority_pubkey)?;
         let signers_seeds = &[&depositor_info.key.to_bytes()[..32], &[bump_seed]];
 
+        // Create internal mining account
+        if !internal_mining_info.owner.eq(program_id) {
+            cpi::system::create_account::<InternalMining>(
+                program_id,
+                manager_info.clone(),
+                internal_mining_info.clone(),
+                &[signers_seeds],
+                rent,
+            )?;
+        }
+
         match mining_type {
             MiningType::Larix { mining_account } => {
                 let mining_account_info = next_account_info(account_info_iter)?;
@@ -811,7 +825,7 @@ impl Processor {
 
                 let lending_market_info = next_account_info(account_info_iter)?;
                 cpi::larix::init_mining(
-                    &money_market_program_id_info.key,
+                    money_market_program_id_info.key,
                     mining_account_info.clone(),
                     depositor_authority_info.clone(),
                     lending_market_info.clone(),
@@ -829,15 +843,15 @@ impl Processor {
                 let staking_account_info = next_account_info(account_info_iter)?;
 
                 assert_account_key(staking_program_id_info, &staking_program_id)?;
-                assert_account_key(staking_account_info, &staking_account)?;
                 assert_account_key(staking_pool_info, &staking_pool)?;
+                assert_account_key(staking_account_info, &staking_account)?;
 
                 if staking_account_info.owner != staking_program_id_info.key {
                     return Err(EverlendError::InvalidAccountOwner.into());
                 };
 
                 cpi::port_finance::create_stake_account(
-                    &staking_program_id_info.key,
+                    staking_program_id_info.key,
                     staking_account_info.clone(),
                     staking_pool_info.clone(),
                     depositor_authority_info.clone(),

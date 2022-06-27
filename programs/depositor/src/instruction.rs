@@ -137,6 +137,8 @@ pub enum DepositorInstruction {
     /// [R] Depositor authority
     /// [R] Registry
     /// [S] Manager
+    /// [R] Rent sysvar
+    /// [R] System program
     /// For larix mining:
     /// [R] Mining account
     /// [R] Lending market
@@ -504,7 +506,7 @@ pub struct InitMiningAccountsPubkeys {
 }
 
 /// Inint ming accounts
-pub fn init_mining_accounts<'a>(
+pub fn init_mining_accounts(
     program_id: &Pubkey,
     pubkeys: InitMiningAccountsPubkeys,
     mining_type: MiningType,
@@ -526,6 +528,8 @@ pub fn init_mining_accounts<'a>(
         AccountMeta::new_readonly(depositor_authority, false),
         AccountMeta::new_readonly(pubkeys.registry, false),
         AccountMeta::new(pubkeys.manager, true),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+        AccountMeta::new_readonly(system_program::id(), false),
     ];
 
     match mining_type {

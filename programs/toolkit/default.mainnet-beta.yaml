@@ -12,6 +12,7 @@ ray_mint: 4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R
 srm_mint: SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt
 sol_oracle: H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG
 port_finance_program_id: Port7uDYB3wk6GJAw4KT1WpTeMtSu9bTcChBHkX2LfR
+port_finance_staking_program_id: stkarvwmSzv2BygN5e2LeTwimTczLWHCKPKGC2zVLiq
 port_finance_lending_market: 6T4XxKerq744sSuj3jaoV6QiZ8acirf4TrPwQzHAoSy5
 port_finance_reserve_sol: X9ByyhmtQH3Wjku9N5obPy54DbVjZV7Z99TPJZ2rwcs
 port_finance_reserve_sol_supply: BLAFX12cDmsumyB6k3L6whJZqNqySaWeCmS5rVuzy3SS
@@ -73,6 +74,8 @@ srm_collateral:
   - 9yoGvCPSFqfgHCyyhb7iVQcNTscFbAqRTbn6XuGUi8xa
   - 4CxGuD2NMr6zM8f18gr6kRhgd748pnmkAhkY1YJtkup1
 multisig_program_id: 3ktyhEXgbiUyDG7RXCzzXWzjXJpThpqqePhJb85eVqFa
-
+port_accounts:
+  SOL:
+    staking_pool: 11111111111111111111111111111111
 
 
