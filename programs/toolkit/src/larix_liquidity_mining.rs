@@ -283,6 +283,14 @@ pub fn claim_mining(
         &config.fee_payer.pubkey(),
     )
     .unwrap();
+    let refresh_instruction = Instruction {
+        program_id: default_accounts.larix_program_id,
+        accounts: vec![
+            AccountMeta::new(default_accounts.larix_reserve_sol, false),
+            AccountMeta::new_readonly(default_accounts.sol_oracle, false),
+        ],
+        data: LendingInstruction::RefreshReserves {}.pack(),
+    };
     let claim_instruction = Instruction {
         program_id: default_accounts.larix_program_id,
         accounts: vec![
@@ -301,6 +309,7 @@ pub fn claim_mining(
         &[
             create_account_instruction,
             init_account_instruction,
+            refresh_instruction,
             claim_instruction,
         ],
         Some(&config.fee_payer.pubkey()),

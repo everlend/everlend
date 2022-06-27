@@ -452,7 +452,8 @@ pub async fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()
         ],
         &token_program_id,
     );
-    let amount = 20_000_000;
+    println!("source_sol {}", source_sol);
+    let amount = 7_500_000_000;
     let mining_account = Keypair::new();
     let collateral_transit = Keypair::new();
     let dividends_account = Keypair::new();
@@ -468,15 +469,19 @@ pub async fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()
         &collateral_transit.pubkey(),
     )?;
     println!("deposit collateral finished");
-    thread::sleep(time::Duration::from_secs(2));
-    larix_liquidity_mining::claim_mining(&config, &dividends_account, &mining_account.pubkey())?;
+    thread::sleep(time::Duration::from_secs(60));
     println!("claim dividends finished");
     larix_liquidity_mining::withdraw_collateral(
         &config,
-        10_000_000,
+        amount - 10_000_000,
         &withdraw_account,
         &mining_account.pubkey(),
     )?;
+    larix_liquidity_mining::claim_mining(&config, &dividends_account, &mining_account.pubkey())?;
     println!("withdraw collateral finished");
+    Ok(())
+}
+
+pub fn command_test_quarry_raw() -> anyhow::Result<()> {
     Ok(())
 }
