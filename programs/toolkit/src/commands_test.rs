@@ -447,6 +447,7 @@ pub async fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()
     let mining_account = Keypair::new();
     let collateral_transit = Keypair::new();
     let devidends_account = Keypair::new();
+    let withdraw_account = Keypair::new();
     larix_liquidity_mining::init_mining_accounts(&config, &mining_account)?;
     println!("init mining accounts finished");
     larix_liquidity_mining::deposit_liquidity(&config, amount, &source_sol, &collateral_transit)?;
@@ -464,7 +465,7 @@ pub async fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()
     larix_liquidity_mining::withdraw_collateral(
         &config,
         10_000_000,
-        &collateral_transit.pubkey(),
+        &withdraw_account,
         &mining_account.pubkey(),
     )?;
     println!("withdraw collateral finished");

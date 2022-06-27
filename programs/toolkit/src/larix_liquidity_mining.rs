@@ -1,6 +1,5 @@
-use std::{default, str::FromStr};
+use std::str::FromStr;
 
-use anchor_lang::Key;
 use everlend_utils::find_program_address;
 use larix_lending::instruction::LendingInstruction;
 use solana_client::client_error::ClientError;
@@ -187,35 +186,71 @@ pub fn deposit_collateral(
 pub fn withdraw_collateral(
     config: &Config,
     amount: u64,
-    source: &Pubkey,
+    destination: &Keypair,
     mining: &Pubkey,
 ) -> Result<(), ClientError> {
     let default_accounts = config.get_default_accounts();
+    let collateral_mint = default_accounts.sol_collateral.get(1).unwrap().unwrap();
     let lending_market = default_accounts.larix_lending_market;
     let (lending_market_authority, _) =
         find_program_address(&default_accounts.larix_program_id, &lending_market);
+    let rent = config
+        .rpc_client
+        .get_minimum_balance_for_rent_exemption(spl_token::state::Account::LEN as usize)?;
+    let create_account_instruction = system_instruction::create_account(
+        &config.fee_payer.pubkey(),
+        &destination.pubkey(),
+        rent,
+        spl_token::state::Account::LEN as u64,
+        &spl_token::id(),
+    );
+    let init_account_instruction = spl_token::instruction::initialize_account(
+        &spl_token::id(),
+        &destination.pubkey(),
+        &collateral_mint,
+        &config.fee_payer.pubkey(),
+    )
+    .unwrap();
+    let refresh_instruction = Instruction {
+        program_id: default_accounts.larix_program_id,
+        accounts: vec![
+            AccountMeta::new(default_accounts.larix_reserve_sol, false),
+            AccountMeta::new_readonly(default_accounts.sol_oracle, false),
+        ],
+        data: LendingInstruction::RefreshReserves {}.pack(),
+    };
+    let clock_id = Pubkey::from_str("SysvarC1ock11111111111111111111111111111111").unwrap();
     let deposit_mining_instruction = Instruction {
         program_id: default_accounts.larix_program_id,
         accounts: vec![
-            AccountMeta::new(*source, false),
             AccountMeta::new(default_accounts.larix_uncollateralized_ltoken_supply, false),
+            AccountMeta::new(destination.pubkey(), false),
             AccountMeta::new(*mining, false),
             AccountMeta::new_readonly(default_accounts.larix_reserve_sol, false),
             AccountMeta::new_readonly(lending_market, false),
             AccountMeta::new_readonly(lending_market_authority, false),
             AccountMeta::new_readonly(config.fee_payer.pubkey(), false),
+            AccountMeta::new_readonly(clock_id, false),
             AccountMeta::new_readonly(spl_token::id(), false),
         ],
         data: LendingInstruction::WithdrawMining { amount }.pack(),
     };
     let transaction = Transaction::new_with_payer(
-        &[deposit_mining_instruction],
+        &[
+            create_account_instruction,
+            init_account_instruction,
+            refresh_instruction,
+            deposit_mining_instruction,
+        ],
         Some(&config.fee_payer.pubkey()),
     );
-    config.sign_and_send_and_confirm_transaction(transaction, vec![config.fee_payer.as_ref()])?;
+    config.sign_and_send_and_confirm_transaction(
+        transaction,
+        vec![config.fee_payer.as_ref(), destination],
+    )?;
     let balance = config
         .rpc_client
-        .get_token_account_balance(&source)
+        .get_token_account_balance(&destination.pubkey())
         .unwrap();
     println!("balance {:?}", balance);
     Ok(())

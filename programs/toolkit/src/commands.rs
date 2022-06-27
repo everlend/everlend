@@ -1,5 +1,4 @@
 use anyhow::bail;
-use larix_lending::state::lending_market;
 use larix_lending::state::reserve::Reserve;
 use solana_client::client_error::ClientError;
 use solana_program::program_pack::Pack;
@@ -22,7 +21,6 @@ use everlend_utils::integrations::MoneyMarket;
 use crate::accounts_config::{CollateralPoolAccounts, InitializedAccounts};
 use crate::collateral_pool::{self, PoolPubkeys};
 use crate::download_account::download_account;
-use crate::larix_liquidity_mining;
 use crate::registry::close_registry_config;
 use crate::{
     accounts_config::TokenAccounts,
