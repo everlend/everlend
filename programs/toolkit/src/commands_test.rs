@@ -15,6 +15,7 @@ use solana_account_decoder::parse_token::UiTokenAmount;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::{signature::Keypair, signer::Signer};
+use spl_token::native_mint;
 use std::{str::FromStr, thread};
 
 use crate::{
@@ -441,12 +442,20 @@ pub async fn command_run_test(
 }
 
 pub async fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()> {
-    // to get this id do "spl-token wrap 1" in your terminal
-    let source_sol = config.fee_payer.pubkey();
+    let token_program_id =
+        Pubkey::from_str("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL").unwrap();
+    let (source_sol, _) = Pubkey::find_program_address(
+        &[
+            &config.fee_payer.pubkey().to_bytes(),
+            &spl_token::id().to_bytes(),
+            &native_mint::id().to_bytes(),
+        ],
+        &token_program_id,
+    );
     let amount = 20_000_000;
     let mining_account = Keypair::new();
     let collateral_transit = Keypair::new();
-    let devidends_account = Keypair::new();
+    let dividends_account = Keypair::new();
     let withdraw_account = Keypair::new();
     larix_liquidity_mining::init_mining_accounts(&config, &mining_account)?;
     println!("init mining accounts finished");
@@ -460,7 +469,7 @@ pub async fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()
     )?;
     println!("deposit collateral finished");
     thread::sleep(time::Duration::from_secs(2));
-    larix_liquidity_mining::claim_mining(&config, &devidends_account, &mining_account.pubkey())?;
+    larix_liquidity_mining::claim_mining(&config, &dividends_account, &mining_account.pubkey())?;
     println!("claim dividends finished");
     larix_liquidity_mining::withdraw_collateral(
         &config,
