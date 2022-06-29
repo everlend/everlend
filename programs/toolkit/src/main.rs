@@ -5,7 +5,7 @@ use std::{process::exit, str::FromStr};
 use clap::{
     crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
 };
-use commands_test::command_test_larix_mining_raw;
+use commands_test::{command_test_larix_mining_raw, command_test_quarry_mining_raw};
 use everlend_utils::find_program_address;
 use regex::Regex;
 use solana_clap_utils::{
@@ -48,6 +48,7 @@ mod larix_liquidity_mining;
 mod liquidity_mining;
 mod liquidity_oracle;
 mod multisig;
+mod quarry_liquidity_mining;
 mod registry;
 mod utils;
 
@@ -600,14 +601,9 @@ async fn main() -> anyhow::Result<()> {
                         .help("Token ticker"),
                 ),
         )
-        .subcommand(
-            SubCommand::with_name("test-larix-mining-raw").arg(
-                Arg::with_name("accounts")
-                    .long("accounts")
-                    .value_name("PATH")
-                    .takes_value(true),
-            ),
-        )
+        .subcommand(SubCommand::with_name("save-quarry-accounts"))
+        .subcommand(SubCommand::with_name("test-larix-mining-raw"))
+        .subcommand(SubCommand::with_name("test-quarry-mining-raw"))
         .subcommand(
             SubCommand::with_name("set-registry-pool-config")
                 .about("Set a new registry pool config")
@@ -1125,14 +1121,16 @@ async fn main() -> anyhow::Result<()> {
             command_set_registry_config(&config, registry_pubkey).await
         }
         ("save-larix-accounts", Some(_)) => {
-            command_save_larix_accounts("../tests/tests/fixtures/larix/larix_reserve_sol.bin").await
+            command_save_larix_accounts("../tests/tests/fixtures/larix/reserve_sol.bin").await
         }
         ("init-mining", Some(arg_matches)) => {
             let money_market = value_of::<usize>(arg_matches, "money-market").unwrap();
             let token = value_of::<String>(arg_matches, "token").unwrap();
             command_init_mining(&config, StakingMoneyMarket::from(money_market), token).await
         }
+        ("save-quarry-accounts", Some(_)) => command_save_quarry_accounts(&config).await,
         ("test-larix-mining-raw", Some(_)) => command_test_larix_mining_raw(&config).await,
+        ("test-quarry-mining-raw", Some(_)) => command_test_quarry_mining_raw(&config).await,
         ("set-registry-pool-config", Some(arg_matches)) => {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
             let general_pool = pubkey_of(arg_matches, "general-pool").unwrap();

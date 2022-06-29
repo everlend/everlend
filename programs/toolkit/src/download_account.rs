@@ -4,7 +4,7 @@ use solana_program::pubkey::Pubkey;
 use std::fs::File;
 use std::io::Write;
 
-pub async fn download_account(pubkey: &Pubkey, account_name: &str) {
+pub async fn download_account(pubkey: &Pubkey, mm_name: &str, account_name: &str) {
     let client = reqwest::Client::new();
     let mut headers = HeaderMap::new();
     headers.insert(CONTENT_TYPE, "application/json".parse().unwrap());
@@ -38,8 +38,8 @@ pub async fn download_account(pubkey: &Pubkey, account_name: &str) {
     let string = data.as_str().unwrap();
     let bytes = base64::decode(string).unwrap();
     let mut file = File::create(format!(
-        "../tests/tests/fixtures/larix/{}.bin",
-        account_name
+        "../tests/tests/fixtures/{}/{}.bin",
+        mm_name, account_name
     ))
     .unwrap();
     file.write_all(bytes.as_slice()).unwrap();

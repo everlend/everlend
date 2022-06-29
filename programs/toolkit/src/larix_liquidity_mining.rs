@@ -164,7 +164,10 @@ pub fn deposit_collateral(
         program_id: default_accounts.larix_program_id,
         accounts: vec![
             AccountMeta::new(*collateral_transit, false),
-            AccountMeta::new(default_accounts.larix_uncollateralized_ltoken_supply, false),
+            AccountMeta::new(
+                default_accounts.larix_uncollateralized_ltoken_supply_sol,
+                false,
+            ),
             AccountMeta::new(*mining, false),
             AccountMeta::new_readonly(default_accounts.larix_reserve_sol, false),
             AccountMeta::new_readonly(default_accounts.larix_lending_market, false),
@@ -223,7 +226,10 @@ pub fn withdraw_collateral(
     let deposit_mining_instruction = Instruction {
         program_id: default_accounts.larix_program_id,
         accounts: vec![
-            AccountMeta::new(default_accounts.larix_uncollateralized_ltoken_supply, false),
+            AccountMeta::new(
+                default_accounts.larix_uncollateralized_ltoken_supply_sol,
+                false,
+            ),
             AccountMeta::new(destination.pubkey(), false),
             AccountMeta::new(*mining, false),
             AccountMeta::new_readonly(default_accounts.larix_reserve_sol, false),

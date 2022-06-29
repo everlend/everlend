@@ -60,11 +60,20 @@ pub struct DefaultAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub larix_reserve_sol_supply: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
-    pub larix_uncollateralized_ltoken_supply: Pubkey,
+    pub larix_uncollateralized_ltoken_supply_sol: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
     pub larix_ltoken_mint: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
     pub larix_mining_supply: Pubkey,
+
+    #[serde_as(as = "DisplayFromStr")]
+    pub quarry_mine_program_id: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub quarry_rewarder: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub quarry_quarry: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub quarry_token_mint: Pubkey,
 
     #[serde_as(as = "DisplayFromStr")]
     pub solend_program_id: Pubkey,

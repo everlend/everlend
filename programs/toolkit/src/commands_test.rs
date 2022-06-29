@@ -1,3 +1,4 @@
+use anchor_lang::Key;
 use anyhow::Context;
 use core::time;
 use everlend_depositor::{
@@ -22,7 +23,7 @@ use crate::{
     accounts_config::InitializedAccounts,
     depositor, distribution,
     general_pool::{self, get_withdrawal_request_accounts},
-    larix_liquidity_mining, liquidity_oracle,
+    larix_liquidity_mining, liquidity_oracle, quarry_liquidity_mining,
     utils::Config,
 };
 
@@ -482,6 +483,8 @@ pub async fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()
     Ok(())
 }
 
-pub fn command_test_quarry_raw() -> anyhow::Result<()> {
+pub async fn command_test_quarry_mining_raw(config: &Config) -> anyhow::Result<()> {
+    let miner_vault = Keypair::new();
+    quarry_liquidity_mining::init_mining_accounts(config, &miner_vault)?;
     Ok(())
 }

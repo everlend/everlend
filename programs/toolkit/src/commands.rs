@@ -1,3 +1,4 @@
+use anchor_lang::AnchorDeserialize;
 use anyhow::bail;
 use everlend_depositor::{instruction::InitMiningAccountsPubkeys, state::MiningType};
 use larix_lending::state::reserve::Reserve;
@@ -150,10 +151,37 @@ pub async fn command_set_registry_config(
 pub async fn command_save_larix_accounts(reserve_filepath: &str) -> anyhow::Result<()> {
     let mut reserve_data = read_file(find_file(reserve_filepath).unwrap());
     let reserve = Reserve::unpack_from_slice(reserve_data.as_mut_slice()).unwrap();
-    download_account(&reserve.liquidity.supply_pubkey, "liquidity_supply").await;
-    download_account(&reserve.liquidity.fee_receiver, "liquidity_fee_receiver").await;
-    download_account(&reserve.collateral.mint_pubkey, "collateral_mint").await;
-    download_account(&reserve.collateral.supply_pubkey, "collateral_supply").await;
+    download_account(
+        &reserve.liquidity.supply_pubkey,
+        "larix",
+        "liquidity_supply",
+    )
+    .await;
+    download_account(
+        &reserve.liquidity.fee_receiver,
+        "larix",
+        "liquidity_fee_receiver",
+    )
+    .await;
+    download_account(&reserve.collateral.mint_pubkey, "larix", "collateral_mint").await;
+    download_account(
+        &reserve.collateral.supply_pubkey,
+        "larix",
+        "collateral_supply",
+    )
+    .await;
+    Ok(())
+}
+
+pub async fn command_save_quarry_accounts(config: &Config) -> anyhow::Result<()> {
+    // let default_accounts = config.get_default_accounts();
+    // download_account(&default_accounts.quarry_quarry, "quarry", "quarry").await;
+    let data: Vec<u8> = read_file(find_file("../tests/tests/fixtures/quarry/quarry.bin").unwrap());
+    // first 8 bytes are meta information
+    let adjusted = &data[8..];
+    let deserialized = quarry_mine::Quarry::try_from_slice(adjusted)?;
+    println!("rewarder {}", deserialized.rewarder);
+    println!("token mint {}", deserialized.token_mint_key);
     Ok(())
 }
 

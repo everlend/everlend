@@ -1247,6 +1247,7 @@ dependencies = [
  "larix-lending",
  "port-finance-staking",
  "port-variable-rate-lending-instructions",
+ "quarry-mine",
  "regex",
  "reqwest",
  "serde",
