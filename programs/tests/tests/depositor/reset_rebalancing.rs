@@ -231,6 +231,7 @@ async fn success() {
             &mut context,
             &registry,
             &general_pool.token_mint_pubkey,
+            100,
             DistributionArray::default(),
         )
         .await

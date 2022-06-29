@@ -764,6 +764,15 @@ async fn main() -> anyhow::Result<()> {
                         .help("Rebalancing pubkey"),
                 )
                 .arg(
+                    Arg::with_name("amount")
+                        .long("amount")
+                        .validator(is_amount)
+                        .value_name("NUMBER")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Liquidity amount"),
+                )
+                .arg(
                     Arg::with_name("distribution")
                         .long("distribution")
                         .multiple(true)
@@ -1177,8 +1186,15 @@ async fn main() -> anyhow::Result<()> {
         }
         ("reset-rebalancing", Some(arg_matches)) => {
             let rebalancing_pubkey = pubkey_of(arg_matches, "rebalancing").unwrap();
+            let distributed_liquidity = value_of::<u64>(arg_matches, "amount").unwrap();
             let distribution: Vec<u64> = values_of::<u64>(arg_matches, "distribution").unwrap();
-            command_reset_rebalancing(&config, &rebalancing_pubkey, distribution).await
+            command_reset_rebalancing(
+                &config,
+                &rebalancing_pubkey,
+                distributed_liquidity,
+                distribution,
+            )
+            .await
         }
         ("info-reserve-liquidity", Some(_)) => command_info_reserve_liquidity(&config).await,
         ("create", Some(arg_matches)) => {

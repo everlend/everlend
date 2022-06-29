@@ -138,6 +138,8 @@ pub enum DepositorInstruction {
     /// [WS] Manager
     /// [R] System program
     ResetRebalancing {
+        ///Manual setup of prev distributed liquidity
+        distributed_liquidity: u64,
         ///Manual setup of prev distribution array
         distribution_array: DistributionArray,
     },
@@ -271,6 +273,7 @@ pub fn reset_rebalancing(
     depositor: &Pubkey,
     liquidity_mint: &Pubkey,
     manager: &Pubkey,
+    distributed_liquidity: u64,
     distribution_array: DistributionArray,
 ) -> Instruction {
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
@@ -286,7 +289,10 @@ pub fn reset_rebalancing(
 
     Instruction::new_with_borsh(
         *program_id,
-        &DepositorInstruction::ResetRebalancing { distribution_array },
+        &DepositorInstruction::ResetRebalancing {
+            distributed_liquidity,
+            distribution_array,
+        },
         accounts,
     )
 }

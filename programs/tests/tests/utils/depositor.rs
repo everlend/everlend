@@ -131,6 +131,7 @@ impl TestDepositor {
         context: &mut ProgramTestContext,
         registry: &TestRegistry,
         liquidity_mint: &Pubkey,
+        distributed_liquidity: u64,
         distribution_array: DistributionArray,
     ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
@@ -140,6 +141,7 @@ impl TestDepositor {
                 &self.depositor.pubkey(),
                 liquidity_mint,
                 &registry.manager.pubkey(),
+                distributed_liquidity,
                 distribution_array,
             )],
             Some(&context.payer.pubkey()),

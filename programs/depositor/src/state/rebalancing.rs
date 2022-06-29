@@ -189,8 +189,13 @@ impl Rebalancing {
     }
 
     /// Reset current rebalancing
-    pub fn reset(&mut self, distribution_array: DistributionArray) -> Result<(), ProgramError> {
+    pub fn reset(
+        &mut self,
+        distributed_liquidity: u64,
+        distribution_array: DistributionArray,
+    ) -> Result<(), ProgramError> {
         self.steps.retain(|&s| s.executed_at.is_some());
+        self.distributed_liquidity = distributed_liquidity;
         self.token_distribution.distribution = distribution_array;
 
         Ok(())
