@@ -7,6 +7,7 @@ use everlend_depositor::{
     find_rebalancing_program_address,
     state::{Depositor, Rebalancing},
 };
+use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_utils::integrations::{self, MoneyMarketPubkeys};
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::ProgramTestContext;
@@ -130,6 +131,7 @@ impl TestDepositor {
         context: &mut ProgramTestContext,
         registry: &TestRegistry,
         liquidity_mint: &Pubkey,
+        distribution_array: DistributionArray,
     ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
             &[everlend_depositor::instruction::reset_rebalancing(
@@ -138,6 +140,7 @@ impl TestDepositor {
                 &self.depositor.pubkey(),
                 liquidity_mint,
                 &registry.manager.pubkey(),
+                distribution_array,
             )],
             Some(&context.payer.pubkey()),
             &[&context.payer, &registry.manager],

@@ -227,7 +227,12 @@ async fn success() {
     let (mut context, registry, general_pool, test_depositor) = setup().await;
 
     test_depositor
-        .reset_rebalancing(&mut context, &registry, &general_pool.token_mint_pubkey)
+        .reset_rebalancing(
+            &mut context,
+            &registry,
+            &general_pool.token_mint_pubkey,
+            DistributionArray::default(),
+        )
         .await
         .unwrap();
 }

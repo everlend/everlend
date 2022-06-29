@@ -11,7 +11,7 @@ use everlend_utils::find_program_address;
 use regex::Regex;
 use solana_clap_utils::{
     fee_payer::fee_payer_arg,
-    input_parsers::{keypair_of, pubkey_of, value_of},
+    input_parsers::{keypair_of, pubkey_of, value_of, values_of},
     input_validators::{is_amount, is_keypair, is_pubkey},
     keypair::signer_from_path,
 };
@@ -756,11 +756,22 @@ async fn main() -> anyhow::Result<()> {
                 .about("Reset rebalancing")
                 .arg(
                     Arg::with_name("rebalancing")
+                        .long("rebalancing")
                         .validator(is_pubkey)
                         .value_name("ADDRESS")
                         .takes_value(true)
                         .required(true)
                         .help("Rebalancing pubkey"),
+                )
+                .arg(
+                    Arg::with_name("distribution")
+                        .long("distribution")
+                        .multiple(true)
+                        .value_name("DISTRIBUTION")
+                        .short("d")
+                        .number_of_values(10)
+                        .required(true)
+                        .takes_value(true),
                 ),
         )
         .subcommand(
@@ -1166,7 +1177,8 @@ async fn main() -> anyhow::Result<()> {
         }
         ("reset-rebalancing", Some(arg_matches)) => {
             let rebalancing_pubkey = pubkey_of(arg_matches, "rebalancing").unwrap();
-            command_reset_rebalancing(&config, &rebalancing_pubkey).await
+            let distribution: Vec<u64> = values_of::<u64>(arg_matches, "distribution").unwrap();
+            command_reset_rebalancing(&config, &rebalancing_pubkey, distribution).await
         }
         ("info-reserve-liquidity", Some(_)) => command_info_reserve_liquidity(&config).await,
         ("create", Some(arg_matches)) => {

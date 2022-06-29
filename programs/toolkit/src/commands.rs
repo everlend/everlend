@@ -523,16 +523,22 @@ pub async fn command_cancel_withdraw_request(
 pub async fn command_reset_rebalancing(
     config: &Config,
     rebalancing_pubkey: &Pubkey,
+    distribution_vec: Vec<u64>,
 ) -> anyhow::Result<()> {
     let initialiazed_accounts = config.get_initialized_accounts();
 
     let rebalancing = config.get_account_unpack::<Rebalancing>(rebalancing_pubkey)?;
+    let mut distribution_array = DistributionArray::default();
+    distribution_array.copy_from_slice(distribution_vec.as_slice());
+
+    println!("distribution_array {:?}", distribution_array);
 
     depositor::reset_rebalancing(
         config,
         &initialiazed_accounts.registry,
         &rebalancing.depositor,
         &rebalancing.mint,
+        distribution_array,
     )?;
 
     Ok(())

@@ -1,3 +1,9 @@
+use everlend_depositor::state::DeprecatedDepositor;
+use everlend_depositor::{
+    find_rebalancing_program_address, find_transit_program_address,
+    state::{Depositor, Rebalancing},
+};
+use everlend_liquidity_oracle::state::DistributionArray;
 use solana_client::client_error::ClientError;
 use solana_program::{
     instruction::AccountMeta, program_pack::Pack, pubkey::Pubkey, system_instruction,
@@ -6,12 +12,6 @@ use solana_sdk::{
     signature::{write_keypair_file, Keypair},
     signer::Signer,
     transaction::Transaction,
-};
-
-use everlend_depositor::state::DeprecatedDepositor;
-use everlend_depositor::{
-    find_rebalancing_program_address, find_transit_program_address,
-    state::{Depositor, Rebalancing},
 };
 
 use crate::utils::*;
@@ -140,6 +140,7 @@ pub fn reset_rebalancing(
     registry_pubkey: &Pubkey,
     depositor_pubkey: &Pubkey,
     token_mint: &Pubkey,
+    distribution_array: DistributionArray,
 ) -> Result<(Pubkey, Rebalancing), ClientError> {
     let tx = Transaction::new_with_payer(
         &[everlend_depositor::instruction::reset_rebalancing(
@@ -148,6 +149,7 @@ pub fn reset_rebalancing(
             depositor_pubkey,
             token_mint,
             &config.fee_payer.pubkey(),
+            distribution_array,
         )],
         Some(&config.fee_payer.pubkey()),
     );

@@ -10,6 +10,7 @@ use solana_program::{
 
 use everlend_general_pool::find_withdrawal_requests_program_address;
 use everlend_liquidity_oracle::find_liquidity_oracle_token_distribution_program_address;
+use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_utils::find_program_address;
 
 use crate::{find_rebalancing_program_address, find_transit_program_address};
@@ -135,8 +136,11 @@ pub enum DepositorInstruction {
     /// [W] Rebalancing account
     /// [R] Token mint
     /// [WS] Manager
-    /// [R] Sytem program
-    ResetRebalancing,
+    /// [R] System program
+    ResetRebalancing {
+        ///Manual setup of prev distribution array
+        distribution_array: DistributionArray,
+    },
 }
 
 /// Creates 'Init' instruction.
@@ -267,6 +271,7 @@ pub fn reset_rebalancing(
     depositor: &Pubkey,
     liquidity_mint: &Pubkey,
     manager: &Pubkey,
+    distribution_array: DistributionArray,
 ) -> Instruction {
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
 
@@ -281,7 +286,7 @@ pub fn reset_rebalancing(
 
     Instruction::new_with_borsh(
         *program_id,
-        &DepositorInstruction::ResetRebalancing,
+        &DepositorInstruction::ResetRebalancing { distribution_array },
         accounts,
     )
 }

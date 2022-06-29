@@ -21,6 +21,7 @@ use spl_token::state::Account;
 
 use everlend_collateral_pool::utils::CollateralPoolAccounts;
 use everlend_general_pool::{find_withdrawal_requests_program_address, state::WithdrawalRequests};
+use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_liquidity_oracle::{
     find_liquidity_oracle_token_distribution_program_address, state::TokenDistribution,
 };
@@ -384,7 +385,11 @@ impl Processor {
     }
 
     /// Process ResetRebalancing instruction
-    pub fn reset_rebalancing(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+    pub fn reset_rebalancing(
+        program_id: &Pubkey,
+        accounts: &[AccountInfo],
+        distribution_array: DistributionArray,
+    ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
 
         let registry_info = next_account_info(account_info_iter)?;
@@ -433,7 +438,7 @@ impl Processor {
             return Err(EverlendError::RebalancingIsCompleted.into());
         }
 
-        rebalancing.reset()?;
+        rebalancing.reset(distribution_array)?;
 
         Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
 
@@ -818,9 +823,9 @@ impl Processor {
                 Self::start_rebalancing(program_id, accounts, refresh_income)
             }
 
-            DepositorInstruction::ResetRebalancing => {
+            DepositorInstruction::ResetRebalancing { distribution_array } => {
                 msg!("DepositorInstruction: ResetRebalancing");
-                Self::reset_rebalancing(program_id, accounts)
+                Self::reset_rebalancing(program_id, accounts, distribution_array)
             }
 
             DepositorInstruction::Deposit => {
