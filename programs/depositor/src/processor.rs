@@ -1000,14 +1000,18 @@ impl Processor {
                 let minter = next_account_info(account_info_iter)?;
                 let rewards_token_mint = next_account_info(account_info_iter)?;
                 let rewards_token_account = next_account_info(account_info_iter)?;
-                let claim_fee_token_account = next_account_info(account_info_iter)?;
+                let miner = next_account_info(account_info_iter)?;
+                let quarry = next_account_info(account_info_iter)?;
+                let quarry_rewarder = next_account_info(account_info_iter)?;
                 cpi::quarry::claim_rewards(
                     staking_program_id_info.key,
                     mint_wrapper.clone(),
                     minter.clone(),
                     rewards_token_mint.clone(),
                     rewards_token_account.clone(),
-                    claim_fee_token_account.clone(),
+                    miner.clone(),
+                    quarry.clone(),
+                    quarry_rewarder.clone(),
                 )?;
             }
             MiningType::None => {}

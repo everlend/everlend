@@ -621,6 +621,15 @@ async fn main() -> anyhow::Result<()> {
                     .help("Defaults file"),
             ),
         )
+        .subcommand(
+            SubCommand::with_name("create-quarry-rewards-token-account").arg(
+                Arg::with_name("default")
+                    .long("default")
+                    .value_name("PATH")
+                    .takes_value(true)
+                    .help("Defaults file"),
+            ),
+        )
         .subcommand(SubCommand::with_name("test-quarry-mining-raw"))
         .subcommand(
             SubCommand::with_name("set-registry-pool-config")
@@ -1147,12 +1156,18 @@ async fn main() -> anyhow::Result<()> {
             command_save_larix_accounts("../tests/tests/fixtures/larix/reserve_sol.bin").await
         }
         ("test-larix-mining-raw", Some(_)) => command_test_larix_mining_raw(&config),
-        ("test-quarry-mining-raw", Some(_)) => command_test_quarry_mining_raw(&config),
+        ("save-quarry-accounts", Some(_)) => command_save_quarry_accounts(&config).await,
         ("create-quarry-token-source", Some(arg_matches)) => {
             let file_path = arg_matches
                 .value_of("default")
                 .unwrap_or("default.devnet.yaml");
             command_create_quarry_token_source(&config, file_path)
+        }
+        ("create-quarry-rewards-token-account", Some(arg_matches)) => {
+            let file_path = arg_matches
+                .value_of("default")
+                .unwrap_or("default.devnet.yaml");
+            command_create_quarry_rewards_token_account(&config, file_path)
         }
         ("create-quarry-miner-vault", Some(arg_matches)) => {
             let file_path = arg_matches
@@ -1160,7 +1175,7 @@ async fn main() -> anyhow::Result<()> {
                 .unwrap_or("default.devnet.yaml");
             command_create_quarry_mining_vault(&config, file_path)
         }
-        ("save-quarry-accounts", Some(_)) => command_save_quarry_accounts(&config).await,
+        ("test-quarry-mining-raw", Some(_)) => command_test_quarry_mining_raw(&config),
         ("set-registry-pool-config", Some(arg_matches)) => {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
             let general_pool = pubkey_of(arg_matches, "general-pool").unwrap();

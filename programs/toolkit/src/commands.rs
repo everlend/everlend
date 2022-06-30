@@ -1,4 +1,4 @@
-use std::{default, fs};
+use std::fs;
 
 use anchor_lang::AnchorDeserialize;
 use anyhow::bail;
@@ -379,7 +379,7 @@ pub fn command_create_quarry_mining_vault(
 ) -> anyhow::Result<()> {
     let mut default_accounts = config.get_default_accounts();
     let miner_vault = Keypair::new();
-    quarry_liquidity_mining::init_miner_vault(config, &miner_vault)?;
+    quarry_liquidity_mining::create_miner(config, &miner_vault)?;
     default_accounts.quarry_miner_vault = miner_vault.pubkey();
     println!("miner vault {}", miner_vault.pubkey());
     save_config_file::<DefaultAccounts, &str>(&default_accounts, defaults_path)?;
@@ -391,14 +391,27 @@ pub fn command_create_quarry_token_source(
     defaults_path: &str,
 ) -> anyhow::Result<()> {
     let mut default_accounts = config.get_default_accounts();
-    let token_source = Keypair::new();
-    quarry_liquidity_mining::init_source_account(
+    let account = Keypair::new();
+    liquidity_mining::init_token_account(config, &account, &default_accounts.quarry_token_mint)?;
+    default_accounts.quarry_token_source = account.pubkey();
+    println!("token source {}", account.pubkey());
+    save_config_file::<DefaultAccounts, &str>(&default_accounts, defaults_path)?;
+    Ok(())
+}
+
+pub fn command_create_quarry_rewards_token_account(
+    config: &Config,
+    defaults_path: &str,
+) -> anyhow::Result<()> {
+    let mut default_accounts = config.get_default_accounts();
+    let account = Keypair::new();
+    liquidity_mining::init_token_account(
         config,
-        &token_source,
-        &default_accounts.quarry_miner_vault,
+        &account,
+        &default_accounts.quarry_rewards_token_mint,
     )?;
-    default_accounts.quarry_token_source = token_source.pubkey();
-    println!("token source {}", token_source.pubkey());
+    default_accounts.quarry_rewards_token_account = account.pubkey();
+    println!("rewards token account {}", account.pubkey());
     save_config_file::<DefaultAccounts, &str>(&default_accounts, defaults_path)?;
     Ok(())
 }

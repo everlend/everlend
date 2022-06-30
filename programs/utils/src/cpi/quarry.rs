@@ -160,7 +160,9 @@ pub fn claim_rewards<'a>(
     minter: AccountInfo<'a>,
     rewards_token_mint: AccountInfo<'a>,
     rewards_token_account: AccountInfo<'a>,
-    claim_fee_token_account: AccountInfo<'a>,
+    miner: AccountInfo<'a>,
+    quarry: AccountInfo<'a>,
+    quarry_rewarder: AccountInfo<'a>,
 ) -> Result<(), ProgramError> {
     let instruction = Instruction {
         program_id: *program_id,
@@ -169,7 +171,12 @@ pub fn claim_rewards<'a>(
             AccountMeta::new(*minter.key, false),
             AccountMeta::new(*rewards_token_mint.key, false),
             AccountMeta::new(*rewards_token_account.key, false),
-            AccountMeta::new(*claim_fee_token_account.key, false),
+            // fee receiver, TODO: double check if it is ok to put rewards token account here
+            AccountMeta::new(*rewards_token_account.key, false),
+            AccountMeta::new(*miner.key, false),
+            AccountMeta::new(*quarry.key, false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(*quarry_rewarder.key, false),
         ],
         data: ClaimRewardsV2 {}.data(),
     };
@@ -181,7 +188,10 @@ pub fn claim_rewards<'a>(
             minter,
             rewards_token_mint,
             rewards_token_account,
-            claim_fee_token_account,
+            rewards_token_account,
+            miner,
+            quarry,
+            quarry_rewarder,
         ],
     )
 }

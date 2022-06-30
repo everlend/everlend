@@ -64,3 +64,37 @@ pub fn init_depositor_mining(
 
     Ok(())
 }
+
+pub fn init_token_account(
+    config: &Config,
+    account: &Keypair,
+    token_mint: &Pubkey,
+) -> Result<(), ClientError> {
+    let default_accounts = config.get_default_accounts();
+    let rent = config
+        .rpc_client
+        .get_minimum_balance_for_rent_exemption(spl_token::state::Account::LEN as usize)?;
+    let create_account_instruction = system_instruction::create_account(
+        &config.fee_payer.pubkey(),
+        &account.pubkey(),
+        rent,
+        spl_token::state::Account::LEN as u64,
+        &spl_token::id(),
+    );
+    let init_account_instruction = spl_token::instruction::initialize_account(
+        &spl_token::id(),
+        &account.pubkey(),
+        token_mint,
+        &config.fee_payer.pubkey(),
+    )
+    .unwrap();
+    let transaction = Transaction::new_with_payer(
+        &[create_account_instruction, init_account_instruction],
+        Some(&config.fee_payer.pubkey()),
+    );
+    config.sign_and_send_and_confirm_transaction(
+        transaction,
+        vec![config.fee_payer.as_ref(), account],
+    )?;
+    Ok(())
+}

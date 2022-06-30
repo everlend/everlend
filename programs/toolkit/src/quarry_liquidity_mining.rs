@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use anchor_lang::{prelude::AccountMeta, InstructionData};
 use quarry_mine::instruction::{ClaimRewardsV2, CreateMinerV2, StakeTokens};
 use solana_client::client_error::ClientError;
@@ -9,42 +11,7 @@ use solana_sdk::{signature::Keypair, signer::Signer, transaction::Transaction};
 
 use crate::utils::Config;
 
-pub fn init_source_account(
-    config: &Config,
-    source_account: &Keypair,
-    miner_vault: &Pubkey,
-) -> Result<(), ClientError> {
-    let default_accounts = config.get_default_accounts();
-    let miner = find_miner_address(config);
-    let rent = config
-        .rpc_client
-        .get_minimum_balance_for_rent_exemption(spl_token::state::Account::LEN as usize)?;
-    let create_account_instruction = system_instruction::create_account(
-        &config.fee_payer.pubkey(),
-        &source_account.pubkey(),
-        rent,
-        spl_token::state::Account::LEN as u64,
-        &spl_token::id(),
-    );
-    let init_account_instruction = spl_token::instruction::initialize_account(
-        &spl_token::id(),
-        &source_account.pubkey(),
-        &default_accounts.quarry_token_mint,
-        &config.fee_payer.pubkey(),
-    )
-    .unwrap();
-    let transaction = Transaction::new_with_payer(
-        &[create_account_instruction, init_account_instruction],
-        Some(&config.fee_payer.pubkey()),
-    );
-    config.sign_and_send_and_confirm_transaction(
-        transaction,
-        vec![config.fee_payer.as_ref(), source_account],
-    )?;
-    Ok(())
-}
-
-pub fn init_miner_vault(config: &Config, miner_vault: &Keypair) -> Result<(), ClientError> {
+pub fn create_miner(config: &Config, miner_vault: &Keypair) -> Result<(), ClientError> {
     let default_accounts = config.get_default_accounts();
     let miner = find_miner_address(config);
     println!("miner {}", miner);
@@ -96,7 +63,7 @@ pub fn init_miner_vault(config: &Config, miner_vault: &Keypair) -> Result<(), Cl
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn deposit_liquidity(config: &Config, amount: u64) -> Result<(), ClientError> {
+pub fn stake_tokens(config: &Config, amount: u64) -> Result<(), ClientError> {
     let default_accounts = config.get_default_accounts();
     let miner = find_miner_address(config);
     let stake_instruction = Instruction {
@@ -120,17 +87,27 @@ pub fn deposit_liquidity(config: &Config, amount: u64) -> Result<(), ClientError
 
 pub fn claim_mining_rewards(config: &Config) -> Result<(), ClientError> {
     let default_accounts = config.get_default_accounts();
+    let miner = find_miner_address(config);
     let instruction = Instruction {
         program_id: default_accounts.quarry_mine_program_id,
         accounts: vec![
-            AccountMeta::new(*mint_wrapper.key, false),
-            AccountMeta::new(*minter.key, false),
-            AccountMeta::new(*rewards_token_mint.key, false),
-            AccountMeta::new(*rewards_token_account.key, false),
-            AccountMeta::new(*claim_fee_token_account.key, false),
+            AccountMeta::new(default_accounts.quarry_mint_wrapper, false),
+            AccountMeta::new(default_accounts.quarry_minter, false),
+            AccountMeta::new(default_accounts.quarry_rewards_token_mint, false),
+            AccountMeta::new(default_accounts.quarry_rewards_token_account, false),
+            AccountMeta::new(default_accounts.quarry_rewards_token_account, false),
+            AccountMeta::new(miner, false),
+            AccountMeta::new(default_accounts.quarry, false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(default_accounts.quarry_rewarder, false),
         ],
         data: ClaimRewardsV2 {}.data(),
     };
+    let balance = config
+        .rpc_client
+        .get_token_account_balance(&default_accounts.quarry_rewards_token_account)
+        .unwrap();
+    println!("balance of rewards token account {:?}", balance);
     Ok(())
 }
 

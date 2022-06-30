@@ -78,6 +78,14 @@ pub struct DefaultAccounts {
     pub quarry_miner_vault: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
     pub quarry_token_source: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub quarry_mint_wrapper: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub quarry_minter: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub quarry_rewards_token_mint: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub quarry_rewards_token_account: Pubkey,
 
     #[serde_as(as = "DisplayFromStr")]
     pub solend_program_id: Pubkey,
