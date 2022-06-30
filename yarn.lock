@@ -480,7 +480,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@everlend/common@workspace:^0.0.2, @everlend/common@workspace:packages/common":
+"@everlend/common@workspace:^0.0.3, @everlend/common@workspace:packages/common":
   version: 0.0.0-use.local
   resolution: "@everlend/common@workspace:packages/common"
   dependencies:
@@ -500,7 +500,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@everlend/general-pool@workspace:packages/general-pool"
   dependencies:
-    "@everlend/common": "workspace:^0.0.2"
+    "@everlend/common": "workspace:^0.0.3"
     "@solana/spl-token": ^0.1.5
     "@solana/web3.js": ^1.16.1
     "@types/jest": ^27.0.2
@@ -520,7 +520,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@everlend/ulp@workspace:packages/ulp"
   dependencies:
-    "@everlend/common": "workspace:^0.0.2"
+    "@everlend/common": "workspace:^0.0.3"
     "@solana/spl-token": ^0.1.5
     "@solana/web3.js": ^1.16.1
     "@types/jest": ^27.0.2

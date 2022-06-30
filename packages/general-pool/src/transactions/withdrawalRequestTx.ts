@@ -71,7 +71,7 @@ export class WithdrawalRequestTx extends Transaction {
           { pubkey: destination, isSigner: false, isWritable: true },
           { pubkey: tokenAccount, isSigner: false, isWritable: true },
           { pubkey: collateralTransit, isSigner: false, isWritable: true },
-          { pubkey: feePayer, isSigner: true, isWritable: false },
+          { pubkey: feePayer, isSigner: true, isWritable: true },
           { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
           { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
           { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
