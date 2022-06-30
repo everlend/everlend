@@ -187,7 +187,7 @@ pub fn claim_rewards<'a>(
             mint_wrapper,
             minter,
             rewards_token_mint,
-            rewards_token_account,
+            rewards_token_account.clone(),
             rewards_token_account,
             miner,
             quarry,
