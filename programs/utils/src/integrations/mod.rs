@@ -23,6 +23,7 @@ pub enum MoneyMarket {
 #[repr(usize)]
 pub enum StakingMoneyMarket {
     #[num_enum(default)]
+    None,
     PortFinance,
     Larix,
     Solend,

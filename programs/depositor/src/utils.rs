@@ -135,7 +135,7 @@ pub fn deposit<'a>(
                 collateral_amount,
             )?;
         }
-        None => {
+        None | Some(MiningType::None) => {
             msg!("Collect collateral tokens to MM Pool");
             everlend_collateral_pool::cpi::deposit(
                 collateral_pool_accounts,
@@ -256,7 +256,7 @@ pub fn withdraw<'a>(
                 signers_seeds,
             )?;
         }
-        None => {
+        None | Some(MiningType::None) => {
             msg!("Withdraw collateral tokens from MM Pool");
             everlend_collateral_pool::cpi::withdraw(
                 collateral_pool_accounts,

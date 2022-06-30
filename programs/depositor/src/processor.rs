@@ -888,6 +888,7 @@ impl Processor {
                     &[signers_seeds.as_ref()],
                 )?;
             }
+            MiningType::None => {}
         }
 
         let mut internal_mining =
@@ -1009,6 +1010,7 @@ impl Processor {
                     claim_fee_token_account.clone(),
                 )?;
             }
+            MiningType::None => {}
         };
 
         // TODO deposit into LM rewards pool
