@@ -572,7 +572,6 @@ async fn main() -> anyhow::Result<()> {
                         .help("Registry pubkey"),
                 ),
         )
-        .subcommand(SubCommand::with_name("save-larix-accounts"))
         .subcommand(
             SubCommand::with_name("init-mining")
                 .arg(
@@ -601,8 +600,27 @@ async fn main() -> anyhow::Result<()> {
                         .help("Token ticker"),
                 ),
         )
-        .subcommand(SubCommand::with_name("save-quarry-accounts"))
+        .subcommand(SubCommand::with_name("save-larix-accounts"))
         .subcommand(SubCommand::with_name("test-larix-mining-raw"))
+        .subcommand(SubCommand::with_name("save-quarry-accounts"))
+        .subcommand(
+            SubCommand::with_name("create-quarry-miner-vault").arg(
+                Arg::with_name("default")
+                    .long("default")
+                    .value_name("PATH")
+                    .takes_value(true)
+                    .help("Defaults file"),
+            ),
+        )
+        .subcommand(
+            SubCommand::with_name("create-quarry-token-source").arg(
+                Arg::with_name("default")
+                    .long("default")
+                    .value_name("PATH")
+                    .takes_value(true)
+                    .help("Defaults file"),
+            ),
+        )
         .subcommand(SubCommand::with_name("test-quarry-mining-raw"))
         .subcommand(
             SubCommand::with_name("set-registry-pool-config")
@@ -1120,17 +1138,29 @@ async fn main() -> anyhow::Result<()> {
             let registry_pubkey = pubkey_of(arg_matches, "registry").unwrap();
             command_set_registry_config(&config, registry_pubkey).await
         }
-        ("save-larix-accounts", Some(_)) => {
-            command_save_larix_accounts("../tests/tests/fixtures/larix/reserve_sol.bin").await
-        }
         ("init-mining", Some(arg_matches)) => {
             let money_market = value_of::<usize>(arg_matches, "money-market").unwrap();
             let token = value_of::<String>(arg_matches, "token").unwrap();
-            command_init_mining(&config, StakingMoneyMarket::from(money_market), token).await
+            command_init_mining(&config, StakingMoneyMarket::from(money_market), token)
+        }
+        ("save-larix-accounts", Some(_)) => {
+            command_save_larix_accounts("../tests/tests/fixtures/larix/reserve_sol.bin").await
+        }
+        ("test-larix-mining-raw", Some(_)) => command_test_larix_mining_raw(&config),
+        ("test-quarry-mining-raw", Some(_)) => command_test_quarry_mining_raw(&config),
+        ("create-quarry-token-source", Some(arg_matches)) => {
+            let file_path = arg_matches
+                .value_of("default")
+                .unwrap_or("default.devnet.yaml");
+            command_create_quarry_token_source(&config, file_path)
+        }
+        ("create-quarry-miner-vault", Some(arg_matches)) => {
+            let file_path = arg_matches
+                .value_of("default")
+                .unwrap_or("default.devnet.yaml");
+            command_create_quarry_mining_vault(&config, file_path)
         }
         ("save-quarry-accounts", Some(_)) => command_save_quarry_accounts(&config).await,
-        ("test-larix-mining-raw", Some(_)) => command_test_larix_mining_raw(&config).await,
-        ("test-quarry-mining-raw", Some(_)) => command_test_quarry_mining_raw(&config).await,
         ("set-registry-pool-config", Some(arg_matches)) => {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
             let general_pool = pubkey_of(arg_matches, "general-pool").unwrap();

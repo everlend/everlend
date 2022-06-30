@@ -1,5 +1,5 @@
 use anchor_lang::{prelude::AccountMeta, InstructionData};
-use quarry_mine::instruction::CreateMinerV2;
+use quarry_mine::instruction::{ClaimRewardsV2, CreateMinerV2, StakeTokens};
 use solana_client::client_error::ClientError;
 use solana_program::{
     instruction::Instruction, program_pack::Pack, pubkey::Pubkey, system_instruction,
@@ -9,21 +9,45 @@ use solana_sdk::{signature::Keypair, signer::Signer, transaction::Transaction};
 
 use crate::utils::Config;
 
-pub fn init_mining_accounts(config: &Config, miner_vault: &Keypair) -> Result<(), ClientError> {
+pub fn init_source_account(
+    config: &Config,
+    source_account: &Keypair,
+    miner_vault: &Pubkey,
+) -> Result<(), ClientError> {
     let default_accounts = config.get_default_accounts();
-    let authority = config.fee_payer.pubkey();
-    let quarry = default_accounts.quarry_quarry;
-
-    let (miner, _) = Pubkey::find_program_address(
-        &[
-            "Miner".as_bytes(),
-            &quarry.to_bytes(),
-            &authority.to_bytes(),
-        ],
-        &default_accounts.quarry_mine_program_id,
+    let miner = find_miner_address(config);
+    let rent = config
+        .rpc_client
+        .get_minimum_balance_for_rent_exemption(spl_token::state::Account::LEN as usize)?;
+    let create_account_instruction = system_instruction::create_account(
+        &config.fee_payer.pubkey(),
+        &source_account.pubkey(),
+        rent,
+        spl_token::state::Account::LEN as u64,
+        &spl_token::id(),
     );
+    let init_account_instruction = spl_token::instruction::initialize_account(
+        &spl_token::id(),
+        &source_account.pubkey(),
+        &default_accounts.quarry_token_mint,
+        &config.fee_payer.pubkey(),
+    )
+    .unwrap();
+    let transaction = Transaction::new_with_payer(
+        &[create_account_instruction, init_account_instruction],
+        Some(&config.fee_payer.pubkey()),
+    );
+    config.sign_and_send_and_confirm_transaction(
+        transaction,
+        vec![config.fee_payer.as_ref(), source_account],
+    )?;
+    Ok(())
+}
+
+pub fn init_miner_vault(config: &Config, miner_vault: &Keypair) -> Result<(), ClientError> {
+    let default_accounts = config.get_default_accounts();
+    let miner = find_miner_address(config);
     println!("miner {}", miner);
-    let miner_len = quarry_mine::Miner::LEN + 8;
     let token_account_rent = config
         .rpc_client
         .get_minimum_balance_for_rent_exemption(spl_token::state::Account::LEN as usize)?;
@@ -44,9 +68,9 @@ pub fn init_mining_accounts(config: &Config, miner_vault: &Keypair) -> Result<()
     let create_miner_instruction = Instruction {
         program_id: default_accounts.quarry_mine_program_id,
         accounts: vec![
-            AccountMeta::new_readonly(authority, true),
+            AccountMeta::new_readonly(config.fee_payer.pubkey(), true),
             AccountMeta::new(miner, false),
-            AccountMeta::new(quarry, false),
+            AccountMeta::new(default_accounts.quarry, false),
             AccountMeta::new_readonly(default_accounts.quarry_rewarder, false),
             AccountMeta::new_readonly(system_program::id(), false),
             AccountMeta::new(config.fee_payer.pubkey(), false),
@@ -69,4 +93,58 @@ pub fn init_mining_accounts(config: &Config, miner_vault: &Keypair) -> Result<()
         vec![config.fee_payer.as_ref(), miner_vault],
     )?;
     Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn deposit_liquidity(config: &Config, amount: u64) -> Result<(), ClientError> {
+    let default_accounts = config.get_default_accounts();
+    let miner = find_miner_address(config);
+    let stake_instruction = Instruction {
+        program_id: default_accounts.quarry_mine_program_id,
+        accounts: vec![
+            AccountMeta::new_readonly(config.fee_payer.pubkey(), true),
+            AccountMeta::new(miner, false),
+            AccountMeta::new(default_accounts.quarry, false),
+            AccountMeta::new(default_accounts.quarry_miner_vault, false),
+            AccountMeta::new(default_accounts.quarry_token_source, false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(default_accounts.quarry_rewarder, false),
+        ],
+        data: StakeTokens { amount }.data(),
+    };
+    let transaction =
+        Transaction::new_with_payer(&[stake_instruction], Some(&config.fee_payer.pubkey()));
+    config.sign_and_send_and_confirm_transaction(transaction, vec![config.fee_payer.as_ref()])?;
+    Ok(())
+}
+
+pub fn claim_mining_rewards(config: &Config) -> Result<(), ClientError> {
+    let default_accounts = config.get_default_accounts();
+    let instruction = Instruction {
+        program_id: default_accounts.quarry_mine_program_id,
+        accounts: vec![
+            AccountMeta::new(*mint_wrapper.key, false),
+            AccountMeta::new(*minter.key, false),
+            AccountMeta::new(*rewards_token_mint.key, false),
+            AccountMeta::new(*rewards_token_account.key, false),
+            AccountMeta::new(*claim_fee_token_account.key, false),
+        ],
+        data: ClaimRewardsV2 {}.data(),
+    };
+    Ok(())
+}
+
+fn find_miner_address(config: &Config) -> Pubkey {
+    let default_accounts = config.get_default_accounts();
+    let authority = config.fee_payer.pubkey();
+    let quarry = default_accounts.quarry;
+    let (miner, _) = Pubkey::find_program_address(
+        &[
+            "Miner".as_bytes(),
+            &quarry.to_bytes(),
+            &authority.to_bytes(),
+        ],
+        &default_accounts.quarry_mine_program_id,
+    );
+    miner
 }

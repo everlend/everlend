@@ -1,3 +1,5 @@
+use std::{default, fs};
+
 use anchor_lang::AnchorDeserialize;
 use anyhow::bail;
 use everlend_depositor::{instruction::InitMiningAccountsPubkeys, state::MiningType};
@@ -21,10 +23,11 @@ use everlend_registry::{
 };
 use everlend_utils::integrations::{MoneyMarket, StakingMoneyMarket};
 
-use crate::accounts_config::{CollateralPoolAccounts, InitializedAccounts};
+use crate::accounts_config::{
+    save_config_file, CollateralPoolAccounts, DefaultAccounts, InitializedAccounts,
+};
 use crate::collateral_pool::{self, PoolPubkeys};
 use crate::download_account::download_account;
-use crate::liquidity_mining;
 use crate::registry::close_registry_config;
 use crate::{
     accounts_config::TokenAccounts,
@@ -34,6 +37,7 @@ use crate::{
         REFRESH_INCOME_INTERVAL,
     },
 };
+use crate::{liquidity_mining, quarry_liquidity_mining};
 
 pub async fn command_create_registry(
     config: &Config,
@@ -174,18 +178,25 @@ pub async fn command_save_larix_accounts(reserve_filepath: &str) -> anyhow::Resu
 }
 
 pub async fn command_save_quarry_accounts(config: &Config) -> anyhow::Result<()> {
+    let mut default_accounts = config.get_default_accounts();
     // let default_accounts = config.get_default_accounts();
-    // download_account(&default_accounts.quarry_quarry, "quarry", "quarry").await;
-    let data: Vec<u8> = read_file(find_file("../tests/tests/fixtures/quarry/quarry.bin").unwrap());
+    let file_path = "../tests/tests/fixtures/quarry/quarry.bin";
+    fs::remove_file(file_path)?;
+    println!("quarry {}", default_accounts.quarry);
+    download_account(&default_accounts.quarry, "quarry", "quarry").await;
+    let data: Vec<u8> = read_file(find_file(file_path).unwrap());
     // first 8 bytes are meta information
     let adjusted = &data[8..];
     let deserialized = quarry_mine::Quarry::try_from_slice(adjusted)?;
     println!("rewarder {}", deserialized.rewarder);
     println!("token mint {}", deserialized.token_mint_key);
+    default_accounts.quarry_rewarder = deserialized.rewarder;
+    default_accounts.quarry_token_mint = deserialized.token_mint_key;
+    save_config_file::<DefaultAccounts, &str>(&default_accounts, "default.devnet.yaml")?;
     Ok(())
 }
 
-pub async fn command_init_mining(
+pub fn command_init_mining(
     config: &Config,
     money_market: StakingMoneyMarket,
     token: String,
@@ -356,6 +367,36 @@ pub async fn command_init_mining(
         .save(&format!("accounts.{}.yaml", config.network))
         .unwrap();
 
+    Ok(())
+}
+
+pub fn command_create_quarry_mining_vault(
+    config: &Config,
+    defaults_path: &str,
+) -> anyhow::Result<()> {
+    let mut default_accounts = config.get_default_accounts();
+    let miner_vault = Keypair::new();
+    quarry_liquidity_mining::init_miner_vault(config, &miner_vault)?;
+    default_accounts.quarry_miner_vault = miner_vault.pubkey();
+    println!("miner vault {}", miner_vault.pubkey());
+    save_config_file::<DefaultAccounts, &str>(&default_accounts, defaults_path)?;
+    Ok(())
+}
+
+pub fn command_create_quarry_token_source(
+    config: &Config,
+    defaults_path: &str,
+) -> anyhow::Result<()> {
+    let mut default_accounts = config.get_default_accounts();
+    let token_source = Keypair::new();
+    quarry_liquidity_mining::init_source_account(
+        config,
+        &token_source,
+        &default_accounts.quarry_miner_vault,
+    )?;
+    default_accounts.quarry_token_source = token_source.pubkey();
+    println!("token source {}", token_source.pubkey());
+    save_config_file::<DefaultAccounts, &str>(&default_accounts, defaults_path)?;
     Ok(())
 }
 

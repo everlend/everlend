@@ -442,7 +442,7 @@ pub async fn command_run_test(
     Ok(())
 }
 
-pub async fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()> {
+pub fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()> {
     let token_program_id =
         Pubkey::from_str("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL").unwrap();
     let (source_sol, _) = Pubkey::find_program_address(
@@ -454,7 +454,7 @@ pub async fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()
         &token_program_id,
     );
     println!("source_sol {}", source_sol);
-    let amount = 7_500_000_000;
+    let amount = 2_500_000_000;
     let mining_account = Keypair::new();
     let collateral_transit = Keypair::new();
     let dividends_account = Keypair::new();
@@ -483,8 +483,12 @@ pub async fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()
     Ok(())
 }
 
-pub async fn command_test_quarry_mining_raw(config: &Config) -> anyhow::Result<()> {
-    let miner_vault = Keypair::new();
-    quarry_liquidity_mining::init_mining_accounts(config, &miner_vault)?;
+// Please mind: pre-requisites:
+// 1. run create-quarry-miner-vault
+// 1. run create-quarry-token-source
+// 2. transfer some Saber-staked USDC collateral token (quarry_token_mint) on token source
+pub fn command_test_quarry_mining_raw(config: &Config) -> anyhow::Result<()> {
+    let amount = 10_000_000;
+    quarry_liquidity_mining::deposit_liquidity(config, amount)?;
     Ok(())
 }
