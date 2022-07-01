@@ -180,10 +180,14 @@ pub enum DepositorInstruction {
     /// [R] Sub reward destination
     /// For Quarry mining:
     /// [W] Mint wrapper
+    /// [R] Mint wrapper program
     /// [W] Minter
     /// [W] Rewards token mint
     /// [W] Rewards token account
     /// [W] Claim fee token account
+    /// [W] Miner
+    /// [W] Quarry
+    /// [R] Rewarder
     ClaimMiningReward,
 }
 

@@ -81,6 +81,8 @@ pub struct DefaultAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub quarry_mint_wrapper: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
+    pub quarry_mint_wrapper_program: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
     pub quarry_minter: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
     pub quarry_rewards_token_mint: Pubkey,

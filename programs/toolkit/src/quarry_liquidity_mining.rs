@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use anchor_lang::{prelude::AccountMeta, InstructionData};
 use quarry_mine::instruction::{ClaimRewardsV2, CreateMinerV2, StakeTokens};
 use solana_client::client_error::ClientError;
@@ -92,10 +90,12 @@ pub fn claim_mining_rewards(config: &Config) -> Result<(), ClientError> {
         program_id: default_accounts.quarry_mine_program_id,
         accounts: vec![
             AccountMeta::new(default_accounts.quarry_mint_wrapper, false),
+            AccountMeta::new_readonly(default_accounts.quarry_mint_wrapper_program, false),
             AccountMeta::new(default_accounts.quarry_minter, false),
             AccountMeta::new(default_accounts.quarry_rewards_token_mint, false),
             AccountMeta::new(default_accounts.quarry_rewards_token_account, false),
             AccountMeta::new(default_accounts.quarry_fee_token_account, false),
+            AccountMeta::new(config.fee_payer.pubkey(), false),
             AccountMeta::new(miner, false),
             AccountMeta::new(default_accounts.quarry, false),
             AccountMeta::new_readonly(spl_token::id(), false),

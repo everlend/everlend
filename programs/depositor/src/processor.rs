@@ -997,6 +997,7 @@ impl Processor {
                 assert_account_key(staking_program_id_info, &quarry_mining_program_id)?;
 
                 let mint_wrapper = next_account_info(account_info_iter)?;
+                let mint_wrapper_program = next_account_info(account_info_iter)?;
                 let minter = next_account_info(account_info_iter)?;
                 let rewards_token_mint = next_account_info(account_info_iter)?;
                 let rewards_token_account = next_account_info(account_info_iter)?;
@@ -1007,10 +1008,12 @@ impl Processor {
                 cpi::quarry::claim_rewards(
                     staking_program_id_info.key,
                     mint_wrapper.clone(),
+                    mint_wrapper_program.clone(),
                     minter.clone(),
                     rewards_token_mint.clone(),
                     rewards_token_account.clone(),
                     rewards_fee_account.clone(),
+                    depositor_authority_info.clone(),
                     miner.clone(),
                     quarry.clone(),
                     quarry_rewarder.clone(),
