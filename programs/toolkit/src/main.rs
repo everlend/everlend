@@ -604,34 +604,7 @@ async fn main() -> anyhow::Result<()> {
         .subcommand(SubCommand::with_name("test-larix-mining-raw"))
         .subcommand(SubCommand::with_name("save-quarry-accounts"))
         .subcommand(
-            SubCommand::with_name("create-quarry-miner-vault").arg(
-                Arg::with_name("default")
-                    .long("default")
-                    .value_name("PATH")
-                    .takes_value(true)
-                    .help("Defaults file"),
-            ),
-        )
-        .subcommand(
-            SubCommand::with_name("create-quarry-token-source").arg(
-                Arg::with_name("default")
-                    .long("default")
-                    .value_name("PATH")
-                    .takes_value(true)
-                    .help("Defaults file"),
-            ),
-        )
-        .subcommand(
-            SubCommand::with_name("create-quarry-rewards-token-account").arg(
-                Arg::with_name("default")
-                    .long("default")
-                    .value_name("PATH")
-                    .takes_value(true)
-                    .help("Defaults file"),
-            ),
-        )
-        .subcommand(
-            SubCommand::with_name("create-quarry-fee-token-account").arg(
+            SubCommand::with_name("init-quarry-mining-accounts").arg(
                 Arg::with_name("default")
                     .long("default")
                     .value_name("PATH")
@@ -1166,29 +1139,11 @@ async fn main() -> anyhow::Result<()> {
         }
         ("test-larix-mining-raw", Some(_)) => command_test_larix_mining_raw(&config),
         ("save-quarry-accounts", Some(_)) => command_save_quarry_accounts(&config).await,
-        ("create-quarry-token-source", Some(arg_matches)) => {
+        ("init-quarry-mining-accounts", Some(arg_matches)) => {
             let file_path = arg_matches
                 .value_of("default")
                 .unwrap_or("default.devnet.yaml");
-            command_create_quarry_token_source(&config, file_path)
-        }
-        ("create-quarry-rewards-token-account", Some(arg_matches)) => {
-            let file_path = arg_matches
-                .value_of("default")
-                .unwrap_or("default.devnet.yaml");
-            command_create_quarry_rewards_token_account(&config, file_path)
-        }
-        ("create-quarry-fee-token-account", Some(arg_matches)) => {
-            let file_path = arg_matches
-                .value_of("default")
-                .unwrap_or("default.devnet.yaml");
-            command_create_quarry_fee_token_account(&config, file_path)
-        }
-        ("create-quarry-miner-vault", Some(arg_matches)) => {
-            let file_path = arg_matches
-                .value_of("default")
-                .unwrap_or("default.devnet.yaml");
-            command_create_quarry_mining_vault(&config, file_path)
+            command_init_quarry_mining_accounts(&config, file_path)
         }
         ("test-quarry-mining-raw", Some(_)) => command_test_quarry_mining_raw(&config),
         ("set-registry-pool-config", Some(arg_matches)) => {

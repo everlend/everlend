@@ -373,7 +373,7 @@ pub fn command_init_mining(
     Ok(())
 }
 
-pub fn command_create_quarry_mining_vault(
+pub fn command_init_quarry_mining_accounts(
     config: &Config,
     defaults_path: &str,
 ) -> anyhow::Result<()> {
@@ -382,53 +382,30 @@ pub fn command_create_quarry_mining_vault(
     quarry_liquidity_mining::create_miner(config, &miner_vault)?;
     default_accounts.quarry_miner_vault = miner_vault.pubkey();
     println!("miner vault {}", miner_vault.pubkey());
-    save_config_file::<DefaultAccounts, &str>(&default_accounts, defaults_path)?;
-    Ok(())
-}
-
-pub fn command_create_quarry_token_source(
-    config: &Config,
-    defaults_path: &str,
-) -> anyhow::Result<()> {
-    let mut default_accounts = config.get_default_accounts();
-    let account = Keypair::new();
-    liquidity_mining::init_token_account(config, &account, &default_accounts.quarry_token_mint)?;
-    default_accounts.quarry_token_source = account.pubkey();
-    println!("token source {}", account.pubkey());
-    save_config_file::<DefaultAccounts, &str>(&default_accounts, defaults_path)?;
-    Ok(())
-}
-
-pub fn command_create_quarry_rewards_token_account(
-    config: &Config,
-    defaults_path: &str,
-) -> anyhow::Result<()> {
-    let mut default_accounts = config.get_default_accounts();
-    let account = Keypair::new();
+    let token_source = Keypair::new();
     liquidity_mining::init_token_account(
         config,
-        &account,
-        &default_accounts.quarry_rewards_token_mint,
+        &token_source,
+        &default_accounts.quarry_token_mint,
     )?;
-    default_accounts.quarry_rewards_token_account = account.pubkey();
-    println!("rewards token account {}", account.pubkey());
-    save_config_file::<DefaultAccounts, &str>(&default_accounts, defaults_path)?;
-    Ok(())
-}
-
-pub fn command_create_quarry_fee_token_account(
-    config: &Config,
-    defaults_path: &str,
-) -> anyhow::Result<()> {
-    let mut default_accounts = config.get_default_accounts();
-    let account = Keypair::new();
+    default_accounts.quarry_token_source = token_source.pubkey();
+    println!("token source {}", token_source.pubkey());
+    let rewards_account = Keypair::new();
     liquidity_mining::init_token_account(
         config,
-        &account,
+        &rewards_account,
         &default_accounts.quarry_rewards_token_mint,
     )?;
-    default_accounts.quarry_fee_token_account = account.pubkey();
-    println!("fee token account {}", account.pubkey());
+    default_accounts.quarry_rewards_token_account = rewards_account.pubkey();
+    println!("rewards token account {}", rewards_account.pubkey());
+    let fee_account = Keypair::new();
+    liquidity_mining::init_token_account(
+        config,
+        &fee_account,
+        &default_accounts.quarry_rewards_token_mint,
+    )?;
+    default_accounts.quarry_fee_token_account = fee_account.pubkey();
+    println!("fee token account {}", fee_account.pubkey());
     save_config_file::<DefaultAccounts, &str>(&default_accounts, defaults_path)?;
     Ok(())
 }
