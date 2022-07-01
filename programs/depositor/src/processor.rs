@@ -999,6 +999,7 @@ impl Processor {
                 let minter = next_account_info(account_info_iter)?;
                 let rewards_token_mint = next_account_info(account_info_iter)?;
                 let rewards_token_account = next_account_info(account_info_iter)?;
+                let rewards_fee_account = next_account_info(account_info_iter)?;
                 let miner = next_account_info(account_info_iter)?;
                 let quarry = next_account_info(account_info_iter)?;
                 let quarry_rewarder = next_account_info(account_info_iter)?;
@@ -1008,6 +1009,7 @@ impl Processor {
                     minter.clone(),
                     rewards_token_mint.clone(),
                     rewards_token_account.clone(),
+                    rewards_fee_account.clone(),
                     miner.clone(),
                     quarry.clone(),
                     quarry_rewarder.clone(),

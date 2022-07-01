@@ -630,6 +630,15 @@ async fn main() -> anyhow::Result<()> {
                     .help("Defaults file"),
             ),
         )
+        .subcommand(
+            SubCommand::with_name("create-quarry-fee-token-account").arg(
+                Arg::with_name("default")
+                    .long("default")
+                    .value_name("PATH")
+                    .takes_value(true)
+                    .help("Defaults file"),
+            ),
+        )
         .subcommand(SubCommand::with_name("test-quarry-mining-raw"))
         .subcommand(
             SubCommand::with_name("set-registry-pool-config")
@@ -1168,6 +1177,12 @@ async fn main() -> anyhow::Result<()> {
                 .value_of("default")
                 .unwrap_or("default.devnet.yaml");
             command_create_quarry_rewards_token_account(&config, file_path)
+        }
+        ("create-quarry-fee-token-account", Some(arg_matches)) => {
+            let file_path = arg_matches
+                .value_of("default")
+                .unwrap_or("default.devnet.yaml");
+            command_create_quarry_fee_token_account(&config, file_path)
         }
         ("create-quarry-miner-vault", Some(arg_matches)) => {
             let file_path = arg_matches

@@ -70,7 +70,6 @@ pub fn init_token_account(
     account: &Keypair,
     token_mint: &Pubkey,
 ) -> Result<(), ClientError> {
-    let default_accounts = config.get_default_accounts();
     let rent = config
         .rpc_client
         .get_minimum_balance_for_rent_exemption(spl_token::state::Account::LEN as usize)?;

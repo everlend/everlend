@@ -413,6 +413,23 @@ pub fn command_create_quarry_rewards_token_account(
     Ok(())
 }
 
+pub fn command_create_quarry_fee_token_account(
+    config: &Config,
+    defaults_path: &str,
+) -> anyhow::Result<()> {
+    let mut default_accounts = config.get_default_accounts();
+    let account = Keypair::new();
+    liquidity_mining::init_token_account(
+        config,
+        &account,
+        &default_accounts.quarry_rewards_token_mint,
+    )?;
+    default_accounts.quarry_fee_token_account = account.pubkey();
+    println!("fee token account {}", account.pubkey());
+    save_config_file::<DefaultAccounts, &str>(&default_accounts, defaults_path)?;
+    Ok(())
+}
+
 pub async fn command_set_registry_pool_config(
     config: &Config,
     accounts_path: &str,

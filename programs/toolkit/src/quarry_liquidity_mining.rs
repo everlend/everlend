@@ -95,7 +95,7 @@ pub fn claim_mining_rewards(config: &Config) -> Result<(), ClientError> {
             AccountMeta::new(default_accounts.quarry_minter, false),
             AccountMeta::new(default_accounts.quarry_rewards_token_mint, false),
             AccountMeta::new(default_accounts.quarry_rewards_token_account, false),
-            AccountMeta::new(default_accounts.quarry_rewards_token_account, false),
+            AccountMeta::new(default_accounts.quarry_fee_token_account, false),
             AccountMeta::new(miner, false),
             AccountMeta::new(default_accounts.quarry, false),
             AccountMeta::new_readonly(spl_token::id(), false),
@@ -103,6 +103,8 @@ pub fn claim_mining_rewards(config: &Config) -> Result<(), ClientError> {
         ],
         data: ClaimRewardsV2 {}.data(),
     };
+    let transaction = Transaction::new_with_payer(&[instruction], Some(&config.fee_payer.pubkey()));
+    config.sign_and_send_and_confirm_transaction(transaction, vec![config.fee_payer.as_ref()])?;
     let balance = config
         .rpc_client
         .get_token_account_balance(&default_accounts.quarry_rewards_token_account)
