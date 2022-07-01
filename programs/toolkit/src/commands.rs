@@ -237,6 +237,9 @@ pub fn command_init_mining(
     let mut money_market_program_id: Pubkey = Pubkey::default();
 
     match money_market {
+        StakingMoneyMarket::None => {
+            // TODO set disabled flag for mining_account in account file
+        }
         StakingMoneyMarket::Larix => {
             // Check that mining account is initialized
             // TODO add as Vec cause 1 mining account can hold up to 10 reserves

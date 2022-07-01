@@ -11,6 +11,8 @@ use crate::state::AccountType;
 ///
 #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, PartialEq)]
 pub enum MiningType {
+    /// None to disable mining
+    None,
     ///
     Larix {
         ///

@@ -888,6 +888,7 @@ impl Processor {
                     &[signers_seeds.as_ref()],
                 )?;
             }
+            MiningType::None => {}
         }
 
         let mut internal_mining =
@@ -1015,6 +1016,7 @@ impl Processor {
                     quarry_rewarder.clone(),
                 )?;
             }
+            MiningType::None => {}
         };
 
         // TODO deposit into LM rewards pool
