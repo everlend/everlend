@@ -1,4 +1,3 @@
-use anchor_lang::Key;
 use anyhow::Context;
 use core::time;
 use everlend_depositor::{
@@ -64,33 +63,36 @@ pub async fn command_run_test(
 
     let sol_oracle = default_accounts.sol_oracle;
     let port_finance_pubkeys = integrations::spl_token_lending::AccountPubkeys {
-        reserve: default_accounts.port_finance_reserve_sol,
-        reserve_liquidity_supply: default_accounts.port_finance_reserve_sol_supply,
+        reserve: default_accounts.port_finance.reserve_sol,
+        reserve_liquidity_supply: default_accounts.port_finance.reserve_sol_supply,
         reserve_liquidity_oracle: sol_oracle,
-        lending_market: default_accounts.port_finance_lending_market,
+        lending_market: default_accounts.port_finance.lending_market,
     };
     let larix_pubkeys = integrations::larix::AccountPubkeys {
-        reserve: default_accounts.larix_reserve_sol,
-        reserve_liquidity_supply: default_accounts.larix_reserve_sol_supply,
+        reserve: default_accounts.larix.reserve_sol,
+        reserve_liquidity_supply: default_accounts.larix.reserve_sol_supply,
         reserve_liquidity_oracle: sol_oracle,
-        lending_market: default_accounts.larix_lending_market,
+        lending_market: default_accounts.larix.lending_market,
     };
 
     let solend_pubkeys = integrations::solend::AccountPubkeys {
-        reserve: default_accounts.solend_reserve_sol,
+        reserve: default_accounts.solend.reserve_sol,
         reserve_liquidity_supply: default_accounts
-            .solend_reserve_sol_supply
+            .solend
+            .reserve_sol_supply
             .context("`solend_reserve_sol_supply` invalid value")
             .unwrap(),
         reserve_liquidity_pyth_oracle: default_accounts
-            .solend_reserve_pyth_oracle
+            .solend
+            .reserve_pyth_oracle
             .context("`solend_reserve_pyth_oracle` invalid value")
             .unwrap(),
         reserve_liquidity_switchboard_oracle: default_accounts
-            .solend_reserve_switchboard_oracle
+            .solend
+            .reserve_switchboard_oracle
             .context("`solend_reserve_switchboard_oracle` invalid value")
             .unwrap(),
-        lending_market: default_accounts.solend_lending_market,
+        lending_market: default_accounts.solend.lending_market,
     };
 
     let get_balance = |pk: &Pubkey| config.rpc_client.get_token_account_balance(pk);

@@ -60,9 +60,9 @@ pub async fn command_create_registry(
         income_pools_program_id: everlend_income_pools::id(),
         money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
     };
-    programs.money_market_program_ids[0] = default_accounts.port_finance_program_id;
-    programs.money_market_program_ids[1] = default_accounts.larix_program_id;
-    programs.money_market_program_ids[2] = default_accounts.solend_program_id;
+    programs.money_market_program_ids[0] = default_accounts.port_finance.program_id;
+    programs.money_market_program_ids[1] = default_accounts.larix.program_id;
+    programs.money_market_program_ids[2] = default_accounts.solend.program_id;
 
     println!("programs = {:#?}", programs);
 
@@ -121,9 +121,9 @@ pub async fn command_set_registry_config(
         // refresh_income_interval: REFRESH_INCOME_INTERVAL,
     };
 
-    programs.money_market_program_ids[0] = default_accounts.port_finance_program_id;
-    programs.money_market_program_ids[1] = default_accounts.larix_program_id;
-    programs.money_market_program_ids[2] = default_accounts.solend_program_id;
+    programs.money_market_program_ids[0] = default_accounts.port_finance.program_id;
+    programs.money_market_program_ids[1] = default_accounts.larix.program_id;
+    programs.money_market_program_ids[2] = default_accounts.solend.program_id;
 
     println!("programs = {:#?}", programs);
 
@@ -182,16 +182,16 @@ pub async fn command_save_quarry_accounts(config: &Config) -> anyhow::Result<()>
     // let default_accounts = config.get_default_accounts();
     let file_path = "../tests/tests/fixtures/quarry/quarry.bin";
     fs::remove_file(file_path)?;
-    println!("quarry {}", default_accounts.quarry);
-    download_account(&default_accounts.quarry, "quarry", "quarry").await;
+    println!("quarry {}", default_accounts.quarry.quarry);
+    download_account(&default_accounts.quarry.quarry, "quarry", "quarry").await;
     let data: Vec<u8> = read_file(find_file(file_path).unwrap());
     // first 8 bytes are meta information
     let adjusted = &data[8..];
     let deserialized = quarry_mine::Quarry::try_from_slice(adjusted)?;
     println!("rewarder {}", deserialized.rewarder);
     println!("token mint {}", deserialized.token_mint_key);
-    default_accounts.quarry_rewarder = deserialized.rewarder;
-    default_accounts.quarry_token_mint = deserialized.token_mint_key;
+    default_accounts.quarry.rewarder = deserialized.rewarder;
+    default_accounts.quarry.token_mint = deserialized.token_mint_key;
     save_config_file::<DefaultAccounts, &str>(&default_accounts, "default.devnet.yaml")?;
     Ok(())
 }
@@ -252,7 +252,7 @@ pub fn command_init_mining(
 
                 liquidity_mining::create_mining_account(
                     config,
-                    &default_accounts.larix_program_id,
+                    &default_accounts.larix.program_id,
                     &mining_account_keypair,
                     money_market,
                 )?;
@@ -279,8 +279,8 @@ pub fn command_init_mining(
                     .unwrap();
             };
 
-            money_market_program_id = default_accounts.larix_program_id;
-            pubkeys.lending_market = Some(default_accounts.larix_lending_market);
+            money_market_program_id = default_accounts.larix.program_id;
+            pubkeys.lending_market = Some(default_accounts.larix.lending_market);
 
             mining_type = Some(MiningType::Larix {
                 mining_account: initialized_accounts.larix_mining,
@@ -308,7 +308,7 @@ pub fn command_init_mining(
 
                 liquidity_mining::create_mining_account(
                     config,
-                    &default_accounts.port_finance_staking_program_id,
+                    &default_accounts.port_finance.staking_program_id,
                     &staking_account_keypair,
                     money_market,
                 )?;
@@ -325,13 +325,13 @@ pub fn command_init_mining(
                     .unwrap();
             };
 
-            pubkeys.lending_market = Some(default_accounts.port_finance_lending_market);
-            money_market_program_id = default_accounts.port_finance_program_id;
+            pubkeys.lending_market = Some(default_accounts.port_finance.lending_market);
+            money_market_program_id = default_accounts.port_finance.program_id;
 
             let port_accounts = default_accounts.port_accounts.get(&token).unwrap();
 
             mining_type = Some(MiningType::PortFinance {
-                staking_program_id: default_accounts.port_finance_staking_program_id,
+                staking_program_id: default_accounts.port_finance.staking_program_id,
                 staking_account: mining_accounts.staking_account,
                 staking_pool: port_accounts.staking_pool,
             });
@@ -380,31 +380,31 @@ pub fn command_init_quarry_mining_accounts(
     let mut default_accounts = config.get_default_accounts();
     let miner_vault = Keypair::new();
     quarry_liquidity_mining::create_miner(config, &miner_vault)?;
-    default_accounts.quarry_miner_vault = miner_vault.pubkey();
+    default_accounts.quarry.miner_vault = miner_vault.pubkey();
     println!("miner vault {}", miner_vault.pubkey());
     let token_source = Keypair::new();
     liquidity_mining::init_token_account(
         config,
         &token_source,
-        &default_accounts.quarry_token_mint,
+        &default_accounts.quarry.token_mint,
     )?;
-    default_accounts.quarry_token_source = token_source.pubkey();
+    default_accounts.quarry.token_source = token_source.pubkey();
     println!("token source {}", token_source.pubkey());
     let rewards_account = Keypair::new();
     liquidity_mining::init_token_account(
         config,
         &rewards_account,
-        &default_accounts.quarry_rewards_token_mint,
+        &default_accounts.quarry.rewards_token_mint,
     )?;
-    default_accounts.quarry_rewards_token_account = rewards_account.pubkey();
+    default_accounts.quarry.rewards_token_account = rewards_account.pubkey();
     println!("rewards token account {}", rewards_account.pubkey());
     let fee_account = Keypair::new();
     liquidity_mining::init_token_account(
         config,
         &fee_account,
-        &default_accounts.quarry_rewards_token_mint,
+        &default_accounts.quarry.rewards_token_mint,
     )?;
-    default_accounts.quarry_fee_token_account = fee_account.pubkey();
+    default_accounts.quarry.fee_token_account = fee_account.pubkey();
     println!("fee token account {}", fee_account.pubkey());
     save_config_file::<DefaultAccounts, &str>(&default_accounts, defaults_path)?;
     Ok(())
