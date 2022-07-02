@@ -18,6 +18,7 @@ use solana_program::{
 };
 use spl_token::state::Account;
 
+use everlend_collateral_pool::utils::CollateralPoolAccounts;
 use everlend_general_pool::{find_withdrawal_requests_program_address, state::WithdrawalRequests};
 use everlend_liquidity_oracle::{
     find_liquidity_oracle_token_distribution_program_address, state::TokenDistribution,
@@ -30,7 +31,6 @@ use everlend_utils::{
     assert_account_key, assert_owned_by, assert_rent_exempt, assert_uninitialized, cpi,
     find_program_address, EverlendError,
 };
-use everlend_collateral_pool::utils::CollateralPoolAccounts;
 
 use crate::{
     find_rebalancing_program_address, find_transit_program_address,
@@ -432,7 +432,10 @@ impl Processor {
             RegistryRootAccounts::unpack_from_slice(&registry_config_info.data.borrow())?;
 
         // Check external programs
-        assert_owned_by(collateral_pool_market_info, &programs.collateral_pool_program_id)?;
+        assert_owned_by(
+            collateral_pool_market_info,
+            &programs.collateral_pool_program_id,
+        )?;
         assert_owned_by(collateral_pool_info, &programs.collateral_pool_program_id)?;
 
         // Check collateral pool market
@@ -510,20 +513,24 @@ impl Processor {
         }
 
         msg!("Deposit");
-        let collateral_amount = deposit(
-            &programs,
-            collateral_pool_accounts,
-            collateral_transit_info.clone(),
-            collateral_mint_info.clone(),
-            liquidity_transit_info.clone(),
-            liquidity_mint_info.clone(),
-            depositor_authority_info.clone(),
-            clock_info.clone(),
-            money_market_program_info.clone(),
-            account_info_iter,
-            step.liquidity_amount,
-            &[signers_seeds],
-        )?;
+        let collateral_amount = if step.liquidity_amount.eq(&0) {
+            0
+        } else {
+            deposit(
+                &programs,
+                collateral_pool_accounts,
+                collateral_transit_info.clone(),
+                collateral_mint_info.clone(),
+                liquidity_transit_info.clone(),
+                liquidity_mint_info.clone(),
+                depositor_authority_info.clone(),
+                clock_info.clone(),
+                money_market_program_info.clone(),
+                account_info_iter,
+                step.liquidity_amount,
+                &[signers_seeds],
+            )?
+        };
 
         rebalancing.execute_step(
             RebalancingOperation::Deposit,
@@ -599,7 +606,10 @@ impl Processor {
                 .map(Box::new)?;
 
         // Check external programs
-        assert_owned_by(collateral_pool_market_info, &programs.collateral_pool_program_id)?;
+        assert_owned_by(
+            collateral_pool_market_info,
+            &programs.collateral_pool_program_id,
+        )?;
         assert_owned_by(collateral_pool_info, &programs.collateral_pool_program_id)?;
 
         // Check collateral pool market
@@ -631,9 +641,12 @@ impl Processor {
         let (collateral_pool_withdraw_authority, _) = find_pool_withdraw_authority_program_address(
             &programs.collateral_pool_program_id,
             collateral_pool_info.key,
-            depositor_authority_info.key, 
+            depositor_authority_info.key,
         );
-        assert_account_key(collateral_pool_withdraw_authority_info, &collateral_pool_withdraw_authority)?;
+        assert_account_key(
+            collateral_pool_withdraw_authority_info,
+            &collateral_pool_withdraw_authority,
+        )?;
 
         // Check rebalancing
         let (rebalancing_pubkey, _) = find_rebalancing_program_address(

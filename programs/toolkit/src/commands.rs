@@ -16,11 +16,11 @@ use everlend_registry::{
 };
 use everlend_utils::integrations::MoneyMarket;
 
-use crate::accounts_config::{InitializedAccounts, CollateralPoolAccounts};
+use crate::accounts_config::{CollateralPoolAccounts, InitializedAccounts};
 use crate::collateral_pool::{self, PoolPubkeys};
 use crate::registry::close_registry_config;
 use crate::{
-    accounts_config::{TokenAccounts},
+    accounts_config::TokenAccounts,
     depositor, general_pool, income_pools, liquidity_oracle, registry,
     utils::{
         get_asset_maps, spl_create_associated_token_account, spl_token_transfer, Config,
@@ -107,7 +107,6 @@ pub async fn command_set_registry_config(
         depositor_program_id: everlend_depositor::id(),
         income_pools_program_id: everlend_income_pools::id(),
         money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
-        // refresh_income_interval: REFRESH_INCOME_INTERVAL,
     };
 
     programs.money_market_program_ids[0] = default_accounts.port_finance_program_id;
@@ -450,15 +449,10 @@ pub async fn command_create_token_accounts(
             .iter()
             .zip(mm_pool_pubkeys)
             .map(
-                |(
-                    (collateral_mint, _mm_pool_market_pubkey),
-                    pubkeys,
-                )| {
-                    CollateralPoolAccounts {
-                        pool: pubkeys.pool,
-                        pool_token_account: pubkeys.token_account,
-                        token_mint: *collateral_mint,
-                    }
+                |((collateral_mint, _mm_pool_market_pubkey), pubkeys)| CollateralPoolAccounts {
+                    pool: pubkeys.pool,
+                    pool_token_account: pubkeys.token_account,
+                    token_mint: *collateral_mint,
                 },
             )
             .collect();
