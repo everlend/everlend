@@ -25,18 +25,19 @@ use everlend_liquidity_oracle::{
 };
 use everlend_registry::{
     find_config_program_address,
-    state::{RegistryPrograms, RegistryRootAccounts, RegistrySettings},
+    state::{Registry, RegistryPrograms, RegistryRootAccounts, RegistrySettings},
 };
 use everlend_utils::{
-    assert_account_key, assert_owned_by, assert_rent_exempt, assert_uninitialized, cpi,
-    find_program_address, EverlendError,
+    assert_account_key, assert_initialized, assert_owned_by, assert_rent_exempt, assert_signer,
+    assert_uninitialized, cpi, find_program_address, EverlendError,
 };
 
 use crate::{
     find_rebalancing_program_address, find_transit_program_address,
     instruction::DepositorInstruction,
     state::{
-        Depositor, InitDepositorParams, InitRebalancingParams, Rebalancing, RebalancingOperation,
+        Depositor, DeprecatedDepositor, InitDepositorParams, InitRebalancingParams, Rebalancing,
+        RebalancingOperation,
     },
     utils::{deposit, withdraw},
 };
@@ -46,7 +47,11 @@ pub struct Processor {}
 
 impl Processor {
     /// Process Init instruction
-    pub fn init(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+    pub fn init(
+        program_id: &Pubkey,
+        accounts: &[AccountInfo],
+        rebalance_executor: Pubkey,
+    ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
 
         let depositor_info = next_account_info(account_info_iter)?;
@@ -65,6 +70,7 @@ impl Processor {
 
         depositor.init(InitDepositorParams {
             registry: *registry_info.key,
+            rebalance_executor,
         });
 
         Depositor::pack(depositor, *depositor_info.data.borrow_mut())?;
@@ -154,7 +160,7 @@ impl Processor {
         // TODO: we can do it optional for refresh income case in the future
         let liquidity_oracle_info = next_account_info(account_info_iter)?;
         let token_distribution_info = next_account_info(account_info_iter)?;
-        let from_info = next_account_info(account_info_iter)?;
+        let executor_info = next_account_info(account_info_iter)?;
 
         let rent_info = next_account_info(account_info_iter)?;
         let rent = &Rent::from_account_info(rent_info)?;
@@ -171,6 +177,10 @@ impl Processor {
 
         // Get depositor state
         let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
+
+        // Check executor
+        assert_signer(executor_info)?;
+        assert_account_key(executor_info, &depositor.rebalance_executor)?;
 
         // Check registry
         let (registry_config_pubkey, _) =
@@ -218,7 +228,7 @@ impl Processor {
 
                 cpi::system::create_account::<Rebalancing>(
                     program_id,
-                    from_info.clone(),
+                    executor_info.clone(),
                     rebalancing_info.clone(),
                     &[signers_seeds],
                     rent,
@@ -408,6 +418,8 @@ impl Processor {
         let collateral_transit_info = next_account_info(account_info_iter)?;
         let collateral_mint_info = next_account_info(account_info_iter)?;
 
+        let executor_info = next_account_info(account_info_iter)?;
+
         let clock_info = next_account_info(account_info_iter)?;
         let clock = Clock::from_account_info(clock_info)?;
         let _token_program_info = next_account_info(account_info_iter)?;
@@ -421,6 +433,10 @@ impl Processor {
         assert_owned_by(rebalancing_info, program_id)?;
 
         let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
+
+        // Check executor
+        assert_signer(executor_info)?;
+        assert_account_key(executor_info, &depositor.rebalance_executor)?;
 
         // Check registry config
         let (registry_config_pubkey, _) =
@@ -580,6 +596,8 @@ impl Processor {
         let liquidity_reserve_transit_info = next_account_info(account_info_iter)?;
         let liquidity_mint_info = next_account_info(account_info_iter)?;
 
+        let executor_info = next_account_info(account_info_iter)?;
+
         let clock_info = next_account_info(account_info_iter)?;
         let clock = Clock::from_account_info(clock_info)?;
         let _token_program_info = next_account_info(account_info_iter)?;
@@ -593,6 +611,10 @@ impl Processor {
         assert_owned_by(rebalancing_info, program_id)?;
 
         let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
+
+        // Check executor
+        assert_signer(executor_info)?;
+        assert_account_key(executor_info, &depositor.rebalance_executor)?;
 
         // Check registry config
         let (registry_config_pubkey, _) =
@@ -736,8 +758,50 @@ impl Processor {
     }
 
     /// Process MigrateDepositor instruction
-    pub fn migrate_depositor(_program_id: &Pubkey, _accounts: &[AccountInfo]) -> ProgramResult {
-        Err(EverlendError::TemporaryUnavailable.into())
+    pub fn migrate_depositor(
+        program_id: &Pubkey,
+        accounts: &[AccountInfo],
+        rebalance_executor: Pubkey,
+    ) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+
+        let depositor_info = next_account_info(account_info_iter)?;
+        let registry_info = next_account_info(account_info_iter)?;
+        let manager_info = next_account_info(account_info_iter)?;
+        let rent_info = next_account_info(account_info_iter)?;
+        let rent = &Rent::from_account_info(rent_info)?;
+
+        assert_signer(manager_info)?;
+
+        assert_owned_by(depositor_info, program_id)?;
+        assert_owned_by(registry_info, &everlend_registry::id())?;
+
+        // Get registry state
+        let registry = Registry::unpack_unchecked(&registry_info.data.borrow())?;
+        assert_account_key(manager_info, &registry.manager)?;
+
+        // Get depositor state
+        let deprecated_depositor =
+            DeprecatedDepositor::unpack_unchecked(&depositor_info.data.borrow())?;
+        assert_account_key(registry_info, &deprecated_depositor.registry)?;
+
+        assert_initialized(&deprecated_depositor)?;
+
+        // Realloc depositor size
+        depositor_info.realloc(Depositor::LEN, false)?;
+
+        // Check rent exemption
+        assert_rent_exempt(rent, depositor_info)?;
+
+        let mut depositor: Depositor = Depositor::default();
+        depositor.init(InitDepositorParams {
+            registry: deprecated_depositor.registry,
+            rebalance_executor,
+        });
+
+        Depositor::pack(depositor, *depositor_info.data.borrow_mut())?;
+
+        Ok(())
     }
 
     /// Instruction processing router
@@ -749,9 +813,9 @@ impl Processor {
         let instruction = DepositorInstruction::try_from_slice(input)?;
 
         match instruction {
-            DepositorInstruction::Init => {
+            DepositorInstruction::Init { rebalance_executor } => {
                 msg!("DepositorInstruction: Init");
-                Self::init(program_id, accounts)
+                Self::init(program_id, accounts, rebalance_executor)
             }
 
             DepositorInstruction::CreateTransit { seed } => {
@@ -774,9 +838,9 @@ impl Processor {
                 Self::withdraw(program_id, accounts)
             }
 
-            DepositorInstruction::MigrateDepositor => {
+            DepositorInstruction::MigrateDepositor { rebalance_executor } => {
                 msg!("DepositorInstruction: MigrateDepositor");
-                Self::migrate_depositor(program_id, accounts)
+                Self::migrate_depositor(program_id, accounts, rebalance_executor)
             }
         }
     }

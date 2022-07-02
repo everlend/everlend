@@ -21,7 +21,10 @@ async fn success() {
     test_liquidity_oracle.init(&mut context).await.unwrap();
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
+    general_pool_market
+        .init(&mut context, &registry.keypair.pubkey())
+        .await
+        .unwrap();
 
     let income_pool_market = TestIncomePoolMarket::new();
     income_pool_market
@@ -45,7 +48,10 @@ async fn fail_second_time_init() {
     test_liquidity_oracle.init(&mut context).await.unwrap();
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
+    general_pool_market
+        .init(&mut context, &registry.keypair.pubkey())
+        .await
+        .unwrap();
 
     let income_pool_market = TestIncomePoolMarket::new();
     income_pool_market
@@ -65,6 +71,7 @@ async fn fail_second_time_init() {
             &everlend_depositor::id(),
             &registry.keypair.pubkey(),
             &test_depositor.depositor.pubkey(),
+            &context.payer.pubkey(),
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer],
@@ -90,7 +97,10 @@ async fn fail_with_invalid_registry() {
     test_liquidity_oracle.init(&mut context).await.unwrap();
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
+    general_pool_market
+        .init(&mut context, &registry.keypair.pubkey())
+        .await
+        .unwrap();
 
     let income_pool_market = TestIncomePoolMarket::new();
     income_pool_market
@@ -115,6 +125,7 @@ async fn fail_with_invalid_registry() {
                 &everlend_depositor::id(),
                 &Pubkey::new_unique(),
                 &test_depositor.depositor.pubkey(),
+                &context.payer.pubkey(),
             ),
         ],
         Some(&context.payer.pubkey()),
@@ -129,8 +140,10 @@ async fn fail_with_invalid_registry() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(1,
-            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32))
+        TransactionError::InstructionError(
+            1,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32)
+        )
     );
 }
 
@@ -142,7 +155,10 @@ async fn fail_with_invalid_uncreated_depositor_account() {
     test_liquidity_oracle.init(&mut context).await.unwrap();
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
+    general_pool_market
+        .init(&mut context, &registry.keypair.pubkey())
+        .await
+        .unwrap();
 
     let income_pool_market = TestIncomePoolMarket::new();
     income_pool_market
@@ -157,6 +173,7 @@ async fn fail_with_invalid_uncreated_depositor_account() {
             &everlend_depositor::id(),
             &registry.keypair.pubkey(),
             &test_depositor.depositor.pubkey(),
+            &context.payer.pubkey(),
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer],

@@ -603,6 +603,7 @@ pub async fn command_migrate_depositor(config: &Config) -> anyhow::Result<()> {
         config,
         &initialized_accounts.depositor,
         &initialized_accounts.registry,
+        &initialized_accounts.rebalance_executor,
     )?;
     Ok(())
 }

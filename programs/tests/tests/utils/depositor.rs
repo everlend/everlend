@@ -3,6 +3,7 @@ use super::{
     TestIncomePool, TestIncomePoolMarket, TestLiquidityOracle, TestPool, TestPoolMarket,
     TestRegistry,
 };
+use everlend_depositor::state::DeprecatedDepositor;
 use everlend_depositor::{
     find_rebalancing_program_address,
     state::{Depositor, Rebalancing},
@@ -56,14 +57,15 @@ impl TestDepositor {
                 system_instruction::create_account(
                     &context.payer.pubkey(),
                     &self.depositor.pubkey(),
-                    rent.minimum_balance(Depositor::LEN),
-                    Depositor::LEN as u64,
+                    rent.minimum_balance(DeprecatedDepositor::LEN),
+                    DeprecatedDepositor::LEN as u64,
                     &everlend_depositor::id(),
                 ),
                 everlend_depositor::instruction::init(
                     &everlend_depositor::id(),
                     &registry.keypair.pubkey(),
                     &self.depositor.pubkey(),
+                    &context.payer.pubkey(),
                 ),
             ],
             Some(&context.payer.pubkey()),
@@ -150,6 +152,7 @@ impl TestDepositor {
                 &mm_pool.token_account.pubkey(),
                 &liquidity_mint,
                 &collateral_mint,
+                &context.payer.pubkey(),
                 money_market_program_id,
                 deposit_accounts,
             )],
@@ -189,6 +192,7 @@ impl TestDepositor {
                 &mm_pool.token_account.pubkey(),
                 &collateral_mint,
                 &liquidity_mint,
+                &context.payer.pubkey(),
                 money_market_program_id,
                 withdraw_accounts,
             )],
