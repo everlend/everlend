@@ -1,5 +1,4 @@
 use solana_client::client_error::ClientError;
-use solana_program::pubkey::PubkeyError;
 use solana_program::{
     instruction::AccountMeta, program_pack::Pack, pubkey::Pubkey, system_instruction,
 };
@@ -21,6 +20,7 @@ pub fn init(
     config: &Config,
     registry_pubkey: &Pubkey,
     depositor_keypair: Option<Keypair>,
+    rebalance_executor: Pubkey,
 ) -> Result<Pubkey, ClientError> {
     let depositor_keypair = depositor_keypair.unwrap_or_else(Keypair::new);
 
@@ -43,7 +43,7 @@ pub fn init(
                 &everlend_depositor::id(),
                 registry_pubkey,
                 &depositor_keypair.pubkey(),
-                &config.fee_payer.pubkey(),
+                &rebalance_executor,
             ),
         ],
         Some(&config.fee_payer.pubkey()),
