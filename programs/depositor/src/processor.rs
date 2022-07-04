@@ -577,20 +577,24 @@ impl Processor {
         }
 
         msg!("Deposit");
-        let collateral_amount = deposit(
-            &programs,
-            collateral_pool_accounts,
-            collateral_transit_info.clone(),
-            collateral_mint_info.clone(),
-            liquidity_transit_info.clone(),
-            liquidity_mint_info.clone(),
-            depositor_authority_info.clone(),
-            clock_info.clone(),
-            money_market_program_info.clone(),
-            account_info_iter,
-            step.liquidity_amount,
-            &[signers_seeds],
-        )?;
+        let collateral_amount = if step.liquidity_amount.eq(&0) {
+            0
+        } else {
+            deposit(
+                &programs,
+                collateral_pool_accounts,
+                collateral_transit_info.clone(),
+                collateral_mint_info.clone(),
+                liquidity_transit_info.clone(),
+                liquidity_mint_info.clone(),
+                depositor_authority_info.clone(),
+                clock_info.clone(),
+                money_market_program_info.clone(),
+                account_info_iter,
+                step.liquidity_amount,
+                &[signers_seeds],
+            )?
+        };
 
         rebalancing.execute_step(
             RebalancingOperation::Deposit,

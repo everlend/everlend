@@ -26,8 +26,8 @@ use accounts_config::*;
 use commands::*;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::state::{
-    DistributionPubkeys, RegistryPrograms, RegistryRootAccounts, RegistrySettings,
-    SetRegistryPoolConfigParams, TOTAL_DISTRIBUTIONS,
+    RegistryPrograms, RegistryRootAccounts, RegistrySettings, SetRegistryPoolConfigParams,
+    TOTAL_DISTRIBUTIONS,
 };
 use everlend_utils::integrations::MoneyMarket;
 use general_pool::get_withdrawal_requests;
@@ -80,19 +80,13 @@ async fn command_create(
         liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
         depositor_program_id: everlend_depositor::id(),
         income_pools_program_id: everlend_income_pools::id(),
-        money_market_program_ids: DistributionPubkeys::default(),
+        money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
     };
-    programs.money_market_program_ids[0] = spl_token_lending::id();
+    programs.money_market_program_ids[0] = default_accounts.port_finance_program_id;
+    programs.money_market_program_ids[1] = default_accounts.larix_program_id;
+    programs.money_market_program_ids[2] = default_accounts.solend_program_id;
 
-    registry::set_registry_config(
-        config,
-        &registry_pubkey,
-        programs,
-        RegistryRootAccounts::default(),
-        RegistrySettings {
-            refresh_income_interval: REFRESH_INCOME_INTERVAL,
-        },
-    )?;
+    println!("programs = {:#?}", programs);
 
     let general_pool_market_pubkey = general_pool::create_market(config, None, &registry_pubkey)?;
     let income_pool_market_pubkey =
@@ -110,22 +104,6 @@ async fn command_create(
     distribution[0] = 0;
     distribution[1] = 0;
     distribution[2] = 0;
-
-    println!("Registry");
-    let registry_pubkey = registry::init(config, None)?;
-    let mut programs = RegistryPrograms {
-        general_pool_program_id: everlend_general_pool::id(),
-        collateral_pool_program_id: everlend_collateral_pool::id(),
-        liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
-        depositor_program_id: everlend_depositor::id(),
-        income_pools_program_id: everlend_income_pools::id(),
-        money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
-    };
-    programs.money_market_program_ids[0] = default_accounts.port_finance_program_id;
-    programs.money_market_program_ids[1] = default_accounts.larix_program_id;
-    programs.money_market_program_ids[2] = default_accounts.solend_program_id;
-
-    println!("programs = {:#?}", programs);
 
     let mut collateral_pool_markets: [Pubkey; TOTAL_DISTRIBUTIONS] = Default::default();
     collateral_pool_markets[..mm_collateral_pool_markets.len()]
@@ -146,7 +124,7 @@ async fn command_create(
         programs,
         roots,
         RegistrySettings {
-            refresh_income_interval: REFRESH_INCOME_INTERVAL,
+            refresh_income_interval: 0,
         },
     )?;
 
@@ -174,6 +152,16 @@ async fn command_create(
         let (general_pool_pubkey, general_pool_token_account, general_pool_mint) =
             general_pool::create_pool(config, &general_pool_market_pubkey, mint)?;
 
+        registry::set_registry_pool_config(
+            config,
+            &registry_pubkey,
+            &general_pool_pubkey,
+            SetRegistryPoolConfigParams {
+                deposit_minimum: 0,
+                withdraw_minimum: 0,
+            },
+        )?;
+
         let token_account = get_associated_token_address(&payer_pubkey, mint);
         let pool_account =
             spl_create_associated_token_account(config, &payer_pubkey, &general_pool_mint)?;
@@ -184,10 +172,25 @@ async fn command_create(
         // MM Pools
         let mm_pool_collection = collateral_mints
             .iter()
-            .map(|(collateral_mint, mm_pool_market_pubkey)| {
-                println!("MM Pool: {}", collateral_mint);
-                collateral_pool::create_pool(config, mm_pool_market_pubkey, collateral_mint)
-            })
+            .map(
+                |(collateral_mint, mm_pool_market_pubkey)| -> Result<PoolPubkeys, ClientError> {
+                    println!("MM Pool: {}", collateral_mint);
+                    let pool_pubkeys = collateral_pool::create_pool(
+                        config,
+                        mm_pool_market_pubkey,
+                        collateral_mint,
+                    )?;
+                    collateral_pool::create_pool_withdraw_authority(
+                        config,
+                        mm_pool_market_pubkey,
+                        &pool_pubkeys.pool,
+                        depositor_authority,
+                        &config.fee_payer.pubkey(),
+                    )?;
+
+                    Ok(pool_pubkeys)
+                },
+            )
             .collect::<Result<Vec<PoolPubkeys>, ClientError>>()?;
 
         liquidity_oracle::create_token_distribution(
@@ -258,7 +261,7 @@ async fn command_create(
                 income_pool: income_pool_pubkey,
                 income_pool_token_account,
                 mm_pools: Vec::new(),
-                collateral_pools: collateral_pools,
+                collateral_pools,
                 liquidity_transit: liquidity_transit_pubkey,
             },
         );

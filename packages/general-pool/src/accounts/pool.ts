@@ -2,8 +2,23 @@ import { AccountInfo, Connection, PublicKey } from '@solana/web3.js'
 import BN from 'bn.js'
 import bs58 from 'bs58'
 import { Buffer } from 'buffer'
-import { Account, Borsh, Errors } from '@everlend/common'
+import {
+  Account,
+  Borsh,
+  deserialize,
+  Errors,
+  findAssociatedTokenAccount,
+  deserializeTokenAccount,
+} from '@everlend/common'
 import { AccountType, GeneralPoolsProgram } from '../program'
+
+export type UserCompoundBalancesByPool = {
+  [poolPubKey: string]: {
+    /** lamports */
+    balance: number
+    tokenMint: PublicKey
+  }
+}
 
 type Args = {
   accountType: PublicKey
@@ -112,5 +127,71 @@ export class Pool extends Account<PoolData> {
     const { poolMintSupply, totalAmountBorrowed, tokenAccountAmount } = amounts
 
     return poolMintSupply / (totalAmountBorrowed + tokenAccountAmount)
+  }
+
+  /**
+   * Calculates user's compound balance by pools. If no pools are provided,
+   * all the Everlend general pools will be automatically loaded.
+   *
+   * @param connection the JSON RPC connection instance.
+   * @param owner the owner account, the account is used to find ATAs of pool mints.
+   * @param poolMarket the public key which represents the main manager root account which is used for generating PDAs.
+   * @param pools the general pools. If absent all the pools will be loaded instead.
+   */
+  static async getUserCompoundBalancesByPools(
+    connection: Connection,
+    owner: PublicKey,
+    poolMarket: PublicKey,
+    pools?: Pool[],
+  ): Promise<UserCompoundBalancesByPool> {
+    const _pools =
+      pools ??
+      (await this.findMany(connection, {
+        poolMarket,
+      }))
+
+    const poolMints: PublicKey[] = []
+    const tokenAccounts: PublicKey[] = []
+    const poolMintsATAs: PublicKey[] = []
+    for (const pool of _pools) {
+      const { poolMint } = pool.data
+      poolMints.push(poolMint)
+
+      tokenAccounts.push(pool.data.tokenAccount)
+
+      const foundATA = await findAssociatedTokenAccount(owner, poolMint)
+      poolMintsATAs.push(foundATA)
+    }
+
+    const poolMintsInfo = await connection.getMultipleAccountsInfo(poolMints)
+    const tokenAccountsInfo = await connection.getMultipleAccountsInfo(tokenAccounts)
+    const poolMintsATAsInfo = await connection.getMultipleAccountsInfo(poolMintsATAs)
+
+    return _pools.reduce((acc, pool, index) => {
+      const poolMintInfoDeserialized = deserialize(poolMintsInfo[index].data)
+
+      const tokenAccountBalance = deserializeTokenAccount(
+        tokenAccountsInfo[index].data,
+      ).amount.toNumber()
+
+      const poolMintATAInfo = poolMintsATAsInfo[index]
+      const eTokenAmount =
+        poolMintATAInfo === null
+          ? 0
+          : deserializeTokenAccount(poolMintATAInfo.data).amount.toNumber()
+
+      const eTokenRate = this.calcETokenRate({
+        poolMintSupply: poolMintInfoDeserialized.supply.toNumber(),
+        totalAmountBorrowed: pool.data.totalAmountBorrowed.toNumber(),
+        tokenAccountAmount: tokenAccountBalance,
+      })
+
+      acc[pool.publicKey.toString()] = {
+        balance: Math.floor(eTokenAmount / eTokenRate),
+        tokenMint: pool.data.tokenMint,
+      }
+
+      return acc
+    }, {})
   }
 }

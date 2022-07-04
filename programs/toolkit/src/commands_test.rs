@@ -51,7 +51,8 @@ pub async fn command_run_test(
         find_config_program_address(&everlend_registry::id(), &registry);
     let registry_config_account = config.rpc_client.get_account(&registry_config_pubkey)?;
     let registry_config = RegistryConfig::unpack(&registry_config_account.data).unwrap();
-    let programs = RegistryPrograms::unpack_unchecked(&registry_config_account.data).unwrap();
+    println!("registry_config = {:?}", registry_config);
+    let programs = RegistryPrograms::unpack_from_slice(&registry_config_account.data).unwrap();
 
     println!("registry_config = {:#?}", registry_config);
     println!("programs = {:#?}", programs);
@@ -149,9 +150,9 @@ pub async fn command_run_test(
             &registry,
             &depositor,
             &collateral_pool_markets[i],
-            &sol.mm_pools[i].pool_token_account,
+            &sol.collateral_pools[i].pool_token_account,
             &sol.mint,
-            &sol.mm_pools[i].token_mint,
+            &sol.collateral_pools[i].token_mint,
             &programs.money_market_program_ids[i],
             integrations::deposit_accounts(&programs.money_market_program_ids[i], &pubkeys),
         )
@@ -173,8 +174,8 @@ pub async fn command_run_test(
             &income_pool_market,
             &sol.income_pool_token_account,
             &collateral_pool_markets[i],
-            &sol.mm_pools[i].pool_token_account,
-            &sol.mm_pools[i].token_mint,
+            &sol.collateral_pools[i].pool_token_account,
+            &sol.collateral_pools[i].token_mint,
             &sol.mint,
             &programs.money_market_program_ids[i],
             integrations::withdraw_accounts(&programs.money_market_program_ids[i], &pubkeys),
@@ -317,6 +318,22 @@ pub async fn command_run_test(
 
             update_token_distribution(distribution!([0, 300000000, 700000000]))?;
             let (_, rebalancing) = start_rebalancing()?;
+            complete_rebalancing(Some(rebalancing))?;
+        }
+        Some("invalid-amount") => {
+            general_pool_deposit(1000)?;
+
+            update_token_distribution(distribution!([1000000000, 0, 0]))?;
+            let (_, rebalancing) = start_rebalancing()?;
+            complete_rebalancing(Some(rebalancing))?;
+
+            general_pool_withdraw_request(
+                get_balance(&sol.general_pool_token_account)?
+                    .amount
+                    .parse::<u64>()
+                    .unwrap(),
+            )?;
+            let (_, rebalancing) = refresh_income()?;
             complete_rebalancing(Some(rebalancing))?;
         }
         Some("larix") => {

@@ -108,7 +108,6 @@ pub async fn command_set_registry_config(
         depositor_program_id: everlend_depositor::id(),
         income_pools_program_id: everlend_income_pools::id(),
         money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
-        // refresh_income_interval: REFRESH_INCOME_INTERVAL,
     };
 
     programs.money_market_program_ids[0] = default_accounts.port_finance_program_id;
