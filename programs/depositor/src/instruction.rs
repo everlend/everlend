@@ -128,7 +128,7 @@ pub enum DepositorInstruction {
     /// [R] Registry config
     MigrateDepositor,
 
-    /// Reset current rebalancing
+    /// Set current rebalancing
     ///
     /// Accounts:
     /// [R] Registry
@@ -137,7 +137,7 @@ pub enum DepositorInstruction {
     /// [R] Token mint
     /// [WS] Manager
     /// [R] System program
-    ResetRebalancing {
+    SetRebalancing {
         ///Manual setup of prev distributed liquidity
         distributed_liquidity: u64,
         ///Manual setup of prev distribution array
@@ -289,7 +289,7 @@ pub fn reset_rebalancing(
 
     Instruction::new_with_borsh(
         *program_id,
-        &DepositorInstruction::ResetRebalancing {
+        &DepositorInstruction::SetRebalancing {
             distributed_liquidity,
             distribution_array,
         },

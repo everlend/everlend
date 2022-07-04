@@ -385,7 +385,7 @@ impl Processor {
     }
 
     /// Process ResetRebalancing instruction
-    pub fn reset_rebalancing(
+    pub fn set_rebalancing(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
         distributed_liquidity: u64,
@@ -439,7 +439,7 @@ impl Processor {
             return Err(EverlendError::RebalancingIsCompleted.into());
         }
 
-        rebalancing.reset(distributed_liquidity, distribution_array)?;
+        rebalancing.set(distributed_liquidity, distribution_array)?;
 
         Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
 
@@ -828,12 +828,12 @@ impl Processor {
                 Self::start_rebalancing(program_id, accounts, refresh_income)
             }
 
-            DepositorInstruction::ResetRebalancing {
+            DepositorInstruction::SetRebalancing {
                 distributed_liquidity,
                 distribution_array,
             } => {
                 msg!("DepositorInstruction: ResetRebalancing");
-                Self::reset_rebalancing(
+                Self::set_rebalancing(
                     program_id,
                     accounts,
                     distributed_liquidity,

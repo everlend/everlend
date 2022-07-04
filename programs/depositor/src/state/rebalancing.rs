@@ -192,8 +192,8 @@ impl Rebalancing {
         Ok(())
     }
 
-    /// Reset current rebalancing
-    pub fn reset(
+    /// Set current rebalancing
+    pub fn set(
         &mut self,
         distributed_liquidity: u64,
         distribution_array: DistributionArray,
