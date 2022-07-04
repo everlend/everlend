@@ -9,7 +9,7 @@ use solana_program::{
 };
 
 pub use deprecated::DeprecatedDepositor;
-use everlend_utils::{AccountVersion, EverlendError};
+use everlend_utils::{AccountVersion, EverlendError, UnInitialized};
 
 use super::AccountType;
 
@@ -73,6 +73,12 @@ impl IsInitialized for Depositor {
         self.account_type != AccountType::Uninitialized
             && self.account_type == AccountType::Depositor
             && self.account_version == Self::ACTUAL_VERSION
+    }
+}
+
+impl UnInitialized for Depositor {
+    fn is_uninitialized(&self) -> bool {
+        self.account_type == AccountType::default()
     }
 }
 

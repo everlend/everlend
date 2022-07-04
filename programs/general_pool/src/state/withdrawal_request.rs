@@ -1,6 +1,6 @@
 use super::{AccountType, AccountVersion};
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-use everlend_utils::EverlendError;
+use everlend_utils::{EverlendError, UnInitialized};
 use solana_program::{
     clock::Slot,
     entrypoint::ProgramResult,
@@ -102,6 +102,12 @@ impl IsInitialized for WithdrawalRequests {
     }
 }
 
+impl UnInitialized for WithdrawalRequests {
+    fn is_uninitialized(&self) -> bool {
+        self.account_type == AccountType::default()
+    }
+}
+
 /// Withdrawal request
 #[repr(C)]
 #[derive(Debug, Clone, BorshDeserialize, BorshSerialize, BorshSchema, PartialEq, Default)]
@@ -185,5 +191,11 @@ impl IsInitialized for WithdrawalRequest {
     fn is_initialized(&self) -> bool {
         self.account_type != AccountType::Uninitialized
             && self.account_type == AccountType::WithdrawRequest
+    }
+}
+
+impl UnInitialized for WithdrawalRequest {
+    fn is_uninitialized(&self) -> bool {
+        self.account_type == AccountType::default()
     }
 }

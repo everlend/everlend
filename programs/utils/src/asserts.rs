@@ -4,6 +4,11 @@ use solana_program::{
     program_pack::IsInitialized, pubkey::Pubkey, rent::Rent,
 };
 
+pub trait UnInitialized {
+    /// Is uninitialized
+    fn is_uninitialized(&self) -> bool;
+}
+
 /// Assert signer.
 pub fn assert_signer(account: &AccountInfo) -> ProgramResult {
     if account.is_signer {
@@ -14,11 +19,11 @@ pub fn assert_signer(account: &AccountInfo) -> ProgramResult {
 }
 
 /// Assert unitilialized
-pub fn assert_uninitialized<T: IsInitialized>(account: &T) -> ProgramResult {
-    if account.is_initialized() {
-        Err(ProgramError::AccountAlreadyInitialized)
-    } else {
+pub fn assert_uninitialized<T: UnInitialized>(account: &T) -> ProgramResult {
+    if account.is_uninitialized() {
         Ok(())
+    } else {
+        Err(ProgramError::AccountAlreadyInitialized)
     }
 }
 

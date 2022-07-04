@@ -40,7 +40,6 @@ impl RegistryPoolConfig {
     }
 }
 
-
 impl Sealed for RegistryPoolConfig {}
 impl Pack for RegistryPoolConfig {
     // 1 + 32 + 32 + 8 + 8 = 81
@@ -63,7 +62,8 @@ impl Pack for RegistryPoolConfig {
 
 impl IsInitialized for RegistryPoolConfig {
     fn is_initialized(&self) -> bool {
-        self.account_type == AccountType::RegistryPoolConfig
+        self.account_type != AccountType::Uninitialized
+            && self.account_type == AccountType::RegistryPoolConfig
     }
 }
 

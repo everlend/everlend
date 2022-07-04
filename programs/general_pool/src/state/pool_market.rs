@@ -1,7 +1,7 @@
 //! Pool market state definitions
 use super::*;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-use everlend_utils::AccountVersion;
+use everlend_utils::{AccountVersion, UnInitialized};
 use solana_program::{
     msg,
     program_error::ProgramError,
@@ -66,5 +66,11 @@ impl IsInitialized for PoolMarket {
     fn is_initialized(&self) -> bool {
         self.account_type != AccountType::Uninitialized
             && self.account_type == AccountType::PoolMarket
+    }
+}
+
+impl UnInitialized for PoolMarket {
+    fn is_uninitialized(&self) -> bool {
+        self.account_type == AccountType::default()
     }
 }
