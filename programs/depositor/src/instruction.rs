@@ -505,7 +505,7 @@ pub struct InitMiningAccountsPubkeys {
 /// Inint ming accounts
 pub fn init_mining_accounts(
     program_id: &Pubkey,
-    pubkeys: InitMiningAccountsPubkeys,
+    pubkeys: &InitMiningAccountsPubkeys,
     mining_type: MiningType,
 ) -> Instruction {
     let (internal_mining, _) = crate::find_internal_mining_program_address(

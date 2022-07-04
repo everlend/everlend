@@ -203,9 +203,6 @@ pub struct InitializedAccounts {
 
     #[serde_as(as = "DisplayFromStr")]
     pub depositor: Pubkey,
-
-    #[serde_as(as = "DisplayFromStr")]
-    pub larix_mining: Pubkey,
 }
 
 #[serde_as]
