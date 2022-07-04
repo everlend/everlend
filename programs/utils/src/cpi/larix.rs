@@ -120,7 +120,7 @@ pub fn init_mining<'a>(
     let ix = Instruction {
         program_id: *program_id,
         accounts: vec![
-            AccountMeta::new_readonly(*mining_info.key, false),
+            AccountMeta::new(*mining_info.key, false),
             AccountMeta::new_readonly(*authority.key, true),
             AccountMeta::new_readonly(*lending_market.key, false),
         ],
