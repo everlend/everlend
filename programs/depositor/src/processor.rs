@@ -879,7 +879,7 @@ impl Processor {
                 cpi::quarry::create_miner(
                     &staking_program_id_info.key,
                     depositor_authority_info.clone(),
-                    quarry_info.clone(),
+                    miner_info.clone(),
                     quarry_info.clone(),
                     rewarder_info.clone(),
                     manager_info.clone(),
