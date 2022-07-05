@@ -1,7 +1,8 @@
+use crate::accounts_config::LarixMiningAccount;
 use crate::utils::*;
 use anyhow::Result;
 use everlend_depositor::{instruction::InitMiningAccountsPubkeys, state::MiningType};
-use everlend_utils::integrations::StakingMoneyMarket;
+use everlend_utils::integrations::{MoneyMarket, StakingMoneyMarket};
 use solana_client::client_error::ClientError;
 use solana_program::pubkey::Pubkey;
 use solana_program::{program_pack::Pack, system_instruction};
@@ -114,45 +115,19 @@ pub fn save_internal_mining_account(
     Ok(())
 }
 
-fn save_mining_account_keypair(
-    config: &Config,
-    token: &String,
-    mining_account: &Keypair,
-    money_market: StakingMoneyMarket,
-) -> Result<()> {
-    let mm_name = match money_market {
-        StakingMoneyMarket::Larix => "larix",
-        StakingMoneyMarket::PortFinance => "port",
-        StakingMoneyMarket::Quarry => "quarry",
-        StakingMoneyMarket::Solend => "solend",
-        StakingMoneyMarket::None => "none",
-    };
-    let mut initialized_accounts = config.get_initialized_accounts();
-    write_keypair_file(
-        &mining_account,
-        &format!(
-            ".keypairs/{}_{}_mining_{}.json",
-            token,
-            mm_name,
-            mining_account.pubkey()
-        ),
-    )
-    .unwrap();
-    // Save into account file
-    initialized_accounts
-        .token_accounts
-        .get_mut(token)
-        .unwrap()
-        .mining_accounts[money_market as usize]
-        .staking_account = mining_account.pubkey();
-    initialized_accounts
-        .save(&format!("accounts.{}.yaml", config.network))
-        .unwrap();
-    Ok(())
-}
-
 pub trait LiquidityMiner {
-    fn create_mining_account(&self, config: &Config, token: &String) -> Result<()>;
+    fn create_mining_account(
+        &self,
+        config: &Config,
+        token: &String,
+        mining_account: &Keypair,
+    ) -> Result<()>;
+    fn save_mining_account_keypair(
+        &self,
+        config: &Config,
+        token: &String,
+        mining_account: &Keypair,
+    ) -> Result<()>;
     fn get_mining_pubkey(&self, config: &Config, token: &String) -> Pubkey;
     fn get_pubkeys(&self, config: &Config, token: &String) -> Option<InitMiningAccountsPubkeys>;
     fn get_mining_type(
@@ -166,9 +141,13 @@ pub trait LiquidityMiner {
 pub struct LarixLiquidityMiner {}
 
 impl LiquidityMiner for LarixLiquidityMiner {
-    fn create_mining_account(&self, config: &Config, token: &String) -> Result<()> {
+    fn create_mining_account(
+        &self,
+        config: &Config,
+        token: &String,
+        mining_account: &Keypair,
+    ) -> Result<()> {
         let default_accounts = config.get_default_accounts();
-        let mining_account = Keypair::new();
         println!("Create and Init larix mining accont");
         println!("Mining account: {}", mining_account.pubkey());
         execute_mining_account_creation(
@@ -177,17 +156,51 @@ impl LiquidityMiner for LarixLiquidityMiner {
             &mining_account,
             LARIX_MINING_SIZE,
         )?;
-        save_mining_account_keypair(config, token, &mining_account, StakingMoneyMarket::Larix)?;
+        self.save_mining_account_keypair(config, token, &mining_account)?;
         Ok(())
     }
 
-    fn get_mining_pubkey(&self, config: &Config, token: &String) -> Pubkey {
-        config
-            .get_initialized_accounts()
+    fn save_mining_account_keypair(
+        &self,
+        config: &Config,
+        token: &String,
+        mining_account: &Keypair,
+    ) -> Result<()> {
+        let mut initialized_accounts = config.get_initialized_accounts();
+        write_keypair_file(
+            &mining_account,
+            &format!(
+                ".keypairs/{}_larix_mining_{}.json",
+                token,
+                mining_account.pubkey()
+            ),
+        )
+        .unwrap();
+        // Larix can store up to 10 tokens on 1 account
+        initialized_accounts.larix_mining.push(LarixMiningAccount {
+            staking_account: mining_account.pubkey(),
+            count: 0,
+        });
+        // Save into account file
+        initialized_accounts
             .token_accounts
             .get_mut(token)
             .unwrap()
-            .mining_accounts[StakingMoneyMarket::Larix as usize]
+            .mining_accounts[MoneyMarket::Larix as usize]
+            .staking_account = mining_account.pubkey();
+        initialized_accounts
+            .save(&format!("accounts.{}.yaml", config.network))
+            .unwrap();
+        Ok(())
+    }
+
+    fn get_mining_pubkey(&self, config: &Config, _token: &String) -> Pubkey {
+        config
+            .get_initialized_accounts()
+            .larix_mining
+            .into_iter()
+            .last()
+            .unwrap()
             .staking_account
     }
 
@@ -209,8 +222,8 @@ impl LiquidityMiner for LarixLiquidityMiner {
 
     fn get_mining_type(
         &self,
-        config: &Config,
-        token: &String,
+        _config: &Config,
+        _token: &String,
         mining_account: Pubkey,
     ) -> MiningType {
         MiningType::Larix {
@@ -222,9 +235,13 @@ impl LiquidityMiner for LarixLiquidityMiner {
 pub struct PortLiquidityMiner {}
 
 impl LiquidityMiner for PortLiquidityMiner {
-    fn create_mining_account(&self, config: &Config, token: &String) -> Result<()> {
+    fn create_mining_account(
+        &self,
+        config: &Config,
+        token: &String,
+        mining_account: &Keypair,
+    ) -> Result<()> {
         let default_accounts = config.get_default_accounts();
-        let mining_account = Keypair::new();
         println!("Create and Init port staking account");
         execute_mining_account_creation(
             config,
@@ -232,17 +249,41 @@ impl LiquidityMiner for PortLiquidityMiner {
             &mining_account,
             port_finance_staking::state::stake_account::StakeAccount::LEN as u64,
         )?;
-        save_mining_account_keypair(
-            config,
-            token,
+        self.save_mining_account_keypair(config, token, &mining_account)?;
+        Ok(())
+    }
+
+    fn save_mining_account_keypair(
+        &self,
+        config: &Config,
+        token: &String,
+        mining_account: &Keypair,
+    ) -> Result<()> {
+        let mut initialized_accounts = config.get_initialized_accounts();
+        write_keypair_file(
             &mining_account,
-            StakingMoneyMarket::PortFinance,
-        )?;
+            &format!(
+                ".keypairs/{}_port_mining_{}.json",
+                token,
+                mining_account.pubkey()
+            ),
+        )
+        .unwrap();
+        // Save into account file
+        initialized_accounts
+            .token_accounts
+            .get_mut(token)
+            .unwrap()
+            .mining_accounts[MoneyMarket::PortFinance as usize]
+            .staking_account = mining_account.pubkey();
+        initialized_accounts
+            .save(&format!("accounts.{}.yaml", config.network))
+            .unwrap();
         Ok(())
     }
 
     fn get_mining_pubkey(&self, config: &Config, token: &String) -> Pubkey {
-        let initialized_accounts = config.get_initialized_accounts();
+        let mut initialized_accounts = config.get_initialized_accounts();
         initialized_accounts
             .token_accounts
             .get_mut(token)
@@ -287,20 +328,33 @@ impl LiquidityMiner for PortLiquidityMiner {
 pub struct NotSupportedMiner {}
 
 impl LiquidityMiner for NotSupportedMiner {
-    fn create_mining_account(&self, _config: &Config, _token: &String) -> Result<()> {
+    fn create_mining_account(
+        &self,
+        _config: &Config,
+        _token: &String,
+        _keypair: &Keypair,
+    ) -> Result<()> {
         Err(anyhow::anyhow!("Not implemented"))
     }
-    fn get_mining_pubkey(&self, config: &Config, token: &String) -> Pubkey {
+    fn save_mining_account_keypair(
+        &self,
+        _config: &Config,
+        _token: &String,
+        _mining_account: &Keypair,
+    ) -> Result<()> {
+        Err(anyhow::anyhow!("Not implemented"))
+    }
+    fn get_mining_pubkey(&self, _config: &Config, _token: &String) -> Pubkey {
         Pubkey::default()
     }
-    fn get_pubkeys(&self, config: &Config, token: &String) -> Option<InitMiningAccountsPubkeys> {
+    fn get_pubkeys(&self, _config: &Config, _token: &String) -> Option<InitMiningAccountsPubkeys> {
         None
     }
     fn get_mining_type(
         &self,
-        config: &Config,
-        token: &String,
-        mining_account: Pubkey,
+        _config: &Config,
+        _token: &String,
+        _mining_account: Pubkey,
     ) -> MiningType {
         MiningType::None
     }

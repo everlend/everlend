@@ -176,6 +176,14 @@ pub struct PortAccounts {
 }
 
 #[serde_as]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default)]
+pub struct LarixMiningAccount {
+    #[serde_as(as = "DisplayFromStr")]
+    pub staking_account: Pubkey,
+    pub count: u64,
+}
+
+#[serde_as]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Default)]
 pub struct InitializedAccounts {
     #[serde_as(as = "DisplayFromStr")]
@@ -203,6 +211,8 @@ pub struct InitializedAccounts {
 
     #[serde_as(as = "DisplayFromStr")]
     pub depositor: Pubkey,
+
+    pub larix_mining: Vec<LarixMiningAccount>,
 }
 
 #[serde_as]

@@ -204,11 +204,11 @@ pub fn command_init_mining(
     token: &String,
 ) -> anyhow::Result<()> {
     let liquidity_miner = get_liquidty_miner(money_market);
-    let mining_pubkey = liquidity_miner.get_mining_pubkey(config, token);
+    let mut mining_pubkey = liquidity_miner.get_mining_pubkey(config, token);
     if mining_pubkey.eq(&Pubkey::default()) {
         let new_mining_account = Keypair::new();
         mining_pubkey = new_mining_account.pubkey();
-        liquidity_miner.create_mining_account(config, token)?;
+        liquidity_miner.create_mining_account(config, token, &new_mining_account)?;
     };
     let pubkeys = liquidity_miner.get_pubkeys(config, token);
     let mining_type = liquidity_miner.get_mining_type(config, token, mining_pubkey);

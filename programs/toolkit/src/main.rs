@@ -278,7 +278,7 @@ async fn command_create(
         token_accounts,
         liquidity_oracle: liquidity_oracle_pubkey,
         depositor: depositor_pubkey,
-        larix_mining: Pubkey::default(),
+        larix_mining: vec![],
     };
 
     initialized_accounts.save(accounts_path).unwrap();
@@ -1132,7 +1132,7 @@ async fn main() -> anyhow::Result<()> {
         ("init-mining", Some(arg_matches)) => {
             let money_market = value_of::<usize>(arg_matches, "money-market").unwrap();
             let token = value_of::<String>(arg_matches, "token").unwrap();
-            command_init_mining(&config, StakingMoneyMarket::from(money_market), token)
+            command_init_mining(&config, StakingMoneyMarket::from(money_market), &token)
         }
         ("save-larix-accounts", Some(_)) => {
             command_save_larix_accounts("../tests/tests/fixtures/larix/reserve_sol.bin").await
