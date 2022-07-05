@@ -21,13 +21,6 @@ token_accounts:
     general_pool_mint: CRwH1DQhExtdojKgtGpTXBL1WWALi9UY8NfqgyjrUqqn
     income_pool: DDyqMDyZj7B6MB4rvAV5hGCiSrcsVgpQojtA3z12hgic
     income_pool_token_account: 4qzrz8K31n5CdpXu5S2MJJ6xZ85weR4WGtgoJPmxqCiE
-    mining_accounts:
-      - staking_account: "11111111111111111111111111111111"
-        internal_mining_account: "11111111111111111111111111111111"
-      - staking_account: "11111111111111111111111111111111"
-        internal_mining_account: "11111111111111111111111111111111"
-      - staking_account: "11111111111111111111111111111111"
-        internal_mining_account: "11111111111111111111111111111111"
     mm_pools:
       - pool: Cu83bvH9okz6EWiLmJ95sgtZpbannBp4uNVfdhsR4wXW
         pool_token_account: 3wF5PYmxjPfxBu46HTzEdKAiTdwZU4gSBQ7L1en3L3Nc
@@ -52,6 +45,13 @@ token_accounts:
         pool_token_account: 7HWs9Yeo7nP52MbmH1WQqdf9tqjppymQd4NVZ7yS6iLx
         token_mint: FzwZWRMc3GCqjSrcpVX3ueJc6UpcV6iWWb7ZMsTXE3Gf
     liquidity_transit: G496hPPBp8krL4YgKrJ9Edb4ni8VYgc8w9ZWLWPKkLJa
+    mining_accounts:
+      - staking_account: "11111111111111111111111111111111"
+        internal_mining_account: "11111111111111111111111111111111"
+      - staking_account: "11111111111111111111111111111111"
+        internal_mining_account: "11111111111111111111111111111111"
+      - staking_account: "11111111111111111111111111111111"
+        internal_mining_account: "11111111111111111111111111111111"
   USDC:
     mint: G6YKv19AeGZ6pUYUwY9D7n4Ry9ESNFa376YqwEkUkhbi
     liquidity_token_account: etSmYih4RqQ5z1QYUQDnXQWv2U3PbVY3Gp3K9JPNYZ9
@@ -61,13 +61,6 @@ token_accounts:
     general_pool_mint: 5gAhHuS82QgoYrkREuWUgVVqUYLdc8SsuiYtHESVvHcZ
     income_pool: Csqk4HQRiaBHzXrJiGp7yXju22pRrYoDYrEVyq3vzdpc
     income_pool_token_account: B4YaCk15a2ZNmTxKSMkKRiQju5yo82duMyTrWgXJe8q2
-    mining_accounts:
-      - staking_account: "11111111111111111111111111111111"
-        internal_mining_account: "11111111111111111111111111111111"
-      - staking_account: "11111111111111111111111111111111"
-        internal_mining_account: "11111111111111111111111111111111"
-      - staking_account: "11111111111111111111111111111111"
-        internal_mining_account: "11111111111111111111111111111111"
     mm_pools:
       - pool: 3pCgmw5KAv6C9Au1ZLFEyjTvk5S3G1idZwZh8VmLgV6H
         pool_token_account: Gwsoyv8vFCeyuu5KqcaLPSoj43cD8zBUp5KyxFBnVPSZ
@@ -92,6 +85,13 @@ token_accounts:
         pool_token_account: "11111111111111111111111111111111"
         token_mint: "11111111111111111111111111111111"
     liquidity_transit: dm7PZzmb2H7nNGGgkw2sNiKnAhQT9iz514k41zKdtA5
+    mining_accounts:
+      - staking_account: "11111111111111111111111111111111"
+        internal_mining_account: "11111111111111111111111111111111"
+      - staking_account: "11111111111111111111111111111111"
+        internal_mining_account: "11111111111111111111111111111111"
+      - staking_account: "11111111111111111111111111111111"
+        internal_mining_account: "11111111111111111111111111111111"
   USDT:
     mint: 9NGDi2tZtNmCCp8SVLKNuGjuWAVwNF3Vap5tT8km5er9
     liquidity_token_account: 8LrhRRJiLBoc4ToYu7ddieZ7rM7E5Y9k8Bmm3ExgHWid
@@ -101,13 +101,6 @@ token_accounts:
     general_pool_mint: 4q6H6HxfgvuKaErvkeKpfhSEiMBUyBEPyRjHdUiTxhmy
     income_pool: ACuyrFveJSD1cHP6yc9D2ihBeyvNYjvTSBBtco2V72gz
     income_pool_token_account: FEZzSv1ybNm2wxD95DtKs9egdAuLCSo1DjSV44zg6sjb
-    mining_accounts:
-      - staking_account: "11111111111111111111111111111111"
-        internal_mining_account: "11111111111111111111111111111111"
-      - staking_account: "11111111111111111111111111111111"
-        internal_mining_account: "11111111111111111111111111111111"
-      - staking_account: "11111111111111111111111111111111"
-        internal_mining_account: "11111111111111111111111111111111"
     mm_pools:
       - pool: 7UsHrzwdXymG7cJDwGKjJhbPFHkdyH9u1FvDiiGZGFsP
         pool_token_account: E7iTNV89yG8PSdZpXaUTrkgHKpjkKoMW8SsBZe2WCJvC
@@ -132,6 +125,13 @@ token_accounts:
         pool_token_account: "11111111111111111111111111111111"
         token_mint: "11111111111111111111111111111111"
     liquidity_transit: 3Vf8uLkVamKq7ku3jU7DLr1nw398whiQno9sx5Zhpg1Q
+    mining_accounts:
+      - staking_account: "11111111111111111111111111111111"
+        internal_mining_account: "11111111111111111111111111111111"
+      - staking_account: "11111111111111111111111111111111"
+        internal_mining_account: "11111111111111111111111111111111"
+      - staking_account: "11111111111111111111111111111111"
+        internal_mining_account: "11111111111111111111111111111111"
 liquidity_oracle: A8KSeWkXAXP8Vskxq5xAREznwyFQkjHqWivNhcfj9LF1
 depositor: 8VTYx1mJ8brKFKReCy1gbNuaisgFK21FrYPjUEaJz3Q6
 larix_mining: []
