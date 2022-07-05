@@ -336,9 +336,6 @@ pub async fn command_run_test(
             )?;
             let (_, rebalancing) = refresh_income()?;
             complete_rebalancing(Some(rebalancing))?;
-
-            // delay(WITHDRAW_DELAY / 2);
-            // general_pool_withdraw()?;
         }
         Some("larix") => {
             general_pool_deposit(1000)?;

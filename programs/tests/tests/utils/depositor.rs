@@ -8,6 +8,7 @@ use everlend_depositor::{
     find_rebalancing_program_address,
     state::{Depositor, Rebalancing},
 };
+use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_utils::integrations::{self, MoneyMarketPubkeys};
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::ProgramTestContext;
@@ -121,6 +122,32 @@ impl TestDepositor {
             )],
             Some(&context.payer.pubkey()),
             &[&context.payer],
+            context.last_blockhash,
+        );
+
+        context.banks_client.process_transaction(tx).await
+    }
+
+    pub async fn reset_rebalancing(
+        &self,
+        context: &mut ProgramTestContext,
+        registry: &TestRegistry,
+        liquidity_mint: &Pubkey,
+        distributed_liquidity: u64,
+        distribution_array: DistributionArray,
+    ) -> BanksClientResult<()> {
+        let tx = Transaction::new_signed_with_payer(
+            &[everlend_depositor::instruction::reset_rebalancing(
+                &everlend_depositor::id(),
+                &registry.keypair.pubkey(),
+                &self.depositor.pubkey(),
+                liquidity_mint,
+                &registry.manager.pubkey(),
+                distributed_liquidity,
+                distribution_array,
+            )],
+            Some(&context.payer.pubkey()),
+            &[&context.payer, &registry.manager],
             context.last_blockhash,
         );
 

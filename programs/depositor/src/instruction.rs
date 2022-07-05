@@ -10,6 +10,7 @@ use solana_program::{
 
 use everlend_general_pool::find_withdrawal_requests_program_address;
 use everlend_liquidity_oracle::find_liquidity_oracle_token_distribution_program_address;
+use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_utils::find_program_address;
 
 use crate::{find_rebalancing_program_address, find_transit_program_address};
@@ -134,6 +135,22 @@ pub enum DepositorInstruction {
     MigrateDepositor {
         /// Rebalancing executor account
         rebalance_executor: Pubkey,
+    },
+
+    /// Set current rebalancing
+    ///
+    /// Accounts:
+    /// [R] Registry
+    /// [R] Depositor
+    /// [W] Rebalancing account
+    /// [R] Token mint
+    /// [WS] Manager
+    /// [R] System program
+    SetRebalancing {
+        ///Manual setup of prev distributed liquidity
+        distributed_liquidity: u64,
+        ///Manual setup of prev distribution array
+        distribution_array: DistributionArray,
     },
 }
 
@@ -264,6 +281,38 @@ pub fn start_rebalancing(
     Instruction::new_with_borsh(
         *program_id,
         &DepositorInstruction::StartRebalancing { refresh_income },
+        accounts,
+    )
+}
+
+/// Creates 'ResetRebalancing' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn reset_rebalancing(
+    program_id: &Pubkey,
+    registry: &Pubkey,
+    depositor: &Pubkey,
+    liquidity_mint: &Pubkey,
+    manager: &Pubkey,
+    distributed_liquidity: u64,
+    distribution_array: DistributionArray,
+) -> Instruction {
+    let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*registry, false),
+        AccountMeta::new_readonly(*depositor, false),
+        AccountMeta::new(rebalancing, false),
+        AccountMeta::new_readonly(*liquidity_mint, false),
+        AccountMeta::new_readonly(*manager, true),
+        AccountMeta::new_readonly(system_program::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &DepositorInstruction::SetRebalancing {
+            distributed_liquidity,
+            distribution_array,
+        },
         accounts,
     )
 }

@@ -4,6 +4,7 @@ mod depositor {
     mod create_transit;
     mod deposit;
     mod init;
+    mod reset_rebalancing;
     mod start_rebalancing;
     mod withdraw;
 }
@@ -22,8 +23,8 @@ mod ulp {
 
 mod collateral_pool {
     mod borrow;
-    mod create_pool_borrow_authority;
     mod create_pool;
+    mod create_pool_borrow_authority;
     mod delete_pool_borrow_authority;
     mod deposit;
     mod init_pool_market;
@@ -62,6 +63,6 @@ mod income_pools {
 
 mod registry {
     mod init;
-    mod set_registry_config;
     mod set_pool_config;
+    mod set_registry_config;
 }

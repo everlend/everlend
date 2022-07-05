@@ -1,3 +1,9 @@
+use everlend_depositor::state::DeprecatedDepositor;
+use everlend_depositor::{
+    find_rebalancing_program_address, find_transit_program_address,
+    state::{Depositor, Rebalancing},
+};
+use everlend_liquidity_oracle::state::DistributionArray;
 use solana_client::client_error::ClientError;
 use solana_program::{
     instruction::AccountMeta, program_pack::Pack, pubkey::Pubkey, system_instruction,
@@ -6,12 +12,6 @@ use solana_sdk::{
     signature::{write_keypair_file, Keypair},
     signer::Signer,
     transaction::Transaction,
-};
-
-use everlend_depositor::state::DeprecatedDepositor;
-use everlend_depositor::{
-    find_rebalancing_program_address, find_transit_program_address,
-    state::{Depositor, Rebalancing},
 };
 
 use crate::utils::*;
@@ -122,6 +122,38 @@ pub fn start_rebalancing(
             liquidity_oracle_pubkey,
             &config.fee_payer.pubkey(),
             refresh_income,
+        )],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+
+    let (rebalancing_pubkey, _) =
+        find_rebalancing_program_address(&everlend_depositor::id(), depositor_pubkey, token_mint);
+
+    let rebalancing_account = config.rpc_client.get_account(&rebalancing_pubkey)?;
+    let rebalancing = Rebalancing::unpack(&rebalancing_account.data).unwrap();
+
+    Ok((rebalancing_pubkey, rebalancing))
+}
+
+pub fn reset_rebalancing(
+    config: &Config,
+    registry_pubkey: &Pubkey,
+    depositor_pubkey: &Pubkey,
+    token_mint: &Pubkey,
+    distributed_liquidity: u64,
+    distribution_array: DistributionArray,
+) -> Result<(Pubkey, Rebalancing), ClientError> {
+    let tx = Transaction::new_with_payer(
+        &[everlend_depositor::instruction::reset_rebalancing(
+            &everlend_depositor::id(),
+            registry_pubkey,
+            depositor_pubkey,
+            token_mint,
+            &config.fee_payer.pubkey(),
+            distributed_liquidity,
+            distribution_array,
         )],
         Some(&config.fee_payer.pubkey()),
     );
