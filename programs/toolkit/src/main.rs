@@ -64,6 +64,7 @@ async fn command_create(
     config: &Config,
     accounts_path: &str,
     required_mints: Vec<&str>,
+    rebalance_executor: Pubkey,
 ) -> anyhow::Result<()> {
     let payer_pubkey = config.fee_payer.pubkey();
     println!("Fee payer: {}", payer_pubkey);
@@ -129,7 +130,12 @@ async fn command_create(
     )?;
 
     println!("Depositor");
-    let depositor_pubkey = depositor::init(config, &registry_pubkey, None)?;
+    let depositor_pubkey = depositor::init(
+        config,
+        &registry_pubkey,
+        None,
+        rebalance_executor,
+    )?;
 
     println!("Prepare borrow authority");
     let (depositor_authority, _) =
@@ -277,6 +283,7 @@ async fn command_create(
         token_accounts,
         liquidity_oracle: liquidity_oracle_pubkey,
         depositor: depositor_pubkey,
+        rebalance_executor,
     };
 
     initialized_accounts.save(accounts_path).unwrap();
@@ -681,7 +688,14 @@ async fn main() -> anyhow::Result<()> {
                         .value_name("KEYPAIR")
                         .takes_value(true)
                         .help("Keypair [default: new keypair]"),
-                ),
+                ).arg(
+                Arg::with_name("rebalance-executor")
+                    .long("rebalance-executor")
+                    .validator(is_pubkey)
+                    .value_name("PUBKEY")
+                    .takes_value(true)
+                    .help("Rebalance executor pubkey"),
+            ),
         )
         .subcommand(
             SubCommand::with_name("create-mm-pool")
@@ -826,7 +840,14 @@ async fn main() -> anyhow::Result<()> {
                         .value_name("PATH")
                         .takes_value(true)
                         .help("Accounts file"),
-                ),
+                ).arg(
+                Arg::with_name("rebalance-executor")
+                    .long("rebalance-executor")
+                    .validator(is_pubkey)
+                    .value_name("PUBKEY")
+                    .takes_value(true)
+                    .help("Rebalance executor pubkey"),
+            ),
         )
         .subcommand(
             SubCommand::with_name("info")
@@ -1159,7 +1180,8 @@ async fn main() -> anyhow::Result<()> {
         }
         ("create-depositor", Some(arg_matches)) => {
             let keypair = keypair_of(arg_matches, "keypair");
-            command_create_depositor(&config, keypair).await
+            let executor_pubkey = pubkey_of(arg_matches, "rebalance-executor").unwrap();
+            command_create_depositor(&config, keypair, executor_pubkey).await
         }
         ("create-mm-pool", Some(arg_matches)) => {
             let money_market = value_of::<usize>(arg_matches, "money-market").unwrap();
@@ -1203,7 +1225,8 @@ async fn main() -> anyhow::Result<()> {
         ("create", Some(arg_matches)) => {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
             let mints: Vec<_> = arg_matches.values_of("mints").unwrap().collect();
-            command_create(&config, accounts_path, mints).await
+            let rebalance_executor_pubkey = pubkey_of(arg_matches, "rebalance-executor").unwrap();
+            command_create(&config, accounts_path, mints, rebalance_executor_pubkey).await
         }
         ("info", Some(arg_matches)) => {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");

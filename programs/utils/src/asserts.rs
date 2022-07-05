@@ -13,6 +13,15 @@ pub fn assert_signer(account: &AccountInfo) -> ProgramResult {
     Err(ProgramError::MissingRequiredSignature)
 }
 
+/// Assert initilialized
+pub fn assert_initialized<T: IsInitialized>(account: &T) -> ProgramResult {
+    if account.is_initialized() {
+        Ok(())
+    } else {
+        Err(ProgramError::UninitializedAccount)
+    }
+}
+
 /// Assert unitilialized
 pub fn assert_uninitialized<T: IsInitialized>(account: &T) -> ProgramResult {
     if account.is_initialized() {

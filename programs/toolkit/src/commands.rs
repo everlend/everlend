@@ -232,6 +232,7 @@ pub async fn command_create_liquidity_oracle(
 pub async fn command_create_depositor(
     config: &Config,
     keypair: Option<Keypair>,
+    rebalance_executor: Pubkey,
 ) -> anyhow::Result<()> {
     let mut initialiazed_accounts = config.get_initialized_accounts();
 
@@ -239,12 +240,14 @@ pub async fn command_create_depositor(
         config,
         &initialiazed_accounts.registry,
         keypair,
+        rebalance_executor,
         // &initialiazed_accounts.general_pool_market,
         // &initialiazed_accounts.income_pool_market,
         // &initialiazed_accounts.liquidity_oracle,
     )?;
 
     initialiazed_accounts.depositor = depositor_pubkey;
+    initialiazed_accounts.rebalance_executor = rebalance_executor;
 
     initialiazed_accounts
         .save(&format!("accounts.{}.yaml", config.network))
@@ -630,6 +633,7 @@ pub async fn command_migrate_depositor(config: &Config) -> anyhow::Result<()> {
         config,
         &initialized_accounts.depositor,
         &initialized_accounts.registry,
+        &initialized_accounts.rebalance_executor,
     )?;
     Ok(())
 }

@@ -45,6 +45,7 @@ pub async fn command_run_test(
         token_accounts,
         liquidity_oracle,
         depositor,
+        rebalance_executor: _,
     } = initialized_accounts;
 
     let (registry_config_pubkey, _) =
