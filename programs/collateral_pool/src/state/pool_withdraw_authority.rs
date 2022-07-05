@@ -1,6 +1,7 @@
 //! PoolBorrowAuthority state definitions
 use super::*;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+use everlend_utils::Uninitialized;
 use solana_program::{
     msg,
     program_error::ProgramError,
@@ -50,7 +51,12 @@ impl Pack for PoolWithdrawAuthority {
 
 impl IsInitialized for PoolWithdrawAuthority {
     fn is_initialized(&self) -> bool {
-            self.account_type == AccountType::PoolWithdrawAuthority
+        self.account_type == AccountType::PoolWithdrawAuthority
     }
 }
 
+impl Uninitialized for PoolWithdrawAuthority {
+    fn is_uninitialized(&self) -> bool {
+        self.account_type == AccountType::default()
+    }
+}

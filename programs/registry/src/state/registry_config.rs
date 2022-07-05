@@ -187,8 +187,7 @@ impl Pack for RegistryConfig {
 
 impl IsInitialized for RegistryConfig {
     fn is_initialized(&self) -> bool {
-        self.account_type != AccountType::Uninitialized
-            && self.account_type == AccountType::RegistryConfig
+        self.account_type == AccountType::RegistryConfig
             && self.account_version == Self::ACTUAL_VERSION
     }
 }
@@ -242,8 +241,7 @@ mod deprecated {
 
     impl IsInitialized for DeprecatedRegistryConfig {
         fn is_initialized(&self) -> bool {
-            self.account_type != AccountType::Uninitialized
-                && self.account_type == AccountType::RegistryConfig
+            self.account_type == AccountType::RegistryConfig
         }
     }
 }
