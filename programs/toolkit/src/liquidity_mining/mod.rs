@@ -179,8 +179,8 @@ impl LiquidityMiner for NotSupportedMiner {
 
 pub fn get_liquidty_miner(money_market: StakingMoneyMarket) -> Box<dyn LiquidityMiner> {
     match money_market {
-        StakingMoneyMarket::Larix => Box::new(LarixLiquidityMiner {}),
         StakingMoneyMarket::PortFinance => Box::new(PortLiquidityMiner {}),
+        StakingMoneyMarket::Larix => Box::new(LarixLiquidityMiner {}),
         _ => Box::new(NotSupportedMiner {}),
     }
 }

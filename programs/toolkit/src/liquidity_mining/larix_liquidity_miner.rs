@@ -66,12 +66,13 @@ impl LiquidityMiner for LarixLiquidityMiner {
     }
 
     fn get_mining_pubkey(&self, config: &Config, _token: &String) -> Pubkey {
-        config
-            .get_initialized_accounts()
-            .larix_mining
-            .into_iter()
+        let larix_mining = config.get_initialized_accounts().larix_mining;
+        larix_mining
             .last()
-            .unwrap()
+            .unwrap_or(&LarixMiningAccount {
+                staking_account: Pubkey::default(),
+                count: 0,
+            })
             .staking_account
     }
 
