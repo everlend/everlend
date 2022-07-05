@@ -913,34 +913,3 @@ async fn fail_with_invalid_money_market_accounts() {
         TransactionError::InstructionError(0, InstructionError::NotEnoughAccountKeys)
     );
 }
-
-#[tokio::test]
-async fn migration() {
-    let (mut context, _, _, registry) = presetup().await;
-
-    let test_depositor = TestDepositor::new();
-    test_depositor.init(&mut context, &registry).await.unwrap();
-
-    let acc = get_account(&mut context, &test_depositor.depositor.pubkey()).await;
-
-    assert_eq!(acc.data.as_slice().len(), 97);
-
-    let tx = Transaction::new_signed_with_payer(
-        &[everlend_depositor::instruction::migrate_depositor(
-            &everlend_depositor::id(),
-            &test_depositor.depositor.pubkey(),
-            &registry.keypair.pubkey(),
-            &context.payer.pubkey(),
-            &context.payer.pubkey(),
-        )],
-        Some(&context.payer.pubkey()),
-        &[&context.payer],
-        context.last_blockhash,
-    );
-
-    context.banks_client.process_transaction(tx).await;
-
-    let acc = get_account(&mut context, &test_depositor.depositor.pubkey()).await;
-
-    assert_eq!(acc.data.as_slice().len(), 66);
-}

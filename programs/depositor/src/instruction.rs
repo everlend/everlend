@@ -9,8 +9,9 @@ use solana_program::{
 };
 
 use everlend_general_pool::find_withdrawal_requests_program_address;
-use everlend_liquidity_oracle::find_liquidity_oracle_token_distribution_program_address;
-use everlend_liquidity_oracle::state::DistributionArray;
+use everlend_liquidity_oracle::{
+    find_liquidity_oracle_token_distribution_program_address, state::DistributionArray,
+};
 use everlend_utils::find_program_address;
 
 use crate::{find_rebalancing_program_address, find_transit_program_address};

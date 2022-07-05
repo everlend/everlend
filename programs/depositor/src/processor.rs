@@ -5,7 +5,6 @@ use std::cmp::Ordering;
 use borsh::BorshDeserialize;
 use everlend_collateral_pool::find_pool_withdraw_authority_program_address;
 use everlend_income_pools::utils::IncomePoolAccounts;
-use everlend_registry::state::Registry;
 use solana_program::program_error::ProgramError;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -21,9 +20,9 @@ use spl_token::state::Account;
 
 use everlend_collateral_pool::utils::CollateralPoolAccounts;
 use everlend_general_pool::{find_withdrawal_requests_program_address, state::WithdrawalRequests};
-use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_liquidity_oracle::{
-    find_liquidity_oracle_token_distribution_program_address, state::TokenDistribution,
+    find_liquidity_oracle_token_distribution_program_address,
+    state::{DistributionArray, TokenDistribution},
 };
 use everlend_registry::{
     find_config_program_address,
