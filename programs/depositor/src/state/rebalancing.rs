@@ -301,8 +301,7 @@ impl Pack for Rebalancing {
 
 impl IsInitialized for Rebalancing {
     fn is_initialized(&self) -> bool {
-        self.account_type != AccountType::Uninitialized
-            && self.account_type == AccountType::Rebalancing
+        self.account_type == AccountType::Rebalancing
     }
 }
 

@@ -4,7 +4,7 @@ use solana_program::{
     program_pack::IsInitialized, pubkey::Pubkey, rent::Rent,
 };
 
-pub trait UnInitialized {
+pub trait Uninitialized {
     /// Is uninitialized
     fn is_uninitialized(&self) -> bool;
 }
@@ -19,7 +19,7 @@ pub fn assert_signer(account: &AccountInfo) -> ProgramResult {
 }
 
 /// Assert unitilialized
-pub fn assert_uninitialized<T: UnInitialized>(account: &T) -> ProgramResult {
+pub fn assert_uninitialized<T: Uninitialized>(account: &T) -> ProgramResult {
     if account.is_uninitialized() {
         Ok(())
     } else {

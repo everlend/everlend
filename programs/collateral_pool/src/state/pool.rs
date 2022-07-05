@@ -2,7 +2,7 @@
 
 use super::*;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-use everlend_utils::{EverlendError, UnInitialized};
+use everlend_utils::{EverlendError, Uninitialized};
 use solana_program::{
     entrypoint::ProgramResult,
     msg,
@@ -95,7 +95,7 @@ impl IsInitialized for Pool {
     }
 }
 
-impl UnInitialized for Pool {
+impl Uninitialized for Pool {
     fn is_uninitialized(&self) -> bool {
         self.account_type == AccountType::default()
     }

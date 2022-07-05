@@ -62,8 +62,7 @@ impl Pack for RegistryPoolConfig {
 
 impl IsInitialized for RegistryPoolConfig {
     fn is_initialized(&self) -> bool {
-        self.account_type != AccountType::Uninitialized
-            && self.account_type == AccountType::RegistryPoolConfig
+        self.account_type == AccountType::RegistryPoolConfig
     }
 }
 

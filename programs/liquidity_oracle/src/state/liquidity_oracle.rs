@@ -2,7 +2,7 @@
 
 use super::AccountType;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-use everlend_utils::UnInitialized;
+use everlend_utils::Uninitialized;
 use solana_program::{
     msg,
     program_error::ProgramError,
@@ -61,12 +61,11 @@ impl Pack for LiquidityOracle {
 
 impl IsInitialized for LiquidityOracle {
     fn is_initialized(&self) -> bool {
-        self.account_type != AccountType::Uninitialized
-            && self.account_type == AccountType::LiquidityOracle
+        self.account_type == AccountType::LiquidityOracle
     }
 }
 
-impl UnInitialized for LiquidityOracle {
+impl Uninitialized for LiquidityOracle {
     fn is_uninitialized(&self) -> bool {
         self.account_type == AccountType::default()
     }

@@ -3,7 +3,7 @@
 use super::AccountType;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use everlend_registry::state::TOTAL_DISTRIBUTIONS;
-use everlend_utils::UnInitialized;
+use everlend_utils::Uninitialized;
 use solana_program::{
     clock::Slot,
     msg,
@@ -60,12 +60,11 @@ impl Pack for TokenDistribution {
 
 impl IsInitialized for TokenDistribution {
     fn is_initialized(&self) -> bool {
-        self.account_type != AccountType::Uninitialized
-            && self.account_type == AccountType::TokenDistribution
+        self.account_type == AccountType::TokenDistribution
     }
 }
 
-impl UnInitialized for TokenDistribution {
+impl Uninitialized for TokenDistribution {
     fn is_uninitialized(&self) -> bool {
         self.account_type == AccountType::default()
     }
