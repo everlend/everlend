@@ -5,11 +5,13 @@ use std::{process::exit, str::FromStr};
 use clap::{
     crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
 };
+use everlend_depositor::find_rebalancing_program_address;
+use everlend_depositor::state::Rebalancing;
 use everlend_utils::find_program_address;
 use regex::Regex;
 use solana_clap_utils::{
     fee_payer::fee_payer_arg,
-    input_parsers::{keypair_of, pubkey_of, value_of},
+    input_parsers::{keypair_of, pubkey_of, value_of, values_of},
     input_validators::{is_amount, is_keypair, is_pubkey},
     keypair::signer_from_path,
 };
@@ -421,6 +423,15 @@ async fn command_info(config: &Config, accounts_path: &str) -> anyhow::Result<()
             &token_accounts.mint,
         )?;
         println!("{:#?}", (withdraw_requests_pubkey, &withdraw_requests));
+
+        let (rebalancing_pubkey, _) = find_rebalancing_program_address(
+            &everlend_depositor::id(),
+            &initialized_accounts.depositor,
+            &token_accounts.mint,
+        );
+
+        let rebalancing = config.get_account_unpack::<Rebalancing>(&rebalancing_pubkey)?;
+        println!("{:#?}", (rebalancing_pubkey, rebalancing));
     }
 
     Ok(())
@@ -741,6 +752,38 @@ async fn main() -> anyhow::Result<()> {
                         .takes_value(true)
                         .required(true)
                         .help("Withdrawal request pubkey"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("reset-rebalancing")
+                .about("Reset rebalancing")
+                .arg(
+                    Arg::with_name("rebalancing")
+                        .long("rebalancing")
+                        .validator(is_pubkey)
+                        .value_name("ADDRESS")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Rebalancing pubkey"),
+                )
+                .arg(
+                    Arg::with_name("amount")
+                        .long("amount")
+                        .validator(is_amount)
+                        .value_name("NUMBER")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Liquidity amount"),
+                )
+                .arg(
+                    Arg::with_name("distribution")
+                        .long("distribution")
+                        .multiple(true)
+                        .value_name("DISTRIBUTION")
+                        .short("d")
+                        .number_of_values(10)
+                        .required(true)
+                        .takes_value(true),
                 ),
         )
         .subcommand(
@@ -1143,6 +1186,18 @@ async fn main() -> anyhow::Result<()> {
         ("cancel-withdraw-request", Some(arg_matches)) => {
             let request_pubkey = pubkey_of(arg_matches, "request").unwrap();
             command_cancel_withdraw_request(&config, &request_pubkey).await
+        }
+        ("reset-rebalancing", Some(arg_matches)) => {
+            let rebalancing_pubkey = pubkey_of(arg_matches, "rebalancing").unwrap();
+            let distributed_liquidity = value_of::<u64>(arg_matches, "amount").unwrap();
+            let distribution: Vec<u64> = values_of::<u64>(arg_matches, "distribution").unwrap();
+            command_reset_rebalancing(
+                &config,
+                &rebalancing_pubkey,
+                distributed_liquidity,
+                distribution,
+            )
+            .await
         }
         ("info-reserve-liquidity", Some(_)) => command_info_reserve_liquidity(&config).await,
         ("create", Some(arg_matches)) => {
