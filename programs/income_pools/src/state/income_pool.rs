@@ -2,6 +2,7 @@
 
 use super::*;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+use everlend_utils::Uninitialized;
 use solana_program::{
     msg,
     program_error::ProgramError,
@@ -64,7 +65,12 @@ impl Pack for IncomePool {
 
 impl IsInitialized for IncomePool {
     fn is_initialized(&self) -> bool {
-        self.account_type != AccountType::Uninitialized
-            && self.account_type == AccountType::IncomePool
+        self.account_type == AccountType::IncomePool
+    }
+}
+
+impl Uninitialized for IncomePool {
+    fn is_uninitialized(&self) -> bool {
+        self.account_type == AccountType::default()
     }
 }

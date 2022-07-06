@@ -40,7 +40,6 @@ impl RegistryPoolConfig {
     }
 }
 
-
 impl Sealed for RegistryPoolConfig {}
 impl Pack for RegistryPoolConfig {
     // 1 + 32 + 32 + 8 + 8 = 81

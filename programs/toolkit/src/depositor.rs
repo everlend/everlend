@@ -1,3 +1,9 @@
+use everlend_depositor::state::DeprecatedDepositor;
+use everlend_depositor::{
+    find_rebalancing_program_address, find_transit_program_address,
+    state::{Depositor, Rebalancing},
+};
+use everlend_liquidity_oracle::state::DistributionArray;
 use solana_client::client_error::ClientError;
 use solana_program::{
     instruction::AccountMeta, program_pack::Pack, pubkey::Pubkey, system_instruction,
@@ -8,18 +14,13 @@ use solana_sdk::{
     transaction::Transaction,
 };
 
-use everlend_depositor::state::DeprecatedDepositor;
-use everlend_depositor::{
-    find_rebalancing_program_address, find_transit_program_address,
-    state::{Depositor, Rebalancing},
-};
-
 use crate::utils::*;
 
 pub fn init(
     config: &Config,
     registry_pubkey: &Pubkey,
     depositor_keypair: Option<Keypair>,
+    rebalance_executor: Pubkey,
 ) -> Result<Pubkey, ClientError> {
     let depositor_keypair = depositor_keypair.unwrap_or_else(Keypair::new);
 
@@ -42,6 +43,7 @@ pub fn init(
                 &everlend_depositor::id(),
                 registry_pubkey,
                 &depositor_keypair.pubkey(),
+                &rebalance_executor,
             ),
         ],
         Some(&config.fee_payer.pubkey()),
@@ -135,6 +137,38 @@ pub fn start_rebalancing(
     Ok((rebalancing_pubkey, rebalancing))
 }
 
+pub fn reset_rebalancing(
+    config: &Config,
+    registry_pubkey: &Pubkey,
+    depositor_pubkey: &Pubkey,
+    token_mint: &Pubkey,
+    distributed_liquidity: u64,
+    distribution_array: DistributionArray,
+) -> Result<(Pubkey, Rebalancing), ClientError> {
+    let tx = Transaction::new_with_payer(
+        &[everlend_depositor::instruction::reset_rebalancing(
+            &everlend_depositor::id(),
+            registry_pubkey,
+            depositor_pubkey,
+            token_mint,
+            &config.fee_payer.pubkey(),
+            distributed_liquidity,
+            distribution_array,
+        )],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+
+    let (rebalancing_pubkey, _) =
+        find_rebalancing_program_address(&everlend_depositor::id(), depositor_pubkey, token_mint);
+
+    let rebalancing_account = config.rpc_client.get_account(&rebalancing_pubkey)?;
+    let rebalancing = Rebalancing::unpack(&rebalancing_account.data).unwrap();
+
+    Ok((rebalancing_pubkey, rebalancing))
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn deposit(
     config: &Config,
@@ -156,6 +190,7 @@ pub fn deposit(
             mm_pool_token_account,
             liquidity_mint,
             collateral_mint,
+            &config.fee_payer.pubkey(),
             money_market_program_id,
             money_market_accounts,
         )],
@@ -192,6 +227,7 @@ pub fn withdraw(
             mm_pool_token_account,
             collateral_mint,
             liquidity_mint,
+            &config.fee_payer.pubkey(),
             money_market_program_id,
             money_market_accounts,
         )],
@@ -207,6 +243,7 @@ pub fn migrate_depositor(
     config: &Config,
     depositor: &Pubkey,
     registry: &Pubkey,
+    rebalance_executor: &Pubkey,
 ) -> Result<(), ClientError> {
     println!("Depositor: {}", depositor);
     let deprecated_depositor: DeprecatedDepositor = config.get_account_unpack(&depositor)?;
@@ -218,6 +255,8 @@ pub fn migrate_depositor(
             &everlend_depositor::id(),
             depositor,
             registry,
+            &config.fee_payer.pubkey(),
+            rebalance_executor,
         )],
         Some(&config.fee_payer.pubkey()),
     );

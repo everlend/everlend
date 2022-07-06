@@ -21,7 +21,7 @@ export class TokenAccount extends Account<TokenAccountInfo> {
       throw ERROR_INVALID_ACCOUNT_DATA()
     }
 
-    this.data = deserialize(this.info.data)
+    this.data = deserializeTokenAccount(this.info.data)
   }
 
   static isCompatible(data: Buffer) {
@@ -37,7 +37,7 @@ export class TokenAccount extends Account<TokenAccountInfo> {
   }
 }
 
-const deserialize = (data: Buffer) => {
+export const deserializeTokenAccount = (data: Buffer) => {
   const accountInfo = AccountLayout.decode(data)
   accountInfo.mint = new PublicKey(accountInfo.mint)
   accountInfo.owner = new PublicKey(accountInfo.owner)

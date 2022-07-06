@@ -3,7 +3,7 @@
 use super::{AccountType, RebalancingStep, TOTAL_REBALANCING_STEP};
 use crate::state::RebalancingOperation;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-use everlend_liquidity_oracle::state::TokenDistribution;
+use everlend_liquidity_oracle::state::{DistributionArray, TokenDistribution};
 use everlend_registry::state::{DistributionPubkeys, RegistrySettings, TOTAL_DISTRIBUTIONS};
 use everlend_utils::{math, EverlendError, PRECISION_SCALER};
 use solana_program::{
@@ -163,19 +163,23 @@ impl Rebalancing {
             let distribution_liquidity = math::share(distributed_liquidity, percent)?;
             let collateral_amount = self.received_collateral[index];
 
-            self.add_step(RebalancingStep::new(
-                index as u8,
-                RebalancingOperation::Withdraw,
-                prev_distribution_liquidity,
-                Some(collateral_amount),
-            ));
+            if prev_distribution_liquidity.gt(&0) {
+                self.add_step(RebalancingStep::new(
+                    index as u8,
+                    RebalancingOperation::Withdraw,
+                    prev_distribution_liquidity,
+                    Some(collateral_amount),
+                ));
+            }
 
-            self.add_step(RebalancingStep::new(
-                index as u8,
-                RebalancingOperation::Deposit,
-                distribution_liquidity,
-                None, // Will be calculated at the deposit stage
-            ));
+            if distribution_liquidity.gt(&0) {
+                self.add_step(RebalancingStep::new(
+                    index as u8,
+                    RebalancingOperation::Deposit,
+                    distribution_liquidity,
+                    None, // Will be calculated at the deposit stage
+                ));
+            }
         }
 
         // Sort steps
@@ -184,6 +188,19 @@ impl Rebalancing {
 
         self.income_refreshed_at = income_refreshed_at;
         self.distributed_liquidity = distributed_liquidity;
+
+        Ok(())
+    }
+
+    /// Set current rebalancing
+    pub fn set(
+        &mut self,
+        distributed_liquidity: u64,
+        distribution_array: DistributionArray,
+    ) -> Result<(), ProgramError> {
+        self.steps.retain(|&s| s.executed_at.is_some());
+        self.distributed_liquidity = distributed_liquidity;
+        self.token_distribution.distribution = distribution_array;
 
         Ok(())
     }
@@ -297,8 +314,7 @@ impl Pack for Rebalancing {
 
 impl IsInitialized for Rebalancing {
     fn is_initialized(&self) -> bool {
-        self.account_type != AccountType::Uninitialized
-            && self.account_type == AccountType::Rebalancing
+        self.account_type == AccountType::Rebalancing
     }
 }
 

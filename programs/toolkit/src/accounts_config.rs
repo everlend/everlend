@@ -133,6 +133,8 @@ pub struct InitializedAccounts {
     pub liquidity_oracle: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
     pub depositor: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub rebalance_executor: Pubkey,
 }
 
 #[serde_as]

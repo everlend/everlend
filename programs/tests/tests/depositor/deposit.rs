@@ -1,5 +1,7 @@
 #![cfg(feature = "test-bpf")]
 
+use everlend_depositor::state::DeprecatedDepositor;
+use solana_program::example_mocks::solana_sdk::signature::Keypair;
 use solana_program::instruction::InstructionError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::*;
@@ -7,13 +9,13 @@ use solana_sdk::signer::Signer;
 use solana_sdk::transaction::{Transaction, TransactionError};
 
 use everlend_liquidity_oracle::state::DistributionArray;
+use everlend_registry::state::SetRegistryPoolConfigParams;
 use everlend_registry::state::{DistributionPubkeys, RegistryRootAccounts};
 use everlend_utils::{
     find_program_address,
     integrations::{self, MoneyMarketPubkeys},
     EverlendError,
 };
-use everlend_registry::state::SetRegistryPoolConfigParams;
 
 use crate::utils::*;
 
@@ -58,7 +60,10 @@ async fn setup() -> (
     // 1. Prepare general pool
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
+    general_pool_market
+        .init(&mut context, &registry.keypair.pubkey())
+        .await
+        .unwrap();
 
     let general_pool = TestGeneralPool::new(&general_pool_market, None);
     general_pool
@@ -69,7 +74,10 @@ async fn setup() -> (
         .set_registry_pool_config(
             &mut context,
             &general_pool.pool_pubkey,
-            SetRegistryPoolConfigParams { deposit_minimum: 0, withdraw_minimum: 0 }
+            SetRegistryPoolConfigParams {
+                deposit_minimum: 0,
+                withdraw_minimum: 0,
+            },
         )
         .await
         .unwrap();
@@ -425,6 +433,7 @@ async fn fail_with_invalid_registry() {
             &mm_pool.token_account.pubkey(),
             &get_liquidity_mint().1,
             &mm_pool.token_mint_pubkey,
+            &context.payer.pubkey(),
             &spl_token_lending::id(),
             deposit_accounts,
         )],
@@ -492,6 +501,7 @@ async fn fail_with_invalid_depositor() {
             &mm_pool.token_account.pubkey(),
             &get_liquidity_mint().1,
             &mm_pool.token_mint_pubkey,
+            &context.payer.pubkey(),
             &spl_token_lending::id(),
             deposit_accounts,
         )],
@@ -559,6 +569,7 @@ async fn fail_with_invalid_mm_pool_market() {
             &mm_pool.token_account.pubkey(),
             &get_liquidity_mint().1,
             &mm_pool.token_mint_pubkey,
+            &context.payer.pubkey(),
             &spl_token_lending::id(),
             deposit_accounts,
         )],
@@ -626,6 +637,7 @@ async fn fail_with_invalid_mm_pool_token_account() {
             &Pubkey::new_unique(),
             &get_liquidity_mint().1,
             &mm_pool.token_mint_pubkey,
+            &context.payer.pubkey(),
             &spl_token_lending::id(),
             deposit_accounts,
         )],
@@ -689,6 +701,7 @@ async fn fail_with_invalid_liquidity_mint() {
             &mm_pool.token_account.pubkey(),
             &Pubkey::new_unique(),
             &mm_pool.token_mint_pubkey,
+            &context.payer.pubkey(),
             &spl_token_lending::id(),
             deposit_accounts,
         )],
@@ -756,6 +769,7 @@ async fn fail_with_invalid_collateral_mint() {
             &mm_pool.token_account.pubkey(),
             &get_liquidity_mint().1,
             &Pubkey::new_unique(),
+            &context.payer.pubkey(),
             &spl_token_lending::id(),
             deposit_accounts,
         )],
@@ -823,6 +837,7 @@ async fn fail_with_invalid_money_market_program_id() {
             &mm_pool.token_account.pubkey(),
             &get_liquidity_mint().1,
             &mm_pool.token_mint_pubkey,
+            &context.payer.pubkey(),
             &Pubkey::new_unique(),
             deposit_accounts,
         )],
@@ -879,6 +894,7 @@ async fn fail_with_invalid_money_market_accounts() {
             &mm_pool.token_account.pubkey(),
             &get_liquidity_mint().1,
             &mm_pool.token_mint_pubkey,
+            &context.payer.pubkey(),
             &spl_token_lending::id(),
             deposit_accounts,
         )],

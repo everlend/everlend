@@ -1,5 +1,6 @@
 //! Utils
 
+use everlend_collateral_pool::utils::CollateralPoolAccounts;
 use everlend_income_pools::utils::IncomePoolAccounts;
 use everlend_registry::state::RegistryPrograms;
 use everlend_utils::{cpi, integrations, EverlendError};
@@ -10,10 +11,8 @@ use solana_program::{
     program_error::ProgramError,
     program_pack::Pack,
 };
-use everlend_collateral_pool::utils::CollateralPoolAccounts;
 use spl_token::state::Account;
 use std::{cmp::Ordering, slice::Iter};
-
 
 /// Deposit
 #[allow(clippy::too_many_arguments)]

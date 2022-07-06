@@ -1,6 +1,7 @@
 //! Income pool market state definitions
 use super::*;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+use everlend_utils::Uninitialized;
 use solana_program::{
     msg,
     program_error::ProgramError,
@@ -58,7 +59,12 @@ impl Pack for IncomePoolMarket {
 
 impl IsInitialized for IncomePoolMarket {
     fn is_initialized(&self) -> bool {
-        self.account_type != AccountType::Uninitialized
-            && self.account_type == AccountType::IncomePoolMarket
+        self.account_type == AccountType::IncomePoolMarket
+    }
+}
+
+impl Uninitialized for IncomePoolMarket {
+    fn is_uninitialized(&self) -> bool {
+        self.account_type == AccountType::default()
     }
 }
