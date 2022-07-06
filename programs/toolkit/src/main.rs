@@ -130,12 +130,7 @@ async fn command_create(
     )?;
 
     println!("Depositor");
-    let depositor_pubkey = depositor::init(
-        config,
-        &registry_pubkey,
-        None,
-        rebalance_executor,
-    )?;
+    let depositor_pubkey = depositor::init(config, &registry_pubkey, None, rebalance_executor)?;
 
     println!("Prepare borrow authority");
     let (depositor_authority, _) =
@@ -688,14 +683,15 @@ async fn main() -> anyhow::Result<()> {
                         .value_name("KEYPAIR")
                         .takes_value(true)
                         .help("Keypair [default: new keypair]"),
-                ).arg(
-                Arg::with_name("rebalance-executor")
-                    .long("rebalance-executor")
-                    .validator(is_pubkey)
-                    .value_name("PUBKEY")
-                    .takes_value(true)
-                    .help("Rebalance executor pubkey"),
-            ),
+                )
+                .arg(
+                    Arg::with_name("rebalance-executor")
+                        .long("rebalance-executor")
+                        .validator(is_pubkey)
+                        .value_name("PUBKEY")
+                        .takes_value(true)
+                        .help("Rebalance executor pubkey"),
+                ),
         )
         .subcommand(
             SubCommand::with_name("create-mm-pool")
@@ -840,14 +836,15 @@ async fn main() -> anyhow::Result<()> {
                         .value_name("PATH")
                         .takes_value(true)
                         .help("Accounts file"),
-                ).arg(
-                Arg::with_name("rebalance-executor")
-                    .long("rebalance-executor")
-                    .validator(is_pubkey)
-                    .value_name("PUBKEY")
-                    .takes_value(true)
-                    .help("Rebalance executor pubkey"),
-            ),
+                )
+                .arg(
+                    Arg::with_name("rebalance-executor")
+                        .long("rebalance-executor")
+                        .validator(is_pubkey)
+                        .value_name("PUBKEY")
+                        .takes_value(true)
+                        .help("Rebalance executor pubkey"),
+                ),
         )
         .subcommand(
             SubCommand::with_name("info")
