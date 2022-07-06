@@ -4,7 +4,7 @@ use crate::liquidity_mining::{execute_mining_account_creation, LARIX_MINING_SIZE
 use crate::utils::*;
 use anyhow::Result;
 use everlend_depositor::{instruction::InitMiningAccountsPubkeys, state::MiningType};
-use everlend_utils::integrations::{MoneyMarket, StakingMoneyMarket};
+use everlend_utils::integrations::MoneyMarket;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::signature::write_keypair_file;
 use solana_sdk::{signature::Keypair, signer::Signer};
@@ -27,7 +27,7 @@ impl LiquidityMiner for LarixLiquidityMiner {
             &mining_account,
             LARIX_MINING_SIZE,
         )?;
-        self.save_mining_account_keypair(config, token, &mining_account)?;
+        self.save_mining_account_keypair(config, token, mining_account)?;
         Ok(())
     }
 
@@ -81,7 +81,7 @@ impl LiquidityMiner for LarixLiquidityMiner {
         let initialized_accounts = config.get_initialized_accounts();
         let (_, collateral_mint_map) = get_asset_maps(default_accounts.clone());
         let collateral_mint =
-            collateral_mint_map.get(token).unwrap()[StakingMoneyMarket::Larix as usize].unwrap();
+            collateral_mint_map.get(token).unwrap()[MoneyMarket::Larix as usize].unwrap();
         Some(InitMiningAccountsPubkeys {
             collateral_mint,
             depositor: initialized_accounts.depositor,
@@ -98,8 +98,6 @@ impl LiquidityMiner for LarixLiquidityMiner {
         _token: &String,
         mining_account: Pubkey,
     ) -> MiningType {
-        MiningType::Larix {
-            mining_account: mining_account,
-        }
+        MiningType::Larix { mining_account }
     }
 }

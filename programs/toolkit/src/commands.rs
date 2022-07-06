@@ -27,9 +27,9 @@ use crate::accounts_config::{
 };
 use crate::collateral_pool::{self, PoolPubkeys};
 use crate::download_account::download_account;
-use crate::liquidity_mining::execute_init_mining_accounts;
-use crate::liquidity_mining::get_liquidty_miner;
-use crate::liquidity_mining::save_internal_mining_account;
+use crate::liquidity_mining::{
+    execute_init_mining_accounts, get_liquidty_miner, save_mining_accounts,
+};
 use crate::registry::close_registry_config;
 use crate::{
     accounts_config::TokenAccounts,
@@ -200,10 +200,11 @@ pub async fn command_save_quarry_accounts(config: &Config) -> anyhow::Result<()>
 
 pub fn command_init_mining(
     config: &Config,
-    money_market: StakingMoneyMarket,
+    staking_money_market: StakingMoneyMarket,
+    money_market: MoneyMarket,
     token: &String,
 ) -> anyhow::Result<()> {
-    let liquidity_miner = get_liquidty_miner(money_market);
+    let liquidity_miner = get_liquidty_miner(staking_money_market);
     let mut mining_pubkey = liquidity_miner.get_mining_pubkey(config, token);
     if mining_pubkey.eq(&Pubkey::default()) {
         let new_mining_account = Keypair::new();
@@ -212,8 +213,9 @@ pub fn command_init_mining(
     };
     let pubkeys = liquidity_miner.get_pubkeys(config, token);
     let mining_type = liquidity_miner.get_mining_type(config, token, mining_pubkey);
+    // TODO increment counter for larix
     execute_init_mining_accounts(config, &pubkeys.unwrap(), mining_type)?;
-    save_internal_mining_account(config, token, money_market)?;
+    save_mining_accounts(config, token, money_market, mining_pubkey)?;
     Ok(())
 }
 

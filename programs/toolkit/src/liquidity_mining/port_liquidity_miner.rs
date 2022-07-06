@@ -3,7 +3,7 @@ use crate::liquidity_mining::execute_mining_account_creation;
 use crate::utils::*;
 use anyhow::Result;
 use everlend_depositor::{instruction::InitMiningAccountsPubkeys, state::MiningType};
-use everlend_utils::integrations::{MoneyMarket, StakingMoneyMarket};
+use everlend_utils::integrations::MoneyMarket;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::signature::write_keypair_file;
@@ -23,10 +23,10 @@ impl LiquidityMiner for PortLiquidityMiner {
         execute_mining_account_creation(
             config,
             &default_accounts.port_finance.staking_program_id,
-            &mining_account,
+            mining_account,
             port_finance_staking::state::stake_account::StakeAccount::LEN as u64,
         )?;
-        self.save_mining_account_keypair(config, token, &mining_account)?;
+        self.save_mining_account_keypair(config, token, mining_account)?;
         Ok(())
     }
 
@@ -65,7 +65,7 @@ impl LiquidityMiner for PortLiquidityMiner {
             .token_accounts
             .get_mut(token)
             .unwrap()
-            .mining_accounts[StakingMoneyMarket::PortFinance as usize]
+            .mining_accounts[MoneyMarket::PortFinance as usize]
             .staking_account
     }
 
@@ -73,9 +73,8 @@ impl LiquidityMiner for PortLiquidityMiner {
         let initialized_accounts = config.get_initialized_accounts();
         let default_accounts = config.get_default_accounts();
         let (_, collateral_mint_map) = get_asset_maps(default_accounts.clone());
-        let collateral_mint = collateral_mint_map.get(token).unwrap()
-            [StakingMoneyMarket::PortFinance as usize]
-            .unwrap();
+        let collateral_mint =
+            collateral_mint_map.get(token).unwrap()[MoneyMarket::PortFinance as usize].unwrap();
         Some(InitMiningAccountsPubkeys {
             collateral_mint,
             depositor: initialized_accounts.depositor,
