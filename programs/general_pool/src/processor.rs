@@ -403,6 +403,23 @@ impl Processor {
         assert_account_key(token_account_info, &pool.token_account)?;
         assert_account_key(pool_mint_info, &pool.pool_mint)?;
 
+        let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+        // Check registry
+        assert_account_key(registry_info, &pool_market.registry)?;
+
+        let (registry_pool_config_pubkey, _) = find_registry_pool_config_program_address(
+            &everlend_registry::id(),
+            registry_info.key,
+            pool_info.key,
+        );
+        assert_account_key(registry_pool_config_info, &registry_pool_config_pubkey)?;
+
+        let registry_pool_config =
+            RegistryPoolConfig::unpack(&registry_pool_config_info.data.borrow())?;
+        if amount < registry_pool_config.deposit_minimum {
+            return Err(EverlendError::DepositAmountTooSmall.into());
+        }
+
         let total_incoming =
             total_pool_amount(token_account_info.clone(), pool.total_amount_borrowed)?;
         let total_minted = Mint::unpack_unchecked(&pool_mint_info.data.borrow())?.supply;
@@ -416,19 +433,6 @@ impl Processor {
                 .checked_div(total_incoming as u128)
                 .ok_or(ProgramError::InvalidArgument)? as u64
         };
-        let (registry_pool_config_pubkey, _) = find_registry_pool_config_program_address(
-            &everlend_registry::id(),
-            registry_info.key,
-            pool_info.key,
-        );
-        assert_account_key(registry_pool_config_info, &registry_pool_config_pubkey)?;
-        let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
-        assert_account_key(registry_info, &pool_market.registry)?;
-        let registry_pool_config =
-            RegistryPoolConfig::unpack(&registry_pool_config_info.data.borrow())?;
-        if mint_amount < registry_pool_config.deposit_minimum {
-            return Err(EverlendError::DepositAmountTooSmall.into());
-        }
 
         // Transfer token from source to token account
         cpi::spl_token::transfer(
