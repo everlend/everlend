@@ -245,6 +245,8 @@ pub struct InitializedAccounts {
     pub larix_mining: Vec<LarixMining>,
 
     pub quarry_mining: BTreeMap<String, QuarryMining>,
+    #[serde_as(as = "DisplayFromStr")]
+    pub rebalance_executor: Pubkey,
 }
 
 #[serde_as]

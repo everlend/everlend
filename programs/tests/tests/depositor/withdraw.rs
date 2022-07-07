@@ -1,23 +1,22 @@
 #![cfg(feature = "test-bpf")]
 
-use solana_program_test::*;
-use solana_sdk::signer::Signer;
-use solana_sdk::transaction::{Transaction, TransactionError};
 use solana_program::{
     instruction::{AccountMeta, Instruction, InstructionError},
     program_pack::Pack,
     pubkey::Pubkey,
     sysvar,
 };
+use solana_program_test::*;
+use solana_sdk::signer::Signer;
+use solana_sdk::transaction::{Transaction, TransactionError};
 
-use everlend_registry::state::SetRegistryPoolConfigParams;
 use everlend_depositor::{
-    find_transit_program_address,
-    find_rebalancing_program_address,
+    find_rebalancing_program_address, find_transit_program_address,
     instruction::DepositorInstruction,
 };
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::{RegistryRootAccounts};
+use everlend_registry::state::RegistryRootAccounts;
+use everlend_registry::state::SetRegistryPoolConfigParams;
 use everlend_utils::{
     find_program_address,
     integrations::{self, MoneyMarketPubkeys},
@@ -69,7 +68,10 @@ async fn setup() -> (
     // 1. Prepare general pool
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut env.context, &env.registry.keypair.pubkey()).await.unwrap();
+    general_pool_market
+        .init(&mut context, &registry.keypair.pubkey())
+        .await
+        .unwrap();
 
     let general_pool = TestGeneralPool::new(&general_pool_market, None);
     general_pool
@@ -80,7 +82,10 @@ async fn setup() -> (
         .set_registry_pool_config(
             &mut env.context,
             &general_pool.pool_pubkey,
-            SetRegistryPoolConfigParams { deposit_minimum: 0, withdraw_minimum: 0 }
+            SetRegistryPoolConfigParams {
+                deposit_minimum: 0,
+                withdraw_minimum: 0,
+            },
         )
         .await
         .unwrap();
@@ -212,8 +217,8 @@ async fn setup() -> (
         )
         .await
         .unwrap();
-    let ten = [1,2,3,4,5,6,7,8,9,0];
-    let collateral_pool_markets = ten.map(|_| { mm_pool_market.keypair.pubkey().clone() });
+    let ten = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
+    let collateral_pool_markets = ten.map(|_| mm_pool_market.keypair.pubkey().clone());
     let mut roots = RegistryRootAccounts {
         general_pool_market: general_pool_market.keypair.pubkey(),
         income_pool_market: income_pool_market.keypair.pubkey(),
@@ -228,7 +233,12 @@ async fn setup() -> (
     // 6. Prepare withdraw authority
     let withdraw_authority = TestPoolWithdrawAuthority::new(&mm_pool, &depositor_authority);
     withdraw_authority
-        .create(&mut env.context, &mm_pool_market, &mm_pool, &depositor_authority)
+        .create(
+            &mut context,
+            &mm_pool_market,
+            &mm_pool,
+            &depositor_authority,
+        )
         .await
         .unwrap();
 
@@ -506,6 +516,7 @@ async fn fail_with_invalid_registry() {
             &mm_pool.token_account.pubkey(),
             &liquidity_mint,
             &collateral_mint,
+            &context.payer.pubkey(),
             money_market_program_id,
             withdraw_accounts,
         )],
@@ -578,6 +589,7 @@ async fn fail_with_invalid_depositor() {
             &mm_pool.token_account.pubkey(),
             &collateral_mint,
             &liquidity_mint,
+            &context.payer.pubkey(),
             money_market_program_id,
             withdraw_accounts,
         )],
@@ -664,6 +676,7 @@ async fn fail_with_invalid_income_pool_market() {
             &mm_pool.token_account.pubkey(),
             &collateral_mint,
             &liquidity_mint,
+            &context.payer.pubkey(),
             money_market_program_id,
             withdraw_accounts,
         )],
@@ -750,6 +763,7 @@ async fn fail_with_invalid_income_pool_token_account() {
             &mm_pool.token_account.pubkey(),
             &collateral_mint,
             &liquidity_mint,
+            &context.payer.pubkey(),
             money_market_program_id,
             withdraw_accounts,
         )],
@@ -819,6 +833,7 @@ async fn fail_with_invalid_mm_pool_market() {
             &mm_pool.token_account.pubkey(),
             &collateral_mint,
             &liquidity_mint,
+            &context.payer.pubkey(),
             money_market_program_id,
             withdraw_accounts,
         )],
@@ -891,6 +906,7 @@ async fn fail_with_invalid_mm_pool_token_account() {
             &Pubkey::new_unique(),
             &collateral_mint,
             &liquidity_mint,
+            &context.payer.pubkey(),
             money_market_program_id,
             withdraw_accounts,
         )],
@@ -960,6 +976,7 @@ async fn fail_with_invalid_collateral_mint() {
             &mm_pool.token_account.pubkey(),
             &collateral_mint,
             &liquidity_mint,
+            &context.payer.pubkey(),
             money_market_program_id,
             withdraw_accounts,
         )],
@@ -1032,6 +1049,7 @@ async fn fail_with_invalid_liquidity_mint() {
             &mm_pool.token_account.pubkey(),
             &collateral_mint,
             &liquidity_mint,
+            &context.payer.pubkey(),
             money_market_program_id,
             withdraw_accounts,
         )],
@@ -1104,6 +1122,7 @@ async fn fail_with_invalid_mm_program_id() {
             &mm_pool.token_account.pubkey(),
             &collateral_mint,
             &liquidity_mint,
+            &context.payer.pubkey(),
             money_market_program_id,
             withdraw_accounts,
         )],
@@ -1176,6 +1195,7 @@ async fn fail_with_invalid_withdraw_accounts() {
             &mm_pool.token_account.pubkey(),
             &collateral_mint,
             &liquidity_mint,
+            &context.payer.pubkey(),
             money_market_program_id,
             withdraw_accounts,
         )],
@@ -1234,15 +1254,19 @@ async fn fail_with_invalid_withdraw_authority() {
     let withdraw_accounts =
         integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
 
-    let (registry_config, _) =
-        everlend_registry::find_config_program_address(&everlend_registry::id(), &registry.keypair.pubkey());
-    let (depositor_authority, _) = find_program_address(&everlend_depositor::id(), &test_depositor.depositor.pubkey());
-    let (rebalancing, _) =
-        find_rebalancing_program_address(
-            &everlend_depositor::id(),
-            &test_depositor.depositor.pubkey(),
-            &liquidity_mint
-        );
+    let (registry_config, _) = everlend_registry::find_config_program_address(
+        &everlend_registry::id(),
+        &registry.keypair.pubkey(),
+    );
+    let (depositor_authority, _) = find_program_address(
+        &everlend_depositor::id(),
+        &test_depositor.depositor.pubkey(),
+    );
+    let (rebalancing, _) = find_rebalancing_program_address(
+        &everlend_depositor::id(),
+        &test_depositor.depositor.pubkey(),
+        &liquidity_mint,
+    );
 
     let (income_pool_address, _) = everlend_income_pools::find_pool_program_address(
         &everlend_income_pools::id(),
@@ -1250,21 +1274,35 @@ async fn fail_with_invalid_withdraw_authority() {
         &liquidity_mint,
     );
 
-    let (mm_pool_market_authority, _) = find_program_address(&everlend_collateral_pool::id(), &mm_pool_market.keypair.pubkey());
+    let (mm_pool_market_authority, _) = find_program_address(
+        &everlend_collateral_pool::id(),
+        &mm_pool_market.keypair.pubkey(),
+    );
     let (mm_pool_address, _) = everlend_collateral_pool::find_pool_program_address(
         &everlend_collateral_pool::id(),
         &mm_pool_market.keypair.pubkey(),
         &collateral_mint,
     );
 
-    let (collateral_transit, _) =
-        find_transit_program_address(&everlend_depositor::id(), &test_depositor.depositor.pubkey(), &collateral_mint, "");
-    let (liquidity_transit, _) =
-        find_transit_program_address(&everlend_depositor::id(), &test_depositor.depositor.pubkey(), &liquidity_mint, "");
+    let (collateral_transit, _) = find_transit_program_address(
+        &everlend_depositor::id(),
+        &test_depositor.depositor.pubkey(),
+        &collateral_mint,
+        "",
+    );
+    let (liquidity_transit, _) = find_transit_program_address(
+        &everlend_depositor::id(),
+        &test_depositor.depositor.pubkey(),
+        &liquidity_mint,
+        "",
+    );
 
-    let (liquidity_reserve_transit, _) =
-        find_transit_program_address(&everlend_depositor::id(), &test_depositor.depositor.pubkey(), &liquidity_mint, "reserve");
-
+    let (liquidity_reserve_transit, _) = find_transit_program_address(
+        &everlend_depositor::id(),
+        &test_depositor.depositor.pubkey(),
+        &liquidity_mint,
+        "reserve",
+    );
 
     let mut accounts = vec![
         AccountMeta::new_readonly(registry_config, false),
@@ -1293,7 +1331,11 @@ async fn fail_with_invalid_withdraw_authority() {
 
     accounts.extend(withdraw_accounts);
 
-    let instruction = Instruction::new_with_borsh(everlend_depositor::id(), &DepositorInstruction::Withdraw, accounts);
+    let instruction = Instruction::new_with_borsh(
+        everlend_depositor::id(),
+        &DepositorInstruction::Withdraw,
+        accounts,
+    );
     let tx = Transaction::new_signed_with_payer(
         &[instruction],
         Some(&context.payer.pubkey()),
@@ -1311,4 +1353,3 @@ async fn fail_with_invalid_withdraw_authority() {
         TransactionError::InstructionError(0, InstructionError::InvalidArgument)
     );
 }
-

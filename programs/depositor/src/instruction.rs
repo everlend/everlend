@@ -9,8 +9,11 @@ use solana_program::{
 };
 
 use everlend_general_pool::find_withdrawal_requests_program_address;
-use everlend_liquidity_oracle::find_liquidity_oracle_token_distribution_program_address;
-use everlend_utils::{cpi, find_program_address};
+use everlend_liquidity_oracle::{
+    find_liquidity_oracle_token_distribution_program_address, state::DistributionArray,
+};
+use everlend_utils::cpi;
+use everlend_utils::find_program_address;
 
 use crate::{find_rebalancing_program_address, find_transit_program_address, state::MiningType};
 
@@ -23,7 +26,10 @@ pub enum DepositorInstruction {
     /// [W] Depositor account - uninitialized
     /// [R] Registry
     /// [R] Rent sysvar
-    Init,
+    Init {
+        /// Rebalance executor account
+        rebalance_executor: Pubkey,
+    },
 
     /// Create transit token account for liquidity
     ///
@@ -58,7 +64,7 @@ pub enum DepositorInstruction {
     /// [W] Liquidity transit account
     /// [R] Liquidity oracle
     /// [R] Token distribution
-    /// [WS] From account
+    /// [WS] Rebalance executor account
     /// [R] Rent sysvar
     /// [R] Clock sysvar
     /// [R] System program
@@ -86,6 +92,7 @@ pub enum DepositorInstruction {
     /// [R] Liquidity mint
     /// [W] Collateral transit account
     /// [W] Collateral mint
+    /// [S] Rebalance executor account
     /// [R] Clock sysvar
     /// [R] Token program id
     /// [R] Everlend collateral pool program id
@@ -113,19 +120,12 @@ pub enum DepositorInstruction {
     /// [W] Liquidity transit account
     /// [W] Liquidity reserve transit account
     /// [R] Liquidity mint
+    /// [S] Rebalance executor account
     /// [R] Clock sysvar
     /// [R] Token program id
     /// [R] Everlend collateral program id
     /// [R] Money market program id
     Withdraw,
-
-    /// Migrate depositor to v1
-    ///
-    /// Accounts
-    /// [W] Depositor
-    /// [R] Registry
-    /// [R] Registry config
-    MigrateDepositor,
 
     /// Initialize accounts for mining LM rewards
     ///
@@ -189,18 +189,52 @@ pub enum DepositorInstruction {
     /// [W] Quarry
     /// [R] Rewarder
     ClaimMiningReward,
+
+    /// [R] Manager
+    /// [R] Rent
+    MigrateDepositor {
+        /// Rebalancing executor account
+        rebalance_executor: Pubkey,
+    },
+
+    /// Set current rebalancing
+    ///
+    /// Accounts:
+    /// [R] Registry
+    /// [R] Depositor
+    /// [W] Rebalancing account
+    /// [R] Token mint
+    /// [WS] Manager
+    /// [R] System program
+    SetRebalancing {
+        ///Manual setup of prev distributed liquidity
+        distributed_liquidity: u64,
+        ///Manual setup of prev distribution array
+        distribution_array: DistributionArray,
+    },
 }
 
 /// Creates 'Init' instruction.
 #[allow(clippy::too_many_arguments)]
-pub fn init(program_id: &Pubkey, registry: &Pubkey, depositor: &Pubkey) -> Instruction {
+pub fn init(
+    program_id: &Pubkey,
+    registry: &Pubkey,
+    depositor: &Pubkey,
+    rebalance_executor: &Pubkey,
+) -> Instruction {
     let accounts = vec![
         AccountMeta::new(*depositor, false),
         AccountMeta::new_readonly(*registry, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
 
-    Instruction::new_with_borsh(*program_id, &DepositorInstruction::Init, accounts)
+    Instruction::new_with_borsh(
+        *program_id,
+        &DepositorInstruction::Init {
+            rebalance_executor: *rebalance_executor,
+        },
+        accounts,
+    )
 }
 
 /// Creates 'CreateTransit' instruction.
@@ -245,7 +279,7 @@ pub fn start_rebalancing(
     general_pool_market: &Pubkey,
     general_pool_token_account: &Pubkey,
     liquidity_oracle: &Pubkey,
-    from: &Pubkey,
+    rebalance_executor: &Pubkey,
     refresh_income: bool,
 ) -> Instruction {
     let (registry_config, _) =
@@ -295,7 +329,7 @@ pub fn start_rebalancing(
         AccountMeta::new(liquidity_transit, false),
         AccountMeta::new_readonly(*liquidity_oracle, false),
         AccountMeta::new_readonly(token_distribution, false),
-        AccountMeta::new(*from, true),
+        AccountMeta::new(*rebalance_executor, true),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
@@ -311,6 +345,38 @@ pub fn start_rebalancing(
     )
 }
 
+/// Creates 'ResetRebalancing' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn reset_rebalancing(
+    program_id: &Pubkey,
+    registry: &Pubkey,
+    depositor: &Pubkey,
+    liquidity_mint: &Pubkey,
+    manager: &Pubkey,
+    distributed_liquidity: u64,
+    distribution_array: DistributionArray,
+) -> Instruction {
+    let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*registry, false),
+        AccountMeta::new_readonly(*depositor, false),
+        AccountMeta::new(rebalancing, false),
+        AccountMeta::new_readonly(*liquidity_mint, false),
+        AccountMeta::new_readonly(*manager, true),
+        AccountMeta::new_readonly(system_program::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &DepositorInstruction::SetRebalancing {
+            distributed_liquidity,
+            distribution_array,
+        },
+        accounts,
+    )
+}
+
 /// Creates 'Deposit' instruction.
 #[allow(clippy::too_many_arguments)]
 pub fn deposit(
@@ -321,6 +387,7 @@ pub fn deposit(
     mm_pool_token_account: &Pubkey,
     liquidity_mint: &Pubkey,
     collateral_mint: &Pubkey,
+    rebalance_executor: &Pubkey,
     money_market_program_id: &Pubkey,
     money_market_accounts: Vec<AccountMeta>,
 ) -> Instruction {
@@ -361,6 +428,7 @@ pub fn deposit(
         AccountMeta::new_readonly(*liquidity_mint, false),
         AccountMeta::new(collateral_transit, false),
         AccountMeta::new(*collateral_mint, false),
+        AccountMeta::new_readonly(*rebalance_executor, true),
         // Programs
         AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
@@ -387,6 +455,7 @@ pub fn withdraw(
     mm_pool_token_account: &Pubkey,
     collateral_mint: &Pubkey,
     liquidity_mint: &Pubkey,
+    rebalance_executor: &Pubkey,
     money_market_program_id: &Pubkey,
     money_market_accounts: Vec<AccountMeta>,
 ) -> Instruction {
@@ -448,6 +517,7 @@ pub fn withdraw(
         AccountMeta::new(liquidity_transit, false),
         AccountMeta::new(liquidity_reserve_transit, false),
         AccountMeta::new_readonly(*liquidity_mint, false),
+        AccountMeta::new_readonly(*rebalance_executor, true),
         // Programs
         AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
@@ -469,19 +539,21 @@ pub fn migrate_depositor(
     program_id: &Pubkey,
     depositor: &Pubkey,
     registry: &Pubkey,
+    manager: &Pubkey,
+    rebalance_executor: &Pubkey,
 ) -> Instruction {
-    let (registry_config, _) =
-        everlend_registry::find_config_program_address(&everlend_registry::id(), registry);
-
     let accounts = vec![
         AccountMeta::new(*depositor, false),
         AccountMeta::new_readonly(*registry, false),
-        AccountMeta::new_readonly(registry_config, false),
+        AccountMeta::new_readonly(*manager, false),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
 
     Instruction::new_with_borsh(
         *program_id,
-        &DepositorInstruction::MigrateDepositor,
+        &DepositorInstruction::MigrateDepositor {
+            rebalance_executor: *rebalance_executor,
+        },
         accounts,
     )
 }

@@ -3,13 +3,13 @@ use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 
 mod pool;
 mod pool_borrow_authority;
-mod pool_withdraw_authority;
 mod pool_market;
+mod pool_withdraw_authority;
 
 pub use pool::*;
 pub use pool_borrow_authority::*;
-pub use pool_withdraw_authority::*;
 pub use pool_market::*;
+pub use pool_withdraw_authority::*;
 
 /// Enum representing the account type managed by the program
 #[derive(Clone, Debug, PartialEq, BorshDeserialize, BorshSerialize, BorshSchema)]

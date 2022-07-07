@@ -2,6 +2,7 @@ use std::fs;
 
 use anchor_lang::AnchorDeserialize;
 use anyhow::bail;
+use everlend_depositor::state::Rebalancing;
 use larix_lending::state::reserve::Reserve;
 use solana_client::client_error::ClientError;
 use solana_program::program_pack::Pack;
@@ -25,6 +26,7 @@ use everlend_utils::integrations::{MoneyMarket, StakingMoneyMarket};
 use crate::accounts_config::{
     save_config_file, CollateralPoolAccounts, DefaultAccounts, InitializedAccounts,
 };
+use crate::accounts_config::{CollateralPoolAccounts, InitializedAccounts};
 use crate::collateral_pool::{self, PoolPubkeys};
 use crate::download_account::download_account;
 use crate::liquidity_mining::init_token_account;
@@ -123,7 +125,6 @@ pub async fn command_set_registry_config(
         depositor_program_id: everlend_depositor::id(),
         income_pools_program_id: everlend_income_pools::id(),
         money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
-        // refresh_income_interval: REFRESH_INCOME_INTERVAL,
     };
 
     programs.money_market_program_ids[0] = default_accounts.port_finance.program_id;
@@ -358,6 +359,7 @@ pub async fn command_create_liquidity_oracle(
 pub async fn command_create_depositor(
     config: &Config,
     keypair: Option<Keypair>,
+    rebalance_executor: Pubkey,
 ) -> anyhow::Result<()> {
     let mut initialiazed_accounts = config.get_initialized_accounts();
 
@@ -365,12 +367,14 @@ pub async fn command_create_depositor(
         config,
         &initialiazed_accounts.registry,
         keypair,
+        rebalance_executor,
         // &initialiazed_accounts.general_pool_market,
         // &initialiazed_accounts.income_pool_market,
         // &initialiazed_accounts.liquidity_oracle,
     )?;
 
     initialiazed_accounts.depositor = depositor_pubkey;
+    initialiazed_accounts.rebalance_executor = rebalance_executor;
 
     initialiazed_accounts
         .save(&format!("accounts.{}.yaml", config.network))
@@ -646,6 +650,32 @@ pub async fn command_cancel_withdraw_request(
     Ok(())
 }
 
+pub async fn command_reset_rebalancing(
+    config: &Config,
+    rebalancing_pubkey: &Pubkey,
+    distributed_liquidity: u64,
+    distribution_vec: Vec<u64>,
+) -> anyhow::Result<()> {
+    let initialiazed_accounts = config.get_initialized_accounts();
+
+    let rebalancing = config.get_account_unpack::<Rebalancing>(rebalancing_pubkey)?;
+    let mut distribution_array = DistributionArray::default();
+    distribution_array.copy_from_slice(distribution_vec.as_slice());
+
+    println!("distribution_array {:?}", distribution_array);
+
+    depositor::reset_rebalancing(
+        config,
+        &initialiazed_accounts.registry,
+        &rebalancing.depositor,
+        &rebalancing.mint,
+        distributed_liquidity,
+        distribution_array,
+    )?;
+
+    Ok(())
+}
+
 pub async fn command_add_reserve_liquidity(
     config: &Config,
     mint_key: &str,
@@ -731,6 +761,7 @@ pub async fn command_migrate_depositor(config: &Config) -> anyhow::Result<()> {
         config,
         &initialized_accounts.depositor,
         &initialized_accounts.registry,
+        &initialized_accounts.rebalance_executor,
     )?;
     Ok(())
 }

@@ -6,11 +6,13 @@ use clap::{
     crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
 };
 use commands_test::{command_test_larix_mining_raw, command_test_quarry_mining_raw};
+use everlend_depositor::find_rebalancing_program_address;
+use everlend_depositor::state::Rebalancing;
 use everlend_utils::find_program_address;
 use regex::Regex;
 use solana_clap_utils::{
     fee_payer::fee_payer_arg,
-    input_parsers::{keypair_of, pubkey_of, value_of},
+    input_parsers::{keypair_of, pubkey_of, value_of, values_of},
     input_validators::{is_amount, is_keypair, is_pubkey},
     keypair::signer_from_path,
 };
@@ -25,8 +27,8 @@ use accounts_config::*;
 use commands::*;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::state::{
-    DistributionPubkeys, RegistryPrograms, RegistryRootAccounts, RegistrySettings,
-    SetRegistryPoolConfigParams, TOTAL_DISTRIBUTIONS,
+    RegistryPrograms, RegistryRootAccounts, RegistrySettings, SetRegistryPoolConfigParams,
+    TOTAL_DISTRIBUTIONS,
 };
 use everlend_utils::integrations::{MoneyMarket, StakingMoneyMarket};
 use general_pool::get_withdrawal_requests;
@@ -65,6 +67,7 @@ async fn command_create(
     config: &Config,
     accounts_path: &str,
     required_mints: Vec<&str>,
+    rebalance_executor: Pubkey,
 ) -> anyhow::Result<()> {
     let payer_pubkey = config.fee_payer.pubkey();
     println!("Fee payer: {}", payer_pubkey);
@@ -81,9 +84,11 @@ async fn command_create(
         liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
         depositor_program_id: everlend_depositor::id(),
         income_pools_program_id: everlend_income_pools::id(),
-        money_market_program_ids: DistributionPubkeys::default(),
+        money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
     };
-    programs.money_market_program_ids[0] = spl_token_lending::id();
+    programs.money_market_program_ids[0] = default_accounts.port_finance.program_id;
+    programs.money_market_program_ids[1] = default_accounts.larix.program_id;
+    programs.money_market_program_ids[2] = default_accounts.solend.program_id;
 
     registry::set_registry_config(
         config,
@@ -94,6 +99,7 @@ async fn command_create(
             refresh_income_interval: REFRESH_INCOME_INTERVAL,
         },
     )?;
+    println!("programs = {:#?}", programs);
 
     let general_pool_market_pubkey = general_pool::create_market(config, None, &registry_pubkey)?;
     let income_pool_market_pubkey =
@@ -147,12 +153,12 @@ async fn command_create(
         programs,
         roots,
         RegistrySettings {
-            refresh_income_interval: REFRESH_INCOME_INTERVAL,
+            refresh_income_interval: 0,
         },
     )?;
 
     println!("Depositor");
-    let depositor_pubkey = depositor::init(config, &registry_pubkey, None)?;
+    let depositor_pubkey = depositor::init(config, &registry_pubkey, None, rebalance_executor)?;
 
     println!("Prepare borrow authority");
     let (depositor_authority, _) =
@@ -175,6 +181,16 @@ async fn command_create(
         let (general_pool_pubkey, general_pool_token_account, general_pool_mint) =
             general_pool::create_pool(config, &general_pool_market_pubkey, mint)?;
 
+        registry::set_registry_pool_config(
+            config,
+            &registry_pubkey,
+            &general_pool_pubkey,
+            SetRegistryPoolConfigParams {
+                deposit_minimum: 0,
+                withdraw_minimum: 0,
+            },
+        )?;
+
         let token_account = get_associated_token_address(&payer_pubkey, mint);
         let pool_account =
             spl_create_associated_token_account(config, &payer_pubkey, &general_pool_mint)?;
@@ -185,10 +201,25 @@ async fn command_create(
         // MM Pools
         let mm_pool_collection = collateral_mints
             .iter()
-            .map(|(collateral_mint, mm_pool_market_pubkey)| {
-                println!("MM Pool: {}", collateral_mint);
-                collateral_pool::create_pool(config, mm_pool_market_pubkey, collateral_mint)
-            })
+            .map(
+                |(collateral_mint, mm_pool_market_pubkey)| -> Result<PoolPubkeys, ClientError> {
+                    println!("MM Pool: {}", collateral_mint);
+                    let pool_pubkeys = collateral_pool::create_pool(
+                        config,
+                        mm_pool_market_pubkey,
+                        collateral_mint,
+                    )?;
+                    collateral_pool::create_pool_withdraw_authority(
+                        config,
+                        mm_pool_market_pubkey,
+                        &pool_pubkeys.pool,
+                        depositor_authority,
+                        &config.fee_payer.pubkey(),
+                    )?;
+
+                    Ok(pool_pubkeys)
+                },
+            )
             .collect::<Result<Vec<PoolPubkeys>, ClientError>>()?;
 
         liquidity_oracle::create_token_distribution(
@@ -260,7 +291,7 @@ async fn command_create(
                 income_pool_token_account,
                 mm_pools: Vec::new(),
                 mining_accounts: Vec::new(),
-                collateral_pools: collateral_pools,
+                collateral_pools,
                 liquidity_transit: liquidity_transit_pubkey,
             },
         );
@@ -278,6 +309,7 @@ async fn command_create(
         depositor: depositor_pubkey,
         larix_mining: vec![],
         quarry_mining: BTreeMap::new(),
+        rebalance_executor,
     };
 
     initialized_accounts.save(accounts_path).unwrap();
@@ -424,6 +456,15 @@ async fn command_info(config: &Config, accounts_path: &str) -> anyhow::Result<()
             &token_accounts.mint,
         )?;
         println!("{:#?}", (withdraw_requests_pubkey, &withdraw_requests));
+
+        let (rebalancing_pubkey, _) = find_rebalancing_program_address(
+            &everlend_depositor::id(),
+            &initialized_accounts.depositor,
+            &token_accounts.mint,
+        );
+
+        let rebalancing = config.get_account_unpack::<Rebalancing>(&rebalancing_pubkey)?;
+        println!("{:#?}", (rebalancing_pubkey, rebalancing));
     }
 
     Ok(())
@@ -722,6 +763,14 @@ async fn main() -> anyhow::Result<()> {
                         .value_name("KEYPAIR")
                         .takes_value(true)
                         .help("Keypair [default: new keypair]"),
+                )
+                .arg(
+                    Arg::with_name("rebalance-executor")
+                        .long("rebalance-executor")
+                        .validator(is_pubkey)
+                        .value_name("PUBKEY")
+                        .takes_value(true)
+                        .help("Rebalance executor pubkey"),
                 ),
         )
         .subcommand(
@@ -796,6 +845,38 @@ async fn main() -> anyhow::Result<()> {
                 ),
         )
         .subcommand(
+            SubCommand::with_name("reset-rebalancing")
+                .about("Reset rebalancing")
+                .arg(
+                    Arg::with_name("rebalancing")
+                        .long("rebalancing")
+                        .validator(is_pubkey)
+                        .value_name("ADDRESS")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Rebalancing pubkey"),
+                )
+                .arg(
+                    Arg::with_name("amount")
+                        .long("amount")
+                        .validator(is_amount)
+                        .value_name("NUMBER")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Liquidity amount"),
+                )
+                .arg(
+                    Arg::with_name("distribution")
+                        .long("distribution")
+                        .multiple(true)
+                        .value_name("DISTRIBUTION")
+                        .short("d")
+                        .number_of_values(10)
+                        .required(true)
+                        .takes_value(true),
+                ),
+        )
+        .subcommand(
             SubCommand::with_name("add-reserve-liquidity")
                 .about("Transfer liquidity to reserve account")
                 .arg(
@@ -835,6 +916,14 @@ async fn main() -> anyhow::Result<()> {
                         .value_name("PATH")
                         .takes_value(true)
                         .help("Accounts file"),
+                )
+                .arg(
+                    Arg::with_name("rebalance-executor")
+                        .long("rebalance-executor")
+                        .validator(is_pubkey)
+                        .value_name("PUBKEY")
+                        .takes_value(true)
+                        .help("Rebalance executor pubkey"),
                 ),
         )
         .subcommand(
@@ -1192,7 +1281,8 @@ async fn main() -> anyhow::Result<()> {
         }
         ("create-depositor", Some(arg_matches)) => {
             let keypair = keypair_of(arg_matches, "keypair");
-            command_create_depositor(&config, keypair).await
+            let executor_pubkey = pubkey_of(arg_matches, "rebalance-executor").unwrap();
+            command_create_depositor(&config, keypair, executor_pubkey).await
         }
         ("create-mm-pool", Some(arg_matches)) => {
             let money_market = value_of::<usize>(arg_matches, "money-market").unwrap();
@@ -1220,11 +1310,24 @@ async fn main() -> anyhow::Result<()> {
             let request_pubkey = pubkey_of(arg_matches, "request").unwrap();
             command_cancel_withdraw_request(&config, &request_pubkey).await
         }
+        ("reset-rebalancing", Some(arg_matches)) => {
+            let rebalancing_pubkey = pubkey_of(arg_matches, "rebalancing").unwrap();
+            let distributed_liquidity = value_of::<u64>(arg_matches, "amount").unwrap();
+            let distribution: Vec<u64> = values_of::<u64>(arg_matches, "distribution").unwrap();
+            command_reset_rebalancing(
+                &config,
+                &rebalancing_pubkey,
+                distributed_liquidity,
+                distribution,
+            )
+            .await
+        }
         ("info-reserve-liquidity", Some(_)) => command_info_reserve_liquidity(&config).await,
         ("create", Some(arg_matches)) => {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
             let mints: Vec<_> = arg_matches.values_of("mints").unwrap().collect();
-            command_create(&config, accounts_path, mints).await
+            let rebalance_executor_pubkey = pubkey_of(arg_matches, "rebalance-executor").unwrap();
+            command_create(&config, accounts_path, mints, rebalance_executor_pubkey).await
         }
         ("info", Some(arg_matches)) => {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
