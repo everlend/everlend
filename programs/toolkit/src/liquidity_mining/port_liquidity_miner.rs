@@ -43,7 +43,7 @@ impl LiquidityMiner for PortLiquidityMiner {
 
     fn save_new_mining_account(
         &self,
-        config: &Config,
+        _config: &Config,
         token: &String,
         mining_account: &Keypair,
     ) -> Result<()> {
@@ -90,7 +90,8 @@ impl LiquidityMiner for PortLiquidityMiner {
         }
     }
 
-    fn update_mining_accounts(&self, config: &Config) -> Result<()> {
+    fn update_mining_accounts(&self, _config: &Config) -> Result<()> {
+        // No additional work needed for port
         Ok(())
     }
 }

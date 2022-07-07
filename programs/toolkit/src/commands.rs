@@ -28,6 +28,7 @@ use crate::accounts_config::{
 };
 use crate::collateral_pool::{self, PoolPubkeys};
 use crate::download_account::download_account;
+use crate::liquidity_mining::quarry_liquidity_miner::QuarryLiquidityMiner;
 use crate::liquidity_mining::save_mining_accounts;
 use crate::liquidity_mining::{
     execute_init_mining_accounts, larix_liquidity_miner::LarixLiquidityMiner,
@@ -208,6 +209,7 @@ pub fn command_init_mining(
     let liquidity_miner_option: Option<Box<dyn LiquidityMiner>> = match staking_money_market {
         StakingMoneyMarket::PortFinance => Some(Box::new(PortLiquidityMiner {})),
         StakingMoneyMarket::Larix => Some(Box::new(LarixLiquidityMiner {})),
+        StakingMoneyMarket::Quarry => Some(Box::new(QuarryLiquidityMiner {})),
         _ => None,
     };
     if liquidity_miner_option.is_none() {

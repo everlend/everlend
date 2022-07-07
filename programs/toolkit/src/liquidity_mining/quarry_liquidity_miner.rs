@@ -104,7 +104,8 @@ impl LiquidityMiner for QuarryLiquidityMiner {
         }
     }
 
-    fn update_mining_accounts(&self, config: &Config) -> Result<()> {
+    fn update_mining_accounts(&self, _config: &Config) -> Result<()> {
+        // No additional work needed for quarry
         Ok(())
     }
 }
