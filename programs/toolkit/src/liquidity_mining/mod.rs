@@ -102,12 +102,6 @@ pub fn save_mining_accounts(
 
 pub trait LiquidityMiner {
     fn get_mining_pubkey(&self, config: &Config, token: &String) -> Pubkey;
-    fn save_new_mining_account(
-        &self,
-        config: &Config,
-        token: &String,
-        mining_account: &Keypair,
-    ) -> Result<()>;
     fn create_mining_account(
         &self,
         config: &Config,

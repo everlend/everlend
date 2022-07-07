@@ -13,6 +13,32 @@ const LARIX_MINING_SIZE: u64 = 1 + 32 + 32 + 1 + 16 + 560;
 
 pub struct LarixLiquidityMiner {}
 
+fn save_new_mining_account(
+    config: &Config,
+    token: &String,
+    mining_account: &Keypair,
+) -> Result<()> {
+    let mut initialized_accounts = config.get_initialized_accounts();
+    write_keypair_file(
+        &mining_account,
+        &format!(
+            ".keypairs/{}_larix_mining_{}.json",
+            token,
+            mining_account.pubkey()
+        ),
+    )
+    .unwrap();
+    // Larix can store up to 10 tokens on 1 account
+    initialized_accounts.larix_mining.push(LarixMining {
+        staking_account: mining_account.pubkey(),
+        count: 0,
+    });
+    initialized_accounts
+        .save(&format!("accounts.{}.yaml", config.network))
+        .unwrap();
+    Ok(())
+}
+
 impl LiquidityMiner for LarixLiquidityMiner {
     fn get_mining_pubkey(&self, config: &Config, _token: &String) -> Pubkey {
         let larix_mining = config.get_initialized_accounts().larix_mining;
@@ -40,34 +66,7 @@ impl LiquidityMiner for LarixLiquidityMiner {
             &mining_account,
             LARIX_MINING_SIZE,
         )?;
-        self.save_new_mining_account(config, token, mining_account)?;
-        Ok(())
-    }
-
-    fn save_new_mining_account(
-        &self,
-        config: &Config,
-        token: &String,
-        mining_account: &Keypair,
-    ) -> Result<()> {
-        let mut initialized_accounts = config.get_initialized_accounts();
-        write_keypair_file(
-            &mining_account,
-            &format!(
-                ".keypairs/{}_larix_mining_{}.json",
-                token,
-                mining_account.pubkey()
-            ),
-        )
-        .unwrap();
-        // Larix can store up to 10 tokens on 1 account
-        initialized_accounts.larix_mining.push(LarixMining {
-            staking_account: mining_account.pubkey(),
-            count: 0,
-        });
-        initialized_accounts
-            .save(&format!("accounts.{}.yaml", config.network))
-            .unwrap();
+        save_new_mining_account(config, token, mining_account)?;
         Ok(())
     }
 

@@ -12,6 +12,23 @@ use solana_sdk::{signature::Keypair, signer::Signer};
 
 pub struct PortLiquidityMiner {}
 
+fn save_new_mining_account(
+    _config: &Config,
+    token: &String,
+    mining_account: &Keypair,
+) -> Result<()> {
+    write_keypair_file(
+        &mining_account,
+        &format!(
+            ".keypairs/{}_port_mining_{}.json",
+            token,
+            mining_account.pubkey()
+        ),
+    )
+    .unwrap();
+    Ok(())
+}
+
 impl LiquidityMiner for PortLiquidityMiner {
     fn get_mining_pubkey(&self, config: &Config, token: &String) -> Pubkey {
         let mut initialized_accounts = config.get_initialized_accounts();
@@ -37,25 +54,7 @@ impl LiquidityMiner for PortLiquidityMiner {
             mining_account,
             port_finance_staking::state::stake_account::StakeAccount::LEN as u64,
         )?;
-        self.save_new_mining_account(config, token, mining_account)?;
-        Ok(())
-    }
-
-    fn save_new_mining_account(
-        &self,
-        _config: &Config,
-        token: &String,
-        mining_account: &Keypair,
-    ) -> Result<()> {
-        write_keypair_file(
-            &mining_account,
-            &format!(
-                ".keypairs/{}_port_mining_{}.json",
-                token,
-                mining_account.pubkey()
-            ),
-        )
-        .unwrap();
+        save_new_mining_account(config, token, mining_account)?;
         Ok(())
     }
 
