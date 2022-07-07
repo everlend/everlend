@@ -1,4 +1,5 @@
-use super::LiquidityMiner;
+use super::{get_internal_mining_account, save_mining_accounts, LiquidityMiner};
+use crate::accounts_config::MiningAccounts;
 use crate::liquidity_mining::execute_mining_account_creation;
 use crate::utils::*;
 use anyhow::Result;
@@ -36,17 +37,16 @@ impl LiquidityMiner for PortLiquidityMiner {
             mining_account,
             port_finance_staking::state::stake_account::StakeAccount::LEN as u64,
         )?;
-        self.save_mining_account_keypair(config, token, mining_account)?;
+        self.save_new_mining_account(config, token, mining_account)?;
         Ok(())
     }
 
-    fn save_mining_account_keypair(
+    fn save_new_mining_account(
         &self,
         config: &Config,
         token: &String,
         mining_account: &Keypair,
     ) -> Result<()> {
-        let mut initialized_accounts = config.get_initialized_accounts();
         write_keypair_file(
             &mining_account,
             &format!(
@@ -56,16 +56,6 @@ impl LiquidityMiner for PortLiquidityMiner {
             ),
         )
         .unwrap();
-        // Save into account file
-        initialized_accounts
-            .token_accounts
-            .get_mut(token)
-            .unwrap()
-            .mining_accounts[MoneyMarket::PortFinance as usize]
-            .staking_account = mining_account.pubkey();
-        initialized_accounts
-            .save(&format!("accounts.{}.yaml", config.network))
-            .unwrap();
         Ok(())
     }
 
@@ -98,5 +88,9 @@ impl LiquidityMiner for PortLiquidityMiner {
             staking_account: mining_account,
             staking_pool: port_accounts.staking_pool,
         }
+    }
+
+    fn update_mining_accounts(&self, config: &Config) -> Result<()> {
+        Ok(())
     }
 }

@@ -1228,12 +1228,10 @@ async fn main() -> anyhow::Result<()> {
         ("init-mining", Some(arg_matches)) => {
             let staking_money_market =
                 value_of::<usize>(arg_matches, "staking-money-market").unwrap();
-            let money_market = value_of::<usize>(arg_matches, "money-market").unwrap();
             let token = value_of::<String>(arg_matches, "token").unwrap();
             command_init_mining(
                 &config,
                 StakingMoneyMarket::from(staking_money_market),
-                MoneyMarket::from(money_market),
                 &token,
             )
         }

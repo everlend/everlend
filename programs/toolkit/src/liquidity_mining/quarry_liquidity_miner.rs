@@ -22,7 +22,7 @@ impl LiquidityMiner for QuarryLiquidityMiner {
             .miner_vault
     }
 
-    fn save_mining_account_keypair(
+    fn save_new_mining_account(
         &self,
         config: &Config,
         token: &String,
@@ -67,7 +67,7 @@ impl LiquidityMiner for QuarryLiquidityMiner {
             &mining_account,
             spl_token::state::Account::LEN as u64,
         )?;
-        self.save_mining_account_keypair(config, token, &mining_account)?;
+        self.save_new_mining_account(config, token, &mining_account)?;
         Ok(())
     }
 
@@ -102,5 +102,9 @@ impl LiquidityMiner for QuarryLiquidityMiner {
             token_mint: quarry.token_mint,
             miner_vault: mining_account,
         }
+    }
+
+    fn update_mining_accounts(&self, config: &Config) -> Result<()> {
+        Ok(())
     }
 }

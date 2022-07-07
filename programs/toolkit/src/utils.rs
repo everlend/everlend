@@ -9,10 +9,12 @@ use solana_client::{
     rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
     rpc_filter::{Memcmp, MemcmpEncodedBytes, MemcmpEncoding, RpcFilterType},
 };
+use solana_program::system_instruction;
 use solana_program::{
     program_pack::{IsInitialized, Pack},
     pubkey::Pubkey,
 };
+use solana_sdk::signature::Keypair;
 use solana_sdk::{
     account::Account, signature::Signature, signer::Signer, transaction::Transaction,
 };
@@ -215,4 +217,37 @@ pub fn get_asset_maps(
 pub fn delay(milis: u64) {
     println!("Waiting {} milliseconds...", milis);
     thread::sleep(time::Duration::from_millis(milis))
+}
+
+pub fn init_token_account(
+    config: &Config,
+    account: &Keypair,
+    token_mint: &Pubkey,
+) -> Result<(), ClientError> {
+    let rent = config
+        .rpc_client
+        .get_minimum_balance_for_rent_exemption(spl_token::state::Account::LEN as usize)?;
+    let create_account_instruction = system_instruction::create_account(
+        &config.fee_payer.pubkey(),
+        &account.pubkey(),
+        rent,
+        spl_token::state::Account::LEN as u64,
+        &spl_token::id(),
+    );
+    let init_account_instruction = spl_token::instruction::initialize_account(
+        &spl_token::id(),
+        &account.pubkey(),
+        token_mint,
+        &config.fee_payer.pubkey(),
+    )
+    .unwrap();
+    let transaction = Transaction::new_with_payer(
+        &[create_account_instruction, init_account_instruction],
+        Some(&config.fee_payer.pubkey()),
+    );
+    config.sign_and_send_and_confirm_transaction(
+        transaction,
+        vec![config.fee_payer.as_ref(), account],
+    )?;
+    Ok(())
 }
