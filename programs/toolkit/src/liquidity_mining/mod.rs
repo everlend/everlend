@@ -1,7 +1,4 @@
-use crate::{
-    accounts_config::{InitializedAccounts, MiningAccounts},
-    utils::*,
-};
+use crate::{accounts_config::MiningAccounts, utils::*};
 use anyhow::Result;
 use everlend_depositor::{instruction::InitMiningAccountsPubkeys, state::MiningType};
 use everlend_utils::integrations::MoneyMarket;

@@ -1,5 +1,4 @@
-use super::{get_internal_mining_account, save_mining_accounts, LiquidityMiner};
-use crate::accounts_config::MiningAccounts;
+use super::LiquidityMiner;
 use crate::liquidity_mining::execute_mining_account_creation;
 use crate::utils::*;
 use anyhow::Result;

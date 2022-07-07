@@ -60,7 +60,6 @@ pub fn create_miner(config: &Config, miner_vault: &Keypair) -> Result<(), Client
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
 pub fn stake_tokens(config: &Config, amount: u64) -> Result<(), ClientError> {
     let default_accounts = config.get_default_accounts();
     let miner = find_miner_address(config);
@@ -80,6 +79,38 @@ pub fn stake_tokens(config: &Config, amount: u64) -> Result<(), ClientError> {
     let transaction =
         Transaction::new_with_payer(&[stake_instruction], Some(&config.fee_payer.pubkey()));
     config.sign_and_send_and_confirm_transaction(transaction, vec![config.fee_payer.as_ref()])?;
+    let balance = config
+        .rpc_client
+        .get_token_account_balance(&default_accounts.quarry.token_source)
+        .unwrap();
+    println!("balance of rewards token account {:?}", balance);
+    Ok(())
+}
+
+pub fn withdraw_tokens(config: &Config, amount: u64) -> Result<(), ClientError> {
+    let default_accounts = config.get_default_accounts();
+    let miner = find_miner_address(config);
+    let stake_instruction = Instruction {
+        program_id: default_accounts.quarry.mine_program_id,
+        accounts: vec![
+            AccountMeta::new_readonly(config.fee_payer.pubkey(), true),
+            AccountMeta::new(miner, false),
+            AccountMeta::new(default_accounts.quarry.quarry, false),
+            AccountMeta::new(default_accounts.quarry.miner_vault, false),
+            AccountMeta::new(default_accounts.quarry.token_source, false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(default_accounts.quarry.token_source, false),
+        ],
+        data: StakeTokens { amount }.data(),
+    };
+    let transaction =
+        Transaction::new_with_payer(&[stake_instruction], Some(&config.fee_payer.pubkey()));
+    config.sign_and_send_and_confirm_transaction(transaction, vec![config.fee_payer.as_ref()])?;
+    let balance = config
+        .rpc_client
+        .get_token_account_balance(&default_accounts.quarry.token_source)
+        .unwrap();
+    println!("balance of rewards token account {:?}", balance);
     Ok(())
 }
 

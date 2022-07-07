@@ -33,13 +33,13 @@ quarry:
   rewarder: rXhAofQCT7NN9TUqigyEAUzV1uLL4boeD8CRkNBSkYk
   quarry: 8QfbpS8fBNcqee9qHjYG5pgBWTKyM193E7zjwzxeUZ3X
   token_mint: YakofBo4X3zMxa823THQJwZ8QeoU8pxPdFdxJs7JW57
-  miner_vault: 6Ve9FVMRV25ppqgM8e5P8AwsdGXTZdxoz3eH767JWpU2
-  token_source: DGuYPHDAVTAZS6jeWmUGEeeQyDvNG1kSsmXcYQnuBgLZ
+  miner_vault: C3hqQbvnYmBQMFor7aPgZ3FTGZB13oXAu51Nps7XDLqJ
+  token_source: DsCtHv6WSPRiAE1Rn2vxYXpXHvXU2hxrHyHcydyt8Z5e
   mint_wrapper: EVVDA3ZiAjTizemLGXNUN3gb6cffQFEYkFjFZokPmUPz
   mint_wrapper_program: QMWoBmAyJLAsA1Lh9ugMTw2gciTihncciphzdNzdZYV
   minter: GEoTC3gN12qHDniaDD7Zxvd5xtcZyEKkTPy42B44s82y
   rewards_token_mint: iouQcQBAiEXe6cKLS85zmZxUqaCqBdeHFpqKoSz615u
-  rewards_token_account: 3GFnqsXDhXPgSZjHsArHtLAVV6sV1ECf5Ly1ezVXE3UX
+  rewards_token_account: 92qo3Y8xBnnWHieMz5Q84rADp94WnEnGoDS1iWywVCKh
   fee_token_account: 4Snkea6wv3K6qzDTdyJiF2VTiLPmCoyHJCzAdkdTStBK
 solend:
   program_id: ALend7Ketfx5bxh6ghsCDXAoDrhvEmsXT3cynB6aPLgx

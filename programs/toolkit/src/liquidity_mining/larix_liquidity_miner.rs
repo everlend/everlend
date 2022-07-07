@@ -1,5 +1,4 @@
-use super::{get_internal_mining_account, save_mining_accounts, LiquidityMiner};
-use crate::accounts_config::{LarixMining, MiningAccounts};
+use crate::accounts_config::LarixMining;
 use crate::liquidity_mining::execute_mining_account_creation;
 use crate::utils::*;
 use anyhow::Result;
@@ -8,6 +7,8 @@ use everlend_utils::integrations::MoneyMarket;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::signature::write_keypair_file;
 use solana_sdk::{signature::Keypair, signer::Signer};
+
+use super::LiquidityMiner;
 
 const LARIX_MINING_SIZE: u64 = 1 + 32 + 32 + 1 + 16 + 560;
 
