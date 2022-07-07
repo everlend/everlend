@@ -631,14 +631,6 @@ async fn main() -> anyhow::Result<()> {
                         .help("Money market index"),
                 )
                 .arg(
-                    Arg::with_name("money-market")
-                        .long("money-market")
-                        .value_name("NUMBER")
-                        .takes_value(true)
-                        .required(true)
-                        .help("Money market index"),
-                )
-                .arg(
                     Arg::with_name("token")
                         .long("token")
                         .short("t")
