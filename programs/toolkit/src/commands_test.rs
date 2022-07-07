@@ -22,7 +22,8 @@ use crate::{
     accounts_config::InitializedAccounts,
     depositor, distribution,
     general_pool::{self, get_withdrawal_request_accounts},
-    larix_liquidity_mining, liquidity_oracle, quarry_liquidity_mining,
+    liquidity_mining::{larix_raw_test, quarry_raw_test},
+    liquidity_oracle,
     utils::Config,
 };
 
@@ -48,6 +49,7 @@ pub async fn command_run_test(
         liquidity_oracle,
         depositor,
         larix_mining: _,
+        quarry_mining: _,
     } = initialized_accounts;
 
     let (registry_config_pubkey, _) =
@@ -461,11 +463,11 @@ pub fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()> {
     let collateral_transit = Keypair::new();
     let dividends_account = Keypair::new();
     let withdraw_account = Keypair::new();
-    larix_liquidity_mining::init_mining_accounts(&config, &mining_account)?;
+    larix_raw_test::init_mining_accounts(&config, &mining_account)?;
     println!("init mining accounts finished");
-    larix_liquidity_mining::deposit_liquidity(&config, amount, &source_sol, &collateral_transit)?;
+    larix_raw_test::deposit_liquidity(&config, amount, &source_sol, &collateral_transit)?;
     println!("deposit liquidity finished");
-    larix_liquidity_mining::deposit_collateral(
+    larix_raw_test::deposit_collateral(
         &config,
         amount,
         &mining_account.pubkey(),
@@ -474,28 +476,26 @@ pub fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()> {
     println!("deposit collateral finished");
     thread::sleep(time::Duration::from_secs(60));
     println!("claim dividends finished");
-    larix_liquidity_mining::withdraw_collateral(
+    larix_raw_test::withdraw_collateral(
         &config,
         amount - 10_000_000,
         &withdraw_account,
         &mining_account.pubkey(),
     )?;
-    larix_liquidity_mining::claim_mining(&config, &dividends_account, &mining_account.pubkey())?;
+    larix_raw_test::claim_mining(&config, &dividends_account, &mining_account.pubkey())?;
     println!("withdraw collateral finished");
     Ok(())
 }
 
 // Please mind: pre-requisites:
-// 1. run create-quarry-miner-vault
-// 2. run create-quarry-token-source
-// 3. run create-quarry-rewards-token-account
-// 4. transfer some Saber-staked USDC collateral token (quarry_token_mint) on token source
+// 1. run init-quarry-mining-accounts
+// 2. transfer some Saber-staked USDC collateral token (quarry_token_mint) on token source
 pub fn command_test_quarry_mining_raw(config: &Config) -> anyhow::Result<()> {
     let amount = 1_000_000;
-    quarry_liquidity_mining::stake_tokens(config, amount)?;
+    quarry_raw_test::stake_tokens(config, amount)?;
     println!("stake tokens finished");
     thread::sleep(time::Duration::from_secs(60));
-    quarry_liquidity_mining::claim_mining_rewards(config)?;
+    quarry_raw_test::claim_mining_rewards(config)?;
     println!("claim rewards finished");
     Ok(())
 }

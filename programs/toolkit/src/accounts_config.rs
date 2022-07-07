@@ -177,10 +177,40 @@ pub struct PortAccounts {
 
 #[serde_as]
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default)]
-pub struct LarixMiningAccount {
+pub struct LarixMining {
     #[serde_as(as = "DisplayFromStr")]
     pub staking_account: Pubkey,
     pub count: u64,
+}
+
+#[serde_as]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default)]
+pub struct QuarryMining {
+    #[serde_as(as = "DisplayFromStr")]
+    pub token_mint: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub rewards_token_mint: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub miner_vault: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub token_source: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub rewards_token_account: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub fee_token_account: Pubkey,
+}
+
+impl QuarryMining {
+    pub fn default() -> QuarryMining {
+        QuarryMining {
+            token_mint: Pubkey::default(),
+            rewards_token_mint: Pubkey::default(),
+            miner_vault: Pubkey::default(),
+            token_source: Pubkey::default(),
+            rewards_token_account: Pubkey::default(),
+            fee_token_account: Pubkey::default(),
+        }
+    }
 }
 
 #[serde_as]
@@ -212,7 +242,9 @@ pub struct InitializedAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub depositor: Pubkey,
 
-    pub larix_mining: Vec<LarixMiningAccount>,
+    pub larix_mining: Vec<LarixMining>,
+
+    pub quarry_mining: BTreeMap<String, QuarryMining>,
 }
 
 #[serde_as]

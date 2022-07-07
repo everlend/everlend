@@ -44,11 +44,9 @@ mod depositor;
 mod download_account;
 mod general_pool;
 mod income_pools;
-mod larix_liquidity_mining;
 mod liquidity_mining;
 mod liquidity_oracle;
 mod multisig;
-mod quarry_liquidity_mining;
 mod registry;
 mod utils;
 
@@ -279,6 +277,7 @@ async fn command_create(
         liquidity_oracle: liquidity_oracle_pubkey,
         depositor: depositor_pubkey,
         larix_mining: vec![],
+        quarry_mining: BTreeMap::new(),
     };
 
     initialized_accounts.save(accounts_path).unwrap();

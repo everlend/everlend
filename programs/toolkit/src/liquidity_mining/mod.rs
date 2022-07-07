@@ -7,11 +7,11 @@ use solana_program::pubkey::Pubkey;
 use solana_program::{program_pack::Pack, system_instruction};
 use solana_sdk::{signature::Keypair, signer::Signer, transaction::Transaction};
 
-use self::larix_liquidity_miner::LarixLiquidityMiner;
-use self::port_liquidity_miner::PortLiquidityMiner;
-
 pub mod larix_liquidity_miner;
+pub mod larix_raw_test;
 pub mod port_liquidity_miner;
+pub mod quarry_liquidity_miner;
+pub mod quarry_raw_test;
 
 const LARIX_MINING_SIZE: u64 = 1 + 32 + 32 + 1 + 16 + 560;
 
@@ -120,19 +120,19 @@ pub fn save_internal_mining_account(
 }
 
 pub trait LiquidityMiner {
-    fn create_mining_account(
-        &self,
-        config: &Config,
-        token: &String,
-        mining_account: &Keypair,
-    ) -> Result<()>;
+    fn get_mining_pubkey(&self, config: &Config, token: &String) -> Pubkey;
     fn save_mining_account_keypair(
         &self,
         config: &Config,
         token: &String,
         mining_account: &Keypair,
     ) -> Result<()>;
-    fn get_mining_pubkey(&self, config: &Config, token: &String) -> Pubkey;
+    fn create_mining_account(
+        &self,
+        config: &Config,
+        token: &String,
+        mining_account: &Keypair,
+    ) -> Result<()>;
     fn get_pubkeys(&self, config: &Config, token: &String) -> Option<InitMiningAccountsPubkeys>;
     fn get_mining_type(
         &self,
@@ -174,13 +174,5 @@ impl LiquidityMiner for NotSupportedMiner {
         _mining_account: Pubkey,
     ) -> MiningType {
         MiningType::None
-    }
-}
-
-pub fn get_liquidty_miner(money_market: StakingMoneyMarket) -> Box<dyn LiquidityMiner> {
-    match money_market {
-        StakingMoneyMarket::PortFinance => Box::new(PortLiquidityMiner {}),
-        StakingMoneyMarket::Larix => Box::new(LarixLiquidityMiner {}),
-        _ => Box::new(NotSupportedMiner {}),
     }
 }

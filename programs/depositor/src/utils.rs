@@ -81,10 +81,11 @@ pub fn deposit<'a>(
                 signers_seeds,
             )?;
         }
-        Some(MiningType::PortFinanceQuarry {
+        Some(MiningType::Quarry {
             quarry_mining_program_id,
             quarry,
             rewarder,
+            token_mint: _,
             miner_vault,
         }) => {
             let quarry_mining_program_id_info = next_account_info(money_market_account_info_iter)?;
@@ -96,7 +97,7 @@ pub fn deposit<'a>(
             assert_account_key(quarry_info, &quarry)?;
             assert_account_key(rewarder_info, &rewarder)?;
             assert_account_key(miner_vault_info, &miner_vault)?;
-            let (miner_pubkey, _miner_bump) = cpi::quarry::find_miner_program_address(
+            let (miner_pubkey, _) = cpi::quarry::find_miner_program_address(
                 &quarry_mining_program_id,
                 &quarry,
                 &internal_mining.key,
@@ -203,10 +204,11 @@ pub fn withdraw<'a>(
                 signers_seeds,
             )?;
         }
-        Some(MiningType::PortFinanceQuarry {
+        Some(MiningType::Quarry {
             quarry_mining_program_id,
             quarry,
             rewarder,
+            token_mint: _,
             miner_vault,
         }) => {
             let miner_info = next_account_info(money_market_account_info_iter)?;

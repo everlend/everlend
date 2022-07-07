@@ -17,6 +17,7 @@ use solana_program::{
     rent::Rent,
     sysvar::Sysvar,
 };
+use spl_token::error::TokenError;
 use spl_token::state::Account;
 
 use everlend_collateral_pool::utils::CollateralPoolAccounts;
@@ -854,10 +855,11 @@ impl Processor {
                     depositor_authority_info.clone(),
                 )?;
             }
-            MiningType::PortFinanceQuarry {
+            MiningType::Quarry {
                 quarry_mining_program_id,
                 quarry,
                 rewarder,
+                token_mint,
                 miner_vault,
             } => {
                 let staking_program_id_info = next_account_info(account_info_iter)?;
@@ -868,6 +870,7 @@ impl Processor {
                 let rewarder_info = next_account_info(account_info_iter)?;
                 assert_account_key(rewarder_info, &rewarder)?;
                 let token_mint_info = next_account_info(account_info_iter)?;
+                assert_account_key(token_mint_info, &token_mint)?;
                 let miner_vault_info = next_account_info(account_info_iter)?;
                 assert_account_key(miner_vault_info, &miner_vault)?;
                 let (miner_pubkey, _) = cpi::quarry::find_miner_program_address(
@@ -988,10 +991,11 @@ impl Processor {
                     &[signers_seeds.as_ref()],
                 )?;
             }
-            MiningType::PortFinanceQuarry {
+            MiningType::Quarry {
                 quarry_mining_program_id,
-                quarry: _,
-                rewarder: _,
+                quarry,
+                rewarder,
+                token_mint: _,
                 miner_vault: _,
             } => {
                 assert_account_key(staking_program_id_info, &quarry_mining_program_id)?;
@@ -1003,8 +1007,10 @@ impl Processor {
                 let rewards_token_account = next_account_info(account_info_iter)?;
                 let rewards_fee_account = next_account_info(account_info_iter)?;
                 let miner = next_account_info(account_info_iter)?;
-                let quarry = next_account_info(account_info_iter)?;
+                let quarry_info = next_account_info(account_info_iter)?;
+                assert_account_key(quarry_info, &quarry)?;
                 let quarry_rewarder = next_account_info(account_info_iter)?;
+                assert_account_key(quarry_rewarder, &rewarder)?;
                 cpi::quarry::claim_rewards(
                     staking_program_id_info.key,
                     mint_wrapper.clone(),
@@ -1015,7 +1021,7 @@ impl Processor {
                     rewards_fee_account.clone(),
                     depositor_authority_info.clone(),
                     miner.clone(),
-                    quarry.clone(),
+                    quarry_info.clone(),
                     quarry_rewarder.clone(),
                 )?;
             }

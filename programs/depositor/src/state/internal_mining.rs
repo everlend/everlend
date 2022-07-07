@@ -29,7 +29,7 @@ pub enum MiningType {
         staking_pool: Pubkey,
     },
     ///
-    PortFinanceQuarry {
+    Quarry {
         ///
         // TODO move to config
         quarry_mining_program_id: Pubkey,
@@ -37,6 +37,8 @@ pub enum MiningType {
         quarry: Pubkey,
         ///
         rewarder: Pubkey,
+        ///
+        token_mint: Pubkey,
         ///
         miner_vault: Pubkey,
     },

@@ -19,7 +19,7 @@ pub enum MoneyMarket {
     Solend,
 }
 
-#[derive(Debug, IntoPrimitive, FromPrimitive, Clone, Copy)]
+#[derive(Debug, IntoPrimitive, FromPrimitive, Clone, Copy, PartialEq)]
 #[repr(usize)]
 pub enum StakingMoneyMarket {
     #[num_enum(default)]

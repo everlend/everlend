@@ -12,22 +12,14 @@ use solana_sdk::{signature::Keypair, signer::Signer};
 pub struct PortLiquidityMiner {}
 
 impl LiquidityMiner for PortLiquidityMiner {
-    fn create_mining_account(
-        &self,
-        config: &Config,
-        token: &String,
-        mining_account: &Keypair,
-    ) -> Result<()> {
-        let default_accounts = config.get_default_accounts();
-        println!("Create and Init port staking account");
-        execute_mining_account_creation(
-            config,
-            &default_accounts.port_finance.staking_program_id,
-            &mining_account,
-            port_finance_staking::state::stake_account::StakeAccount::LEN as u64,
-        )?;
-        self.save_mining_account_keypair(config, token, &mining_account)?;
-        Ok(())
+    fn get_mining_pubkey(&self, config: &Config, token: &String) -> Pubkey {
+        let mut initialized_accounts = config.get_initialized_accounts();
+        initialized_accounts
+            .token_accounts
+            .get_mut(token)
+            .unwrap()
+            .mining_accounts[StakingMoneyMarket::PortFinance as usize]
+            .staking_account
     }
 
     fn save_mining_account_keypair(
@@ -59,14 +51,22 @@ impl LiquidityMiner for PortLiquidityMiner {
         Ok(())
     }
 
-    fn get_mining_pubkey(&self, config: &Config, token: &String) -> Pubkey {
-        let mut initialized_accounts = config.get_initialized_accounts();
-        initialized_accounts
-            .token_accounts
-            .get_mut(token)
-            .unwrap()
-            .mining_accounts[StakingMoneyMarket::PortFinance as usize]
-            .staking_account
+    fn create_mining_account(
+        &self,
+        config: &Config,
+        token: &String,
+        mining_account: &Keypair,
+    ) -> Result<()> {
+        let default_accounts = config.get_default_accounts();
+        println!("Create and Init port staking account");
+        execute_mining_account_creation(
+            config,
+            &default_accounts.port_finance.staking_program_id,
+            &mining_account,
+            port_finance_staking::state::stake_account::StakeAccount::LEN as u64,
+        )?;
+        self.save_mining_account_keypair(config, token, &mining_account)?;
+        Ok(())
     }
 
     fn get_pubkeys(&self, config: &Config, token: &String) -> Option<InitMiningAccountsPubkeys> {

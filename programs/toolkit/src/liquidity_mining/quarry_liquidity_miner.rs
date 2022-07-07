@@ -1,26 +1,25 @@
 use super::LiquidityMiner;
-use crate::accounts_config::LarixMining;
-use crate::liquidity_mining::{execute_mining_account_creation, LARIX_MINING_SIZE};
+use crate::accounts_config::QuarryMining;
+use crate::liquidity_mining::execute_mining_account_creation;
 use crate::utils::*;
 use anyhow::Result;
 use everlend_depositor::{instruction::InitMiningAccountsPubkeys, state::MiningType};
-use everlend_utils::integrations::{MoneyMarket, StakingMoneyMarket};
+use everlend_utils::integrations::StakingMoneyMarket;
+use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::signature::write_keypair_file;
 use solana_sdk::{signature::Keypair, signer::Signer};
 
-pub struct LarixLiquidityMiner {}
+pub struct QuarryLiquidityMiner {}
 
-impl LiquidityMiner for LarixLiquidityMiner {
-    fn get_mining_pubkey(&self, config: &Config, _token: &String) -> Pubkey {
-        let larix_mining = config.get_initialized_accounts().larix_mining;
-        larix_mining
-            .last()
-            .unwrap_or(&LarixMining {
-                staking_account: Pubkey::default(),
-                count: 0,
-            })
-            .staking_account
+impl LiquidityMiner for QuarryLiquidityMiner {
+    fn get_mining_pubkey(&self, config: &Config, token: &String) -> Pubkey {
+        config
+            .get_initialized_accounts()
+            .quarry_mining
+            .get_mut(token)
+            .unwrap_or(&mut QuarryMining::default())
+            .miner_vault
     }
 
     fn save_mining_account_keypair(
@@ -29,31 +28,28 @@ impl LiquidityMiner for LarixLiquidityMiner {
         token: &String,
         mining_account: &Keypair,
     ) -> Result<()> {
-        let mut initialized_accounts = config.get_initialized_accounts();
         write_keypair_file(
             &mining_account,
             &format!(
-                ".keypairs/{}_larix_mining_{}.json",
+                ".keypairs/{}_quarry_mining_{}.json",
                 token,
                 mining_account.pubkey()
             ),
         )
         .unwrap();
-        // Larix can store up to 10 tokens on 1 account
-        initialized_accounts.larix_mining.push(LarixMining {
-            staking_account: mining_account.pubkey(),
-            count: 0,
-        });
-        // Save into account file
+        let mut initialized_accounts = config.get_initialized_accounts();
+        let quarry_mining = initialized_accounts.quarry_mining.get_mut(token);
+        if quarry_mining.is_none() {
+            initialized_accounts
+                .quarry_mining
+                .insert(token.clone(), QuarryMining::default());
+        }
         initialized_accounts
-            .token_accounts
+            .quarry_mining
             .get_mut(token)
             .unwrap()
-            .mining_accounts[MoneyMarket::Larix as usize]
-            .staking_account = mining_account.pubkey();
-        initialized_accounts
-            .save(&format!("accounts.{}.yaml", config.network))
-            .unwrap();
+            .miner_vault = mining_account.pubkey();
+        initialized_accounts.save(&format!("accounts.{}.yaml", config.network))?;
         Ok(())
     }
 
@@ -63,14 +59,13 @@ impl LiquidityMiner for LarixLiquidityMiner {
         token: &String,
         mining_account: &Keypair,
     ) -> Result<()> {
-        let default_accounts = config.get_default_accounts();
-        println!("Create and Init larix mining accont");
+        println!("Create and Init quarry mining accont");
         println!("Mining account: {}", mining_account.pubkey());
         execute_mining_account_creation(
             config,
-            &default_accounts.larix.program_id,
+            &spl_token::id(),
             &mining_account,
-            LARIX_MINING_SIZE,
+            spl_token::state::Account::LEN as u64,
         )?;
         self.save_mining_account_keypair(config, token, &mining_account)?;
         Ok(())
@@ -81,25 +76,31 @@ impl LiquidityMiner for LarixLiquidityMiner {
         let initialized_accounts = config.get_initialized_accounts();
         let (_, collateral_mint_map) = get_asset_maps(default_accounts.clone());
         let collateral_mint =
-            collateral_mint_map.get(token).unwrap()[StakingMoneyMarket::Larix as usize].unwrap();
+            collateral_mint_map.get(token).unwrap()[StakingMoneyMarket::Quarry as usize].unwrap();
         Some(InitMiningAccountsPubkeys {
             collateral_mint,
             depositor: initialized_accounts.depositor,
             registry: initialized_accounts.registry,
             manager: config.fee_payer.pubkey(),
-            money_market_program_id: default_accounts.larix.program_id,
-            lending_market: Some(default_accounts.larix.lending_market),
+            money_market_program_id: default_accounts.quarry.mine_program_id,
+            lending_market: None,
         })
     }
 
     fn get_mining_type(
         &self,
-        _config: &Config,
+        config: &Config,
         _token: &String,
         mining_account: Pubkey,
     ) -> MiningType {
-        MiningType::Larix {
-            mining_account: mining_account,
+        let default_accounts = config.get_default_accounts();
+        let quarry = default_accounts.quarry;
+        MiningType::Quarry {
+            quarry_mining_program_id: quarry.mine_program_id,
+            quarry: quarry.quarry,
+            rewarder: quarry.rewarder,
+            token_mint: quarry.token_mint,
+            miner_vault: mining_account,
         }
     }
 }

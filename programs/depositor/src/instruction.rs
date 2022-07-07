@@ -10,7 +10,7 @@ use solana_program::{
 
 use everlend_general_pool::find_withdrawal_requests_program_address;
 use everlend_liquidity_oracle::find_liquidity_oracle_token_distribution_program_address;
-use everlend_utils::find_program_address;
+use everlend_utils::{cpi, find_program_address};
 
 use crate::{find_rebalancing_program_address, find_transit_program_address, state::MiningType};
 
@@ -548,6 +548,25 @@ pub fn init_mining_accounts(
             accounts.push(AccountMeta::new_readonly(staking_program_id, false));
             accounts.push(AccountMeta::new_readonly(staking_pool, false));
             accounts.push(AccountMeta::new(staking_account, false));
+        }
+        MiningType::Quarry {
+            quarry_mining_program_id,
+            quarry,
+            rewarder,
+            token_mint,
+            miner_vault,
+        } => {
+            let (miner_pubkey, _) = cpi::quarry::find_miner_program_address(
+                &quarry_mining_program_id,
+                &quarry,
+                &internal_mining,
+            );
+            accounts.push(AccountMeta::new_readonly(quarry_mining_program_id, false));
+            accounts.push(AccountMeta::new(miner_pubkey, false));
+            accounts.push(AccountMeta::new(quarry, false));
+            accounts.push(AccountMeta::new_readonly(rewarder, false));
+            accounts.push(AccountMeta::new_readonly(token_mint, false));
+            accounts.push(AccountMeta::new_readonly(miner_vault, false));
         }
         _ => {}
     }
