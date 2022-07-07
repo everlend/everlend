@@ -16,7 +16,7 @@ pub fn refresh_reserve<'a>(
     let mut liquidity_oracle = COption::None;
     let mut account_infos = vec![reserve, clock];
 
-    if reserve_liquidity_oracle.lamports() != 0 {
+    if !reserve_liquidity_oracle.key.eq(&Pubkey::default()) {
         liquidity_oracle = COption::Some(*reserve_liquidity_oracle.key);
         account_infos.push(reserve_liquidity_oracle);
     }
