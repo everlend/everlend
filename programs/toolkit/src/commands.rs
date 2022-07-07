@@ -222,8 +222,7 @@ pub fn command_init_mining(
     let mining_type = liquidity_miner.get_mining_type(config, token, mining_pubkey);
     // TODO increment counter for larix
     execute_init_mining_accounts(config, &pubkeys.unwrap(), mining_type)?;
-    save_internal_mining_account(config, token, money_market)?;
-    if money_market == StakingMoneyMarket::Larix {
+    if staking_money_market == StakingMoneyMarket::Larix {
         let mut initialized_accounts = config.get_initialized_accounts();
         let last_index = initialized_accounts.larix_mining.len() - 1;
         initialized_accounts.larix_mining[last_index].count += 1;

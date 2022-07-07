@@ -2,7 +2,7 @@ use crate::utils::*;
 use crate::MiningAccounts;
 use anyhow::Result;
 use everlend_depositor::{instruction::InitMiningAccountsPubkeys, state::MiningType};
-use everlend_utils::integrations::{MoneyMarket, StakingMoneyMarket};
+use everlend_utils::integrations::MoneyMarket;
 use solana_client::client_error::ClientError;
 use solana_program::pubkey::Pubkey;
 use solana_program::{program_pack::Pack, system_instruction};
