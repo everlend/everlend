@@ -69,7 +69,7 @@ async fn setup() -> (
 
     let general_pool_market = TestGeneralPoolMarket::new();
     general_pool_market
-        .init(&mut context, &registry.keypair.pubkey())
+        .init(&mut env.context, &env.registry.keypair.pubkey())
         .await
         .unwrap();
 
@@ -234,7 +234,7 @@ async fn setup() -> (
     let withdraw_authority = TestPoolWithdrawAuthority::new(&mm_pool, &depositor_authority);
     withdraw_authority
         .create(
-            &mut context,
+            &mut env.context,
             &mm_pool_market,
             &mm_pool,
             &depositor_authority,

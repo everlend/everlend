@@ -22,7 +22,7 @@ async fn success() {
 
     let general_pool_market = TestGeneralPoolMarket::new();
     general_pool_market
-        .init(&mut context, &registry.keypair.pubkey())
+        .init(&mut env.context, &env.registry.keypair.pubkey())
         .await
         .unwrap();
 
@@ -49,7 +49,7 @@ async fn fail_second_time_init() {
 
     let general_pool_market = TestGeneralPoolMarket::new();
     general_pool_market
-        .init(&mut context, &registry.keypair.pubkey())
+        .init(&mut env.context, &env.registry.keypair.pubkey())
         .await
         .unwrap();
 
@@ -71,7 +71,7 @@ async fn fail_second_time_init() {
             &everlend_depositor::id(),
             &env.registry.keypair.pubkey(),
             &test_depositor.depositor.pubkey(),
-            &context.payer.pubkey(),
+            &env.context.payer.pubkey(),
         )],
         Some(&env.context.payer.pubkey()),
         &[&env.context.payer],
@@ -98,7 +98,7 @@ async fn fail_with_invalid_registry() {
 
     let general_pool_market = TestGeneralPoolMarket::new();
     general_pool_market
-        .init(&mut context, &registry.keypair.pubkey())
+        .init(&mut env.context, &env.registry.keypair.pubkey())
         .await
         .unwrap();
 
@@ -125,7 +125,7 @@ async fn fail_with_invalid_registry() {
                 &everlend_depositor::id(),
                 &Pubkey::new_unique(),
                 &test_depositor.depositor.pubkey(),
-                &context.payer.pubkey(),
+                &env.context.payer.pubkey(),
             ),
         ],
         Some(&env.context.payer.pubkey()),
@@ -156,7 +156,7 @@ async fn fail_with_invalid_uncreated_depositor_account() {
 
     let general_pool_market = TestGeneralPoolMarket::new();
     general_pool_market
-        .init(&mut context, &registry.keypair.pubkey())
+        .init(&mut env.context, &env.registry.keypair.pubkey())
         .await
         .unwrap();
 
@@ -173,7 +173,7 @@ async fn fail_with_invalid_uncreated_depositor_account() {
             &everlend_depositor::id(),
             &env.registry.keypair.pubkey(),
             &test_depositor.depositor.pubkey(),
-            &context.payer.pubkey(),
+            &env.context.payer.pubkey(),
         )],
         Some(&env.context.payer.pubkey()),
         &[&env.context.payer],

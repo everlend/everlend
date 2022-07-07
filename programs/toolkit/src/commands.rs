@@ -26,7 +26,6 @@ use everlend_utils::integrations::{MoneyMarket, StakingMoneyMarket};
 use crate::accounts_config::{
     save_config_file, CollateralPoolAccounts, DefaultAccounts, InitializedAccounts,
 };
-use crate::accounts_config::{CollateralPoolAccounts, InitializedAccounts};
 use crate::collateral_pool::{self, PoolPubkeys};
 use crate::download_account::download_account;
 use crate::liquidity_mining::init_token_account;

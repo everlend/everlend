@@ -62,7 +62,7 @@ async fn setup() -> (
     let general_pool_market = TestGeneralPoolMarket::new();
     general_pool_market.init(&mut context, &env.registry.keypair.pubkey()).await.unwrap();
     general_pool_market
-        .init(&mut context, &registry.keypair.pubkey())
+        .init(&mut context, &env.registry.keypair.pubkey())
         .await
         .unwrap();
 
