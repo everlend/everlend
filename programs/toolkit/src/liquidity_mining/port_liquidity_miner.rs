@@ -22,6 +22,24 @@ impl LiquidityMiner for PortLiquidityMiner {
             .staking_account
     }
 
+    fn create_mining_account(
+        &self,
+        config: &Config,
+        token: &String,
+        mining_account: &Keypair,
+    ) -> Result<()> {
+        let default_accounts = config.get_default_accounts();
+        println!("Create and Init port staking account");
+        execute_mining_account_creation(
+            config,
+            &default_accounts.port_finance.staking_program_id,
+            mining_account,
+            port_finance_staking::state::stake_account::StakeAccount::LEN as u64,
+        )?;
+        self.save_mining_account_keypair(config, token, mining_account)?;
+        Ok(())
+    }
+
     fn save_mining_account_keypair(
         &self,
         config: &Config,
@@ -51,31 +69,12 @@ impl LiquidityMiner for PortLiquidityMiner {
         Ok(())
     }
 
-    fn create_mining_account(
-        &self,
-        config: &Config,
-        token: &String,
-        mining_account: &Keypair,
-    ) -> Result<()> {
-        let default_accounts = config.get_default_accounts();
-        println!("Create and Init port staking account");
-        execute_mining_account_creation(
-            config,
-            &default_accounts.port_finance.staking_program_id,
-            &mining_account,
-            port_finance_staking::state::stake_account::StakeAccount::LEN as u64,
-        )?;
-        self.save_mining_account_keypair(config, token, &mining_account)?;
-        Ok(())
-    }
-
     fn get_pubkeys(&self, config: &Config, token: &String) -> Option<InitMiningAccountsPubkeys> {
         let initialized_accounts = config.get_initialized_accounts();
         let default_accounts = config.get_default_accounts();
         let (_, collateral_mint_map) = get_asset_maps(default_accounts.clone());
-        let collateral_mint = collateral_mint_map.get(token).unwrap()
-            [StakingMoneyMarket::PortFinance as usize]
-            .unwrap();
+        let collateral_mint =
+            collateral_mint_map.get(token).unwrap()[MoneyMarket::PortFinance as usize].unwrap();
         Some(InitMiningAccountsPubkeys {
             collateral_mint,
             depositor: initialized_accounts.depositor,

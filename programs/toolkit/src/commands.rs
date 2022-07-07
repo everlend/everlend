@@ -30,11 +30,10 @@ use crate::download_account::download_account;
 use crate::liquidity_mining::init_token_account;
 use crate::liquidity_mining::larix_liquidity_miner::LarixLiquidityMiner;
 use crate::liquidity_mining::port_liquidity_miner::PortLiquidityMiner;
+use crate::liquidity_mining::save_mining_accounts;
 use crate::liquidity_mining::LiquidityMiner;
 use crate::liquidity_mining::NotSupportedMiner;
-use crate::liquidity_mining::{
-    execute_init_mining_accounts, quarry_raw_test, save_internal_mining_account,
-};
+use crate::liquidity_mining::{execute_init_mining_accounts, quarry_raw_test};
 use crate::registry::close_registry_config;
 use crate::{
     accounts_config::TokenAccounts,
@@ -204,10 +203,11 @@ pub async fn command_save_quarry_accounts(config: &Config) -> anyhow::Result<()>
 
 pub fn command_init_mining(
     config: &Config,
-    money_market: StakingMoneyMarket,
+    staking_money_market: StakingMoneyMarket,
+    money_market: MoneyMarket,
     token: &String,
 ) -> anyhow::Result<()> {
-    let liquidity_miner: Box<dyn LiquidityMiner> = match money_market {
+    let liquidity_miner: Box<dyn LiquidityMiner> = match staking_money_market {
         StakingMoneyMarket::PortFinance => Box::new(PortLiquidityMiner {}),
         StakingMoneyMarket::Larix => Box::new(LarixLiquidityMiner {}),
         _ => Box::new(NotSupportedMiner {}),
@@ -220,6 +220,7 @@ pub fn command_init_mining(
     };
     let pubkeys = liquidity_miner.get_pubkeys(config, token);
     let mining_type = liquidity_miner.get_mining_type(config, token, mining_pubkey);
+    // TODO increment counter for larix
     execute_init_mining_accounts(config, &pubkeys.unwrap(), mining_type)?;
     save_internal_mining_account(config, token, money_market)?;
     if money_market == StakingMoneyMarket::Larix {
@@ -230,6 +231,7 @@ pub fn command_init_mining(
             .save(&format!("accounts.{}.yaml", config.network))
             .unwrap();
     }
+    save_mining_accounts(config, token, money_market, mining_pubkey)?;
     Ok(())
 }
 

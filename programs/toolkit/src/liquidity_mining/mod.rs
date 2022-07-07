@@ -1,7 +1,8 @@
 use crate::utils::*;
+use crate::MiningAccounts;
 use anyhow::Result;
 use everlend_depositor::{instruction::InitMiningAccountsPubkeys, state::MiningType};
-use everlend_utils::integrations::StakingMoneyMarket;
+use everlend_utils::integrations::{MoneyMarket, StakingMoneyMarket};
 use solana_client::client_error::ClientError;
 use solana_program::pubkey::Pubkey;
 use solana_program::{program_pack::Pack, system_instruction};
@@ -91,10 +92,11 @@ pub fn execute_init_mining_accounts(
     Ok(())
 }
 
-pub fn save_internal_mining_account(
+pub fn save_mining_accounts(
     config: &Config,
     token: &String,
-    money_market: StakingMoneyMarket,
+    money_market: MoneyMarket,
+    mining_account: Pubkey,
 ) -> Result<()> {
     let default_accounts = config.get_default_accounts();
     let mut initialized_accounts = config.get_initialized_accounts();
@@ -111,8 +113,11 @@ pub fn save_internal_mining_account(
         .token_accounts
         .get_mut(token)
         .unwrap()
-        .mining_accounts[money_market as usize]
-        .internal_mining_account = internal_mining_account;
+        .mining_accounts[money_market as usize] = MiningAccounts {
+        staking_account: mining_account,
+        internal_mining_account,
+    };
+
     initialized_accounts
         .save(&format!("accounts.{}.yaml", config.network))
         .unwrap();

@@ -582,6 +582,14 @@ async fn main() -> anyhow::Result<()> {
                         .help("Accounts file"),
                 )
                 .arg(
+                    Arg::with_name("staking-money-market")
+                        .long("staking-money-market")
+                        .value_name("NUMBER")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Money market index"),
+                )
+                .arg(
                     Arg::with_name("money-market")
                         .long("money-market")
                         .value_name("NUMBER")
@@ -1129,9 +1137,16 @@ async fn main() -> anyhow::Result<()> {
             command_set_registry_config(&config, registry_pubkey).await
         }
         ("init-mining", Some(arg_matches)) => {
+            let staking_money_market =
+                value_of::<usize>(arg_matches, "staking-money-market").unwrap();
             let money_market = value_of::<usize>(arg_matches, "money-market").unwrap();
             let token = value_of::<String>(arg_matches, "token").unwrap();
-            command_init_mining(&config, StakingMoneyMarket::from(money_market), &token)
+            command_init_mining(
+                &config,
+                StakingMoneyMarket::from(staking_money_market),
+                MoneyMarket::from(money_market),
+                &token,
+            )
         }
         ("save-larix-accounts", Some(_)) => {
             command_save_larix_accounts("../tests/tests/fixtures/larix/reserve_sol.bin").await
