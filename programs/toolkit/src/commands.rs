@@ -235,18 +235,17 @@ pub fn command_init_mining(
     Ok(())
 }
 
-pub fn command_init_quarry_mining_accounts(
-    config: &Config,
-    defaults_path: &str,
-) -> anyhow::Result<()> {
-    let mut default_accounts = config.get_default_accounts();
+pub fn command_init_quarry_mining_accounts(config: &Config, token: &String) -> anyhow::Result<()> {
+    let default_accounts = config.get_default_accounts();
+    let mut initialized_accounts = config.get_initialized_accounts();
+    let quarry_mining = initialized_accounts.quarry_mining.get_mut(token).unwrap();
     let miner_vault = Keypair::new();
     quarry_raw_test::create_miner(config, &miner_vault)?;
-    default_accounts.quarry.miner_vault = miner_vault.pubkey();
+    quarry_mining.miner_vault = miner_vault.pubkey();
     println!("miner vault {}", miner_vault.pubkey());
     let token_source = Keypair::new();
     init_token_account(config, &token_source, &default_accounts.quarry.token_mint)?;
-    default_accounts.quarry.token_source = token_source.pubkey();
+    quarry_mining.token_source = token_source.pubkey();
     println!("token source {}", token_source.pubkey());
     let rewards_account = Keypair::new();
     init_token_account(
@@ -254,7 +253,7 @@ pub fn command_init_quarry_mining_accounts(
         &rewards_account,
         &default_accounts.quarry.rewards_token_mint,
     )?;
-    default_accounts.quarry.rewards_token_account = rewards_account.pubkey();
+    quarry_mining.rewards_token_account = rewards_account.pubkey();
     println!("rewards token account {}", rewards_account.pubkey());
     let fee_account = Keypair::new();
     init_token_account(
@@ -262,9 +261,9 @@ pub fn command_init_quarry_mining_accounts(
         &fee_account,
         &default_accounts.quarry.rewards_token_mint,
     )?;
-    default_accounts.quarry.fee_token_account = fee_account.pubkey();
+    quarry_mining.fee_token_account = fee_account.pubkey();
     println!("fee token account {}", fee_account.pubkey());
-    save_config_file::<DefaultAccounts, &str>(&default_accounts, defaults_path)?;
+    initialized_accounts.save(&format!("accounts.{}.yaml", config.network))?;
     Ok(())
 }
 

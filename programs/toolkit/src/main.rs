@@ -637,12 +637,22 @@ async fn main() -> anyhow::Result<()> {
                         .value_name("TOKEN")
                         .takes_value(true)
                         .required(true)
-                        .help("Token ticker"),
+                        .help("Token"),
                 ),
         )
         .subcommand(SubCommand::with_name("save-larix-accounts"))
         .subcommand(SubCommand::with_name("test-larix-mining-raw"))
-        .subcommand(SubCommand::with_name("save-quarry-accounts"))
+        .subcommand(
+            SubCommand::with_name("save-quarry-accounts").arg(
+                Arg::with_name("token")
+                    .long("token")
+                    .short("t")
+                    .value_name("TOKEN")
+                    .takes_value(true)
+                    .required(true)
+                    .help("Token"),
+            ),
+        )
         .subcommand(
             SubCommand::with_name("init-quarry-mining-accounts").arg(
                 Arg::with_name("default")
@@ -652,7 +662,17 @@ async fn main() -> anyhow::Result<()> {
                     .help("Defaults file"),
             ),
         )
-        .subcommand(SubCommand::with_name("test-quarry-mining-raw"))
+        .subcommand(
+            SubCommand::with_name("test-quarry-mining-raw").arg(
+                Arg::with_name("token")
+                    .long("token")
+                    .short("t")
+                    .value_name("TOKEN")
+                    .takes_value(true)
+                    .required(true)
+                    .help("Token"),
+            ),
+        )
         .subcommand(
             SubCommand::with_name("set-registry-pool-config")
                 .about("Set a new registry pool config")
@@ -1233,12 +1253,13 @@ async fn main() -> anyhow::Result<()> {
         ("test-larix-mining-raw", Some(_)) => command_test_larix_mining_raw(&config),
         ("save-quarry-accounts", Some(_)) => command_save_quarry_accounts(&config).await,
         ("init-quarry-mining-accounts", Some(arg_matches)) => {
-            let file_path = arg_matches
-                .value_of("default")
-                .unwrap_or("default.devnet.yaml");
-            command_init_quarry_mining_accounts(&config, file_path)
+            let token = value_of::<String>(arg_matches, "token").unwrap();
+            command_init_quarry_mining_accounts(&config, &token)
         }
-        ("test-quarry-mining-raw", Some(_)) => command_test_quarry_mining_raw(&config),
+        ("test-quarry-mining-raw", Some(arg_matches)) => {
+            let token = value_of::<String>(arg_matches, "token").unwrap();
+            command_test_quarry_mining_raw(&config, &token)
+        }
         ("set-registry-pool-config", Some(arg_matches)) => {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
             let general_pool = pubkey_of(arg_matches, "general-pool").unwrap();

@@ -60,8 +60,10 @@ pub fn create_miner(config: &Config, miner_vault: &Keypair) -> Result<(), Client
     Ok(())
 }
 
-pub fn stake_tokens(config: &Config, amount: u64) -> Result<(), ClientError> {
+pub fn stake_tokens(config: &Config, token: &String, amount: u64) -> Result<(), ClientError> {
     let default_accounts = config.get_default_accounts();
+    let mut initialized_accounts = config.get_initialized_accounts();
+    let quarry_mining = initialized_accounts.quarry_mining.get_mut(token).unwrap();
     let miner = find_miner_address(config);
     let stake_instruction = Instruction {
         program_id: default_accounts.quarry.mine_program_id,
@@ -69,8 +71,8 @@ pub fn stake_tokens(config: &Config, amount: u64) -> Result<(), ClientError> {
             AccountMeta::new_readonly(config.fee_payer.pubkey(), true),
             AccountMeta::new(miner, false),
             AccountMeta::new(default_accounts.quarry.quarry, false),
-            AccountMeta::new(default_accounts.quarry.miner_vault, false),
-            AccountMeta::new(default_accounts.quarry.token_source, false),
+            AccountMeta::new(quarry_mining.miner_vault, false),
+            AccountMeta::new(quarry_mining.token_source, false),
             AccountMeta::new_readonly(spl_token::id(), false),
             AccountMeta::new_readonly(default_accounts.quarry.rewarder, false),
         ],
@@ -81,14 +83,16 @@ pub fn stake_tokens(config: &Config, amount: u64) -> Result<(), ClientError> {
     config.sign_and_send_and_confirm_transaction(transaction, vec![config.fee_payer.as_ref()])?;
     let balance = config
         .rpc_client
-        .get_token_account_balance(&default_accounts.quarry.token_source)
+        .get_token_account_balance(&quarry_mining.token_source)
         .unwrap();
     println!("balance of rewards token account {:?}", balance);
     Ok(())
 }
 
-pub fn withdraw_tokens(config: &Config, amount: u64) -> Result<(), ClientError> {
+pub fn withdraw_tokens(config: &Config, token: &String, amount: u64) -> Result<(), ClientError> {
     let default_accounts = config.get_default_accounts();
+    let mut initialized_accounts = config.get_initialized_accounts();
+    let quarry_mining = initialized_accounts.quarry_mining.get_mut(token).unwrap();
     let miner = find_miner_address(config);
     let stake_instruction = Instruction {
         program_id: default_accounts.quarry.mine_program_id,
@@ -96,10 +100,10 @@ pub fn withdraw_tokens(config: &Config, amount: u64) -> Result<(), ClientError> 
             AccountMeta::new_readonly(config.fee_payer.pubkey(), true),
             AccountMeta::new(miner, false),
             AccountMeta::new(default_accounts.quarry.quarry, false),
-            AccountMeta::new(default_accounts.quarry.miner_vault, false),
-            AccountMeta::new(default_accounts.quarry.token_source, false),
+            AccountMeta::new(quarry_mining.miner_vault, false),
+            AccountMeta::new(quarry_mining.token_source, false),
             AccountMeta::new_readonly(spl_token::id(), false),
-            AccountMeta::new_readonly(default_accounts.quarry.token_source, false),
+            AccountMeta::new_readonly(quarry_mining.token_source, false),
         ],
         data: StakeTokens { amount }.data(),
     };
@@ -108,14 +112,16 @@ pub fn withdraw_tokens(config: &Config, amount: u64) -> Result<(), ClientError> 
     config.sign_and_send_and_confirm_transaction(transaction, vec![config.fee_payer.as_ref()])?;
     let balance = config
         .rpc_client
-        .get_token_account_balance(&default_accounts.quarry.token_source)
+        .get_token_account_balance(&quarry_mining.token_source)
         .unwrap();
     println!("balance of rewards token account {:?}", balance);
     Ok(())
 }
 
-pub fn claim_mining_rewards(config: &Config) -> Result<(), ClientError> {
+pub fn claim_mining_rewards(config: &Config, token: &String) -> Result<(), ClientError> {
     let default_accounts = config.get_default_accounts();
+    let mut initialized_accounts = config.get_initialized_accounts();
+    let quarry_mining = initialized_accounts.quarry_mining.get_mut(token).unwrap();
     let miner = find_miner_address(config);
     let instruction = Instruction {
         program_id: default_accounts.quarry.mine_program_id,
@@ -123,9 +129,9 @@ pub fn claim_mining_rewards(config: &Config) -> Result<(), ClientError> {
             AccountMeta::new(default_accounts.quarry.mint_wrapper, false),
             AccountMeta::new_readonly(default_accounts.quarry.mint_wrapper_program, false),
             AccountMeta::new(default_accounts.quarry.minter, false),
-            AccountMeta::new(default_accounts.quarry.rewards_token_mint, false),
-            AccountMeta::new(default_accounts.quarry.rewards_token_account, false),
-            AccountMeta::new(default_accounts.quarry.fee_token_account, false),
+            AccountMeta::new(quarry_mining.rewards_token_mint, false),
+            AccountMeta::new(quarry_mining.rewards_token_account, false),
+            AccountMeta::new(quarry_mining.fee_token_account, false),
             AccountMeta::new(config.fee_payer.pubkey(), false),
             AccountMeta::new(miner, false),
             AccountMeta::new(default_accounts.quarry.quarry, false),
@@ -138,7 +144,7 @@ pub fn claim_mining_rewards(config: &Config) -> Result<(), ClientError> {
     config.sign_and_send_and_confirm_transaction(transaction, vec![config.fee_payer.as_ref()])?;
     let balance = config
         .rpc_client
-        .get_token_account_balance(&default_accounts.quarry.rewards_token_account)
+        .get_token_account_balance(&quarry_mining.rewards_token_account)
         .unwrap();
     println!("balance of rewards token account {:?}", balance);
     Ok(())
