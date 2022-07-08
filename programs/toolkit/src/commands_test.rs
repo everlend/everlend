@@ -512,7 +512,7 @@ pub fn command_test_quarry_mining_raw(config: &Config, token: &String) -> anyhow
     let amount = 100_000;
     quarry_raw_test::stake_tokens(config, token, amount)?;
     println!("stake tokens finished");
-    thread::sleep(time::Duration::from_secs(60));
+    thread::sleep(time::Duration::from_secs(15));
     quarry_raw_test::claim_mining_rewards(config, token)?;
     quarry_raw_test::withdraw_tokens(config, token, amount - 1000)?;
     println!("claim rewards finished");
