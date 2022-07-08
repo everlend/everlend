@@ -510,11 +510,13 @@ pub fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()> {
 // 2. transfer some Saber-staked USDC collateral token (quarry_token_mint) on token source
 pub fn command_test_quarry_mining_raw(config: &Config, token: &String) -> anyhow::Result<()> {
     let amount = 100_000;
+    println!("depositing {}", amount);
     quarry_raw_test::stake_tokens(config, token, amount)?;
     println!("stake tokens finished");
     thread::sleep(time::Duration::from_secs(15));
     quarry_raw_test::claim_mining_rewards(config, token)?;
-    quarry_raw_test::withdraw_tokens(config, token, amount - 1000)?;
     println!("claim rewards finished");
+    quarry_raw_test::withdraw_tokens(config, token, amount - 1000)?;
+    println!("withdraw tokens finished");
     Ok(())
 }

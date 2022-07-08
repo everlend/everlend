@@ -1,5 +1,5 @@
 use anchor_lang::{prelude::AccountMeta, InstructionData};
-use quarry_mine::instruction::{ClaimRewardsV2, CreateMinerV2, StakeTokens};
+use quarry_mine::instruction::{ClaimRewardsV2, CreateMinerV2, StakeTokens, WithdrawTokens};
 use solana_client::client_error::ClientError;
 use solana_program::{
     instruction::Instruction, program_pack::Pack, pubkey::Pubkey, system_instruction,
@@ -80,12 +80,22 @@ pub fn stake_tokens(config: &Config, token: &String, amount: u64) -> Result<(), 
     };
     let transaction =
         Transaction::new_with_payer(&[stake_instruction], Some(&config.fee_payer.pubkey()));
+    let balance = config
+        .rpc_client
+        .get_token_account_balance(&quarry_mining.token_source)
+        .unwrap();
+    println!("balance of token_source before deposit {:?}", balance);
     config.sign_and_send_and_confirm_transaction(transaction, vec![config.fee_payer.as_ref()])?;
     let balance = config
         .rpc_client
         .get_token_account_balance(&quarry_mining.token_source)
         .unwrap();
-    println!("balance of rewards token account {:?}", balance);
+    println!("balance of token_source after deposit {:?}", balance);
+    let balance = config
+        .rpc_client
+        .get_token_account_balance(&quarry_mining.rewards_token_account)
+        .unwrap();
+    println!("balance of rewards_token_account {:?}", balance);
     Ok(())
 }
 
@@ -103,9 +113,9 @@ pub fn withdraw_tokens(config: &Config, token: &String, amount: u64) -> Result<(
             AccountMeta::new(quarry_mining.miner_vault, false),
             AccountMeta::new(quarry_mining.token_source, false),
             AccountMeta::new_readonly(spl_token::id(), false),
-            AccountMeta::new_readonly(quarry_mining.token_source, false),
+            AccountMeta::new_readonly(default_accounts.quarry.rewarder, false),
         ],
-        data: StakeTokens { amount }.data(),
+        data: WithdrawTokens { amount }.data(),
     };
     let transaction =
         Transaction::new_with_payer(&[stake_instruction], Some(&config.fee_payer.pubkey()));
@@ -114,7 +124,7 @@ pub fn withdraw_tokens(config: &Config, token: &String, amount: u64) -> Result<(
         .rpc_client
         .get_token_account_balance(&quarry_mining.token_source)
         .unwrap();
-    println!("balance of rewards token account {:?}", balance);
+    println!("balance of token_source account {:?}", balance);
     Ok(())
 }
 
@@ -146,7 +156,7 @@ pub fn claim_mining_rewards(config: &Config, token: &String) -> Result<(), Clien
         .rpc_client
         .get_token_account_balance(&quarry_mining.rewards_token_account)
         .unwrap();
-    println!("balance of rewards token account {:?}", balance);
+    println!("balance of rewards_token_account {:?}", balance);
     Ok(())
 }
 
