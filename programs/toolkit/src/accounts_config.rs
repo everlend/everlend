@@ -55,10 +55,6 @@ pub struct QuarryAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub token_mint: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
-    pub miner_vault: Pubkey,
-    #[serde_as(as = "DisplayFromStr")]
-    pub token_source: Pubkey,
-    #[serde_as(as = "DisplayFromStr")]
     pub mint_wrapper: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
     pub mint_wrapper_program: Pubkey,
@@ -66,10 +62,6 @@ pub struct QuarryAccounts {
     pub minter: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
     pub rewards_token_mint: Pubkey,
-    #[serde_as(as = "DisplayFromStr")]
-    pub rewards_token_account: Pubkey,
-    #[serde_as(as = "DisplayFromStr")]
-    pub fee_token_account: Pubkey,
 }
 
 #[serde_as]

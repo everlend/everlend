@@ -28,14 +28,14 @@ use crate::accounts_config::{
 };
 use crate::collateral_pool::{self, PoolPubkeys};
 use crate::download_account::download_account;
-use crate::liquidity_mining::init_token_account;
-use crate::liquidity_mining::larix_liquidity_miner::LarixLiquidityMiner;
-use crate::liquidity_mining::port_liquidity_miner::PortLiquidityMiner;
+use crate::liquidity_mining::quarry_liquidity_miner::QuarryLiquidityMiner;
 use crate::liquidity_mining::save_mining_accounts;
-use crate::liquidity_mining::LiquidityMiner;
-use crate::liquidity_mining::NotSupportedMiner;
-use crate::liquidity_mining::{execute_init_mining_accounts, quarry_raw_test};
+use crate::liquidity_mining::{
+    execute_init_mining_accounts, larix_liquidity_miner::LarixLiquidityMiner,
+    port_liquidity_miner::PortLiquidityMiner, quarry_raw_test, LiquidityMiner,
+};
 use crate::registry::close_registry_config;
+use crate::utils::init_token_account;
 use crate::{
     accounts_config::TokenAccounts,
     depositor, general_pool, income_pools, liquidity_oracle, registry,
@@ -204,14 +204,18 @@ pub async fn command_save_quarry_accounts(config: &Config) -> anyhow::Result<()>
 pub fn command_init_mining(
     config: &Config,
     staking_money_market: StakingMoneyMarket,
-    money_market: MoneyMarket,
     token: &String,
 ) -> anyhow::Result<()> {
-    let liquidity_miner: Box<dyn LiquidityMiner> = match staking_money_market {
-        StakingMoneyMarket::PortFinance => Box::new(PortLiquidityMiner {}),
-        StakingMoneyMarket::Larix => Box::new(LarixLiquidityMiner {}),
-        _ => Box::new(NotSupportedMiner {}),
+    let liquidity_miner_option: Option<Box<dyn LiquidityMiner>> = match staking_money_market {
+        StakingMoneyMarket::PortFinance => Some(Box::new(PortLiquidityMiner {})),
+        StakingMoneyMarket::Larix => Some(Box::new(LarixLiquidityMiner {})),
+        StakingMoneyMarket::Quarry => Some(Box::new(QuarryLiquidityMiner {})),
+        _ => None,
     };
+    if liquidity_miner_option.is_none() {
+        return Err(anyhow::anyhow!("Wrong staking money market"));
+    }
+    let liquidity_miner = liquidity_miner_option.unwrap();
     let mut mining_pubkey = liquidity_miner.get_mining_pubkey(config, token);
     if mining_pubkey.eq(&Pubkey::default()) {
         let new_mining_account = Keypair::new();
@@ -220,32 +224,28 @@ pub fn command_init_mining(
     };
     let pubkeys = liquidity_miner.get_pubkeys(config, token);
     let mining_type = liquidity_miner.get_mining_type(config, token, mining_pubkey);
-    // TODO increment counter for larix
     execute_init_mining_accounts(config, &pubkeys.unwrap(), mining_type)?;
-    if staking_money_market == StakingMoneyMarket::Larix {
-        let mut initialized_accounts = config.get_initialized_accounts();
-        let last_index = initialized_accounts.larix_mining.len() - 1;
-        initialized_accounts.larix_mining[last_index].count += 1;
-        initialized_accounts
-            .save(&format!("accounts.{}.yaml", config.network))
-            .unwrap();
-    }
-    save_mining_accounts(config, token, money_market, mining_pubkey)?;
+    let money_market = match staking_money_market {
+        StakingMoneyMarket::Larix => MoneyMarket::Larix,
+        StakingMoneyMarket::Solend => MoneyMarket::Solend,
+        _ => MoneyMarket::PortFinance,
+    };
+    save_mining_accounts(config, token, money_market, mining_pubkey, &config.network)?;
+    liquidity_miner.update_mining_accounts(config)?;
     Ok(())
 }
 
-pub fn command_init_quarry_mining_accounts(
-    config: &Config,
-    defaults_path: &str,
-) -> anyhow::Result<()> {
-    let mut default_accounts = config.get_default_accounts();
+pub fn command_init_quarry_mining_accounts(config: &Config, token: &String) -> anyhow::Result<()> {
+    let default_accounts = config.get_default_accounts();
+    let mut initialized_accounts = config.get_initialized_accounts();
+    let quarry_mining = initialized_accounts.quarry_mining.get_mut(token).unwrap();
     let miner_vault = Keypair::new();
     quarry_raw_test::create_miner(config, &miner_vault)?;
-    default_accounts.quarry.miner_vault = miner_vault.pubkey();
+    quarry_mining.miner_vault = miner_vault.pubkey();
     println!("miner vault {}", miner_vault.pubkey());
     let token_source = Keypair::new();
     init_token_account(config, &token_source, &default_accounts.quarry.token_mint)?;
-    default_accounts.quarry.token_source = token_source.pubkey();
+    quarry_mining.token_source = token_source.pubkey();
     println!("token source {}", token_source.pubkey());
     let rewards_account = Keypair::new();
     init_token_account(
@@ -253,7 +253,7 @@ pub fn command_init_quarry_mining_accounts(
         &rewards_account,
         &default_accounts.quarry.rewards_token_mint,
     )?;
-    default_accounts.quarry.rewards_token_account = rewards_account.pubkey();
+    quarry_mining.rewards_token_account = rewards_account.pubkey();
     println!("rewards token account {}", rewards_account.pubkey());
     let fee_account = Keypair::new();
     init_token_account(
@@ -261,9 +261,9 @@ pub fn command_init_quarry_mining_accounts(
         &fee_account,
         &default_accounts.quarry.rewards_token_mint,
     )?;
-    default_accounts.quarry.fee_token_account = fee_account.pubkey();
+    quarry_mining.fee_token_account = fee_account.pubkey();
     println!("fee token account {}", fee_account.pubkey());
-    save_config_file::<DefaultAccounts, &str>(&default_accounts, defaults_path)?;
+    initialized_accounts.save(&format!("accounts.{}.yaml", config.network))?;
     Ok(())
 }
 

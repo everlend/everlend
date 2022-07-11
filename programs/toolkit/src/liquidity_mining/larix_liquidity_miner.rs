@@ -1,6 +1,5 @@
-use super::LiquidityMiner;
 use crate::accounts_config::LarixMining;
-use crate::liquidity_mining::{execute_mining_account_creation, LARIX_MINING_SIZE};
+use crate::liquidity_mining::execute_mining_account_creation;
 use crate::utils::*;
 use anyhow::Result;
 use everlend_depositor::{instruction::InitMiningAccountsPubkeys, state::MiningType};
@@ -9,7 +8,37 @@ use solana_program::pubkey::Pubkey;
 use solana_sdk::signature::write_keypair_file;
 use solana_sdk::{signature::Keypair, signer::Signer};
 
+use super::LiquidityMiner;
+
+const LARIX_MINING_SIZE: u64 = 1 + 32 + 32 + 1 + 16 + 560;
+
 pub struct LarixLiquidityMiner {}
+
+fn save_new_mining_account(
+    config: &Config,
+    token: &String,
+    mining_account: &Keypair,
+) -> Result<()> {
+    let mut initialized_accounts = config.get_initialized_accounts();
+    write_keypair_file(
+        &mining_account,
+        &format!(
+            ".keypairs/{}_larix_mining_{}.json",
+            token,
+            mining_account.pubkey()
+        ),
+    )
+    .unwrap();
+    // Larix can store up to 10 tokens on 1 account
+    initialized_accounts.larix_mining.push(LarixMining {
+        staking_account: mining_account.pubkey(),
+        count: 0,
+    });
+    initialized_accounts
+        .save(&format!("accounts.{}.yaml", config.network))
+        .unwrap();
+    Ok(())
+}
 
 impl LiquidityMiner for LarixLiquidityMiner {
     fn get_mining_pubkey(&self, config: &Config, _token: &String) -> Pubkey {
@@ -38,41 +67,7 @@ impl LiquidityMiner for LarixLiquidityMiner {
             &mining_account,
             LARIX_MINING_SIZE,
         )?;
-        self.save_mining_account_keypair(config, token, mining_account)?;
-        Ok(())
-    }
-
-    fn save_mining_account_keypair(
-        &self,
-        config: &Config,
-        token: &String,
-        mining_account: &Keypair,
-    ) -> Result<()> {
-        let mut initialized_accounts = config.get_initialized_accounts();
-        write_keypair_file(
-            &mining_account,
-            &format!(
-                ".keypairs/{}_larix_mining_{}.json",
-                token,
-                mining_account.pubkey()
-            ),
-        )
-        .unwrap();
-        // Larix can store up to 10 tokens on 1 account
-        initialized_accounts.larix_mining.push(LarixMining {
-            staking_account: mining_account.pubkey(),
-            count: 0,
-        });
-        // Save into account file
-        initialized_accounts
-            .token_accounts
-            .get_mut(token)
-            .unwrap()
-            .mining_accounts[MoneyMarket::Larix as usize]
-            .staking_account = mining_account.pubkey();
-        initialized_accounts
-            .save(&format!("accounts.{}.yaml", config.network))
-            .unwrap();
+        save_new_mining_account(config, token, mining_account)?;
         Ok(())
     }
 
@@ -99,5 +94,15 @@ impl LiquidityMiner for LarixLiquidityMiner {
         mining_account: Pubkey,
     ) -> MiningType {
         MiningType::Larix { mining_account }
+    }
+
+    fn update_mining_accounts(&self, config: &Config) -> Result<()> {
+        let mut initialized_accounts = config.get_initialized_accounts();
+        let last_index = initialized_accounts.larix_mining.len() - 1;
+        initialized_accounts.larix_mining[last_index].count += 1;
+        initialized_accounts
+            .save(&format!("accounts.{}.yaml", config.network))
+            .unwrap();
+        Ok(())
     }
 }

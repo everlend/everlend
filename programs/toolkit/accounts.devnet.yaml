@@ -137,10 +137,10 @@ depositor: 8VTYx1mJ8brKFKReCy1gbNuaisgFK21FrYPjUEaJz3Q6
 larix_mining: []
 quarry_mining:
   USDC:
-    - token_mint: YakofBo4X3zMxa823THQJwZ8QeoU8pxPdFdxJs7JW57
-      rewards_token_mint: iouQcQBAiEXe6cKLS85zmZxUqaCqBdeHFpqKoSz615u
-      mining_vault: 6Ve9FVMRV25ppqgM8e5P8AwsdGXTZdxoz3eH767JWpU2
-      token_source: DGuYPHDAVTAZS6jeWmUGEeeQyDvNG1kSsmXcYQnuBgLZ
-      rewards_token_account: 3GFnqsXDhXPgSZjHsArHtLAVV6sV1ECf5Ly1ezVXE3UX
-      fee_token_account: 4Snkea6wv3K6qzDTdyJiF2VTiLPmCoyHJCzAdkdTStBK
+    token_mint: YakofBo4X3zMxa823THQJwZ8QeoU8pxPdFdxJs7JW57
+    rewards_token_mint: iouQcQBAiEXe6cKLS85zmZxUqaCqBdeHFpqKoSz615u
+    miner_vault: C3hqQbvnYmBQMFor7aPgZ3FTGZB13oXAu51Nps7XDLqJ
+    token_source: DsCtHv6WSPRiAE1Rn2vxYXpXHvXU2hxrHyHcydyt8Z5e
+    rewards_token_account: 92qo3Y8xBnnWHieMz5Q84rADp94WnEnGoDS1iWywVCKh
+    fee_token_account: 4Snkea6wv3K6qzDTdyJiF2VTiLPmCoyHJCzAdkdTStBK
 rebalance_executor: 9xjZ9CYGxtXGRTxJMevumNoVcqFEu4ZfFRyungr7WBff

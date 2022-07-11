@@ -12,6 +12,36 @@ use solana_sdk::{signature::Keypair, signer::Signer};
 
 pub struct QuarryLiquidityMiner {}
 
+fn save_new_mining_account(
+    config: &Config,
+    token: &String,
+    mining_account: &Keypair,
+) -> Result<()> {
+    write_keypair_file(
+        &mining_account,
+        &format!(
+            ".keypairs/{}_quarry_mining_{}.json",
+            token,
+            mining_account.pubkey()
+        ),
+    )
+    .unwrap();
+    let mut initialized_accounts = config.get_initialized_accounts();
+    let quarry_mining = initialized_accounts.quarry_mining.get_mut(token);
+    if quarry_mining.is_none() {
+        initialized_accounts
+            .quarry_mining
+            .insert(token.clone(), QuarryMining::default());
+    }
+    initialized_accounts
+        .quarry_mining
+        .get_mut(token)
+        .unwrap()
+        .miner_vault = mining_account.pubkey();
+    initialized_accounts.save(&format!("accounts.{}.yaml", config.network))?;
+    Ok(())
+}
+
 impl LiquidityMiner for QuarryLiquidityMiner {
     fn get_mining_pubkey(&self, config: &Config, token: &String) -> Pubkey {
         config
@@ -20,37 +50,6 @@ impl LiquidityMiner for QuarryLiquidityMiner {
             .get_mut(token)
             .unwrap_or(&mut QuarryMining::default())
             .miner_vault
-    }
-
-    fn save_mining_account_keypair(
-        &self,
-        config: &Config,
-        token: &String,
-        mining_account: &Keypair,
-    ) -> Result<()> {
-        write_keypair_file(
-            &mining_account,
-            &format!(
-                ".keypairs/{}_quarry_mining_{}.json",
-                token,
-                mining_account.pubkey()
-            ),
-        )
-        .unwrap();
-        let mut initialized_accounts = config.get_initialized_accounts();
-        let quarry_mining = initialized_accounts.quarry_mining.get_mut(token);
-        if quarry_mining.is_none() {
-            initialized_accounts
-                .quarry_mining
-                .insert(token.clone(), QuarryMining::default());
-        }
-        initialized_accounts
-            .quarry_mining
-            .get_mut(token)
-            .unwrap()
-            .miner_vault = mining_account.pubkey();
-        initialized_accounts.save(&format!("accounts.{}.yaml", config.network))?;
-        Ok(())
     }
 
     fn create_mining_account(
@@ -67,7 +66,7 @@ impl LiquidityMiner for QuarryLiquidityMiner {
             &mining_account,
             spl_token::state::Account::LEN as u64,
         )?;
-        self.save_mining_account_keypair(config, token, &mining_account)?;
+        save_new_mining_account(config, token, &mining_account)?;
         Ok(())
     }
 
@@ -102,5 +101,10 @@ impl LiquidityMiner for QuarryLiquidityMiner {
             token_mint: quarry.token_mint,
             miner_vault: mining_account,
         }
+    }
+
+    fn update_mining_accounts(&self, _config: &Config) -> Result<()> {
+        // No additional work needed for quarry
+        Ok(())
     }
 }

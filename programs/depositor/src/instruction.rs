@@ -190,6 +190,11 @@ pub enum DepositorInstruction {
     /// [R] Rewarder
     ClaimMiningReward,
 
+    /// Migrate Depositor
+    ///
+    /// Accounts:
+    /// [R] Depositor
+    /// [R] Registry
     /// [R] Manager
     /// [R] Rent
     MigrateDepositor {
@@ -243,7 +248,7 @@ pub fn create_transit(
     program_id: &Pubkey,
     depositor: &Pubkey,
     mint: &Pubkey,
-    from: &Pubkey,
+    rebalance_executor: &Pubkey,
     //todo! remove option
     seed: Option<String>,
 ) -> Instruction {
@@ -256,7 +261,7 @@ pub fn create_transit(
         AccountMeta::new(transit, false),
         AccountMeta::new_readonly(*mint, false),
         AccountMeta::new_readonly(depositor_authority, false),
-        AccountMeta::new(*from, true),
+        AccountMeta::new(*rebalance_executor, true),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),

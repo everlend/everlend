@@ -644,12 +644,26 @@ async fn main() -> anyhow::Result<()> {
                         .help("Money market index"),
                 )
                 .arg(
-                    Arg::with_name("money-market")
-                        .long("money-market")
-                        .value_name("NUMBER")
+                    Arg::with_name("token")
+                        .long("token")
+                        .short("t")
+                        .value_name("TOKEN")
                         .takes_value(true)
                         .required(true)
-                        .help("Money market index"),
+                        .help("Token"),
+                ),
+        )
+        .subcommand(SubCommand::with_name("save-larix-accounts"))
+        .subcommand(SubCommand::with_name("test-larix-mining-raw"))
+        .subcommand(SubCommand::with_name("save-quarry-accounts"))
+        .subcommand(
+            SubCommand::with_name("init-quarry-mining-accounts")
+                .arg(
+                    Arg::with_name("default")
+                        .long("default")
+                        .value_name("PATH")
+                        .takes_value(true)
+                        .help("Defaults file"),
                 )
                 .arg(
                     Arg::with_name("token")
@@ -658,22 +672,20 @@ async fn main() -> anyhow::Result<()> {
                         .value_name("TOKEN")
                         .takes_value(true)
                         .required(true)
-                        .help("Token ticker"),
+                        .help("Token"),
                 ),
         )
-        .subcommand(SubCommand::with_name("save-larix-accounts"))
-        .subcommand(SubCommand::with_name("test-larix-mining-raw"))
-        .subcommand(SubCommand::with_name("save-quarry-accounts"))
         .subcommand(
-            SubCommand::with_name("init-quarry-mining-accounts").arg(
-                Arg::with_name("default")
-                    .long("default")
-                    .value_name("PATH")
+            SubCommand::with_name("test-quarry-mining-raw").arg(
+                Arg::with_name("token")
+                    .long("token")
+                    .short("t")
+                    .value_name("TOKEN")
                     .takes_value(true)
-                    .help("Defaults file"),
+                    .required(true)
+                    .help("Token"),
             ),
         )
-        .subcommand(SubCommand::with_name("test-quarry-mining-raw"))
         .subcommand(
             SubCommand::with_name("set-registry-pool-config")
                 .about("Set a new registry pool config")
@@ -1260,12 +1272,10 @@ async fn main() -> anyhow::Result<()> {
         ("init-mining", Some(arg_matches)) => {
             let staking_money_market =
                 value_of::<usize>(arg_matches, "staking-money-market").unwrap();
-            let money_market = value_of::<usize>(arg_matches, "money-market").unwrap();
             let token = value_of::<String>(arg_matches, "token").unwrap();
             command_init_mining(
                 &config,
                 StakingMoneyMarket::from(staking_money_market),
-                MoneyMarket::from(money_market),
                 &token,
             )
         }
@@ -1275,12 +1285,13 @@ async fn main() -> anyhow::Result<()> {
         ("test-larix-mining-raw", Some(_)) => command_test_larix_mining_raw(&config),
         ("save-quarry-accounts", Some(_)) => command_save_quarry_accounts(&config).await,
         ("init-quarry-mining-accounts", Some(arg_matches)) => {
-            let file_path = arg_matches
-                .value_of("default")
-                .unwrap_or("default.devnet.yaml");
-            command_init_quarry_mining_accounts(&config, file_path)
+            let token = value_of::<String>(arg_matches, "token").unwrap();
+            command_init_quarry_mining_accounts(&config, &token)
         }
-        ("test-quarry-mining-raw", Some(_)) => command_test_quarry_mining_raw(&config),
+        ("test-quarry-mining-raw", Some(arg_matches)) => {
+            let token = value_of::<String>(arg_matches, "token").unwrap();
+            command_test_quarry_mining_raw(&config, &token)
+        }
         ("set-registry-pool-config", Some(arg_matches)) => {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
             let general_pool = pubkey_of(arg_matches, "general-pool").unwrap();

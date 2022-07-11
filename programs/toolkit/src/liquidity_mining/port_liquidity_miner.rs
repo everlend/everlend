@@ -11,6 +11,23 @@ use solana_sdk::{signature::Keypair, signer::Signer};
 
 pub struct PortLiquidityMiner {}
 
+fn save_new_mining_account(
+    _config: &Config,
+    token: &String,
+    mining_account: &Keypair,
+) -> Result<()> {
+    write_keypair_file(
+        &mining_account,
+        &format!(
+            ".keypairs/{}_port_mining_{}.json",
+            token,
+            mining_account.pubkey()
+        ),
+    )
+    .unwrap();
+    Ok(())
+}
+
 impl LiquidityMiner for PortLiquidityMiner {
     fn get_mining_pubkey(&self, config: &Config, token: &String) -> Pubkey {
         let mut initialized_accounts = config.get_initialized_accounts();
@@ -36,36 +53,7 @@ impl LiquidityMiner for PortLiquidityMiner {
             mining_account,
             port_finance_staking::state::stake_account::StakeAccount::LEN as u64,
         )?;
-        self.save_mining_account_keypair(config, token, mining_account)?;
-        Ok(())
-    }
-
-    fn save_mining_account_keypair(
-        &self,
-        config: &Config,
-        token: &String,
-        mining_account: &Keypair,
-    ) -> Result<()> {
-        let mut initialized_accounts = config.get_initialized_accounts();
-        write_keypair_file(
-            &mining_account,
-            &format!(
-                ".keypairs/{}_port_mining_{}.json",
-                token,
-                mining_account.pubkey()
-            ),
-        )
-        .unwrap();
-        // Save into account file
-        initialized_accounts
-            .token_accounts
-            .get_mut(token)
-            .unwrap()
-            .mining_accounts[MoneyMarket::PortFinance as usize]
-            .staking_account = mining_account.pubkey();
-        initialized_accounts
-            .save(&format!("accounts.{}.yaml", config.network))
-            .unwrap();
+        save_new_mining_account(config, token, mining_account)?;
         Ok(())
     }
 
@@ -98,5 +86,10 @@ impl LiquidityMiner for PortLiquidityMiner {
             staking_account: mining_account,
             staking_pool: port_accounts.staking_pool,
         }
+    }
+
+    fn update_mining_accounts(&self, _config: &Config) -> Result<()> {
+        // No additional work needed for port
+        Ok(())
     }
 }
