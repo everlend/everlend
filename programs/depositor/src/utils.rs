@@ -38,11 +38,13 @@ pub fn deposit<'a>(
     let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
     let lending_market_info = next_account_info(money_market_account_info_iter)?;
     let lending_market_authority_info = next_account_info(money_market_account_info_iter)?;
+    let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
     let internal_mining_type = if internal_mining.owner == program_id {
         Some(InternalMining::unpack(&internal_mining.data.borrow())?.mining_type)
     } else {
         None
     };
+
     msg!("Deposit to Money market");
     money_market_deposit(
         registry_programs,
@@ -56,6 +58,7 @@ pub fn deposit<'a>(
         reserve_liquidity_supply_info.clone(),
         lending_market_info.clone(),
         lending_market_authority_info.clone(),
+        reserve_liquidity_oracle_info.clone(),
         clock.clone(),
         liquidity_amount,
         signers_seeds,
@@ -68,8 +71,15 @@ pub fn deposit<'a>(
             let reserve_bonus_info = next_account_info(money_market_account_info_iter)?;
             let mining_info = next_account_info(money_market_account_info_iter)?;
             assert_account_key(mining_info, &mining_account)?;
+
+            cpi::larix::refresh_reserve(
+                money_market_program.key,
+                reserve_info.clone(),
+                reserve_liquidity_oracle_info.clone(),
+            )?;
+
             cpi::larix::deposit_mining(
-                &money_market_program.key,
+                money_market_program.key,
                 collateral_transit.clone(),
                 reserve_bonus_info.clone(),
                 mining_info.clone(),
@@ -147,7 +157,6 @@ pub fn deposit<'a>(
             )?;
         }
     }
-
     Ok(collateral_amount)
 }
 
@@ -176,6 +185,7 @@ pub fn withdraw<'a>(
     let reserve_liquidity_supply_info = next_account_info(money_market_account_info_iter)?;
     let lending_market_info = next_account_info(money_market_account_info_iter)?;
     let lending_market_authority_info = next_account_info(money_market_account_info_iter)?;
+    let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
 
     let liquidity_transit_supply = Account::unpack(&liquidity_transit.data.borrow())?.amount;
 
@@ -190,17 +200,24 @@ pub fn withdraw<'a>(
             let reserve_bonus_info = next_account_info(money_market_account_info_iter)?;
             let mining_info = next_account_info(money_market_account_info_iter)?;
             assert_account_key(mining_info, &mining_account)?;
+
+            cpi::larix::refresh_reserve(
+                money_market_program.key,
+                reserve_info.clone(),
+                reserve_liquidity_oracle_info.clone(),
+            )?;
+
             cpi::larix::withdraw_mining(
                 money_market_program.key,
-                reserve_bonus_info.clone(),
                 collateral_transit.clone(),
+                reserve_bonus_info.clone(),
                 mining_info.clone(),
                 reserve_info.clone(),
                 lending_market_info.clone(),
                 lending_market_authority_info.clone(),
                 authority.clone(),
                 clock.clone(),
-                u64::MAX,
+                collateral_amount,
                 signers_seeds,
             )?;
         }
@@ -284,6 +301,7 @@ pub fn withdraw<'a>(
         reserve_liquidity_supply_info.clone(),
         lending_market_info.clone(),
         lending_market_authority_info.clone(),
+        reserve_liquidity_oracle_info.clone(),
         clock.clone(),
         collateral_amount,
         signers_seeds,
@@ -345,6 +363,7 @@ pub fn money_market_deposit<'a>(
     reserve_liquidity_supply_info: AccountInfo<'a>,
     lending_market_info: AccountInfo<'a>,
     lending_market_authority_info: AccountInfo<'a>,
+    reserve_liquidity_oracle_info: AccountInfo<'a>,
     clock: AccountInfo<'a>,
     amount: u64,
     signers_seeds: &[&[&[u8]]],
@@ -355,8 +374,6 @@ pub fn money_market_deposit<'a>(
 
     // Only for tests
     if money_market_program.key.to_string() == integrations::SPL_TOKEN_LENDING_PROGRAM_ID {
-        let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
-
         cpi::spl_token_lending::refresh_reserve(
             money_market_program.key,
             reserve_info.clone(),
@@ -381,8 +398,6 @@ pub fn money_market_deposit<'a>(
     }
 
     if *money_market_program.key == port_finance_program_id {
-        let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
-
         cpi::port_finance::refresh_reserve(
             money_market_program.key,
             reserve_info.clone(),
@@ -405,8 +420,6 @@ pub fn money_market_deposit<'a>(
             signers_seeds,
         )
     } else if *money_market_program.key == larix_program_id {
-        let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
-
         cpi::larix::refresh_reserve(
             money_market_program.key,
             reserve_info.clone(),
@@ -427,7 +440,7 @@ pub fn money_market_deposit<'a>(
             signers_seeds,
         )
     } else if *money_market_program.key == solend_program_id {
-        let reserve_liquidity_pyth_oracle_info = next_account_info(money_market_account_info_iter)?;
+        let reserve_liquidity_pyth_oracle_info = reserve_liquidity_oracle_info;
         let reserve_liquidity_switchboard_oracle_info =
             next_account_info(money_market_account_info_iter)?;
 
@@ -472,6 +485,7 @@ pub fn money_market_redeem<'a>(
     reserve_liquidity_supply: AccountInfo<'a>,
     lending_market: AccountInfo<'a>,
     lending_market_authority: AccountInfo<'a>,
+    reserve_liquidity_oracle_info: AccountInfo<'a>,
     clock: AccountInfo<'a>,
     amount: u64,
     signers_seeds: &[&[&[u8]]],
@@ -482,8 +496,6 @@ pub fn money_market_redeem<'a>(
 
     // Only for tests
     if money_market_program.key.to_string() == integrations::SPL_TOKEN_LENDING_PROGRAM_ID {
-        let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
-
         cpi::spl_token_lending::refresh_reserve(
             money_market_program.key,
             reserve.clone(),
@@ -508,8 +520,6 @@ pub fn money_market_redeem<'a>(
     }
 
     if *money_market_program.key == port_finance_program_id {
-        let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
-
         cpi::port_finance::refresh_reserve(
             money_market_program.key,
             reserve.clone(),
@@ -532,8 +542,6 @@ pub fn money_market_redeem<'a>(
             signers_seeds,
         )
     } else if *money_market_program.key == larix_program_id {
-        let reserve_liquidity_oracle_info = next_account_info(money_market_account_info_iter)?;
-
         cpi::larix::refresh_reserve(
             money_market_program.key,
             reserve.clone(),
@@ -554,7 +562,7 @@ pub fn money_market_redeem<'a>(
             signers_seeds,
         )
     } else if *money_market_program.key == solend_program_id {
-        let reserve_liquidity_pyth_oracle_info = next_account_info(money_market_account_info_iter)?;
+        let reserve_liquidity_pyth_oracle_info = reserve_liquidity_oracle_info;
         let reserve_liquidity_switchboard_oracle_info =
             next_account_info(money_market_account_info_iter)?;
 

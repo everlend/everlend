@@ -48,6 +48,7 @@ pub fn assert_owned_by(account: &AccountInfo, owner: &Pubkey) -> ProgramResult {
 /// Assert account key
 pub fn assert_account_key(account_info: &AccountInfo, key: &Pubkey) -> ProgramResult {
     if *account_info.key != *key {
+        msg!("Assert error. Got {} Expected {}", *account_info.key, *key);
         Err(ProgramError::InvalidArgument)
     } else {
         Ok(())

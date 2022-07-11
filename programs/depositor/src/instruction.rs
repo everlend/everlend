@@ -601,14 +601,14 @@ pub fn init_mining_accounts(
 
     match mining_type {
         MiningType::Larix { mining_account } => {
-            accounts.push(AccountMeta::new_readonly(mining_account, false));
-            accounts.push(AccountMeta::new_readonly(
-                pubkeys.lending_market.unwrap(),
-                false,
-            ));
-
+            // Mining program equal to money_market_program_id
             accounts.push(AccountMeta::new_readonly(
                 pubkeys.money_market_program_id,
+                false,
+            ));
+            accounts.push(AccountMeta::new(mining_account, false));
+            accounts.push(AccountMeta::new_readonly(
+                pubkeys.lending_market.unwrap(),
                 false,
             ));
         }

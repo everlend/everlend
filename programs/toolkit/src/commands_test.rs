@@ -476,7 +476,7 @@ pub fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()> {
         &token_program_id,
     );
     println!("source_sol {}", source_sol);
-    let amount = 2_500_000_000;
+    let amount = 100_000_000; //2_500_000_000;
     let mining_account = Keypair::new();
     let collateral_transit = Keypair::new();
     let dividends_account = Keypair::new();
@@ -484,10 +484,20 @@ pub fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()> {
     larix_raw_test::init_mining_accounts(&config, &mining_account)?;
     println!("init mining accounts finished");
     larix_raw_test::deposit_liquidity(&config, amount, &source_sol, &collateral_transit)?;
+
+    let collateral_balance = config
+        .rpc_client
+        .get_token_account_balance(&collateral_transit.pubkey())
+        .unwrap();
+
+    println!("collateral_balance {:?}", collateral_balance);
+
+    let collateral_amount = spl_token::ui_amount_to_amount(collateral_balance.ui_amount.unwrap(),collateral_balance.decimals);
+
     println!("deposit liquidity finished");
     larix_raw_test::deposit_collateral(
         &config,
-        amount,
+        collateral_amount,
         &mining_account.pubkey(),
         &collateral_transit.pubkey(),
     )?;
@@ -496,7 +506,7 @@ pub fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()> {
     println!("claim dividends finished");
     larix_raw_test::withdraw_collateral(
         &config,
-        amount - 10_000_000,
+        collateral_amount,
         &withdraw_account,
         &mining_account.pubkey(),
     )?;

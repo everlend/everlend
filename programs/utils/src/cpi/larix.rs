@@ -198,8 +198,8 @@ pub fn withdraw_mining<'a>(
     let ix = Instruction {
         program_id: *program_id,
         accounts: vec![
-            AccountMeta::new(*source_collateral.key, false),
             AccountMeta::new(*reserve_bonus.key, false),
+            AccountMeta::new(*source_collateral.key, false),
             AccountMeta::new(*mining_info.key, false),
             AccountMeta::new_readonly(*reserve.key, false),
             AccountMeta::new_readonly(*lending_market.key, false),

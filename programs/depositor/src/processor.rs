@@ -898,7 +898,6 @@ impl Processor {
 
         let internal_mining_info = next_account_info(account_info_iter)?;
         let collateral_mint_info = next_account_info(account_info_iter)?;
-        let money_market_program_id_info = next_account_info(account_info_iter)?;
         let depositor_info = next_account_info(account_info_iter)?;
         let depositor_authority_info = next_account_info(account_info_iter)?;
         let registry_info = next_account_info(account_info_iter)?;
@@ -917,17 +916,15 @@ impl Processor {
         let registry = Registry::unpack(&registry_info.data.borrow())?;
         assert_account_key(manager_info, &registry.manager)?;
 
-        let (internal_mining_pubkey, _) = find_internal_mining_program_address(
-            program_id,
-            collateral_mint_info.key,
-            depositor_info.key,
-        );
+        let (internal_mining_pubkey, internal_mining_bump_seed) =
+            find_internal_mining_program_address(
+                program_id,
+                collateral_mint_info.key,
+                depositor_info.key,
+            );
         assert_account_key(internal_mining_info, &internal_mining_pubkey)?;
-        assert_owned_by(internal_mining_info, program_id)?;
 
-        // TODO check that account created with requared len
-
-        // Create depositor authority account
+        // Check depositor authority account
         let (depositor_authority_pubkey, bump_seed) =
             find_program_address(program_id, depositor_info.key);
         assert_account_key(depositor_authority_info, &depositor_authority_pubkey)?;
@@ -935,6 +932,13 @@ impl Processor {
 
         // Create internal mining account
         if !internal_mining_info.owner.eq(program_id) {
+            let signers_seeds = &[
+                "internal_mining".as_bytes(),
+                &collateral_mint_info.key.to_bytes()[..32],
+                &depositor_info.key.to_bytes()[..32],
+                &[internal_mining_bump_seed],
+            ];
+
             cpi::system::create_account::<InternalMining>(
                 program_id,
                 manager_info.clone(),
@@ -942,19 +946,22 @@ impl Processor {
                 &[signers_seeds],
                 rent,
             )?;
+        } else {
+            // TODO check that account created with requared len
+            assert_owned_by(internal_mining_info, program_id)?;
         }
+
+        let staking_program_id_info = next_account_info(account_info_iter)?;
 
         match mining_type {
             MiningType::Larix { mining_account } => {
                 let mining_account_info = next_account_info(account_info_iter)?;
-                if mining_account_info.owner != money_market_program_id_info.key {
-                    return Err(EverlendError::InvalidAccountOwner.into());
-                };
+                assert_owned_by(mining_account_info, staking_program_id_info.key)?;
                 assert_account_key(mining_account_info, &mining_account)?;
 
                 let lending_market_info = next_account_info(account_info_iter)?;
                 cpi::larix::init_mining(
-                    money_market_program_id_info.key,
+                    staking_program_id_info.key,
                     mining_account_info.clone(),
                     depositor_authority_info.clone(),
                     lending_market_info.clone(),
@@ -967,11 +974,10 @@ impl Processor {
                 staking_account,
                 staking_pool,
             } => {
-                let staking_program_id_info = next_account_info(account_info_iter)?;
+                assert_account_key(staking_program_id_info, &staking_program_id)?;
                 let staking_pool_info = next_account_info(account_info_iter)?;
                 let staking_account_info = next_account_info(account_info_iter)?;
 
-                assert_account_key(staking_program_id_info, &staking_program_id)?;
                 assert_account_key(staking_pool_info, &staking_pool)?;
                 assert_account_key(staking_account_info, &staking_account)?;
 
@@ -993,7 +999,6 @@ impl Processor {
                 token_mint,
                 miner_vault,
             } => {
-                let staking_program_id_info = next_account_info(account_info_iter)?;
                 assert_account_key(staking_program_id_info, &quarry_mining_program_id)?;
                 let miner_info = next_account_info(account_info_iter)?;
                 let quarry_info = next_account_info(account_info_iter)?;
@@ -1040,11 +1045,11 @@ impl Processor {
         let depositor_info = next_account_info(account_info_iter)?;
         let depositor_authority_info = next_account_info(account_info_iter)?;
 
-        // Create depositor authority account
-        let (depositor_authority_pubkey, bump_seed) =
-            find_program_address(program_id, depositor_info.key);
-        assert_account_key(depositor_authority_info, &depositor_authority_pubkey)?;
-        let signers_seeds = &[&depositor_info.key.to_bytes()[..32], &[bump_seed]];
+        let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
+        let executor_info = next_account_info(account_info_iter)?;
+        // Check executor
+        assert_signer(executor_info)?;
+        assert_account_key(executor_info, &depositor.rebalance_executor)?;
 
         let collateral_mint_info = next_account_info(account_info_iter)?;
 
@@ -1057,11 +1062,29 @@ impl Processor {
         assert_account_key(internal_mining_info, &internal_mining_pubkey)?;
         assert_owned_by(internal_mining_info, program_id)?;
 
+        // Check rewards destination account
+        let reward_mint = next_account_info(account_info_iter)?;
+        let reward_destination = next_account_info(account_info_iter)?;
+
+        let (reward_token_account, _) = find_transit_program_address(
+            program_id,
+            depositor_info.key,
+            reward_mint.key,
+            "lm_reward",
+        );
+        assert_account_key(reward_destination, &reward_token_account)?;
+
         let internal_mining_type =
             InternalMining::unpack(&internal_mining_info.data.borrow())?.mining_type;
 
         // TODO check money market
         let staking_program_id_info = next_account_info(account_info_iter)?;
+
+        // Create depositor authority account
+        let (depositor_authority_pubkey, bump_seed) =
+            find_program_address(program_id, depositor_info.key);
+        assert_account_key(depositor_authority_info, &depositor_authority_pubkey)?;
+        let signers_seeds = &[&depositor_info.key.to_bytes()[..32], &[bump_seed]];
 
         match internal_mining_type {
             MiningType::Larix { mining_account } => {
@@ -1069,7 +1092,7 @@ impl Processor {
                 assert_account_key(mining_account_info, &mining_account)?;
 
                 let mine_supply_info = next_account_info(account_info_iter)?;
-                let destination_info = next_account_info(account_info_iter)?;
+
                 let lending_market_info = next_account_info(account_info_iter)?;
                 let lending_market_authority_info = next_account_info(account_info_iter)?;
                 let reserve_info = next_account_info(account_info_iter)?;
@@ -1083,7 +1106,7 @@ impl Processor {
                     staking_program_id_info.key,
                     mining_account_info.clone(),
                     mine_supply_info.clone(),
-                    destination_info.clone(),
+                    reward_destination.clone(),
                     depositor_authority_info.clone(),
                     lending_market_info.clone(),
                     lending_market_authority_info.clone(),
@@ -1096,9 +1119,9 @@ impl Processor {
                 staking_pool,
                 staking_program_id,
             } => {
-                let stake_account_owner = next_account_info(account_info_iter)?;
                 let stake_account_info = next_account_info(account_info_iter)?;
                 assert_account_key(stake_account_info, &staking_account)?;
+                let stake_account_owner = next_account_info(account_info_iter)?;
 
                 let staking_pool_info = next_account_info(account_info_iter)?;
                 assert_account_key(staking_pool_info, &staking_pool)?;
@@ -1106,7 +1129,7 @@ impl Processor {
                 assert_account_key(staking_program_id_info, &staking_program_id)?;
 
                 let reward_token_pool = next_account_info(account_info_iter)?;
-                let reward_destination = next_account_info(account_info_iter)?;
+                // let reward_destination = next_account_info(account_info_iter)?;
                 // TODO check sub reward token
                 let sub_reward_token_pool = next_account_info(account_info_iter)?;
                 let sub_reward_destination = next_account_info(account_info_iter)?;

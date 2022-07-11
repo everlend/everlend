@@ -516,6 +516,19 @@ async fn command_run_migrate_pool_market(
     Ok(())
 }
 
+async fn command_create_depositor_transit_account(
+    config: &Config,
+    token_mint: Pubkey,
+    seed: Option<String>,
+) -> anyhow::Result<()> {
+    let initialized_accounts = config.get_initialized_accounts();
+
+    println!("Token mint {}. Seed {:?}",token_mint, seed);
+    depositor::create_transit(config,&initialized_accounts.depositor,&token_mint, seed)?;
+
+    Ok(())
+}
+
 // TODO remove after setup
 async fn command_create_income_pool_safety_fund_token_account(
     config: &Config,
@@ -1147,6 +1160,25 @@ async fn main() -> anyhow::Result<()> {
                         .help("Accounts file"),
                 ),
         )
+        .subcommand(
+            SubCommand::with_name("create-depositor-transit-token-account")
+                .about("Run  create depositor transit token account")
+                .arg(
+                    Arg::with_name("seed")
+                        .long("seed")
+                        .value_name("SEED")
+                        .takes_value(true)
+                        .help("Transit seed"),
+                )
+                .arg(
+                    Arg::with_name("token-mint")
+                        .long("token-mint")
+                        .value_name("MINT")
+                        .validator(is_pubkey)
+                        .takes_value(true)
+                        .help("Rewards token mint"),
+                ),
+        )
         .get_matches();
 
     let mut wallet_manager = None;
@@ -1435,6 +1467,11 @@ async fn main() -> anyhow::Result<()> {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
             let case = value_of::<String>(arg_matches, "case");
             command_create_income_pool_safety_fund_token_account(&config, accounts_path, case).await
+        }
+        ("create-depositor-transit-token-account", Some(arg_matches)) => {
+            let token_mint = pubkey_of(arg_matches, "token-mint").unwrap();
+            let seed = value_of::<String>(arg_matches, "seed");
+            command_create_depositor_transit_account(&config, token_mint, seed).await
         }
         _ => unreachable!(),
     }

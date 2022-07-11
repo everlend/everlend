@@ -92,7 +92,7 @@ impl Pack for InternalMining {
 
 impl IsInitialized for InternalMining {
     fn is_initialized(&self) -> bool {
-        self.account_type != AccountType::InternalMining
+        self.account_type == AccountType::InternalMining
             && self.account_version == Self::ACTUAL_VERSION
     }
 }
