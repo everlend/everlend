@@ -1083,6 +1083,7 @@ impl Processor {
             InternalMining::unpack(&internal_mining_info.data.borrow())?.mining_type;
 
         // TODO check money market
+        let _token_program_info = next_account_info(account_info_iter)?;
         let staking_program_id_info = next_account_info(account_info_iter)?;
 
         // Create depositor authority account
@@ -1102,6 +1103,13 @@ impl Processor {
                 let lending_market_authority_info = next_account_info(account_info_iter)?;
                 let reserve_info = next_account_info(account_info_iter)?;
                 let reserve_liquidity_oracle = next_account_info(account_info_iter)?;
+                // TODO think about necessary
+                cpi::larix::refresh_mine(
+                    staking_program_id_info.key,
+                    mining_account_info.clone(),
+                    reserve_info.clone(),
+                )?;
+
                 cpi::larix::refresh_reserve(
                     staking_program_id_info.key,
                     reserve_info.clone(),

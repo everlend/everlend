@@ -48,7 +48,6 @@ pub async fn command_run_test(
         token_accounts,
         liquidity_oracle,
         depositor,
-        larix_mining: _,
         quarry_mining: _,
         rebalance_executor: _,
     } = initialized_accounts;
@@ -492,7 +491,10 @@ pub fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()> {
 
     println!("collateral_balance {:?}", collateral_balance);
 
-    let collateral_amount = spl_token::ui_amount_to_amount(collateral_balance.ui_amount.unwrap(),collateral_balance.decimals);
+    let collateral_amount = spl_token::ui_amount_to_amount(
+        collateral_balance.ui_amount.unwrap(),
+        collateral_balance.decimals,
+    );
 
     println!("deposit liquidity finished");
     larix_raw_test::deposit_collateral(

@@ -48,8 +48,8 @@ token_accounts:
     mining_accounts:
       - staking_account: "11111111111111111111111111111111"
         internal_mining_account: "11111111111111111111111111111111"
-      - staking_account: "11111111111111111111111111111111"
-        internal_mining_account: "11111111111111111111111111111111"
+      - staking_account: Eje4gDrR7WpB57urKAPEBFH5BHDdMGBZfBNucBSiQSFA
+        internal_mining_account: DbtQ5ccKijtMGEQajoFngoMiGKcCRMp6xXK4AXNZNMNg
       - staking_account: "11111111111111111111111111111111"
         internal_mining_account: "11111111111111111111111111111111"
   USDC:
@@ -128,13 +128,12 @@ token_accounts:
     mining_accounts:
       - staking_account: "11111111111111111111111111111111"
         internal_mining_account: "11111111111111111111111111111111"
-      - staking_account: "11111111111111111111111111111111"
-        internal_mining_account: "11111111111111111111111111111111"
+      - staking_account: AxjcWarYP13jbujc4k9YRSjSJ9UMTMTmH6iAQUFp7YxM
+        internal_mining_account: 9kYJV9t6kEj7WtBdYnYjxag2qUFmq69UDrqPZS9v95po
       - staking_account: "11111111111111111111111111111111"
         internal_mining_account: "11111111111111111111111111111111"
 liquidity_oracle: A8KSeWkXAXP8Vskxq5xAREznwyFQkjHqWivNhcfj9LF1
 depositor: 8VTYx1mJ8brKFKReCy1gbNuaisgFK21FrYPjUEaJz3Q6
-larix_mining: []
 quarry_mining:
   USDC:
     token_mint: YakofBo4X3zMxa823THQJwZ8QeoU8pxPdFdxJs7JW57

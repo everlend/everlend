@@ -1,4 +1,5 @@
 use anchor_lang::prelude::AccountMeta;
+use anchor_lang::Key;
 use larix_lending::instruction::LendingInstruction;
 use solana_program::{
     account_info::AccountInfo,
@@ -264,6 +265,7 @@ pub fn claim_mine<'a>(
         lending_market_authority,
         authority,
         mining,
+        mine_supply,
         destination,
         reserve,
     ];
@@ -275,4 +277,22 @@ pub fn claim_mine<'a>(
     };
 
     invoke_signed(&ix, &accounts, signers_seeds)
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn refresh_mine<'a>(
+    program_id: &Pubkey,
+    mining: AccountInfo<'a>,
+    reserve: AccountInfo<'a>,
+) -> ProgramResult {
+    let ix = Instruction {
+        program_id: *program_id,
+        accounts: vec![
+            AccountMeta::new(*mining.key, false),
+            AccountMeta::new_readonly(*reserve.key, false),
+        ],
+        data: LendingInstruction::RefreshMining.pack(),
+    };
+
+    invoke(&ix, &[mining, reserve])
 }

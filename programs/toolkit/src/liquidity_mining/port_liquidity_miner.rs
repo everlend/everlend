@@ -3,7 +3,7 @@ use crate::liquidity_mining::execute_mining_account_creation;
 use crate::utils::*;
 use anyhow::Result;
 use everlend_depositor::{instruction::InitMiningAccountsPubkeys, state::MiningType};
-use everlend_utils::integrations::{MoneyMarket, StakingMoneyMarket};
+use everlend_utils::integrations::MoneyMarket;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::signature::write_keypair_file;
@@ -35,7 +35,7 @@ impl LiquidityMiner for PortLiquidityMiner {
             .token_accounts
             .get_mut(token)
             .unwrap()
-            .mining_accounts[StakingMoneyMarket::PortFinance as usize]
+            .mining_accounts[MoneyMarket::PortFinance as usize]
             .staking_account
     }
 
@@ -86,10 +86,5 @@ impl LiquidityMiner for PortLiquidityMiner {
             staking_account: mining_account,
             staking_pool: port_accounts.staking_pool,
         }
-    }
-
-    fn update_mining_accounts(&self, _config: &Config) -> Result<()> {
-        // No additional work needed for port
-        Ok(())
     }
 }

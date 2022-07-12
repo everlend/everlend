@@ -102,9 +102,4 @@ impl LiquidityMiner for QuarryLiquidityMiner {
             miner_vault: mining_account,
         }
     }
-
-    fn update_mining_accounts(&self, _config: &Config) -> Result<()> {
-        // No additional work needed for quarry
-        Ok(())
-    }
 }

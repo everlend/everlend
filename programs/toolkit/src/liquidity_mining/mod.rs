@@ -78,7 +78,6 @@ pub fn save_mining_accounts(
     config: &Config,
     token: &String,
     money_market: MoneyMarket,
-    mining_pubkey: Pubkey,
     network: &String,
 ) -> Result<()> {
     let mut initialized_accounts = config.get_initialized_accounts();
@@ -87,10 +86,8 @@ pub fn save_mining_accounts(
         .token_accounts
         .get_mut(token)
         .unwrap()
-        .mining_accounts[money_market as usize] = MiningAccounts {
-        staking_account: mining_pubkey,
-        internal_mining_account,
-    };
+        .mining_accounts[money_market as usize]
+        .internal_mining_account = internal_mining_account;
     initialized_accounts
         .save(&format!("accounts.{}.yaml", network))
         .unwrap();
@@ -108,5 +105,4 @@ pub trait LiquidityMiner {
     fn get_pubkeys(&self, config: &Config, token: &String) -> Option<InitMiningAccountsPubkeys>;
     fn get_mining_type(&self, config: &Config, token: &String, mining_pubkey: Pubkey)
         -> MiningType;
-    fn update_mining_accounts(&self, config: &Config) -> Result<()>;
 }

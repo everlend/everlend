@@ -307,7 +307,6 @@ async fn command_create(
         token_accounts,
         liquidity_oracle: liquidity_oracle_pubkey,
         depositor: depositor_pubkey,
-        larix_mining: vec![],
         quarry_mining: BTreeMap::new(),
         rebalance_executor,
     };
@@ -523,8 +522,8 @@ async fn command_create_depositor_transit_account(
 ) -> anyhow::Result<()> {
     let initialized_accounts = config.get_initialized_accounts();
 
-    println!("Token mint {}. Seed {:?}",token_mint, seed);
-    depositor::create_transit(config,&initialized_accounts.depositor,&token_mint, seed)?;
+    println!("Token mint {}. Seed {:?}", token_mint, seed);
+    depositor::create_transit(config, &initialized_accounts.depositor, &token_mint, seed)?;
 
     Ok(())
 }
@@ -1146,8 +1145,7 @@ async fn main() -> anyhow::Result<()> {
                 )
                 .subcommand(SubCommand::with_name("migrate-depositor").about(
                     "Migrate Depositor account. Must be invoke after migrate-registry-config.",
-                ),
-                )
+                ))
                 .subcommand(
                     SubCommand::with_name("migrate-registry-config").about(
                         "Migrate RegistryConfig account. Must be invoke by registry manager.",

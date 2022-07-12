@@ -230,8 +230,7 @@ pub fn command_init_mining(
         StakingMoneyMarket::Solend => MoneyMarket::Solend,
         _ => MoneyMarket::PortFinance,
     };
-    save_mining_accounts(config, token, money_market, mining_pubkey, &config.network)?;
-    liquidity_miner.update_mining_accounts(config)?;
+    save_mining_accounts(config, token, money_market, &config.network)?;
     Ok(())
 }
 
@@ -743,9 +742,7 @@ pub async fn command_info_reserve_liquidity(config: &Config) -> anyhow::Result<(
     Ok(())
 }
 
-pub async fn command_migrate_depositor(
-    config: &Config,
-) -> anyhow::Result<()> {
+pub async fn command_migrate_depositor(config: &Config) -> anyhow::Result<()> {
     let initialized_accounts = config.get_initialized_accounts();
     // Check that RegistryConfig migrated
     {
