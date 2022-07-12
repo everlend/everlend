@@ -1146,7 +1146,8 @@ async fn main() -> anyhow::Result<()> {
                 )
                 .subcommand(SubCommand::with_name("migrate-depositor").about(
                     "Migrate Depositor account. Must be invoke after migrate-registry-config.",
-                ))
+                ),
+                )
                 .subcommand(
                     SubCommand::with_name("migrate-registry-config").about(
                         "Migrate RegistryConfig account. Must be invoke by registry manager.",
