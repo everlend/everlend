@@ -288,7 +288,7 @@ pub struct InitRebalancingParams {
 
 impl Sealed for Rebalancing {}
 impl Pack for Rebalancing {
-    // 1 + 32 + 32 + 8 + (8 * 10) + 89 + (4 + 8 * 28) + 8 + 20 = 478
+    // 1 + 32 + 32 + 8 + (8 * 10) + 89 + (4 + 8 * 28) + 8 = 478
     const LEN: usize = 73
         + (8 * TOTAL_DISTRIBUTIONS)
         + TokenDistribution::LEN
