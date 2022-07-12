@@ -1,4 +1,3 @@
-use everlend_depositor::state::DeprecatedDepositor;
 use everlend_depositor::{
     find_rebalancing_program_address, find_transit_program_address,
     state::{Depositor, Rebalancing},
@@ -246,18 +245,30 @@ pub fn migrate_depositor(
     liquidity_mint: &Pubkey,
 ) -> Result<(), ClientError> {
     println!("Depositor: {}", depositor);
-    let deprecated_depositor: DeprecatedDepositor = config.get_account_unpack(&depositor)?;
-    println!("Deprecated depositor struct:\n{:?}", &deprecated_depositor);
+
+    let (rebalancing, _) =
+        find_rebalancing_program_address(&everlend_depositor::id(), depositor, liquidity_mint);
+
+    let balance = config
+        .rpc_client
+        .get_minimum_balance_for_rent_exemption(Rebalancing::LEN)?;
+
+    let rebalancing_account = config.rpc_client.get_account(&rebalancing)?;
+    let difference = balance - rebalancing_account.lamports;
+    println!("Balance difference {}", difference);
 
     println!("Sending MigrateDepositor itx ...");
     let tx = Transaction::new_with_payer(
-        &[everlend_depositor::instruction::migrate_depositor(
-            &everlend_depositor::id(),
-            depositor,
-            registry,
-            &config.fee_payer.pubkey(),
-            liquidity_mint,
-        )],
+        &[
+            system_instruction::transfer(&config.fee_payer.pubkey(), &rebalancing, difference),
+            everlend_depositor::instruction::migrate_depositor(
+                &everlend_depositor::id(),
+                depositor,
+                registry,
+                &config.fee_payer.pubkey(),
+                liquidity_mint,
+            ),
+        ],
         Some(&config.fee_payer.pubkey()),
     );
 

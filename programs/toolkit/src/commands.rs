@@ -618,10 +618,8 @@ pub async fn command_info_reserve_liquidity(config: &Config) -> anyhow::Result<(
 
 pub async fn command_migrate_depositor(
     config: &Config,
-    liquidity_mint: &Pubkey,
 ) -> anyhow::Result<()> {
     let initialized_accounts = config.get_initialized_accounts();
-
     // Check that RegistryConfig migrated
     {
         let (registry_config_pubkey, _) =
@@ -632,12 +630,16 @@ pub async fn command_migrate_depositor(
         }
     }
 
-    depositor::migrate_depositor(
-        config,
-        &initialized_accounts.depositor,
-        &initialized_accounts.registry,
-        liquidity_mint,
-    )?;
+    for (_, token_accounts) in initialized_accounts.token_accounts {
+        println!("Mint {}", &token_accounts.mint);
+        depositor::migrate_depositor(
+            config,
+            &initialized_accounts.depositor,
+            &initialized_accounts.registry,
+            &token_accounts.mint,
+        )?;
+    }
+
     Ok(())
 }
 

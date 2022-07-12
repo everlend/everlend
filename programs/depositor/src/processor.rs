@@ -853,19 +853,6 @@ impl Processor {
         // Realloc depositor size
         rebalance_info.realloc(Rebalancing::LEN, false)?;
 
-        let difference = rent.minimum_balance(Rebalancing::LEN) - rebalance_info.lamports();
-
-        let manager_starting_lamports = manager_info.lamports();
-        let rebalance_lamports = rebalance_info.lamports();
-
-        **rebalance_info.lamports.borrow_mut() = rebalance_lamports
-            .checked_add(difference)
-            .ok_or(EverlendError::MathOverflow)?;
-
-        **manager_info.lamports.borrow_mut() = manager_starting_lamports
-            .checked_sub(difference)
-            .ok_or(EverlendError::MathOverflow)?;
-
         // Check rent exemption
         assert_rent_exempt(rent, rebalance_info)?;
 

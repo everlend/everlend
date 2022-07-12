@@ -1039,14 +1039,7 @@ async fn main() -> anyhow::Result<()> {
                 )
                 .subcommand(SubCommand::with_name("migrate-depositor").about(
                     "Migrate Depositor account. Must be invoke after migrate-registry-config.",
-                ).arg(
-                    Arg::with_name("liquidity-mint")
-                        .short("M")
-                        .long("liquidity-mint")
-                        .value_name("PATH")
-                        .takes_value(true)
-                        .help("Accounts file"),
-                )
+                ),
                 )
                 .subcommand(
                     SubCommand::with_name("migrate-registry-config").about(
@@ -1313,8 +1306,7 @@ async fn main() -> anyhow::Result<()> {
                 ("migrate-depositor", Some(_)) => {
                     println!("WARN! This migration must be invoke after migrate-registry-config.");
                     println!("Started Depositor migration");
-                    let liquidity_mint = pubkey_of(arg_matches, "liquidity-mint").unwrap();
-                    command_migrate_depositor(&config, &liquidity_mint).await
+                    command_migrate_depositor(&config).await
                 }
                 ("migrate-registry-config", Some(_)) => {
                     println!("Started RegistryConfig migration");

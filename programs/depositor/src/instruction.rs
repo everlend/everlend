@@ -477,10 +477,10 @@ pub fn migrate_depositor(
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
 
     let accounts = vec![
-        AccountMeta::new(*depositor, false),
+        AccountMeta::new_readonly(*depositor, false),
         AccountMeta::new_readonly(*registry, false),
         AccountMeta::new(rebalancing, false),
-        AccountMeta::new_readonly(*manager, true),
+        AccountMeta::new(*manager, true),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
 
