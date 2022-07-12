@@ -37,7 +37,7 @@ use crate::{
     find_rebalancing_program_address, find_transit_program_address,
     instruction::DepositorInstruction,
     state::{
-        Depositor, DeprecatedDepositor, InitDepositorParams, InitRebalancingParams, Rebalancing,
+        Depositor, DeprecatedRebalancing, InitDepositorParams, InitRebalancingParams, Rebalancing,
         RebalancingOperation,
     },
     utils::{deposit, withdraw},
@@ -821,15 +821,12 @@ impl Processor {
     }
 
     /// Process MigrateDepositor instruction
-    pub fn migrate_depositor(
-        program_id: &Pubkey,
-        accounts: &[AccountInfo],
-        rebalance_executor: Pubkey,
-    ) -> ProgramResult {
+    pub fn migrate_depositor(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
 
         let depositor_info = next_account_info(account_info_iter)?;
         let registry_info = next_account_info(account_info_iter)?;
+        let rebalance_info = next_account_info(account_info_iter)?;
         let manager_info = next_account_info(account_info_iter)?;
         let rent_info = next_account_info(account_info_iter)?;
         let rent = &Rent::from_account_info(rent_info)?;
@@ -844,25 +841,33 @@ impl Processor {
         assert_account_key(manager_info, &registry.manager)?;
 
         // Get depositor state
-        let deprecated_depositor =
-            DeprecatedDepositor::unpack_unchecked(&depositor_info.data.borrow())?;
-        assert_account_key(registry_info, &deprecated_depositor.registry)?;
+        let depositor = Depositor::unpack_unchecked(&depositor_info.data.borrow())?;
+        assert_account_key(registry_info, &depositor.registry)?;
 
-        assert_initialized(&deprecated_depositor)?;
+        let deprecated_rebalancing =
+            DeprecatedRebalancing::unpack_unchecked(&rebalance_info.data.borrow())?;
+        assert_initialized(&deprecated_rebalancing)?;
+
+        assert_account_key(depositor_info, &deprecated_rebalancing.depositor)?;
 
         // Realloc depositor size
-        depositor_info.realloc(Depositor::LEN, false)?;
+        rebalance_info.realloc(Rebalancing::LEN, false)?;
 
         // Check rent exemption
-        assert_rent_exempt(rent, depositor_info)?;
+        assert_rent_exempt(rent, rebalance_info)?;
 
-        let mut depositor: Depositor = Depositor::default();
-        depositor.init(InitDepositorParams {
-            registry: deprecated_depositor.registry,
-            rebalance_executor,
-        });
+        let rebalancing: Rebalancing = Rebalancing {
+            account_type: deprecated_rebalancing.account_type,
+            depositor: deprecated_rebalancing.depositor,
+            mint: deprecated_rebalancing.mint,
+            distributed_liquidity: deprecated_rebalancing.distributed_liquidity,
+            received_collateral: deprecated_rebalancing.received_collateral,
+            token_distribution: deprecated_rebalancing.token_distribution,
+            steps: deprecated_rebalancing.steps,
+            income_refreshed_at: deprecated_rebalancing.income_refreshed_at,
+        };
 
-        Depositor::pack(depositor, *depositor_info.data.borrow_mut())?;
+        Rebalancing::pack(rebalancing, *rebalance_info.data.borrow_mut())?;
 
         Ok(())
     }
@@ -914,9 +919,9 @@ impl Processor {
                 Self::withdraw(program_id, accounts)
             }
 
-            DepositorInstruction::MigrateDepositor { rebalance_executor } => {
+            DepositorInstruction::MigrateDepositor => {
                 msg!("DepositorInstruction: MigrateDepositor");
-                Self::migrate_depositor(program_id, accounts, rebalance_executor)
+                Self::migrate_depositor(program_id, accounts)
             }
         }
     }
