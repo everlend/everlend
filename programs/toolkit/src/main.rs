@@ -130,12 +130,7 @@ async fn command_create(
     )?;
 
     println!("Depositor");
-    let depositor_pubkey = depositor::init(
-        config,
-        &registry_pubkey,
-        None,
-        rebalance_executor,
-    )?;
+    let depositor_pubkey = depositor::init(config, &registry_pubkey, None, rebalance_executor)?;
 
     println!("Prepare borrow authority");
     let (depositor_authority, _) =
@@ -1044,7 +1039,15 @@ async fn main() -> anyhow::Result<()> {
                 )
                 .subcommand(SubCommand::with_name("migrate-depositor").about(
                     "Migrate Depositor account. Must be invoke after migrate-registry-config.",
-                ))
+                ).arg(
+                    Arg::with_name("liquidity-mint")
+                        .short("M")
+                        .long("liquidity-mint")
+                        .value_name("PATH")
+                        .takes_value(true)
+                        .help("Accounts file"),
+                )
+                )
                 .subcommand(
                     SubCommand::with_name("migrate-registry-config").about(
                         "Migrate RegistryConfig account. Must be invoke by registry manager.",
@@ -1310,7 +1313,8 @@ async fn main() -> anyhow::Result<()> {
                 ("migrate-depositor", Some(_)) => {
                     println!("WARN! This migration must be invoke after migrate-registry-config.");
                     println!("Started Depositor migration");
-                    command_migrate_depositor(&config).await
+                    let liquidity_mint = pubkey_of(arg_matches, "liquidity-mint").unwrap();
+                    command_migrate_depositor(&config, &liquidity_mint).await
                 }
                 ("migrate-registry-config", Some(_)) => {
                     println!("Started RegistryConfig migration");

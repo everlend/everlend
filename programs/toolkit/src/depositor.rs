@@ -243,7 +243,7 @@ pub fn migrate_depositor(
     config: &Config,
     depositor: &Pubkey,
     registry: &Pubkey,
-    rebalance_executor: &Pubkey,
+    liquidity_mint: &Pubkey,
 ) -> Result<(), ClientError> {
     println!("Depositor: {}", depositor);
     let deprecated_depositor: DeprecatedDepositor = config.get_account_unpack(&depositor)?;
@@ -256,7 +256,7 @@ pub fn migrate_depositor(
             depositor,
             registry,
             &config.fee_payer.pubkey(),
-            rebalance_executor,
+            liquidity_mint,
         )],
         Some(&config.fee_payer.pubkey()),
     );

@@ -131,12 +131,10 @@ pub enum DepositorInstruction {
     /// Accounts
     /// [W] Depositor
     /// [R] Registry
+    /// [W] Rebalance account
     /// [R] Manager
     /// [R] Rent
-    MigrateDepositor {
-        /// Rebalancing executor account
-        rebalance_executor: Pubkey,
-    },
+    MigrateDepositor,
 
     /// Set current rebalancing
     ///
@@ -474,20 +472,21 @@ pub fn migrate_depositor(
     depositor: &Pubkey,
     registry: &Pubkey,
     manager: &Pubkey,
-    rebalance_executor: &Pubkey,
+    liquidity_mint: &Pubkey,
 ) -> Instruction {
+    let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
+
     let accounts = vec![
         AccountMeta::new(*depositor, false),
         AccountMeta::new_readonly(*registry, false),
-        AccountMeta::new_readonly(*manager, false),
+        AccountMeta::new(rebalancing, false),
+        AccountMeta::new_readonly(*manager, true),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
 
     Instruction::new_with_borsh(
         *program_id,
-        &DepositorInstruction::MigrateDepositor {
-            rebalance_executor: *rebalance_executor,
-        },
+        &DepositorInstruction::MigrateDepositor,
         accounts,
     )
 }

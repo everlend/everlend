@@ -616,7 +616,10 @@ pub async fn command_info_reserve_liquidity(config: &Config) -> anyhow::Result<(
     Ok(())
 }
 
-pub async fn command_migrate_depositor(config: &Config) -> anyhow::Result<()> {
+pub async fn command_migrate_depositor(
+    config: &Config,
+    liquidity_mint: &Pubkey,
+) -> anyhow::Result<()> {
     let initialized_accounts = config.get_initialized_accounts();
 
     // Check that RegistryConfig migrated
@@ -633,7 +636,7 @@ pub async fn command_migrate_depositor(config: &Config) -> anyhow::Result<()> {
         config,
         &initialized_accounts.depositor,
         &initialized_accounts.registry,
-        &initialized_accounts.rebalance_executor,
+        liquidity_mint,
     )?;
     Ok(())
 }

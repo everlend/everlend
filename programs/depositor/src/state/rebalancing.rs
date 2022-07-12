@@ -3,6 +3,7 @@
 use super::{AccountType, RebalancingStep, TOTAL_REBALANCING_STEP};
 use crate::state::RebalancingOperation;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+pub use deprecated::DeprecatedRebalancing;
 use everlend_liquidity_oracle::state::{DistributionArray, TokenDistribution};
 use everlend_registry::state::{DistributionPubkeys, RegistrySettings, TOTAL_DISTRIBUTIONS};
 use everlend_utils::{math, EverlendError, PRECISION_SCALER};
@@ -42,8 +43,6 @@ pub struct Rebalancing {
 
     /// Income refreshed mark to avoid frequent refresh
     pub income_refreshed_at: Slot,
-    // Space for future values
-    // 20
 }
 
 impl Rebalancing {
@@ -289,13 +288,12 @@ pub struct InitRebalancingParams {
 
 impl Sealed for Rebalancing {}
 impl Pack for Rebalancing {
-    // 1 + 32 + 32 + 8 + (8 * 10) + 89 + (4 + 4 * 28) + 8 + 20 = 386
+    // 1 + 32 + 32 + 8 + (8 * 10) + 89 + (4 + 8 * 28) + 8 + 20 = 478
     const LEN: usize = 73
         + (8 * TOTAL_DISTRIBUTIONS)
         + TokenDistribution::LEN
         + (4 + TOTAL_REBALANCING_STEP * RebalancingStep::LEN)
-        + 8
-        + 20;
+        + 8;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;
@@ -483,5 +481,71 @@ pub mod tests {
             "unused_liquidity = {:#?}",
             rebalancing.unused_liquidity().unwrap()
         );
+    }
+}
+
+mod deprecated {
+    use super::*;
+
+    /// Rebalancing
+    #[repr(C)]
+    #[derive(Debug, Clone, PartialEq, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
+    pub struct DeprecatedRebalancing {
+        /// Account type - Rebalancing
+        pub account_type: AccountType,
+
+        /// Depositor
+        pub depositor: Pubkey,
+
+        /// Mint
+        pub mint: Pubkey,
+
+        /// Distributed liquidity
+        pub distributed_liquidity: u64,
+
+        /// Received collateral in each market
+        pub received_collateral: [u64; TOTAL_DISTRIBUTIONS],
+
+        /// Current token distribution from liquidity oracle
+        pub token_distribution: TokenDistribution,
+
+        /// Rebalancing steps
+        pub steps: Vec<RebalancingStep>,
+
+        /// Income refreshed mark to avoid frequent refresh
+        pub income_refreshed_at: Slot,
+        // Space for future values
+        // 20
+    }
+
+    impl Sealed for DeprecatedRebalancing {}
+    impl Pack for DeprecatedRebalancing {
+        // 1 + 32 + 32 + 8 + (8 * 10) + 89 + (4 + 4 * 28) + 8 + 20 = 386
+        const LEN: usize = 73
+            + (8 * TOTAL_DISTRIBUTIONS)
+            + TokenDistribution::LEN
+            + (4 + 4 * RebalancingStep::LEN)
+            + 8
+            + 20;
+
+        fn pack_into_slice(&self, dst: &mut [u8]) {
+            let mut slice = dst;
+            self.serialize(&mut slice).unwrap()
+        }
+
+        fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
+            let mut src_mut = src;
+            Self::deserialize(&mut src_mut).map_err(|err| {
+                msg!("Failed to deserialize");
+                msg!(&err.to_string());
+                ProgramError::InvalidAccountData
+            })
+        }
+    }
+
+    impl IsInitialized for DeprecatedRebalancing {
+        fn is_initialized(&self) -> bool {
+            self.account_type == AccountType::Rebalancing
+        }
     }
 }
