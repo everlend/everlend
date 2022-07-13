@@ -44,6 +44,7 @@ impl LiquidityMiner for PortLiquidityMiner {
         config: &Config,
         token: &String,
         mining_account: &Keypair,
+        _sub_reward_token_mint: Option<Pubkey>,
     ) -> Result<()> {
         let default_accounts = config.get_default_accounts();
         println!("Create and Init port staking account");
@@ -78,6 +79,7 @@ impl LiquidityMiner for PortLiquidityMiner {
         config: &Config,
         token: &String,
         mining_account: Pubkey,
+        _sub_reward_token_mint: Option<Pubkey>,
     ) -> MiningType {
         let default_accounts = config.get_default_accounts();
         let port_accounts = default_accounts.port_accounts.get(token).unwrap();

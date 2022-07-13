@@ -959,12 +959,36 @@ impl Processor {
         let staking_program_id_info = next_account_info(account_info_iter)?;
 
         match mining_type {
-            MiningType::Larix { mining_account } => {
+            MiningType::Larix {
+                mining_account,
+                additional_reward_token_account,
+            } => {
                 let mining_account_info = next_account_info(account_info_iter)?;
                 assert_owned_by(mining_account_info, staking_program_id_info.key)?;
                 assert_account_key(mining_account_info, &mining_account)?;
 
                 let lending_market_info = next_account_info(account_info_iter)?;
+                if additional_reward_token_account.is_some() {
+                    let additional_reward_token_account_info =
+                        next_account_info(account_info_iter)?;
+                    assert_account_key(
+                        additional_reward_token_account_info,
+                        &additional_reward_token_account.unwrap(),
+                    )?;
+
+                    assert_owned_by(additional_reward_token_account_info, &spl_token::id())?;
+
+                    let token_account = spl_token::state::Account::unpack(
+                        &additional_reward_token_account_info.data.borrow(),
+                    )?;
+
+                    let (depositor_authority_pubkey, _) =
+                        find_program_address(program_id, depositor_info.key);
+                    if !token_account.owner.eq(&depositor_authority_pubkey) {
+                        return Err(EverlendError::InvalidAccountOwner.into());
+                    }
+                }
+
                 cpi::larix::init_mining(
                     staking_program_id_info.key,
                     mining_account_info.clone(),
@@ -1093,7 +1117,10 @@ impl Processor {
         let signers_seeds = &[&depositor_info.key.to_bytes()[..32], &[bump_seed]];
 
         match internal_mining_type {
-            MiningType::Larix { mining_account } => {
+            MiningType::Larix {
+                mining_account,
+                additional_reward_token_account,
+            } => {
                 let mining_account_info = next_account_info(account_info_iter)?;
                 assert_account_key(mining_account_info, &mining_account)?;
 
@@ -1103,6 +1130,17 @@ impl Processor {
                 let lending_market_authority_info = next_account_info(account_info_iter)?;
                 let reserve_info = next_account_info(account_info_iter)?;
                 let reserve_liquidity_oracle = next_account_info(account_info_iter)?;
+
+                if additional_reward_token_account.is_some() {
+                    let additional_reward_token_account_info =
+                        next_account_info(account_info_iter)?;
+                    assert_account_key(
+                        additional_reward_token_account_info,
+                        &additional_reward_token_account.unwrap(),
+                    )?;
+                    //TODO Deposit into rewards pool
+                }
+
                 // TODO think about necessary
                 cpi::larix::refresh_mine(
                     staking_program_id_info.key,

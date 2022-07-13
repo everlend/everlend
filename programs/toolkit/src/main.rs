@@ -627,14 +627,6 @@ async fn main() -> anyhow::Result<()> {
         .subcommand(
             SubCommand::with_name("init-mining")
                 .arg(
-                    Arg::with_name("accounts")
-                        .short("A")
-                        .long("accounts")
-                        .value_name("PATH")
-                        .takes_value(true)
-                        .help("Accounts file"),
-                )
-                .arg(
                     Arg::with_name("staking-money-market")
                         .long("staking-money-market")
                         .value_name("NUMBER")
@@ -650,6 +642,14 @@ async fn main() -> anyhow::Result<()> {
                         .takes_value(true)
                         .required(true)
                         .help("Token"),
+                )
+                .arg(
+                    Arg::with_name("sub-reward-mint")
+                        .long("sub-reward-mint")
+                        .short("m")
+                        .value_name("REWARD_MINT")
+                        .takes_value(true)
+                        .help("Sub reward token mint"),
                 ),
         )
         .subcommand(SubCommand::with_name("save-larix-accounts"))
@@ -1272,10 +1272,12 @@ async fn main() -> anyhow::Result<()> {
             let staking_money_market =
                 value_of::<usize>(arg_matches, "staking-money-market").unwrap();
             let token = value_of::<String>(arg_matches, "token").unwrap();
+            let sub_reward_mint = pubkey_of(arg_matches, "sub-reward-mint");
             command_init_mining(
                 &config,
                 StakingMoneyMarket::from(staking_money_market),
                 &token,
+                sub_reward_mint,
             )
         }
         ("save-larix-accounts", Some(_)) => {

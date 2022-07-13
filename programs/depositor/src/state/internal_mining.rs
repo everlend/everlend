@@ -17,6 +17,8 @@ pub enum MiningType {
     Larix {
         ///
         mining_account: Pubkey,
+        /// ATA for additional reward
+        additional_reward_token_account: Option<Pubkey>,
     },
     ///
     PortFinance {

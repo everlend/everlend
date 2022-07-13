@@ -604,7 +604,10 @@ pub fn init_mining_accounts(
     ];
 
     match mining_type {
-        MiningType::Larix { mining_account } => {
+        MiningType::Larix {
+            mining_account,
+            additional_reward_token_account,
+        } => {
             // Mining program equal to money_market_program_id
             accounts.push(AccountMeta::new_readonly(
                 pubkeys.money_market_program_id,
@@ -615,6 +618,13 @@ pub fn init_mining_accounts(
                 pubkeys.lending_market.unwrap(),
                 false,
             ));
+
+            if additional_reward_token_account.is_some() {
+                accounts.push(AccountMeta::new_readonly(
+                    additional_reward_token_account.unwrap(),
+                    false,
+                ));
+            }
         }
         MiningType::PortFinance {
             staking_program_id,

@@ -1,9 +1,8 @@
-use crate::accounts_config::LarixMining;
 use crate::liquidity_mining::execute_mining_account_creation;
 use crate::utils::*;
 use anyhow::Result;
 use everlend_depositor::{instruction::InitMiningAccountsPubkeys, state::MiningType};
-use everlend_utils::integrations::MoneyMarket;
+use everlend_utils::{find_program_address, integrations::MoneyMarket};
 use solana_program::pubkey::Pubkey;
 use solana_sdk::signature::write_keypair_file;
 use solana_sdk::{signature::Keypair, signer::Signer};
@@ -59,10 +58,23 @@ impl LiquidityMiner for LarixLiquidityMiner {
         config: &Config,
         token: &String,
         mining_account: &Keypair,
+        sub_reward_token_mint: Option<Pubkey>,
     ) -> Result<()> {
         let default_accounts = config.get_default_accounts();
+        let initialized_accounts = config.get_initialized_accounts();
         println!("Create and Init larix mining accont");
         println!("Mining account: {}", mining_account.pubkey());
+
+        let (depositor_authority, _) =
+            find_program_address(&everlend_depositor::id(), &initialized_accounts.depositor);
+        if sub_reward_token_mint.is_some() {
+            spl_create_associated_token_account(
+                config,
+                &depositor_authority,
+                &sub_reward_token_mint.unwrap(),
+            )?;
+        }
+
         execute_mining_account_creation(
             config,
             &default_accounts.larix.program_id,
@@ -91,10 +103,32 @@ impl LiquidityMiner for LarixLiquidityMiner {
 
     fn get_mining_type(
         &self,
-        _config: &Config,
+        config: &Config,
         _token: &String,
         mining_account: Pubkey,
+        sub_reward_token_mint: Option<Pubkey>,
     ) -> MiningType {
-        MiningType::Larix { mining_account }
+        let initialized_accounts = config.get_initialized_accounts();
+
+        let (depositor_authority, _) =
+            find_program_address(&everlend_depositor::id(), &initialized_accounts.depositor);
+
+        let additional_reward_token_account = if sub_reward_token_mint.is_some() {
+            Some(spl_associated_token_account::get_associated_token_address(
+                &depositor_authority,
+                &sub_reward_token_mint.unwrap(),
+            ))
+        } else {
+            None
+        };
+
+        println!(
+            "Additional reward token account {:?}",
+            additional_reward_token_account
+        );
+        MiningType::Larix {
+            mining_account,
+            additional_reward_token_account,
+        }
     }
 }

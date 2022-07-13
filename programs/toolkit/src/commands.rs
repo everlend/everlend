@@ -205,6 +205,7 @@ pub fn command_init_mining(
     config: &Config,
     staking_money_market: StakingMoneyMarket,
     token: &String,
+    sub_reward_token_mint: Option<Pubkey>,
 ) -> anyhow::Result<()> {
     let liquidity_miner_option: Option<Box<dyn LiquidityMiner>> = match staking_money_market {
         StakingMoneyMarket::PortFinance => Some(Box::new(PortLiquidityMiner {})),
@@ -220,10 +221,16 @@ pub fn command_init_mining(
     if mining_pubkey.eq(&Pubkey::default()) {
         let new_mining_account = Keypair::new();
         mining_pubkey = new_mining_account.pubkey();
-        liquidity_miner.create_mining_account(config, token, &new_mining_account)?;
+        liquidity_miner.create_mining_account(
+            config,
+            token,
+            &new_mining_account,
+            sub_reward_token_mint,
+        )?;
     };
     let pubkeys = liquidity_miner.get_pubkeys(config, token);
-    let mining_type = liquidity_miner.get_mining_type(config, token, mining_pubkey);
+    let mining_type =
+        liquidity_miner.get_mining_type(config, token, mining_pubkey, sub_reward_token_mint);
     execute_init_mining_accounts(config, &pubkeys.unwrap(), mining_type)?;
     let money_market = match staking_money_market {
         StakingMoneyMarket::Larix => MoneyMarket::Larix,

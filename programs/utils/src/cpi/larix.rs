@@ -1,10 +1,8 @@
-use anchor_lang::prelude::AccountMeta;
-use anchor_lang::Key;
 use larix_lending::instruction::LendingInstruction;
 use solana_program::{
     account_info::AccountInfo,
     entrypoint::ProgramResult,
-    instruction::Instruction,
+    instruction::{AccountMeta, Instruction},
     program::{invoke, invoke_signed},
     program_error::ProgramError,
     pubkey::Pubkey,

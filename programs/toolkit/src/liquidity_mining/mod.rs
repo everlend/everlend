@@ -101,8 +101,14 @@ pub trait LiquidityMiner {
         config: &Config,
         token: &String,
         mining_account: &Keypair,
+        sub_reward_token_mint: Option<Pubkey>,
     ) -> Result<()>;
     fn get_pubkeys(&self, config: &Config, token: &String) -> Option<InitMiningAccountsPubkeys>;
-    fn get_mining_type(&self, config: &Config, token: &String, mining_pubkey: Pubkey)
-        -> MiningType;
+    fn get_mining_type(
+        &self,
+        config: &Config,
+        token: &String,
+        mining_pubkey: Pubkey,
+        sub_reward_token_mint: Option<Pubkey>,
+    ) -> MiningType;
 }
