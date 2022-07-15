@@ -4,7 +4,7 @@ use borsh::BorshDeserialize;
 use everlend_registry::{find_registry_pool_config_program_address, state::RegistryPoolConfig};
 use everlend_utils::{
     assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
-    cpi, find_program_address, EverlendError,
+    cpi::{self, rewards::{initialize_mining, deposit_mining, withdraw_mining}}, find_program_address, EverlendError
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -15,7 +15,7 @@ use solana_program::{
     program_pack::Pack,
     pubkey::Pubkey,
     rent::Rent,
-    sysvar::Sysvar,
+    sysvar::Sysvar
 };
 use spl_token::state::{Account, Mint};
 
@@ -388,6 +388,12 @@ impl Processor {
         let pool_mint_info = next_account_info(account_info_iter)?;
         let pool_market_authority_info = next_account_info(account_info_iter)?;
         let user_transfer_authority_info = next_account_info(account_info_iter)?;
+        // mining accounts
+        let everlend_config_info = next_account_info(account_info_iter)?;
+        let mining_reward_pool = next_account_info(account_info_iter)?;
+        let mining_reward_acc = next_account_info(account_info_iter)?;
+        let everlend_rewards_program_info = next_account_info(account_info_iter)?;
+
         let _token_program_info = next_account_info(account_info_iter)?;
 
         assert_signer(user_transfer_authority_info)?;
@@ -455,6 +461,27 @@ impl Processor {
             &[signers_seeds],
         )?;
 
+        let (pool_pubkey, pool_bump_seed) =
+           find_pool_program_address(program_id, &pool.pool_market, &pool.token_mint);
+       assert_account_key(pool_info, &pool_pubkey)?;
+
+       let pool_seeds: &[&[u8]] = &[
+           &pool.pool_market.to_bytes()[..32],
+           &pool.token_mint.to_bytes()[..32],
+           &[pool_bump_seed],
+       ];
+
+        if mining_reward_acc.owner.eq(&Pubkey::default()) {
+            let destination_account = Account::unpack(&destination_info.data.borrow())?;
+            if pool.pool_mint != destination_account.mint {
+                return Err(ProgramError::InvalidArgument);
+            }
+
+            initialize_mining(everlend_rewards_program_info.key, everlend_config_info.clone(), mining_reward_pool.clone(), mining_reward_acc.clone(), source_info.clone(), source_info.clone())?;
+        }
+
+        deposit_mining(everlend_rewards_program_info.key, everlend_config_info.clone(), mining_reward_pool.clone(), mining_reward_acc.clone(), source_info.clone(), pool_info.to_owned(), mint_amount, &[pool_seeds],)?;
+
         Ok(())
     }
 
@@ -473,6 +500,12 @@ impl Processor {
         let from_info = next_account_info(account_info_iter)?;
         let clock_info = next_account_info(account_info_iter)?;
         let clock = Clock::from_account_info(clock_info)?;
+        // mining accounts
+        let everlend_config_info = next_account_info(account_info_iter)?;
+        let mining_reward_pool = next_account_info(account_info_iter)?;
+        let mining_reward_acc = next_account_info(account_info_iter)?;
+        let everlend_rewards_program_info = next_account_info(account_info_iter)?;
+
         let _token_program_info = next_account_info(account_info_iter)?;
 
         // Check programs
@@ -513,6 +546,9 @@ impl Processor {
         if withdrawal_request.ticket > clock.slot {
             return Err(EverlendError::WithdrawRequestsInvalidTicket.into());
         }
+
+        let (_, bump_seed) = find_program_address(program_id, pool_market_info.key);
+        let signers_seeds = &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]];
 
         // In the case of a SOL token, we do unwrap SPL token,
         // the destination can be any account
@@ -555,9 +591,6 @@ impl Processor {
                 rent_info.clone(),
             )?;
 
-            let (_, bump_seed) = find_program_address(program_id, pool_market_info.key);
-            let signers_seeds = &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]];
-
             // Transfer from token account to destination
             cpi::spl_token::transfer(
                 token_account_info.clone(),
@@ -581,9 +614,6 @@ impl Processor {
                 &[],
             )?;
         } else {
-            let (_, bump_seed) = find_program_address(program_id, pool_market_info.key);
-            let signers_seeds = &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]];
-
             // Transfer from token account to destination
             cpi::spl_token::transfer(
                 token_account_info.clone(),
@@ -594,9 +624,6 @@ impl Processor {
             )?;
         };
 
-        let (_, bump_seed) = find_program_address(program_id, pool_market_info.key);
-        let signers_seeds = &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]];
-
         // Burn from transit collateral pool token
         cpi::spl_token::burn(
             pool_mint_info.clone(),
@@ -605,6 +632,21 @@ impl Processor {
             withdrawal_request.collateral_amount,
             &[signers_seeds],
         )?;
+
+        // Mining reward
+        let (pool_pubkey, pool_bump_seed) =
+           find_pool_program_address(program_id, &pool.pool_market, &pool.token_mint);
+       assert_account_key(pool_info, &pool_pubkey)?;
+
+       let pool_seeds: &[&[u8]] = &[
+           &pool.pool_market.to_bytes()[..32],
+           &pool.token_mint.to_bytes()[..32],
+           &[pool_bump_seed],
+       ];
+
+        if !mining_reward_acc.owner.eq(&Pubkey::default()) {
+            withdraw_mining(everlend_rewards_program_info.key, everlend_config_info.clone(), mining_reward_pool.clone(), mining_reward_acc.clone(), from_info.clone(), pool_info.to_owned(), withdrawal_request.collateral_amount, &[pool_seeds],)?;
+        }
 
         withdrawal_requests.process(withdrawal_request.liquidity_amount)?;
 
@@ -985,6 +1027,55 @@ impl Processor {
         Ok(())
     }
 
+     /// Migrate withdraw request
+     pub fn init_user_mining(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let pool_market_info = next_account_info(account_info_iter)?;
+        let pool_info = next_account_info(account_info_iter)?;
+
+        let user_collateral_token_account_info = next_account_info(account_info_iter)?;
+        let user_authority_info = next_account_info(account_info_iter)?;
+        let manager_info = next_account_info(account_info_iter)?;
+        let mining_reward_pool = next_account_info(account_info_iter)?;
+        let mining_reward_acc = next_account_info(account_info_iter)?;
+        let everlend_config_info = next_account_info(account_info_iter)?;
+        let everlend_rewards_program_info = next_account_info(account_info_iter)?;
+
+        assert_signer(manager_info)?;
+        assert_owned_by(pool_market_info, program_id)?;
+        assert_owned_by(pool_info, program_id)?;
+
+        let pool = Pool::unpack(&pool_info.data.borrow())?;
+        assert_account_key(pool_market_info, &pool.pool_market)?;
+
+        let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+        assert_account_key(manager_info, &pool_market.manager)?;
+
+        let (pool_pubkey, pool_bump_seed) =
+           find_pool_program_address(program_id, &pool.pool_market, &pool.token_mint);
+       assert_account_key(pool_info, &pool_pubkey)?;
+
+       let pool_seeds: &[&[u8]] = &[
+           &pool.pool_market.to_bytes()[..32],
+           &pool.token_mint.to_bytes()[..32],
+           &[pool_bump_seed],
+       ];
+
+       let user_account = Account::unpack(&user_collateral_token_account_info.data.borrow())?;
+       if pool.pool_mint != user_account.mint {
+           return Err(ProgramError::InvalidArgument);
+       }
+
+        if !mining_reward_acc.owner.eq(&Pubkey::default()) {
+            return Err(ProgramError::InvalidArgument);
+        }
+
+        initialize_mining(everlend_rewards_program_info.key, everlend_config_info.clone(), mining_reward_pool.clone(), mining_reward_acc.clone(), user_authority_info.clone(), manager_info.clone())?;
+        deposit_mining(everlend_rewards_program_info.key, everlend_config_info.clone(), mining_reward_pool.clone(), mining_reward_acc.clone(), user_authority_info.clone(), pool_info.to_owned(), user_account.amount, &[pool_seeds],)?;
+
+        Ok(())
+     }
+
     /// Migrate withdraw request
     pub fn migrate_instruction(_program_id: &Pubkey, _accounts: &[AccountInfo]) -> ProgramResult {
         Err(EverlendError::TemporaryUnavailable.into())
@@ -1069,6 +1160,11 @@ impl Processor {
             LiquidityPoolsInstruction::MigrationInstruction => {
                 msg!("LiquidityPoolsInstruction: MigrationInstruction");
                 Self::migrate_instruction(program_id, accounts)
+            }
+
+            LiquidityPoolsInstruction::InitUserMining => {
+                msg!("LiquidityPoolsInstruction: InitUserMining");
+                Self::init_user_mining(program_id, accounts)
             }
         }
     }

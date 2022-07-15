@@ -208,6 +208,10 @@ pub enum LiquidityPoolsInstruction {
     /// Migrate account data
     ///
     MigrationInstruction,
+
+    /// Init user mining account
+    ///
+    InitUserMining,
 }
 
 /// Creates 'InitPoolMarket' instruction.
@@ -367,6 +371,9 @@ pub fn deposit(
     token_account: &Pubkey,
     pool_mint: &Pubkey,
     user_transfer_authority: &Pubkey,
+    everlend_config: &Pubkey,
+    mining_reward_pool: &Pubkey,
+    mining_reward_acc: &Pubkey,
     amount: u64,
 ) -> Instruction {
     let (pool_market_authority, _) = find_program_address(program_id, pool_market);
@@ -384,6 +391,10 @@ pub fn deposit(
         AccountMeta::new(*pool_mint, false),
         AccountMeta::new_readonly(pool_market_authority, false),
         AccountMeta::new_readonly(*user_transfer_authority, true),
+        AccountMeta::new_readonly(*everlend_config, false),
+        AccountMeta::new(*mining_reward_pool, false),
+        AccountMeta::new(*mining_reward_acc, false),
+        AccountMeta::new_readonly(eld_rewards::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
     ];
 
@@ -405,6 +416,9 @@ pub fn withdraw(
     token_mint: &Pubkey,
     pool_mint: &Pubkey,
     from: &Pubkey,
+    everlend_config: &Pubkey,
+    mining_reward_pool: &Pubkey,
+    mining_reward_acc: &Pubkey,
     addition_accounts: Vec<AccountMeta>,
 ) -> Instruction {
     let (pool_market_authority, _) = find_program_address(program_id, pool_market);
@@ -426,6 +440,10 @@ pub fn withdraw(
         AccountMeta::new(*token_account, false),
         AccountMeta::new(collateral_transit, false),
         AccountMeta::new(*from, false),
+        AccountMeta::new_readonly(*everlend_config, false),
+        AccountMeta::new(*mining_reward_pool, false),
+        AccountMeta::new(*mining_reward_acc, false),
+        AccountMeta::new_readonly(eld_rewards::id(), false),
         AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
     ];
