@@ -619,9 +619,9 @@ pub fn init_mining_accounts(
                 false,
             ));
 
-            if additional_reward_token_account.is_some() {
+            if let Some(additional_reward_token_account) = additional_reward_token_account {
                 accounts.push(AccountMeta::new_readonly(
-                    additional_reward_token_account.unwrap(),
+                    additional_reward_token_account,
                     false,
                 ));
             }
@@ -630,10 +630,25 @@ pub fn init_mining_accounts(
             staking_program_id,
             staking_account,
             staking_pool,
+            obligation,
         } => {
             accounts.push(AccountMeta::new_readonly(staking_program_id, false));
             accounts.push(AccountMeta::new_readonly(staking_pool, false));
             accounts.push(AccountMeta::new(staking_account, false));
+
+            // Init obligation
+            accounts.push(AccountMeta::new_readonly(
+                pubkeys.money_market_program_id,
+                false,
+            ));
+            accounts.push(AccountMeta::new(obligation, false));
+            accounts.push(AccountMeta::new_readonly(
+                pubkeys.lending_market.unwrap(),
+                false,
+            ));
+            accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
+            accounts.push(AccountMeta::new_readonly(sysvar::rent::id(), false));
+            accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
         }
         MiningType::Quarry {
             quarry_mining_program_id,

@@ -13,10 +13,10 @@ pub mod port_liquidity_miner;
 pub mod quarry_liquidity_miner;
 pub mod quarry_raw_test;
 
-pub fn execute_mining_account_creation(
+pub fn execute_account_creation(
     config: &Config,
-    staking_program_id: &Pubkey,
-    mining_account: &Keypair,
+    program_id: &Pubkey,
+    account: &Keypair,
     space: u64,
 ) -> Result<(), ClientError> {
     let rent = config
@@ -24,19 +24,16 @@ pub fn execute_mining_account_creation(
         .get_minimum_balance_for_rent_exemption(space as usize)?;
     let create_account_instruction = system_instruction::create_account(
         &config.fee_payer.pubkey(),
-        &mining_account.pubkey(),
+        &account.pubkey(),
         rent,
         space,
-        staking_program_id,
+        program_id,
     );
     let tx = Transaction::new_with_payer(
         &[create_account_instruction],
         Some(&config.fee_payer.pubkey()),
     );
-    config.sign_and_send_and_confirm_transaction(
-        tx,
-        vec![config.fee_payer.as_ref(), mining_account],
-    )?;
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref(), account])?;
     Ok(())
 }
 

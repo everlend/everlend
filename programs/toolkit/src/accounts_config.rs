@@ -260,6 +260,9 @@ pub struct TokenAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub liquidity_transit: Pubkey,
 
+    #[serde_as(as = "DisplayFromStr")]
+    pub port_finance_obligation_account: Pubkey,
+
     pub mining_accounts: Vec<MiningAccounts>,
 }
 

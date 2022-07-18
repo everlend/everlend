@@ -1,4 +1,4 @@
-use crate::liquidity_mining::execute_mining_account_creation;
+use crate::liquidity_mining::execute_account_creation;
 use crate::utils::*;
 use anyhow::Result;
 use everlend_depositor::{instruction::InitMiningAccountsPubkeys, state::MiningType};
@@ -75,7 +75,7 @@ impl LiquidityMiner for LarixLiquidityMiner {
             )?;
         }
 
-        execute_mining_account_creation(
+        execute_account_creation(
             config,
             &default_accounts.larix.program_id,
             &mining_account,

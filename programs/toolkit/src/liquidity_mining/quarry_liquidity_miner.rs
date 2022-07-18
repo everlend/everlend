@@ -1,6 +1,6 @@
 use super::LiquidityMiner;
 use crate::accounts_config::QuarryMining;
-use crate::liquidity_mining::execute_mining_account_creation;
+use crate::liquidity_mining::execute_account_creation;
 use crate::utils::*;
 use anyhow::Result;
 use everlend_depositor::{instruction::InitMiningAccountsPubkeys, state::MiningType};
@@ -61,7 +61,7 @@ impl LiquidityMiner for QuarryLiquidityMiner {
     ) -> Result<()> {
         println!("Create and Init quarry mining accont");
         println!("Mining account: {}", mining_account.pubkey());
-        execute_mining_account_creation(
+        execute_account_creation(
             config,
             &spl_token::id(),
             &mining_account,

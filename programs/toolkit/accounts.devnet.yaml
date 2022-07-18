@@ -21,6 +21,7 @@ token_accounts:
     general_pool_mint: CRwH1DQhExtdojKgtGpTXBL1WWALi9UY8NfqgyjrUqqn
     income_pool: DDyqMDyZj7B6MB4rvAV5hGCiSrcsVgpQojtA3z12hgic
     income_pool_token_account: 4qzrz8K31n5CdpXu5S2MJJ6xZ85weR4WGtgoJPmxqCiE
+    port_finance_obligation_account: "11111111111111111111111111111111"
     mm_pools:
       - pool: Cu83bvH9okz6EWiLmJ95sgtZpbannBp4uNVfdhsR4wXW
         pool_token_account: 3wF5PYmxjPfxBu46HTzEdKAiTdwZU4gSBQ7L1en3L3Nc
@@ -61,6 +62,7 @@ token_accounts:
     general_pool_mint: 5gAhHuS82QgoYrkREuWUgVVqUYLdc8SsuiYtHESVvHcZ
     income_pool: Csqk4HQRiaBHzXrJiGp7yXju22pRrYoDYrEVyq3vzdpc
     income_pool_token_account: B4YaCk15a2ZNmTxKSMkKRiQju5yo82duMyTrWgXJe8q2
+    port_finance_obligation_account: BKKeewGnQugWzZji64JUtuGTyDK98qF67RVeKem41BLZ"
     mm_pools:
       - pool: 3pCgmw5KAv6C9Au1ZLFEyjTvk5S3G1idZwZh8VmLgV6H
         pool_token_account: Gwsoyv8vFCeyuu5KqcaLPSoj43cD8zBUp5KyxFBnVPSZ
@@ -86,10 +88,10 @@ token_accounts:
         token_mint: "11111111111111111111111111111111"
     liquidity_transit: dm7PZzmb2H7nNGGgkw2sNiKnAhQT9iz514k41zKdtA5
     mining_accounts:
-      - staking_account: "11111111111111111111111111111111"
-        internal_mining_account: "11111111111111111111111111111111"
-      - staking_account: "11111111111111111111111111111111"
-        internal_mining_account: "11111111111111111111111111111111"
+      - staking_account: 4FRwLUAtnrhtv8833PXrWRqQV2aP95Y53cJZdDUb4yGw
+        internal_mining_account: 9gF91SxzE2LZqybnHEZmUZXJMJEyDatcWXAhknFGTJxf
+      - staking_account: 79HL71g9yrExtaXrA5NMRoEY29nunaiXDajfVCwg7ze9
+        internal_mining_account: 2ko4THKMYTiQDHwgX7SvkzeybMRQg8wc6awbsrH6gQr4
       - staking_account: "11111111111111111111111111111111"
         internal_mining_account: "11111111111111111111111111111111"
   USDT:
@@ -101,6 +103,7 @@ token_accounts:
     general_pool_mint: 4q6H6HxfgvuKaErvkeKpfhSEiMBUyBEPyRjHdUiTxhmy
     income_pool: ACuyrFveJSD1cHP6yc9D2ihBeyvNYjvTSBBtco2V72gz
     income_pool_token_account: FEZzSv1ybNm2wxD95DtKs9egdAuLCSo1DjSV44zg6sjb
+    port_finance_obligation_account: "11111111111111111111111111111111"
     mm_pools:
       - pool: 7UsHrzwdXymG7cJDwGKjJhbPFHkdyH9u1FvDiiGZGFsP
         pool_token_account: E7iTNV89yG8PSdZpXaUTrkgHKpjkKoMW8SsBZe2WCJvC

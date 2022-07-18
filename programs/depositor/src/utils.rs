@@ -129,6 +129,7 @@ pub fn deposit<'a>(
             staking_program_id,
             staking_account,
             staking_pool,
+            obligation,
         }) => {
             let staking_program_id_info = next_account_info(money_market_account_info_iter)?;
             let staking_account_info = next_account_info(money_market_account_info_iter)?;
@@ -138,12 +139,36 @@ pub fn deposit<'a>(
             assert_account_key(staking_account_info, &staking_account)?;
             assert_account_key(staking_pool_info, &staking_pool)?;
 
-            cpi::port_finance::deposit_staking(
-                &staking_program_id,
+            let obligation_info = next_account_info(money_market_account_info_iter)?;
+            assert_account_key(obligation_info, &obligation)?;
+
+            let collateral_supply_pubkey_info = next_account_info(money_market_account_info_iter)?;
+
+            cpi::port_finance::refresh_reserve(
+                money_market_program.key,
+                reserve_info.clone(),
+                reserve_liquidity_oracle_info.clone(),
+                clock.clone(),
+            )?;
+
+            // TODO use DepositReserveLiquidityAndObligationCollateral after refactor
+            // Mining by obligation
+            cpi::port_finance::deposit_obligation_collateral(
+                money_market_program.key,
+                collateral_transit.clone(),
+                collateral_supply_pubkey_info.clone(),
+                reserve_info.clone(),
+                obligation_info.clone(),
+                lending_market_info.clone(),
+                authority.clone(),
+                authority.clone(),
                 staking_account_info.clone(),
                 staking_pool_info.clone(),
-                authority.clone(),
+                staking_program_id_info.clone(),
+                lending_market_authority_info.clone(),
+                clock.clone(),
                 collateral_amount,
+                signers_seeds,
             )?;
         }
         None | Some(MiningType::None) => {
@@ -257,6 +282,7 @@ pub fn withdraw<'a>(
             staking_program_id,
             staking_account,
             staking_pool,
+            obligation,
         }) => {
             let staking_program_id_info = next_account_info(money_market_account_info_iter)?;
             let staking_account_info = next_account_info(money_market_account_info_iter)?;
@@ -266,11 +292,39 @@ pub fn withdraw<'a>(
             assert_account_key(staking_account_info, &staking_account)?;
             assert_account_key(staking_pool_info, &staking_pool)?;
 
-            cpi::port_finance::withdraw_staking(
-                &staking_program_id,
+            let obligation_info = next_account_info(money_market_account_info_iter)?;
+            assert_account_key(obligation_info, &obligation)?;
+
+            let collateral_supply_pubkey_info = next_account_info(money_market_account_info_iter)?;
+
+            cpi::port_finance::refresh_reserve(
+                money_market_program.key,
+                reserve_info.clone(),
+                reserve_liquidity_oracle_info.clone(),
+                clock.clone(),
+            )?;
+
+            cpi::port_finance::refresh_obligation(
+                money_market_program.key,
+                obligation_info.clone(),
+                reserve_info.clone(),
+                clock.clone(),
+            )?;
+
+            // Mining by obligation
+            cpi::port_finance::withdraw_obligation_collateral(
+                money_market_program.key,
+                collateral_supply_pubkey_info.clone(),
+                collateral_transit.clone(),
+                reserve_info.clone(),
+                obligation_info.clone(),
+                lending_market_info.clone(),
+                authority.clone(),
                 staking_account_info.clone(),
                 staking_pool_info.clone(),
-                authority.clone(),
+                staking_program_id_info.clone(),
+                lending_market_authority_info.clone(),
+                clock.clone(),
                 collateral_amount,
                 signers_seeds,
             )?;

@@ -29,6 +29,8 @@ pub enum MiningType {
         staking_account: Pubkey,
         ///
         staking_pool: Pubkey,
+        ///
+        obligation: Pubkey,
     },
     ///
     Quarry {

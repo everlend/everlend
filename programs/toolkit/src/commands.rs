@@ -617,6 +617,7 @@ pub async fn command_create_token_accounts(
                 mining_accounts: Vec::new(),
                 collateral_pools,
                 liquidity_transit: liquidity_transit_pubkey,
+                port_finance_obligation_account: Pubkey::default(),
             },
         );
     }

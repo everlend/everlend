@@ -968,12 +968,12 @@ impl Processor {
                 assert_account_key(mining_account_info, &mining_account)?;
 
                 let lending_market_info = next_account_info(account_info_iter)?;
-                if additional_reward_token_account.is_some() {
+                if let Some(additional_reward_token_account) = additional_reward_token_account {
                     let additional_reward_token_account_info =
                         next_account_info(account_info_iter)?;
                     assert_account_key(
                         additional_reward_token_account_info,
-                        &additional_reward_token_account.unwrap(),
+                        &additional_reward_token_account,
                     )?;
 
                     assert_owned_by(additional_reward_token_account_info, &spl_token::id())?;
@@ -1002,6 +1002,7 @@ impl Processor {
                 staking_program_id,
                 staking_account,
                 staking_pool,
+                obligation,
             } => {
                 assert_account_key(staking_program_id_info, &staking_program_id)?;
                 let staking_pool_info = next_account_info(account_info_iter)?;
@@ -1014,11 +1015,30 @@ impl Processor {
                     return Err(EverlendError::InvalidAccountOwner.into());
                 };
 
+                let money_market_program_id_info = next_account_info(account_info_iter)?;
+                let obligation_info = next_account_info(account_info_iter)?;
+                assert_account_key(obligation_info, &obligation)?;
+
+                let lending_market_info = next_account_info(account_info_iter)?;
+                let clock_info = next_account_info(account_info_iter)?;
+                let rent_info = next_account_info(account_info_iter)?;
+
+                cpi::port_finance::init_obligation(
+                    money_market_program_id_info.key,
+                    obligation_info.clone(),
+                    lending_market_info.clone(),
+                    depositor_authority_info.clone(),
+                    clock_info.clone(),
+                    rent_info.clone(),
+                    &[signers_seeds.as_ref()],
+                )?;
+
                 cpi::port_finance::create_stake_account(
                     staking_program_id_info.key,
                     staking_account_info.clone(),
                     staking_pool_info.clone(),
                     depositor_authority_info.clone(),
+                    rent_info.clone(),
                 )?;
             }
             MiningType::Quarry {
@@ -1039,9 +1059,9 @@ impl Processor {
                 let miner_vault_info = next_account_info(account_info_iter)?;
                 assert_account_key(miner_vault_info, &miner_vault)?;
                 let (miner_pubkey, _) = cpi::quarry::find_miner_program_address(
-                    &staking_program_id_info.key,
-                    &quarry_info.key,
-                    &depositor_authority_info.key,
+                    staking_program_id_info.key,
+                    quarry_info.key,
+                    depositor_authority_info.key,
                 );
                 assert_account_key(miner_info, &miner_pubkey)?;
                 cpi::quarry::create_miner(
@@ -1069,7 +1089,7 @@ impl Processor {
 
     /// Process ClaimMiningReward instruction
     pub fn claim_mining_reward(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
-        let account_info_iter = &mut accounts.iter();
+        let account_info_iter = &mut accounts.iter().peekable();
 
         let depositor_info = next_account_info(account_info_iter)?;
         let depositor_authority_info = next_account_info(account_info_iter)?;
@@ -1107,7 +1127,7 @@ impl Processor {
             InternalMining::unpack(&internal_mining_info.data.borrow())?.mining_type;
 
         // TODO check money market
-        let _token_program_info = next_account_info(account_info_iter)?;
+        let token_program_info = next_account_info(account_info_iter)?;
         let staking_program_id_info = next_account_info(account_info_iter)?;
 
         // Create depositor authority account
@@ -1169,30 +1189,56 @@ impl Processor {
                 staking_account,
                 staking_pool,
                 staking_program_id,
+                ..
             } => {
                 let stake_account_info = next_account_info(account_info_iter)?;
                 assert_account_key(stake_account_info, &staking_account)?;
-                let stake_account_owner = next_account_info(account_info_iter)?;
 
                 let staking_pool_info = next_account_info(account_info_iter)?;
                 assert_account_key(staking_pool_info, &staking_pool)?;
 
+                let staking_pool_authority_info = next_account_info(account_info_iter)?;
+
+                assert_account_key(staking_pool_info, &staking_pool)?;
                 assert_account_key(staking_program_id_info, &staking_program_id)?;
 
                 let reward_token_pool = next_account_info(account_info_iter)?;
-                // let reward_destination = next_account_info(account_info_iter)?;
-                // TODO check sub reward token
-                let sub_reward_token_pool = next_account_info(account_info_iter)?;
-                let sub_reward_destination = next_account_info(account_info_iter)?;
+
+                let clock = next_account_info(account_info_iter)?;
+
+                // let sub_reward_token_pool_option :Option<AccountInfo>;
+                // let sub_reward_destination_option :Option<AccountInfo>;
+                let sub_reward = if account_info_iter.peek().is_some() {
+                    let sub_reward_token_pool = next_account_info(account_info_iter)?;
+
+                    let account = Account::unpack(&sub_reward_token_pool.data.borrow()).unwrap();
+
+                    let (sub_reward_token_account, _) = find_transit_program_address(
+                        program_id,
+                        depositor_info.key,
+                        &account.mint,
+                        "lm_reward",
+                    );
+
+                    let sub_reward_destination = next_account_info(account_info_iter)?;
+                    assert_account_key(sub_reward_destination, &sub_reward_token_account)?;
+
+                    Some((sub_reward_token_pool, sub_reward_destination))
+                } else {
+                    None
+                };
+
                 cpi::port_finance::claim_reward(
-                    &staking_program_id,
-                    stake_account_owner.clone(),
+                    staking_program_id_info.key,
+                    depositor_authority_info.clone(),
                     stake_account_info.clone(),
                     staking_pool_info.clone(),
-                    reward_token_pool.key,
-                    reward_destination.key,
-                    Some(*sub_reward_token_pool.key),
-                    Some(*sub_reward_destination.key),
+                    staking_pool_authority_info.clone(),
+                    reward_token_pool.clone(),
+                    reward_destination.clone(),
+                    sub_reward,
+                    clock.clone(),
+                    token_program_info.clone(),
                     &[signers_seeds.as_ref()],
                 )?;
             }

@@ -19,7 +19,9 @@ port_finance:
   reserve_sol_supply: AbKeR7nQdHPDddiDQ71YUsz1F138a7cJMfJVtpdYUSvE
 port_accounts:
   SOL:
-    staking_pool: "11111111111111111111111111111111"
+    staking_pool: HVpeNxfmxmtGaKN3D6rkQttShatH3RMgXxQYkDquVJ74
+  USDC:
+    staking_pool: 57kezK2g224MVbGnJAriPhrL1QURWeh5fAc9RLjXNH3i
 larix:
   program_id: BDBsJpBPWtMfTgxejekYCWUAJu1mvQshiwrKuTjdEeT3
   lending_market: HpshZh3hw9265EBSDAwopDHR5VegdEFyjxpNf9ZKH8m3
