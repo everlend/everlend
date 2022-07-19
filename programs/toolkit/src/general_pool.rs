@@ -12,7 +12,7 @@ use solana_sdk::{
     signer::Signer,
     transaction::Transaction,
 };
-
+use everlend_utils::instructions::{config::initialize, rewards::initialize_pool};
 pub fn create_market(
     config: &Config,
     pool_market_keypair: Option<Keypair>,
@@ -126,6 +126,42 @@ pub fn create_pool(
         vec![config.fee_payer.as_ref(), &token_account, &pool_mint],
     )?;
 
+    // Initialize mining pool
+    let anchor_config = Keypair::new();
+    let (mining_reward_pool, _) = Pubkey::find_program_address(
+        &[
+            b"reward_pool".as_ref(),
+            &anchor_config.pubkey().to_bytes(),
+            &token_mint.to_bytes(),
+        ],
+        &eld_rewards::id(),
+    );
+
+    let tx = Transaction::new_with_payer(
+        &[
+            initialize(
+                &eld_config::id(),
+                &anchor_config.pubkey(),
+                &config.fee_payer.pubkey(),
+            ),
+
+            initialize_pool(
+                &eld_rewards::id(),
+                &anchor_config.pubkey(),
+                &mining_reward_pool,
+                &token_mint,
+                &pool_pubkey,
+                &config.fee_payer.pubkey(),
+            ),
+        ],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    config.sign_and_send_and_confirm_transaction(
+        tx,
+        vec![config.fee_payer.as_ref(), &anchor_config],
+    )?;
+
     Ok((pool_pubkey, token_account.pubkey(), pool_mint.pubkey()))
 }
 
@@ -182,6 +218,9 @@ pub fn deposit(
     destination: &Pubkey,
     pool_token_account: &Pubkey,
     pool_mint: &Pubkey,
+    mining_reward_pool: &Pubkey,
+    mining_reward_acc: &Pubkey,
+    anchor_config: &Pubkey,
     amount: u64,
 ) -> Result<(), ClientError> {
     let tx = Transaction::new_with_payer(
@@ -195,8 +234,9 @@ pub fn deposit(
             pool_token_account,
             pool_mint,
             &config.fee_payer.pubkey(),
-            &Pubkey::new_unique(),
-            &Pubkey::new_unique(),
+            mining_reward_pool,
+            mining_reward_acc,
+            anchor_config,
             amount,
         )],
         Some(&config.fee_payer.pubkey()),
@@ -283,10 +323,14 @@ pub fn withdraw(
     config: &Config,
     pool_market_pubkey: &Pubkey,
     pool_pubkey: &Pubkey,
+    source: &Pubkey,
     destination: &Pubkey,
     pool_token_account: &Pubkey,
     token_mint: &Pubkey,
     pool_mint: &Pubkey,
+    mining_reward_pool: &Pubkey,
+    mining_reward_acc: &Pubkey,
+    anchor_config: &Pubkey,
 ) -> Result<(), ClientError> {
     let payer_pubkey = config.fee_payer.pubkey();
     let (addition_accounts, destination) = if token_mint == &spl_token::native_mint::id() {
@@ -313,13 +357,15 @@ pub fn withdraw(
             &everlend_general_pool::id(),
             pool_market_pubkey,
             pool_pubkey,
+            source,
             destination,
             pool_token_account,
             token_mint,
             pool_mint,
             &config.fee_payer.pubkey(),
-            &Pubkey::new_unique(),
-            &Pubkey::new_unique(),
+            mining_reward_pool,
+            mining_reward_acc,
+            anchor_config,
             addition_accounts,
         )],
         Some(&config.fee_payer.pubkey()),
@@ -409,4 +455,35 @@ pub fn get_withdrawal_request_accounts(
         },
     )
     .collect())
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn init_user_mining(
+    config: &Config,
+    registry_pubkey: &Pubkey,
+    pool_market_pubkey: &Pubkey,
+    pool_pubkey: &Pubkey,
+    user_collateral_token_account: &Pubkey,
+    payer: &Pubkey,
+    mining_reward_pool: &Pubkey,
+    mining_reward_acc: &Pubkey,
+    anchor_config: &Pubkey,
+) -> Result<(), ClientError> {
+    let tx = Transaction::new_with_payer(
+        &[instruction::init_user_mining(
+            &everlend_general_pool::id(),
+            pool_market_pubkey,
+            pool_pubkey,
+            user_collateral_token_account,
+            payer,
+            mining_reward_pool,
+            mining_reward_acc,
+            anchor_config,
+        )],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+
+    Ok(())
 }

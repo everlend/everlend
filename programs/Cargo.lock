@@ -1164,6 +1164,8 @@ dependencies = [
  "bs58 0.2.5",
  "clap",
  "dirs-next",
+ "eld-config",
+ "eld-rewards",
  "everlend-collateral-pool",
  "everlend-depositor",
  "everlend-general-pool",

@@ -10,7 +10,6 @@ use everlend_general_pool::{
     state::Pool,
 };
 use everlend_utils::instructions::{config::initialize, rewards::initialize_pool};
-use solana_program::msg;
 use solana_program::{
     instruction::AccountMeta, program_pack::Pack, pubkey::Pubkey, system_instruction,
     system_program, sysvar,
@@ -151,7 +150,6 @@ impl TestGeneralPool {
         context.banks_client.process_transaction(tx).await.unwrap();
 
         // Initialize mining pool
-
         let tx = Transaction::new_signed_with_payer(
             &[
                 initialize(
