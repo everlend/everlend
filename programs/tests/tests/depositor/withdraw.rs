@@ -1,5 +1,3 @@
-#![cfg(feature = "test-bpf")]
-
 use solana_program::{
     instruction::{AccountMeta, Instruction, InstructionError},
     program_pack::Pack,
@@ -101,12 +99,15 @@ async fn setup() -> (
     .await
     .unwrap();
 
+    let mining_acc = general_pool.init_user_mining(&mut context, &general_pool_market, &liquidity_provider).await;
+
     general_pool
         .deposit(
             &mut context,
             &registry,
             &general_pool_market,
             &liquidity_provider,
+            mining_acc,
             100 * EXP,
         )
         .await

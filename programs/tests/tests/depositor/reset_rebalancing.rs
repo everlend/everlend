@@ -1,5 +1,3 @@
-#![cfg(feature = "test-bpf")]
-
 use everlend_depositor::find_transit_program_address;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::state::{
@@ -64,12 +62,15 @@ async fn setup() -> (
     .await
     .unwrap();
 
+    let mining_acc = general_pool.init_user_mining(&mut context, &general_pool_market, &liquidity_provider).await;
+
     general_pool
         .deposit(
             &mut context,
             &registry,
             &general_pool_market,
             &liquidity_provider,
+            mining_acc,
             100 * EXP,
         )
         .await
