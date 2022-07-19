@@ -1,7 +1,7 @@
 //! Program state definitions
 
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-use everlend_utils::{AccountVersion, EverlendError, Uninitialized};
+use everlend_utils::{AccountVersion, Uninitialized};
 use solana_program::{
     msg,
     program_error::ProgramError,

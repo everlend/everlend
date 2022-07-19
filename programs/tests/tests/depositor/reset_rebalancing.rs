@@ -1,7 +1,7 @@
 use everlend_depositor::find_transit_program_address;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::state::{
-    DistributionPubkeys, RegistryRootAccounts, SetRegistryPoolConfigParams,
+    RegistryRootAccounts, SetRegistryPoolConfigParams,
 };
 use everlend_utils::find_program_address;
 use solana_program_test::*;
@@ -15,7 +15,7 @@ async fn setup() -> (
     TestGeneralPool,
     TestDepositor,
 ) {
-    let (mut context, money_market, pyth_oracle, registry) = presetup().await;
+    let (mut context, money_market, _, registry) = presetup().await;
 
     let payer_pubkey = context.payer.pubkey();
 
