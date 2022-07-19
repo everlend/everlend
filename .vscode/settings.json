@@ -1,9 +1,0 @@
-{
-  "conventionalCommits.scopes": [
-    "cli",
-    "program",
-    "api"
-  ],
-  "rust-analyzer.inlayHints.parameterHints.enable": false,
-  "rust-analyzer.inlayHints.typeHints.enable": false,
-}
