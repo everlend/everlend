@@ -1,5 +1,3 @@
-use everlend_depositor::state::DeprecatedDepositor;
-use solana_program::example_mocks::solana_sdk::signature::Keypair;
 use solana_program::instruction::InstructionError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::*;
