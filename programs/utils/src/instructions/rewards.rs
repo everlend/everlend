@@ -5,16 +5,37 @@ use solana_program::{
     system_program, sysvar,
 };
 
+use crate::AnchorInstruction;
+
 #[derive(Debug, BorshDeserialize, BorshSerialize, PartialEq)]
-pub enum RewardsInstruction {
-    I0,
-    I1,
-    FillVault { amount: u64 },
-    DepositMining { amount: u64 },
-    InitializeMining,
-    WithdrawMining { amount: u64 },
-    I6,
-    I7,
+pub struct InstructionData {
+    amount: u64
+}
+
+pub fn initialize_pool(
+    program_id: &Pubkey,
+    config: &Pubkey,
+    reward_pool: &Pubkey,
+    liquidity_mint: &Pubkey,
+    authority: &Pubkey,
+    payer: &Pubkey,
+) -> Instruction {
+    let accounts = vec![
+        AccountMeta::new_readonly(*config, false),
+        AccountMeta::new(*reward_pool, false),
+        AccountMeta::new_readonly(*liquidity_mint, false),
+        AccountMeta::new_readonly(*authority, false),
+        AccountMeta::new(*payer, true),
+        AccountMeta::new_readonly(spl_token::id(), false),
+        AccountMeta::new_readonly(system_program::id(), false),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+    ];
+
+    Instruction::new_with_bytes(
+        *program_id,
+        &AnchorInstruction::new(b"initialize_pool"),
+        accounts,
+    )
 }
 
 pub fn fill_vault(
@@ -45,9 +66,9 @@ pub fn fill_vault(
         AccountMeta::new_readonly(spl_token::id(), false),
     ];
 
-    Instruction::new_with_borsh(
+    Instruction::new_with_bytes(
         *program_id,
-        &RewardsInstruction::FillVault { amount },
+        &AnchorInstruction::new_with_data(b"fill_vault", &InstructionData{amount}),
         accounts,
     )
 }
@@ -70,9 +91,9 @@ pub fn initialize_mining(
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
 
-    Instruction::new_with_borsh(
+    Instruction::new_with_bytes(
         *program_id,
-        &RewardsInstruction::InitializeMining,
+        &AnchorInstruction::new(b"initialize_mining"),
         accounts,
     )
 }
@@ -92,13 +113,11 @@ pub fn deposit_mining(
         AccountMeta::new(*mining, false),
         AccountMeta::new_readonly(*user, false),
         AccountMeta::new(*deposit_authority, true),
-        AccountMeta::new_readonly(system_program::id(), false),
-        AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
 
-    Instruction::new_with_borsh(
+    Instruction::new_with_bytes(
         *program_id,
-        &RewardsInstruction::DepositMining { amount },
+        &AnchorInstruction::new_with_data(b"deposit_mining", &InstructionData{amount}),
         accounts,
     )
 }
@@ -118,13 +137,11 @@ pub fn withdraw_mining(
         AccountMeta::new(*mining, false),
         AccountMeta::new_readonly(*user, false),
         AccountMeta::new(*deposit_authority, true),
-        AccountMeta::new_readonly(system_program::id(), false),
-        AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
 
-    Instruction::new_with_borsh(
+    Instruction::new_with_bytes(
         *program_id,
-        &RewardsInstruction::WithdrawMining { amount },
+        &AnchorInstruction::new_with_data(b"withdraw_mining", &InstructionData{amount}),
         accounts,
     )
 }

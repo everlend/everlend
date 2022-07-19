@@ -218,8 +218,10 @@ impl TestGeneralPool {
         context: &mut ProgramTestContext,
         test_pool_market: &TestGeneralPoolMarket,
         user: &LiquidityProvider,
+        mining_acc: Pubkey,
     ) -> BanksClientResult<()> {
         let mut addition_accounts: Vec<AccountMeta> = vec![];
+        let source = user.pool_account;
         let mut destination = user.token_account;
         if self.token_mint_pubkey == spl_token::native_mint::id() {
             let (withdrawal_requests, _) = find_withdrawal_requests_program_address(
@@ -252,13 +254,15 @@ impl TestGeneralPool {
                 &everlend_general_pool::id(),
                 &test_pool_market.keypair.pubkey(),
                 &self.pool_pubkey,
+                &source,
                 &destination,
                 &self.token_account.pubkey(),
                 &self.token_mint_pubkey,
                 &self.pool_mint.pubkey(),
                 &user.owner.pubkey(),
-                &Pubkey::new_unique(),
-                &Pubkey::new_unique(),
+                &self.mining_reward_pool,
+                &mining_acc,
+                &self.config.pubkey(),
                 addition_accounts,
             )],
             Some(&context.payer.pubkey()),

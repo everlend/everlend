@@ -1,4 +1,3 @@
-use anchor_lang::prelude::Pubkey;
 use solana_program::{
     account_info::AccountInfo,
     entrypoint::ProgramResult,
@@ -8,14 +7,16 @@ use solana_program::{
 use crate::instructions::rewards;
 
 pub fn initialize_mining<'a>(
-    program_id: &Pubkey,
+    program_id: AccountInfo<'a>,
     config: AccountInfo<'a>,
     reward_pool: AccountInfo<'a>,
     mining: AccountInfo<'a>,
     user: AccountInfo<'a>,
     payer: AccountInfo<'a>,
+    system_program: AccountInfo<'a>,
+    rent:  AccountInfo<'a>,
 ) -> ProgramResult {
-    let ix = rewards::initialize_mining(program_id, config.key, reward_pool.key, mining.key, user.key, payer.key);
+    let ix = rewards::initialize_mining(program_id.key, config.key, reward_pool.key, mining.key, user.key, payer.key);
 
     invoke(&ix, &[
         config,
@@ -23,11 +24,13 @@ pub fn initialize_mining<'a>(
         mining,
         user,
         payer,
+        system_program,
+        rent,
     ])
 }
 
 pub fn deposit_mining<'a>(
-    program_id: &Pubkey,
+    program_id: AccountInfo<'a>,
     config: AccountInfo<'a>,
     reward_pool: AccountInfo<'a>,
     mining: AccountInfo<'a>,
@@ -36,9 +39,7 @@ pub fn deposit_mining<'a>(
     amount: u64,
     signers_seeds: &[&[&[u8]]],
 ) -> ProgramResult {
-
-    // deposit_mining(rewards_program_id, destination_account.amount
-    let ix = rewards::deposit_mining(program_id, config.key, reward_pool.key, mining.key, user.key, deposit_authority.key, amount);
+    let ix = rewards::deposit_mining(program_id.key, config.key, reward_pool.key, mining.key, user.key, deposit_authority.key, amount);
 
     invoke_signed(&ix, &[
         config,
@@ -50,7 +51,7 @@ pub fn deposit_mining<'a>(
 }
 
 pub fn withdraw_mining<'a>(
-    program_id: &Pubkey,
+    program_id: AccountInfo<'a>,
     config: AccountInfo<'a>,
     reward_pool: AccountInfo<'a>,
     mining: AccountInfo<'a>,
@@ -59,9 +60,7 @@ pub fn withdraw_mining<'a>(
     amount: u64,
     signers_seeds: &[&[&[u8]]],
 ) -> ProgramResult {
-
-    // deposit_mining(rewards_program_id, destination_account.amount
-    let ix = rewards::withdraw_mining(program_id, config.key, reward_pool.key, mining.key, user.key, deposit_authority.key, amount);
+    let ix = rewards::withdraw_mining(program_id.key, config.key, reward_pool.key, mining.key, user.key, deposit_authority.key, amount);
 
     invoke_signed(&ix, &[
         config,

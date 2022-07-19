@@ -125,7 +125,7 @@ async fn success_with_sol() {
     );
 
     test_pool
-        .withdraw(&mut context, &test_pool_market, &user)
+        .withdraw(&mut context, &test_pool_market, &user, mining_acc)
         .await
         .unwrap();
 
@@ -170,7 +170,7 @@ async fn success() {
     assert_eq!(get_token_balance(&mut context, &transit_account).await, 45);
 
     test_pool
-        .withdraw(&mut context, &test_pool_market, &user)
+        .withdraw(&mut context, &test_pool_market, &user, mining_acc)
         .await
         .unwrap();
 
@@ -211,7 +211,7 @@ async fn fail_with_invalid_ticket() {
 
     assert_eq!(
         test_pool
-            .withdraw(&mut context, &test_pool_market, &user)
+            .withdraw(&mut context, &test_pool_market, &user, mining_acc)
             .await
             .unwrap_err()
             .unwrap(),
@@ -253,13 +253,15 @@ async fn fail_with_invalid_pool_market() {
             &everlend_general_pool::id(),
             &Pubkey::new_unique(),
             &test_pool.pool_pubkey,
+            &user.pool_account,
             &user.token_account,
             &test_pool.token_account.pubkey(),
             &test_pool.token_mint_pubkey,
             &test_pool.pool_mint.pubkey(),
             &user.owner.pubkey(),
-            &Pubkey::new_unique(),
-            &Pubkey::new_unique(),
+            &test_pool.mining_reward_pool,
+            &mining_acc,
+            &test_pool.config.pubkey(),
             vec![],
         )],
         Some(&context.payer.pubkey()),
@@ -312,13 +314,15 @@ async fn fail_with_invalid_pool() {
             &everlend_general_pool::id(),
             &test_pool_market.keypair.pubkey(),
             &Pubkey::new_unique(),
+            &user.pool_account,
             &user.token_account,
             &test_pool.token_account.pubkey(),
             &test_pool.token_mint_pubkey,
             &test_pool.pool_mint.pubkey(),
             &user.owner.pubkey(),
-            &Pubkey::new_unique(),
-            &Pubkey::new_unique(),
+            &test_pool.mining_reward_pool,
+            &mining_acc,
+            &test_pool.config.pubkey(),
             vec![],
         )],
         Some(&context.payer.pubkey()),
@@ -371,13 +375,15 @@ async fn fail_with_invalid_destination() {
             &everlend_general_pool::id(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
+            &user.pool_account,
             &Pubkey::new_unique(),
             &test_pool.token_account.pubkey(),
             &test_pool.token_mint_pubkey,
             &test_pool.pool_mint.pubkey(),
             &user.owner.pubkey(),
-            &Pubkey::new_unique(),
-            &Pubkey::new_unique(),
+            &test_pool.mining_reward_pool,
+            &mining_acc,
+            &test_pool.config.pubkey(),
             vec![],
         )],
         Some(&context.payer.pubkey()),
@@ -427,13 +433,15 @@ async fn fail_with_invalid_token_account() {
             &everlend_general_pool::id(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
+            &user.pool_account,
             &user.token_account,
             &Pubkey::new_unique(),
             &test_pool.token_mint_pubkey,
             &test_pool.pool_mint.pubkey(),
             &user.owner.pubkey(),
-            &Pubkey::new_unique(),
-            &Pubkey::new_unique(),
+            &test_pool.mining_reward_pool,
+            &mining_acc,
+            &test_pool.config.pubkey(),
             vec![],
         )],
         Some(&context.payer.pubkey()),
@@ -483,13 +491,15 @@ async fn fail_with_invalid_token_mint() {
             &everlend_general_pool::id(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
+            &user.pool_account,
             &user.token_account,
             &test_pool.token_account.pubkey(),
             &Pubkey::new_unique(),
             &test_pool.pool_mint.pubkey(),
             &user.owner.pubkey(),
-            &Pubkey::new_unique(),
-            &Pubkey::new_unique(),
+            &test_pool.mining_reward_pool,
+            &mining_acc,
+            &test_pool.config.pubkey(),
             vec![],
         )],
         Some(&context.payer.pubkey()),
@@ -542,13 +552,15 @@ async fn fail_with_invalid_pool_mint() {
             &everlend_general_pool::id(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
+            &user.pool_account,
             &user.token_account,
             &test_pool.token_account.pubkey(),
             &test_pool.token_mint_pubkey,
             &Pubkey::new_unique(),
             &user.owner.pubkey(),
-            &Pubkey::new_unique(),
-            &Pubkey::new_unique(),
+            &test_pool.mining_reward_pool,
+            &mining_acc,
+            &test_pool.config.pubkey(),
             vec![],
         )],
         Some(&context.payer.pubkey()),
@@ -603,13 +615,15 @@ async fn success_with_random_tx_signer() {
             &everlend_general_pool::id(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
+            &user.pool_account,
             &user.token_account,
             &test_pool.token_account.pubkey(),
             &test_pool.token_mint_pubkey,
             &test_pool.pool_mint.pubkey(),
             &user.owner.pubkey(),
-            &Pubkey::new_unique(),
-            &Pubkey::new_unique(),
+            &test_pool.mining_reward_pool,
+            &mining_acc,
+            &test_pool.config.pubkey(),
             vec![],
         )],
         Some(&random_tx_signer.manager.pubkey()),
