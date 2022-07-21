@@ -3,14 +3,14 @@
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 
 mod depositor;
+mod internal_mining;
 mod rebalancing;
 mod rebalancing_step;
-mod internal_mining;
 
 pub use depositor::*;
+pub use internal_mining::*;
 pub use rebalancing::*;
 pub use rebalancing_step::*;
-pub use internal_mining::*;
 
 /// Enum representing the account type managed by the program
 #[derive(Clone, Debug, PartialEq, BorshDeserialize, BorshSerialize, BorshSchema)]

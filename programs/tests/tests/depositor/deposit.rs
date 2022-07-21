@@ -1,6 +1,6 @@
 #![cfg(feature = "test-bpf")]
 
-use solana_program::example_mocks::solana_sdk::signature::Keypair;
+use solana_sdk::signature::{Keypair};
 use solana_program::instruction::InstructionError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::*;
@@ -423,19 +423,19 @@ async fn fail_with_invalid_registry() {
 
     let deposit_accounts =
         integrations::deposit_accounts(&spl_token_lending::id(), &money_market_pubkeys);
+    let deposit_collateral_storage_accounts = mm_pool.deposit_accounts(&mm_pool_market);
 
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::deposit(
             &everlend_depositor::id(),
             &Pubkey::new_unique(),
             &test_depositor.depositor.pubkey(),
-            &mm_pool_market.keypair.pubkey(),
-            &mm_pool.token_account.pubkey(),
             &get_liquidity_mint().1,
             &mm_pool.token_mint_pubkey,
             &context.payer.pubkey(),
             &spl_token_lending::id(),
             deposit_accounts,
+            deposit_collateral_storage_accounts,
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer],
@@ -492,18 +492,18 @@ async fn fail_with_invalid_depositor() {
     let deposit_accounts =
         integrations::deposit_accounts(&spl_token_lending::id(), &money_market_pubkeys);
 
+    let deposit_collateral_storage_accounts = mm_pool.deposit_accounts(&mm_pool_market);
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::deposit(
             &everlend_depositor::id(),
             &registry.keypair.pubkey(),
             &Pubkey::new_unique(),
-            &mm_pool_market.keypair.pubkey(),
-            &mm_pool.token_account.pubkey(),
             &get_liquidity_mint().1,
             &mm_pool.token_mint_pubkey,
             &context.payer.pubkey(),
             &spl_token_lending::id(),
             deposit_accounts,
+            deposit_collateral_storage_accounts,
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer],
@@ -560,18 +560,22 @@ async fn fail_with_invalid_mm_pool_market() {
     let deposit_accounts =
         integrations::deposit_accounts(&spl_token_lending::id(), &money_market_pubkeys);
 
+    let deposit_collateral_storage_accounts  = mm_pool.deposit_accounts(&TestPoolMarket{
+        keypair: Keypair::new(),
+        manager: Keypair::new(),
+    });
+
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::deposit(
             &everlend_depositor::id(),
             &registry.keypair.pubkey(),
             &test_depositor.depositor.pubkey(),
-            &Pubkey::new_unique(),
-            &mm_pool.token_account.pubkey(),
             &get_liquidity_mint().1,
             &mm_pool.token_mint_pubkey,
             &context.payer.pubkey(),
             &spl_token_lending::id(),
             deposit_accounts,
+            deposit_collateral_storage_accounts,
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer],
@@ -628,18 +632,24 @@ async fn fail_with_invalid_mm_pool_token_account() {
     let deposit_accounts =
         integrations::deposit_accounts(&spl_token_lending::id(), &money_market_pubkeys);
 
+    let mock_mm_pool = TestPool{
+        pool_pubkey: mm_pool.pool_pubkey,
+        token_mint_pubkey: mm_pool.token_mint_pubkey,
+        token_account: Keypair::new(),
+    };
+    let deposit_collateral_storage_accounts  = mock_mm_pool.deposit_accounts(&mm_pool_market);
+
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::deposit(
             &everlend_depositor::id(),
             &registry.keypair.pubkey(),
             &test_depositor.depositor.pubkey(),
-            &mm_pool_market.keypair.pubkey(),
-            &Pubkey::new_unique(),
             &get_liquidity_mint().1,
             &mm_pool.token_mint_pubkey,
             &context.payer.pubkey(),
             &spl_token_lending::id(),
             deposit_accounts,
+            deposit_collateral_storage_accounts,
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer],
@@ -692,18 +702,19 @@ async fn fail_with_invalid_liquidity_mint() {
     let deposit_accounts =
         integrations::deposit_accounts(&spl_token_lending::id(), &money_market_pubkeys);
 
+    let deposit_collateral_storage_accounts  = mm_pool.deposit_accounts(&mm_pool_market);
+
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::deposit(
             &everlend_depositor::id(),
             &registry.keypair.pubkey(),
             &test_depositor.depositor.pubkey(),
-            &mm_pool_market.keypair.pubkey(),
-            &mm_pool.token_account.pubkey(),
             &Pubkey::new_unique(),
             &mm_pool.token_mint_pubkey,
             &context.payer.pubkey(),
             &spl_token_lending::id(),
             deposit_accounts,
+            deposit_collateral_storage_accounts,
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer],
@@ -760,18 +771,26 @@ async fn fail_with_invalid_collateral_mint() {
     let deposit_accounts =
         integrations::deposit_accounts(&spl_token_lending::id(), &money_market_pubkeys);
 
+    let collateral_mint = mm_pool.token_mint_pubkey.clone();
+
+    let mock_mm_pool = TestPool{
+        pool_pubkey: mm_pool.pool_pubkey,
+        token_mint_pubkey: Pubkey::new_unique(),
+        token_account: mm_pool.token_account,
+    };
+    let deposit_collateral_storage_accounts  = mock_mm_pool.deposit_accounts(&mm_pool_market);
+
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::deposit(
             &everlend_depositor::id(),
             &registry.keypair.pubkey(),
             &test_depositor.depositor.pubkey(),
-            &mm_pool_market.keypair.pubkey(),
-            &mm_pool.token_account.pubkey(),
             &get_liquidity_mint().1,
-            &Pubkey::new_unique(),
+            &collateral_mint,
             &context.payer.pubkey(),
             &spl_token_lending::id(),
             deposit_accounts,
+            deposit_collateral_storage_accounts,
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer],
@@ -828,18 +847,19 @@ async fn fail_with_invalid_money_market_program_id() {
     let deposit_accounts =
         integrations::deposit_accounts(&spl_token_lending::id(), &money_market_pubkeys);
 
+    let deposit_collateral_storage_accounts  = mm_pool.deposit_accounts(&mm_pool_market);
+
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::deposit(
             &everlend_depositor::id(),
             &registry.keypair.pubkey(),
             &test_depositor.depositor.pubkey(),
-            &mm_pool_market.keypair.pubkey(),
-            &mm_pool.token_account.pubkey(),
             &get_liquidity_mint().1,
             &mm_pool.token_mint_pubkey,
             &context.payer.pubkey(),
             &Pubkey::new_unique(),
             deposit_accounts,
+            deposit_collateral_storage_accounts,
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer],
@@ -870,7 +890,7 @@ async fn fail_with_invalid_money_market_accounts() {
         _,
         _,
         _,
-        mm_pool_market,
+        _,
         mm_pool,
         _,
         test_depositor,
@@ -884,19 +904,19 @@ async fn fail_with_invalid_money_market_accounts() {
     pyth_oracle.update(&mut context, 3).await;
 
     let deposit_accounts = vec![];
+    let deposit_collateral_storage_accounts  = vec![];
 
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::deposit(
             &everlend_depositor::id(),
             &registry.keypair.pubkey(),
             &test_depositor.depositor.pubkey(),
-            &mm_pool_market.keypair.pubkey(),
-            &mm_pool.token_account.pubkey(),
             &get_liquidity_mint().1,
             &mm_pool.token_mint_pubkey,
             &context.payer.pubkey(),
             &spl_token_lending::id(),
             deposit_accounts,
+            deposit_collateral_storage_accounts,
         )],
         Some(&context.payer.pubkey()),
         &[&context.payer],

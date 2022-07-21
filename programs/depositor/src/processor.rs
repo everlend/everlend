@@ -467,17 +467,6 @@ impl Processor {
         let depositor_authority_info = next_account_info(account_info_iter)?;
         let rebalancing_info = next_account_info(account_info_iter)?;
 
-        let collateral_pool_market_info = next_account_info(account_info_iter)?;
-        let collateral_pool_market_authority_info = next_account_info(account_info_iter)?;
-        let collateral_pool_info = next_account_info(account_info_iter)?;
-        let collateral_pool_token_account_info = next_account_info(account_info_iter)?;
-        let collateral_pool_accounts = CollateralPoolAccounts {
-            pool_market: collateral_pool_market_info.clone(),
-            pool_market_authority: collateral_pool_market_authority_info.clone(),
-            pool: collateral_pool_info.clone(),
-            token_account: collateral_pool_token_account_info.clone(),
-        };
-
         let liquidity_transit_info = next_account_info(account_info_iter)?;
         let liquidity_mint_info = next_account_info(account_info_iter)?;
         let collateral_transit_info = next_account_info(account_info_iter)?;
@@ -488,7 +477,6 @@ impl Processor {
         let clock_info = next_account_info(account_info_iter)?;
         let clock = Clock::from_account_info(clock_info)?;
         let _token_program_info = next_account_info(account_info_iter)?;
-        let _everlend_collateral_pool_info = next_account_info(account_info_iter)?;
 
         let money_market_program_info = next_account_info(account_info_iter)?;
         let internal_mining_info = next_account_info(account_info_iter)?;
@@ -511,39 +499,6 @@ impl Processor {
         let programs = RegistryPrograms::unpack_from_slice(&registry_config_info.data.borrow())?;
         let root_accounts =
             RegistryRootAccounts::unpack_from_slice(&registry_config_info.data.borrow())?;
-
-        // Check external programs
-        assert_owned_by(
-            collateral_pool_market_info,
-            &programs.collateral_pool_program_id,
-        )?;
-        assert_owned_by(collateral_pool_info, &programs.collateral_pool_program_id)?;
-
-        // Check collateral pool market
-        if !root_accounts
-            .collateral_pool_markets
-            .contains(collateral_pool_market_info.key)
-        {
-            return Err(ProgramError::InvalidArgument);
-        }
-
-        // Check collateral pool
-        let (collateral_pool_pubkey, _) = everlend_collateral_pool::find_pool_program_address(
-            &programs.collateral_pool_program_id,
-            collateral_pool_market_info.key,
-            collateral_mint_info.key,
-        );
-        assert_account_key(collateral_pool_info, &collateral_pool_pubkey)?;
-
-        let collateral_pool =
-            everlend_collateral_pool::state::Pool::unpack(&collateral_pool_info.data.borrow())?;
-
-        // Check collateral pool accounts
-        assert_account_key(collateral_mint_info, &collateral_pool.token_mint)?;
-        assert_account_key(
-            collateral_pool_token_account_info,
-            &collateral_pool.token_account,
-        )?;
 
         // Check rebalancing
         let (rebalancing_pubkey, _) = find_rebalancing_program_address(
@@ -607,7 +562,7 @@ impl Processor {
             deposit(
                 program_id,
                 &programs,
-                collateral_pool_accounts,
+                &root_accounts,
                 collateral_transit_info.clone(),
                 collateral_mint_info.clone(),
                 liquidity_transit_info.clone(),
@@ -651,18 +606,6 @@ impl Processor {
             token_account: income_pool_token_account_info.clone(),
         };
 
-        let collateral_pool_market_info = next_account_info(account_info_iter)?;
-        let collateral_pool_market_authority_info = next_account_info(account_info_iter)?;
-        let collateral_pool_info = next_account_info(account_info_iter)?;
-        let collateral_pool_token_account_info = next_account_info(account_info_iter)?;
-        let collateral_pool_withdraw_authority_info = next_account_info(account_info_iter)?;
-        let collateral_pool_accounts = CollateralPoolAccounts {
-            pool_market: collateral_pool_market_info.clone(),
-            pool_market_authority: collateral_pool_market_authority_info.clone(),
-            pool: collateral_pool_info.clone(),
-            token_account: collateral_pool_token_account_info.clone(),
-        };
-
         let collateral_transit_info = next_account_info(account_info_iter)?;
         let collateral_mint_info = next_account_info(account_info_iter)?;
         let liquidity_transit_info = next_account_info(account_info_iter)?;
@@ -674,7 +617,6 @@ impl Processor {
         let clock_info = next_account_info(account_info_iter)?;
         let clock = Clock::from_account_info(clock_info)?;
         let _token_program_info = next_account_info(account_info_iter)?;
-        let _everlend_collateral_pool_info = next_account_info(account_info_iter)?;
         let _everlend_income_pools_info = next_account_info(account_info_iter)?;
 
         let money_market_program_info = next_account_info(account_info_iter)?;
@@ -701,49 +643,6 @@ impl Processor {
         let root_accounts =
             RegistryRootAccounts::unpack_from_slice(&registry_config_info.data.borrow())
                 .map(Box::new)?;
-
-        // Check external programs
-        assert_owned_by(
-            collateral_pool_market_info,
-            &programs.collateral_pool_program_id,
-        )?;
-        assert_owned_by(collateral_pool_info, &programs.collateral_pool_program_id)?;
-
-        // Check collateral pool market
-        if !root_accounts
-            .collateral_pool_markets
-            .contains(collateral_pool_market_info.key)
-        {
-            return Err(ProgramError::InvalidArgument);
-        }
-
-        // Check collateral pool
-        let (collateral_pool_pubkey, _) = everlend_collateral_pool::find_pool_program_address(
-            &programs.collateral_pool_program_id,
-            collateral_pool_market_info.key,
-            collateral_mint_info.key,
-        );
-        assert_account_key(collateral_pool_info, &collateral_pool_pubkey)?;
-
-        let collateral_pool =
-            everlend_collateral_pool::state::Pool::unpack(&collateral_pool_info.data.borrow())?;
-
-        // Check collateral pool accounts
-        assert_account_key(collateral_mint_info, &collateral_pool.token_mint)?;
-        assert_account_key(
-            collateral_pool_token_account_info,
-            &collateral_pool.token_account,
-        )?;
-
-        let (collateral_pool_withdraw_authority, _) = find_pool_withdraw_authority_program_address(
-            &programs.collateral_pool_program_id,
-            collateral_pool_info.key,
-            depositor_authority_info.key,
-        );
-        assert_account_key(
-            collateral_pool_withdraw_authority_info,
-            &collateral_pool_withdraw_authority,
-        )?;
 
         // Check rebalancing
         let (rebalancing_pubkey, _) = find_rebalancing_program_address(
@@ -817,9 +716,8 @@ impl Processor {
         withdraw(
             program_id,
             &programs,
+            &root_accounts,
             income_pool_accounts,
-            collateral_pool_accounts,
-            collateral_pool_withdraw_authority_info.clone(),
             collateral_transit_info.clone(),
             collateral_mint_info.clone(),
             liquidity_transit_info.clone(),

@@ -9,7 +9,10 @@ use solana_program::{
 
 use everlend_utils::find_program_address;
 
-use crate::{find_pool_borrow_authority_program_address, find_pool_program_address, find_pool_withdraw_authority_program_address};
+use crate::{
+    find_pool_borrow_authority_program_address, find_pool_program_address,
+    find_pool_withdraw_authority_program_address,
+};
 
 /// Instructions supported by the program
 #[derive(Debug, BorshDeserialize, BorshSerialize, PartialEq)]
@@ -348,8 +351,6 @@ pub fn delete_pool_withdraw_authority(
         accounts,
     )
 }
-
-
 
 /// Creates 'Deposit' instruction.
 #[allow(clippy::too_many_arguments)]

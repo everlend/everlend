@@ -168,19 +168,19 @@ impl TestDepositor {
 
         let deposit_accounts =
             integrations::deposit_accounts(money_market_program_id, money_market_pubkeys);
+        let deposit_collateral_storage_accounts = mm_pool.deposit_accounts(&mm_pool_market);
 
         let tx = Transaction::new_signed_with_payer(
             &[everlend_depositor::instruction::deposit(
                 &everlend_depositor::id(),
                 &registry.keypair.pubkey(),
                 &self.depositor.pubkey(),
-                &mm_pool_market.keypair.pubkey(),
-                &mm_pool.token_account.pubkey(),
                 &liquidity_mint,
                 &collateral_mint,
                 &context.payer.pubkey(),
                 money_market_program_id,
                 deposit_accounts,
+                deposit_collateral_storage_accounts,
             )],
             Some(&context.payer.pubkey()),
             &[&context.payer],
@@ -207,6 +207,8 @@ impl TestDepositor {
 
         let withdraw_accounts =
             integrations::withdraw_accounts(money_market_program_id, money_market_pubkeys);
+        let collateral_storage_withdraw_accounts =  mm_pool.withdraw_accounts(mm_pool_market,self);
+
         let tx = Transaction::new_signed_with_payer(
             &[everlend_depositor::instruction::withdraw(
                 &everlend_depositor::id(),
@@ -214,13 +216,12 @@ impl TestDepositor {
                 &self.depositor.pubkey(),
                 &income_pool_market.keypair.pubkey(),
                 &income_pool.token_account.pubkey(),
-                &mm_pool_market.keypair.pubkey(),
-                &mm_pool.token_account.pubkey(),
                 &collateral_mint,
                 &liquidity_mint,
                 &context.payer.pubkey(),
                 money_market_program_id,
                 withdraw_accounts,
+                collateral_storage_withdraw_accounts,
             )],
             Some(&context.payer.pubkey()),
             &[&context.payer],
