@@ -216,10 +216,8 @@ impl TestGeneralPool {
         context: &mut ProgramTestContext,
         test_pool_market: &TestGeneralPoolMarket,
         user: &LiquidityProvider,
-        mining_acc: Pubkey,
     ) -> BanksClientResult<()> {
         let mut addition_accounts: Vec<AccountMeta> = vec![];
-        let source = user.pool_account;
         let mut destination = user.token_account;
         if self.token_mint_pubkey == spl_token::native_mint::id() {
             let (withdrawal_requests, _) = find_withdrawal_requests_program_address(
@@ -252,15 +250,11 @@ impl TestGeneralPool {
                 &everlend_general_pool::id(),
                 &test_pool_market.keypair.pubkey(),
                 &self.pool_pubkey,
-                &source,
                 &destination,
                 &self.token_account.pubkey(),
                 &self.token_mint_pubkey,
                 &self.pool_mint.pubkey(),
                 &user.owner.pubkey(),
-                &self.mining_reward_pool,
-                &mining_acc,
-                &self.config.pubkey(),
                 addition_accounts,
             )],
             Some(&context.payer.pubkey()),
@@ -277,6 +271,7 @@ impl TestGeneralPool {
         test_registry: &TestRegistry,
         test_pool_market: &TestGeneralPoolMarket,
         user: &LiquidityProvider,
+        mining_acc: Pubkey,
         collateral_amount: u64,
     ) -> BanksClientResult<()> {
         let mut destination = user.token_account;
@@ -296,6 +291,9 @@ impl TestGeneralPool {
                 &self.token_mint_pubkey,
                 &self.pool_mint.pubkey(),
                 &user.pubkey(),
+                &self.mining_reward_pool,
+                &mining_acc,
+                &self.config.pubkey(),
                 collateral_amount,
             )],
             Some(&context.payer.pubkey()),
@@ -399,7 +397,7 @@ impl TestGeneralPool {
         let (mining_account, _) = Pubkey::find_program_address(
             &[
                 b"mining".as_ref(),
-                user.pool_account.as_ref(),
+                user.owner.pubkey().as_ref(),
                 self.mining_reward_pool.as_ref(),
             ],
             &eld_rewards::id(),
@@ -412,6 +410,7 @@ impl TestGeneralPool {
                     &test_pool_market.keypair.pubkey(),
                     &self.pool_pubkey,
                     &user.pool_account,
+                    &user.owner.pubkey(),
                     &context.payer.pubkey(),
                     &self.mining_reward_pool,
                     &mining_account,

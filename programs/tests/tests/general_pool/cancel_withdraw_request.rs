@@ -17,6 +17,7 @@ async fn setup(
     TestGeneralPool,
     TestGeneralPoolBorrowAuthority,
     LiquidityProvider,
+    Pubkey,
 ) {
     let (mut context, _, _, registry) = presetup().await;
 
@@ -83,16 +84,17 @@ async fn setup(
         test_pool,
         test_pool_borrow_authority,
         user,
+        mining_acc,
     )
 }
 
 #[tokio::test]
 async fn success() {
-    let (mut context, registry, test_pool_market, test_pool, _pool_borrow_authority, user) =
+    let (mut context, registry, test_pool_market, test_pool, _pool_borrow_authority, user, mining_acc) =
         setup(None).await;
 
     test_pool
-        .withdraw_request(&mut context, &registry, &test_pool_market, &user, 45)
+        .withdraw_request(&mut context, &registry, &test_pool_market, &user, mining_acc, 45)
         .await
         .unwrap();
 

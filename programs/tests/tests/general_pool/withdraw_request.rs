@@ -95,7 +95,7 @@ async fn success() {
     context.warp_to_slot(WARP_SLOT + 5).unwrap();
 
     test_pool
-        .withdraw_request(&mut context, &test_registry, &test_pool_market, &user, 50)
+        .withdraw_request(&mut context, &test_registry, &test_pool_market, &user, mining_acc, 50)
         .await
         .unwrap();
 
@@ -145,6 +145,9 @@ async fn fail_with_invalid_pool_market() {
             &test_pool.token_mint_pubkey,
             &test_pool.pool_mint.pubkey(),
             &user.pubkey(),
+            &test_pool.mining_reward_pool,
+            &mining_acc,
+            &test_pool.config.pubkey(),
             withdraw_amount,
         )],
         Some(&context.payer.pubkey()),
@@ -191,6 +194,9 @@ async fn fail_with_invalid_pool() {
             &test_pool.token_mint_pubkey,
             &test_pool.pool_mint.pubkey(),
             &user.pubkey(),
+            &test_pool.mining_reward_pool,
+            &mining_acc,
+            &test_pool.config.pubkey(),
             withdraw_amount,
         )],
         Some(&context.payer.pubkey()),
@@ -237,6 +243,9 @@ async fn fail_with_invalid_destination() {
             &test_pool.token_mint_pubkey,
             &test_pool.pool_mint.pubkey(),
             &user.pubkey(),
+            &test_pool.mining_reward_pool,
+            &mining_acc,
+            &test_pool.config.pubkey(),
             withdraw_amount,
         )],
         Some(&context.payer.pubkey()),
@@ -280,6 +289,9 @@ async fn fail_with_invalid_token_account() {
             &test_pool.token_mint_pubkey,
             &test_pool.pool_mint.pubkey(),
             &user.pubkey(),
+            &test_pool.mining_reward_pool,
+            &mining_acc,
+            &test_pool.config.pubkey(),
             withdraw_amount,
         )],
         Some(&context.payer.pubkey()),
@@ -323,6 +335,9 @@ async fn fail_with_invalid_token_mint() {
             &Pubkey::new_unique(),
             &test_pool.pool_mint.pubkey(),
             &user.pubkey(),
+            &test_pool.mining_reward_pool,
+            &mining_acc,
+            &test_pool.config.pubkey(),
             withdraw_amount,
         )],
         Some(&context.payer.pubkey()),
@@ -369,6 +384,9 @@ async fn fail_with_invalid_pool_mint() {
             &test_pool.token_mint_pubkey,
             &Pubkey::new_unique(),
             &user.pubkey(),
+            &test_pool.mining_reward_pool,
+            &mining_acc,
+            &test_pool.config.pubkey(),
             withdraw_amount,
         )],
         Some(&context.payer.pubkey()),
@@ -414,6 +432,9 @@ async fn fail_with_wrong_user_transfer_authority() {
             &test_pool.token_mint_pubkey,
             &test_pool.pool_mint.pubkey(),
             &wrong_user_authority.pubkey(),
+            &test_pool.mining_reward_pool,
+            &mining_acc,
+            &test_pool.config.pubkey(),
             withdraw_amount,
         )],
         Some(&context.payer.pubkey()),
@@ -460,6 +481,9 @@ async fn fail_with_invalid_withdraw_amount() {
             &test_pool.token_mint_pubkey,
             &test_pool.pool_mint.pubkey(),
             &user.pubkey(),
+            &test_pool.mining_reward_pool,
+            &mining_acc,
+            &test_pool.config.pubkey(),
             withdraw_amount,
         )],
         Some(&context.payer.pubkey()),
@@ -483,7 +507,7 @@ async fn fail_with_invalid_withdraw_amount() {
 
 #[tokio::test]
 async fn fail_with_amount_too_small() {
-    let (mut context, test_registry, test_pool_market, test_pool, _pool_borrow_authority, user, _) = setup().await;
+    let (mut context, test_registry, test_pool_market, test_pool, _pool_borrow_authority, user, mining_acc) = setup().await;
     let pool_config_params = SetRegistryPoolConfigParams {
         deposit_minimum: 90,
         withdraw_minimum: 90,
@@ -498,7 +522,7 @@ async fn fail_with_amount_too_small() {
 
     assert_eq!(
         test_pool
-            .withdraw_request(&mut context, &test_registry, &test_pool_market, &user, withdraw_amount)
+            .withdraw_request(&mut context, &test_registry, &test_pool_market, &user, mining_acc, withdraw_amount)
             .await
             .unwrap_err()
             .unwrap(),

@@ -6,7 +6,7 @@ use everlend_general_pool::{
     state::{AccountType, Pool, PoolMarket, WithdrawalRequest, WithdrawalRequests},
 };
 use solana_client::client_error::ClientError;
-use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
+use solana_program::{program_pack::Pack, pubkey::{Pubkey, self}, system_instruction};
 use solana_sdk::{
     signature::{write_keypair_file, Keypair},
     signer::Signer,
@@ -258,6 +258,9 @@ pub fn withdraw_request(
     pool_token_account: &Pubkey,
     token_mint: &Pubkey,
     pool_mint: &Pubkey,
+    mining_reward_pool: &Pubkey,
+    mining_reward_acc: &Pubkey,
+    anchor_config: &Pubkey,
     amount: u64,
 ) -> Result<(), ClientError> {
     let payer_pubkey = config.fee_payer.pubkey();
@@ -279,6 +282,9 @@ pub fn withdraw_request(
             token_mint,
             pool_mint,
             &config.fee_payer.pubkey(),
+            mining_reward_pool,
+            mining_reward_acc,
+            anchor_config,
             amount,
         )],
         Some(&config.fee_payer.pubkey()),
@@ -323,14 +329,10 @@ pub fn withdraw(
     config: &Config,
     pool_market_pubkey: &Pubkey,
     pool_pubkey: &Pubkey,
-    source: &Pubkey,
     destination: &Pubkey,
     pool_token_account: &Pubkey,
     token_mint: &Pubkey,
     pool_mint: &Pubkey,
-    mining_reward_pool: &Pubkey,
-    mining_reward_acc: &Pubkey,
-    anchor_config: &Pubkey,
 ) -> Result<(), ClientError> {
     let payer_pubkey = config.fee_payer.pubkey();
     let (addition_accounts, destination) = if token_mint == &spl_token::native_mint::id() {
@@ -357,15 +359,11 @@ pub fn withdraw(
             &everlend_general_pool::id(),
             pool_market_pubkey,
             pool_pubkey,
-            source,
             destination,
             pool_token_account,
             token_mint,
             pool_mint,
             &config.fee_payer.pubkey(),
-            mining_reward_pool,
-            mining_reward_acc,
-            anchor_config,
             addition_accounts,
         )],
         Some(&config.fee_payer.pubkey()),
@@ -464,6 +462,7 @@ pub fn init_user_mining(
     pool_market_pubkey: &Pubkey,
     pool_pubkey: &Pubkey,
     user_collateral_token_account: &Pubkey,
+    user_authority: &Pubkey,
     payer: &Pubkey,
     mining_reward_pool: &Pubkey,
     mining_reward_acc: &Pubkey,
@@ -475,6 +474,7 @@ pub fn init_user_mining(
             pool_market_pubkey,
             pool_pubkey,
             user_collateral_token_account,
+            user_authority,
             payer,
             mining_reward_pool,
             mining_reward_acc,
