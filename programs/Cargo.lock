@@ -947,6 +947,31 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
 
 [[package]]
+name = "eld-config"
+version = "0.1.0"
+source = "git+ssh://git@github.com/everlend/everlend-next.git?branch=main#ae5faf262a87c18f5952fc8e8a67d75f3d970bcf"
+dependencies = [
+ "anchor-lang",
+ "anchor-spl",
+ "bs58 0.4.0",
+ "port-anchor-adaptor",
+ "thiserror",
+ "uint 0.9.1",
+]
+
+[[package]]
+name = "eld-rewards"
+version = "0.1.0"
+source = "git+ssh://git@github.com/everlend/everlend-next.git?branch=main#ae5faf262a87c18f5952fc8e8a67d75f3d970bcf"
+dependencies = [
+ "anchor-lang",
+ "anchor-spl",
+ "bs58 0.4.0",
+ "eld-config",
+ "thiserror",
+]
+
+[[package]]
 name = "encode_unicode"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1050,6 +1075,8 @@ name = "everlend-general-pool"
 version = "0.1.0"
 dependencies = [
  "borsh",
+ "eld-config",
+ "eld-rewards",
  "everlend-registry",
  "everlend-utils",
  "num-derive",
@@ -1111,6 +1138,8 @@ dependencies = [
 name = "everlend-tests"
 version = "0.1.0"
 dependencies = [
+ "eld-config",
+ "eld-rewards",
  "everlend-collateral-pool",
  "everlend-depositor",
  "everlend-general-pool",
@@ -1135,6 +1164,8 @@ dependencies = [
  "bs58 0.2.5",
  "clap",
  "dirs-next",
+ "eld-config",
+ "eld-rewards",
  "everlend-collateral-pool",
  "everlend-depositor",
  "everlend-general-pool",
@@ -1185,6 +1216,8 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "borsh",
+ "eld-config",
+ "eld-rewards",
  "larix-lending",
  "num-derive",
  "num-traits",
@@ -1825,9 +1858,9 @@ dependencies = [
 
 [[package]]
 name = "linked-hash-map"
-version = "0.5.4"
+version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7fb9b38af92608140b86b693604b9ffcc5824240a484d1ecd4795bacb2fe88f3"
+checksum = "0717cef1bc8b636c6e1c1bbdefc09e6322da8a9321966e8928ef80d20f7f770f"
 
 [[package]]
 name = "lock_api"
@@ -2195,6 +2228,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4596b6d070b27117e987119b4dac604f3c58cfb0b191112e24771b2faeac1a6"
 
 [[package]]
+name = "port-anchor-adaptor"
+version = "0.3.4"
+source = "git+https://github.com/everlend/port-anchor-adaptor#818b7f988c9ff9c563d4bf698baca6c5762e5f8b"
+dependencies = [
+ "anchor-lang",
+ "num-derive",
+ "num-traits",
+ "port-staking-instructions 0.2.0",
+ "port-variable-rate-lending-instructions",
+ "solana-maths",
+ "thiserror",
+]
+
+[[package]]
 name = "port-staking-instructions"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2211,6 +2258,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "port-staking-instructions"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "58a0376f07714b1c0813b6140c8ee39eaa39a0482545b4c7dc4d894f74a9c7a9"
+dependencies = [
+ "arrayref",
+ "bytemuck",
+ "num-derive",
+ "num-traits",
+ "solana-maths",
+ "solana-program",
+ "spl-token 3.2.0",
+ "thiserror",
+ "uint 0.8.5",
+]
+
+[[package]]
 name = "port-variable-rate-lending-instructions"
 version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2220,7 +2284,7 @@ dependencies = [
  "bytemuck",
  "num-derive",
  "num-traits",
- "port-staking-instructions",
+ "port-staking-instructions 0.1.7",
  "solana-program",
  "spl-token 3.2.0",
  "thiserror",
@@ -2743,11 +2807,10 @@ dependencies = [
 
 [[package]]
 name = "serde_with"
-version = "1.13.0"
+version = "1.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b827f2113224f3f19a665136f006709194bdfdcb1fdc1e4b2b5cbac8e0cced54"
+checksum = "678b5a069e50bf00ecd22d0cd8ddf7c236f68581b03db652061ed5eb13a312ff"
 dependencies = [
- "rustversion",
  "serde",
  "serde_with_macros",
 ]
@@ -2766,9 +2829,9 @@ dependencies = [
 
 [[package]]
 name = "serde_yaml"
-version = "0.8.24"
+version = "0.8.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "707d15895415db6628332b737c838b88c598522e4dc70647e59b72312924aebc"
+checksum = "578a7433b776b56a35785ed5ce9a7e777ac0598aac5a6dd1b4b18a307c7fc71b"
 dependencies = [
  "indexmap",
  "ryu",
@@ -3165,6 +3228,20 @@ dependencies = [
  "env_logger",
  "lazy_static",
  "log",
+]
+
+[[package]]
+name = "solana-maths"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a5a56a07f42e0619414cda078b3f838d8df98ec2a4ed145d03c3b2a554556a7"
+dependencies = [
+ "arrayref",
+ "num-derive",
+ "num-traits",
+ "solana-program",
+ "thiserror",
+ "uint 0.8.5",
 ]
 
 [[package]]

@@ -1,5 +1,3 @@
-#![cfg(feature = "test-bpf")]
-
 use crate::utils::*;
 use everlend_general_pool::instruction;
 use everlend_utils::EverlendError;
@@ -59,8 +57,9 @@ async fn setup() -> (
     .await
     .unwrap();
 
+    let mining_acc = test_pool.init_user_mining(&mut context, &test_pool_market, &user).await;
     test_pool
-        .deposit(&mut context, &registry, &test_pool_market, &user, 100)
+        .deposit(&mut context, &registry, &test_pool_market, &user, mining_acc, 100)
         .await
         .unwrap();
 

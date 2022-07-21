@@ -1,9 +1,7 @@
-#![cfg(feature = "test-bpf")]
-
 use everlend_depositor::find_transit_program_address;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::state::{
-    DistributionPubkeys, RegistryRootAccounts, SetRegistryPoolConfigParams,
+    RegistryRootAccounts, SetRegistryPoolConfigParams,
 };
 use everlend_utils::find_program_address;
 use solana_program_test::*;
@@ -17,7 +15,7 @@ async fn setup() -> (
     TestGeneralPool,
     TestDepositor,
 ) {
-    let (mut context, money_market, pyth_oracle, registry) = presetup().await;
+    let (mut context, money_market, _, registry) = presetup().await;
 
     let payer_pubkey = context.payer.pubkey();
 
@@ -64,12 +62,15 @@ async fn setup() -> (
     .await
     .unwrap();
 
+    let mining_acc = general_pool.init_user_mining(&mut context, &general_pool_market, &liquidity_provider).await;
+
     general_pool
         .deposit(
             &mut context,
             &registry,
             &general_pool_market,
             &liquidity_provider,
+            mining_acc,
             100 * EXP,
         )
         .await

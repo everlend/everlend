@@ -4,11 +4,11 @@ on:
   push:
     branches:
       - 'main'
-      - 'v1'
+      - 'dev'
   pull_request:
     branches:
       - 'main'
-      - 'v1'
+      - 'dev'
 
 env:
   CARGO_TERM_COLOR: always
@@ -23,6 +23,9 @@ jobs:
 
     steps:
       # Setup Deps
+      - uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.SSH_EVERLEND_NEXT }}
       - uses: actions/checkout@v2
       - uses: ./.github/actions/install-linux-build-deps
       - uses: ./.github/actions/install-solana

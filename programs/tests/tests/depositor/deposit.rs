@@ -1,6 +1,3 @@
-#![cfg(feature = "test-bpf")]
-
-use solana_program::example_mocks::solana_sdk::signature::Keypair;
 use solana_program::instruction::InstructionError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::*;
@@ -33,6 +30,7 @@ async fn setup() -> (
     TestLiquidityOracle,
     TestTokenDistribution,
     DistributionArray,
+    Pubkey
 ) {
     let (mut context, money_market, pyth_oracle, registry) = presetup().await;
 
@@ -92,12 +90,14 @@ async fn setup() -> (
     .await
     .unwrap();
 
+    let mining_acc = general_pool.init_user_mining(&mut context, &general_pool_market, &liquidity_provider).await;
     general_pool
         .deposit(
             &mut context,
             &registry,
             &general_pool_market,
             &liquidity_provider,
+            mining_acc,
             100 * EXP,
         )
         .await
@@ -218,6 +218,7 @@ async fn setup() -> (
         test_liquidity_oracle,
         test_token_distribution,
         distribution,
+        mining_acc,
     )
 }
 
@@ -235,6 +236,7 @@ async fn success() {
         mm_pool,
         _liquidity_provider,
         test_depositor,
+        _,
         _,
         _,
         _,
@@ -312,6 +314,7 @@ async fn success_increased_liquidity() {
         test_liquidity_oracle,
         test_token_distribution,
         distribution,
+        mining_acc,
     ) = setup().await;
     let payer_pubkey = context.payer.pubkey();
 
@@ -361,6 +364,7 @@ async fn success_increased_liquidity() {
             &registry,
             &general_pool_market,
             &liquidity_provider,
+            mining_acc,
             50 * EXP,
         )
         .await
@@ -401,6 +405,7 @@ async fn fail_with_invalid_registry() {
         mm_pool,
         _,
         test_depositor,
+        _,
         _,
         _,
         _,
@@ -467,6 +472,7 @@ async fn fail_with_invalid_depositor() {
         _,
         mm_pool_market,
         mm_pool,
+        _,
         _,
         _,
         _,
@@ -540,6 +546,7 @@ async fn fail_with_invalid_mm_pool_market() {
         _,
         _,
         _,
+        _,
     ) = setup().await;
 
     let reserve = money_market.get_reserve_data(&mut context).await;
@@ -608,6 +615,7 @@ async fn fail_with_invalid_mm_pool_token_account() {
         _,
         _,
         _,
+        _,
     ) = setup().await;
 
     let reserve = money_market.get_reserve_data(&mut context).await;
@@ -669,6 +677,7 @@ async fn fail_with_invalid_liquidity_mint() {
         mm_pool,
         _,
         test_depositor,
+        _,
         _,
         _,
         _,
@@ -740,6 +749,7 @@ async fn fail_with_invalid_collateral_mint() {
         _,
         _,
         _,
+        _,
     ) = setup().await;
 
     let reserve = money_market.get_reserve_data(&mut context).await;
@@ -808,6 +818,7 @@ async fn fail_with_invalid_money_market_program_id() {
         _,
         _,
         _,
+        _,
     ) = setup().await;
 
     let reserve = money_market.get_reserve_data(&mut context).await;
@@ -873,6 +884,7 @@ async fn fail_with_invalid_money_market_accounts() {
         mm_pool,
         _,
         test_depositor,
+        _,
         _,
         _,
         _,

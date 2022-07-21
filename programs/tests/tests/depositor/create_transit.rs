@@ -1,5 +1,3 @@
-#![cfg(feature = "test-bpf")]
-
 use solana_program::instruction::InstructionError;
 use solana_program::system_instruction::SystemError;
 use solana_program_test::*;
