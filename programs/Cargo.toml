@@ -10,3 +10,6 @@ members = [
   "tests",
   "toolkit",
 ]
+
+[profile.release]
+overflow-checks = true
