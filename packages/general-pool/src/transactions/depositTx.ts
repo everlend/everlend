@@ -27,6 +27,10 @@ type DepositTxParams = {
   destination: PublicKey
   tokenAccount: PublicKey
   poolMint: PublicKey
+  rewardPool: PublicKey
+  rewardAccount: PublicKey
+  config: PublicKey
+  rewardProgramId: PublicKey
   poolMarketAuthority: PublicKey
   amount: BN
 }
@@ -44,6 +48,10 @@ export class DepositTx extends Transaction {
       destination,
       tokenAccount,
       poolMint,
+      rewardPool,
+      rewardAccount,
+      config,
+      rewardProgramId,
       poolMarketAuthority,
       amount,
     } = params
@@ -63,6 +71,10 @@ export class DepositTx extends Transaction {
           { pubkey: poolMint, isSigner: false, isWritable: true },
           { pubkey: poolMarketAuthority, isSigner: false, isWritable: false },
           { pubkey: feePayer, isSigner: true, isWritable: false },
+          { pubkey: rewardPool, isSigner: false, isWritable: true },
+          { pubkey: rewardAccount, isSigner: false, isWritable: true },
+          { pubkey: config, isSigner: false, isWritable: false },
+          { pubkey: rewardProgramId, isSigner: false, isWritable: false },
           { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
         ],
         programId: GeneralPoolsProgram.PUBKEY,
