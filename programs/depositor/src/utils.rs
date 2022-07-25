@@ -91,7 +91,7 @@ pub fn deposit<'a>(
                 lending_market_info.clone(),
                 authority.clone(),
                 authority,
-                u64::MAX,
+                collateral_amount,
                 signers_seeds,
             )?;
         }

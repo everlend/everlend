@@ -213,8 +213,8 @@ pub fn withdraw_mining<'a>(
     invoke_signed(
         &ix,
         &[
-            source_collateral,
             reserve_bonus,
+            source_collateral,
             mining_info,
             reserve,
             lending_market,
