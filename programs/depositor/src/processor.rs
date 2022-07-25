@@ -3,10 +3,21 @@
 use std::cmp::Ordering;
 
 use borsh::BorshDeserialize;
-use everlend_collateral_pool::find_pool_withdraw_authority_program_address;
+use everlend_general_pool::{find_withdrawal_requests_program_address, state::WithdrawalRequests};
 use everlend_income_pools::utils::IncomePoolAccounts;
+use everlend_liquidity_oracle::{
+    find_liquidity_oracle_token_distribution_program_address,
+    state::{DistributionArray, TokenDistribution},
+};
 use everlend_registry::state::Registry;
-use solana_program::program_error::ProgramError;
+use everlend_registry::{
+    find_config_program_address,
+    state::{RegistryPrograms, RegistryRootAccounts, RegistrySettings},
+};
+use everlend_utils::{
+    assert_account_key, assert_initialized, assert_owned_by, assert_rent_exempt, assert_signer,
+    assert_uninitialized, cpi, find_program_address, EverlendError,
+};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     clock::Clock,
@@ -17,23 +28,7 @@ use solana_program::{
     rent::Rent,
     sysvar::Sysvar,
 };
-use spl_token::error::TokenError;
 use spl_token::state::Account;
-
-use everlend_collateral_pool::utils::CollateralPoolAccounts;
-use everlend_general_pool::{find_withdrawal_requests_program_address, state::WithdrawalRequests};
-use everlend_liquidity_oracle::{
-    find_liquidity_oracle_token_distribution_program_address,
-    state::{DistributionArray, TokenDistribution},
-};
-use everlend_registry::{
-    find_config_program_address,
-    state::{RegistryPrograms, RegistryRootAccounts, RegistrySettings},
-};
-use everlend_utils::{
-    assert_account_key, assert_initialized, assert_owned_by, assert_rent_exempt, assert_signer,
-    assert_uninitialized, cpi, find_program_address, EverlendError,
-};
 
 use crate::state::{InternalMining, MiningType};
 use crate::utils::{deposit, withdraw};
@@ -710,7 +705,7 @@ impl Processor {
             collateral_mint_info.key,
             depositor_info.key,
         );
-        assert_account_key(&internal_mining_info, &internal_mining_pubkey)?;
+        assert_account_key(internal_mining_info, &internal_mining_pubkey)?;
 
         msg!("Withdraw");
         withdraw(
@@ -946,6 +941,8 @@ impl Processor {
                 token_mint,
                 miner_vault,
             } => {
+                return Err(EverlendError::TemporaryUnavailable.into());
+
                 assert_account_key(staking_program_id_info, &quarry_mining_program_id)?;
                 let miner_info = next_account_info(account_info_iter)?;
                 let quarry_info = next_account_info(account_info_iter)?;
@@ -963,7 +960,7 @@ impl Processor {
                 );
                 assert_account_key(miner_info, &miner_pubkey)?;
                 cpi::quarry::create_miner(
-                    &staking_program_id_info.key,
+                    staking_program_id_info.key,
                     depositor_authority_info.clone(),
                     miner_info.clone(),
                     quarry_info.clone(),
@@ -1010,16 +1007,16 @@ impl Processor {
         assert_owned_by(internal_mining_info, program_id)?;
 
         // Check rewards destination account
-        let reward_mint = next_account_info(account_info_iter)?;
-        let reward_destination = next_account_info(account_info_iter)?;
+        let reward_mint_info = next_account_info(account_info_iter)?;
+        let reward_destination_info = next_account_info(account_info_iter)?;
 
         let (reward_token_account, _) = find_transit_program_address(
             program_id,
             depositor_info.key,
-            reward_mint.key,
+            reward_mint_info.key,
             "lm_reward",
         );
-        assert_account_key(reward_destination, &reward_token_account)?;
+        assert_account_key(reward_destination_info, &reward_token_account)?;
 
         let internal_mining_type =
             InternalMining::unpack(&internal_mining_info.data.borrow())?.mining_type;
@@ -1027,6 +1024,23 @@ impl Processor {
         // TODO check money market
         let token_program_info = next_account_info(account_info_iter)?;
         let staking_program_id_info = next_account_info(account_info_iter)?;
+
+        // TODO add checks
+        let eld_config_info = next_account_info(account_info_iter)?;
+        let reward_pool_info = next_account_info(account_info_iter)?;
+        let vault_info = next_account_info(account_info_iter)?;
+
+        let eld_reward_program_id = next_account_info(account_info_iter)?;
+
+        let (vault, _) = Pubkey::find_program_address(
+            &[
+                b"vault".as_ref(),
+                &reward_pool_info.key.to_bytes(),
+                &reward_mint_info.key.to_bytes(),
+            ],
+            eld_reward_program_id.key,
+        );
+        assert_account_key(vault_info, &vault)?;
 
         // Create depositor authority account
         let (depositor_authority_pubkey, bump_seed) =
@@ -1075,7 +1089,7 @@ impl Processor {
                     staking_program_id_info.key,
                     mining_account_info.clone(),
                     mine_supply_info.clone(),
-                    reward_destination.clone(),
+                    reward_destination_info.clone(),
                     depositor_authority_info.clone(),
                     lending_market_info.clone(),
                     lending_market_authority_info.clone(),
@@ -1133,7 +1147,7 @@ impl Processor {
                     staking_pool_info.clone(),
                     staking_pool_authority_info.clone(),
                     reward_token_pool.clone(),
-                    reward_destination.clone(),
+                    reward_destination_info.clone(),
                     sub_reward,
                     clock.clone(),
                     token_program_info.clone(),
@@ -1148,7 +1162,6 @@ impl Processor {
                 miner_vault: _,
             } => {
                 assert_account_key(staking_program_id_info, &quarry_mining_program_id)?;
-
                 let mint_wrapper = next_account_info(account_info_iter)?;
                 let mint_wrapper_program = next_account_info(account_info_iter)?;
                 let minter = next_account_info(account_info_iter)?;
@@ -1177,7 +1190,20 @@ impl Processor {
             MiningType::None => {}
         };
 
-        // TODO deposit into LM rewards pool
+        let reward_account = Account::unpack(&reward_destination_info.data.borrow())?;
+
+        cpi::rewards::fill_vault(
+            eld_reward_program_id.key,
+            eld_config_info.clone(),
+            reward_pool_info.clone(),
+            reward_mint_info.clone(),
+            vault_info.clone(),
+            reward_destination_info.clone(),
+            depositor_authority_info.clone(),
+            reward_account.amount,
+            &[signers_seeds.as_ref()],
+        )?;
+
         Ok(())
     }
 
