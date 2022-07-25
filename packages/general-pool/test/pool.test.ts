@@ -21,6 +21,10 @@ import {
 describe('Pool', () => {
   let source: PublicKey
   let destination: PublicKey
+  let rewardPool: PublicKey
+  let rewardAccount: PublicKey
+  const CONFIG = new PublicKey('CP9RVpjywTR1qRvaxNn74QVm6B9s4qmwhF6WbSgtQ4KX')
+  const REWARD_PROGRAM_ID = new PublicKey('41NY8Dppr4CUfg2Q1pdz6kg9ueV2ksemuej7TL1mJAJW')
 
   beforeAll(async () => {
     console.log(payerPublicKey)
@@ -39,6 +43,15 @@ describe('Pool', () => {
         [payerPublicKey.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), poolMint.toBuffer()],
         ASSOCIATED_TOKEN_PROGRAM_ID,
       )
+    )[0]
+
+    rewardPool = await PublicKey.findProgramAddress(
+      [Buffer.from('reward_pool'), CONFIG.toBuffer(), new PublicKey(tokenMint).toBuffer()],
+      REWARD_PROGRAM_ID,
+    )[0]
+    rewardAccount = await PublicKey.findProgramAddress(
+      [Buffer.from('mining'), payerPublicKey.toBuffer(), rewardPool.toBuffer()],
+      REWARD_PROGRAM_ID,
     )[0]
   })
 
@@ -96,6 +109,10 @@ describe('Pool', () => {
         POOL_PUBKEY,
         REGISTRY_PUBKEY,
         amount,
+        REWARD_PROGRAM_ID,
+        CONFIG,
+        rewardPool,
+        rewardAccount,
         source,
         destination,
       )
@@ -122,6 +139,10 @@ describe('Pool', () => {
         POOL_PUBKEY,
         REGISTRY_PUBKEY,
         amount,
+        REWARD_PROGRAM_ID,
+        CONFIG,
+        rewardPool,
+        rewardAccount,
         destination,
         source,
       )
