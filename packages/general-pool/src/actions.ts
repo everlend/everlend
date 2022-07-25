@@ -32,6 +32,7 @@ import {
   UnwrapParams,
 } from './transactions'
 import { Buffer } from 'buffer'
+import { InitializeMining } from './transactions/initializeMiningTx'
 
 /** The type is returned by actions, e.g. [[prepareDepositTx]] or [[prepareWithdrawalRequestTx]]. */
 export type ActionResult = {
@@ -138,6 +139,10 @@ export const prepareCreatePoolTx = async (
  * @param pool the general pool public key for a specific token, e.g. there can be a general pool for USDT or USDC etc.
  * @param registry the public key of the registry (the program that stores a registry config).
  * @param amount the amount of tokens in lamports to deposit.
+ * @param rewardProgramId reward program id
+ * @param config const
+ * @param rewardPool public key of reward pool
+ * @param rewardAccount public key of user reward account
  * @param source the public key which represents user's token ATA (token mint ATA) from which the token amount will be taken.
  * When depositing native SOL it will be replaced by a newly generated ATA for wrapped SOL, created by `payerPublicKey` from [[ActionOptions]].
  * @param destination the public key which represents user's collateral token ATA (pool mint ATA) where collateral tokens
@@ -150,6 +155,10 @@ export const prepareDepositTx = async (
   pool: PublicKey,
   registry: PublicKey,
   amount: BN,
+  rewardProgramId: PublicKey,
+  config: PublicKey,
+  rewardPool: PublicKey,
+  rewardAccount: PublicKey,
   source: PublicKey,
   destination?: PublicKey,
 ): Promise<ActionResult> => {
@@ -197,18 +206,7 @@ export const prepareDepositTx = async (
     source = SOLDepositSource
   }
 
-  // Create destination account for pool mint if doesn't exist
   destination = destination ?? (await findAssociatedTokenAccount(payerPublicKey, poolMint))
-  !(await connection.getAccountInfo(destination)) &&
-    tx.add(
-      new CreateAssociatedTokenAccount(
-        { feePayer: payerPublicKey },
-        {
-          associatedTokenAddress: destination,
-          tokenMint: poolMint,
-        },
-      ),
-    )
 
   tx.add(
     new DepositTx(
@@ -222,6 +220,10 @@ export const prepareDepositTx = async (
         destination,
         tokenAccount,
         poolMint,
+        rewardPool,
+        rewardAccount,
+        config,
+        rewardProgramId,
         poolMarketAuthority,
         amount,
       },
@@ -246,6 +248,10 @@ export const prepareDepositTx = async (
  * @param pool the general pool public key for a specific token, e.g. there can be a general pool for USDT or USDC etc.
  * @param registry the public key of the registry (the program that stores a registry config).
  * @param collateralAmount the amount of collateral tokens in lamports which will be taken from a user.
+ * @param rewardProgramId reward program id
+ * @param config const
+ * @param rewardPool public key of reward pool
+ * @param rewardAccount public key of user reward account
  * @param source the public key which represents user's collateral token ATA (pool mint ATA) from which the collateral tokens will be taken.
  * @param destination the public key which represents user's token ATA (token mint ATA) to which the withdrawn from
  * a general pool tokens will be sent. The param isn't used when withdrawing SOL. There is wrapped SOL unwrapping logic
@@ -258,6 +264,10 @@ export const prepareWithdrawalRequestTx = async (
   pool: PublicKey,
   registry: PublicKey,
   collateralAmount: BN,
+  rewardProgramId: PublicKey,
+  config: PublicKey,
+  rewardPool: PublicKey,
+  rewardAccount: PublicKey,
   source: PublicKey,
   destination?: PublicKey,
 ): Promise<ActionResult> => {
@@ -306,6 +316,10 @@ export const prepareWithdrawalRequestTx = async (
         collateralTransit,
         poolMint,
         collateralAmount,
+        rewardPool,
+        rewardAccount,
+        rewardProgramId,
+        config,
       },
     ),
   )
@@ -469,6 +483,50 @@ export const prepareRepayTx = async (
       amount,
       interestAmount,
     },
+  )
+
+  return { tx }
+}
+
+export const prepareInititalizeMining = async (
+  { connection, payerPublicKey }: ActionOptions,
+  rewardPool: PublicKey,
+  rewardAccount: PublicKey,
+  config: PublicKey,
+  rewardProgramId: PublicKey,
+  pool: PublicKey,
+  poolMarket: PublicKey,
+  poolMint: PublicKey,
+  poolMintATA: PublicKey,
+): Promise<ActionResult> => {
+  const tx = new Transaction()
+
+  if (!(await connection.getAccountInfo(poolMintATA))) {
+    tx.add(
+      new CreateAssociatedTokenAccount(
+        { feePayer: payerPublicKey },
+        {
+          associatedTokenAddress: poolMintATA,
+          tokenMint: new PublicKey(poolMint),
+        },
+      ),
+    )
+  }
+
+  tx.add(
+    new InitializeMining(
+      { feePayer: payerPublicKey },
+      {
+        config,
+        rewardPool,
+        mining: rewardAccount,
+        user: payerPublicKey,
+        rewardProgramId,
+        pool,
+        poolMarket,
+        poolMintATA,
+      },
+    ),
   )
 
   return { tx }
