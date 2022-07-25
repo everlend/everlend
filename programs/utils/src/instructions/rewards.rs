@@ -102,7 +102,7 @@ pub fn deposit_mining(
             AccountMeta::new(*reward_pool, false),
             AccountMeta::new(*mining, false),
             AccountMeta::new_readonly(*user, false),
-            AccountMeta::new(*deposit_authority, true),
+            AccountMeta::new_readonly(*deposit_authority, true),
         ],
         data: DepositMining{amount}.data(),
     }
@@ -124,7 +124,7 @@ pub fn withdraw_mining(
             AccountMeta::new(*reward_pool, false),
             AccountMeta::new(*mining, false),
             AccountMeta::new_readonly(*user, false),
-            AccountMeta::new(*deposit_authority, true),
+            AccountMeta::new_readonly(*deposit_authority, true),
         ],
         data: WithdrawMining{amount}.data(),
     }

@@ -384,7 +384,7 @@ pub fn deposit(
         AccountMeta::new_readonly(*registry, false),
         AccountMeta::new_readonly(registry_pool_config, false),
         AccountMeta::new_readonly(*pool_market, false),
-        AccountMeta::new(*pool, false),
+        AccountMeta::new_readonly(*pool, false),
         AccountMeta::new(*source, false),
         AccountMeta::new(*destination, false),
         AccountMeta::new(*token_account, false),
@@ -479,7 +479,7 @@ pub fn withdraw_request(
         AccountMeta::new_readonly(*registry, false),
         AccountMeta::new_readonly(registry_pool_config, false),
         AccountMeta::new_readonly(*pool_market, false),
-        AccountMeta::new(*pool, false),
+        AccountMeta::new_readonly(*pool, false),
         AccountMeta::new(*pool_mint, false),
         AccountMeta::new(withdrawal_requests, false),
         AccountMeta::new(withdrawal_request, false),
@@ -645,7 +645,7 @@ pub fn init_user_mining(
 ) -> Instruction {
     let accounts = vec![
         AccountMeta::new_readonly(*pool_market, false),
-        AccountMeta::new(*pool, false),
+        AccountMeta::new_readonly(*pool, false),
         AccountMeta::new_readonly(*user_collateral_token_account, false),
         AccountMeta::new_readonly(*user_authority, false),
         AccountMeta::new(*payer, true),
