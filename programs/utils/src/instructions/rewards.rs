@@ -99,10 +99,10 @@ pub fn deposit_mining(
         program_id: *program_id,
         accounts: vec![
             AccountMeta::new_readonly(*config, false),
-            AccountMeta::new_readonly(*reward_pool, false),
+            AccountMeta::new(*reward_pool, false),
             AccountMeta::new(*mining, false),
             AccountMeta::new_readonly(*user, false),
-            AccountMeta::new(*deposit_authority, true),
+            AccountMeta::new_readonly(*deposit_authority, true),
         ],
         data: DepositMining{amount}.data(),
     }
@@ -121,10 +121,10 @@ pub fn withdraw_mining(
         program_id: *program_id,
         accounts: vec![
             AccountMeta::new_readonly(*config, false),
-            AccountMeta::new_readonly(*reward_pool, false),
+            AccountMeta::new(*reward_pool, false),
             AccountMeta::new(*mining, false),
             AccountMeta::new_readonly(*user, false),
-            AccountMeta::new(*deposit_authority, true),
+            AccountMeta::new_readonly(*deposit_authority, true),
         ],
         data: WithdrawMining{amount}.data(),
     }
