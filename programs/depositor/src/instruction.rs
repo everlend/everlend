@@ -119,9 +119,9 @@ pub enum DepositorInstruction {
     /// Initialize accounts for mining LM rewards
     ///
     /// Accounts:
-    /// [R] Collateral mint (collateral of liquidity asset)
-    /// [R] Money market program id
     /// [W] Internal mining account
+    /// [R] Liquidity mint
+    /// [R] Collateral mint (collateral of liquidity asset)
     /// [R] Depositor
     /// [R] Depositor authority
     /// [R] Registry
@@ -148,6 +148,7 @@ pub enum DepositorInstruction {
     /// [R] Depositor
     /// [R] Depositor authority
     /// [R] Money market program id
+    /// [R] Liquidity mint
     /// [R] Collateral mint
     /// [R] Internal mining account
     /// [R] Staking program id
@@ -392,8 +393,12 @@ pub fn deposit(
     let (collateral_transit, _) =
         find_transit_program_address(program_id, depositor, collateral_mint, "");
 
-    let (internal_mining, _) =
-        crate::find_internal_mining_program_address(program_id, collateral_mint, depositor);
+    let (internal_mining, _) = crate::find_internal_mining_program_address(
+        program_id,
+        liquidity_mint,
+        collateral_mint,
+        depositor,
+    );
 
     let mut accounts = vec![
         AccountMeta::new_readonly(registry_config, false),
@@ -455,8 +460,12 @@ pub fn withdraw(
     let (liquidity_reserve_transit, _) =
         find_transit_program_address(program_id, depositor, liquidity_mint, "reserve");
 
-    let (internal_mining, _internal_mining_bump_seed) =
-        crate::find_internal_mining_program_address(program_id, collateral_mint, depositor);
+    let (internal_mining, _internal_mining_bump_seed) = crate::find_internal_mining_program_address(
+        program_id,
+        liquidity_mint,
+        collateral_mint,
+        depositor,
+    );
 
     let mut accounts = vec![
         AccountMeta::new_readonly(registry_config, false),
@@ -517,6 +526,8 @@ pub fn migrate_depositor(
 
 /// Argument to init_mining_accounts
 pub struct InitMiningAccountsPubkeys {
+    /// Liquidity mint
+    pub liquidity_mint: Pubkey,
     /// Collateral mint
     pub collateral_mint: Pubkey,
     /// Money market program id
@@ -539,6 +550,7 @@ pub fn init_mining_accounts(
 ) -> Instruction {
     let (internal_mining, _) = crate::find_internal_mining_program_address(
         program_id,
+        &pubkeys.liquidity_mint,
         &pubkeys.collateral_mint,
         &pubkeys.depositor,
     );
@@ -547,6 +559,7 @@ pub fn init_mining_accounts(
 
     let mut accounts = vec![
         AccountMeta::new(internal_mining, false),
+        AccountMeta::new_readonly(pubkeys.liquidity_mint, false),
         AccountMeta::new_readonly(pubkeys.collateral_mint, false),
         AccountMeta::new_readonly(pubkeys.depositor, false),
         AccountMeta::new_readonly(depositor_authority, false),

@@ -60,11 +60,13 @@ pub fn get_internal_mining_account(
 ) -> Pubkey {
     let initialized_accounts = config.get_initialized_accounts();
     let default_accounts = config.get_default_accounts();
-    let (_, collateral_mint_map) = get_asset_maps(default_accounts);
+    let (mint_map, collateral_mint_map) = get_asset_maps(default_accounts);
+    let liquidity_mint = mint_map.get(token).unwrap();
     let collateral_mint = collateral_mint_map.get(token).unwrap()[money_market as usize].unwrap();
     // Generate internal mining account
     let (internal_mining_account, _) = everlend_depositor::find_internal_mining_program_address(
         &everlend_depositor::id(),
+        liquidity_mint,
         &collateral_mint,
         &initialized_accounts.depositor,
     );

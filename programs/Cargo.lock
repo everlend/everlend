@@ -1049,7 +1049,7 @@ checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
 [[package]]
 name = "eld-config"
 version = "0.1.0"
-source = "git+ssh://git@github.com/everlend/everlend-next.git?branch=main#b394bdef37b3fac163d02934bf6a10c8240af539"
+source = "git+ssh://git@github.com/everlend/everlend-next.git?branch=main#2b1877d27228bc01b9805d193a3dc91702629664"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
@@ -1062,7 +1062,7 @@ dependencies = [
 [[package]]
 name = "eld-rewards"
 version = "0.1.0"
-source = "git+ssh://git@github.com/everlend/everlend-next.git?branch=main#b394bdef37b3fac163d02934bf6a10c8240af539"
+source = "git+ssh://git@github.com/everlend/everlend-next.git?branch=main#2b1877d27228bc01b9805d193a3dc91702629664"
 dependencies = [
  "anchor-lang",
  "anchor-spl",

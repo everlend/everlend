@@ -132,11 +132,13 @@ impl LiquidityMiner for PortLiquidityMiner {
     fn get_pubkeys(&self, config: &Config, token: &String) -> Option<InitMiningAccountsPubkeys> {
         let initialized_accounts = config.get_initialized_accounts();
         let default_accounts = config.get_default_accounts();
-        let (_, collateral_mint_map) = get_asset_maps(default_accounts.clone());
+        let (mint_map, collateral_mint_map) = get_asset_maps(default_accounts.clone());
+        let liquidity_mint = mint_map.get(token).unwrap();
         let collateral_mint =
             collateral_mint_map.get(token).unwrap()[MoneyMarket::PortFinance as usize].unwrap();
 
         Some(InitMiningAccountsPubkeys {
+            liquidity_mint: *liquidity_mint,
             collateral_mint,
             depositor: initialized_accounts.depositor,
             registry: initialized_accounts.registry,

@@ -1,7 +1,5 @@
 //! Program state processor
 
-use std::cmp::Ordering;
-
 use borsh::BorshDeserialize;
 use everlend_general_pool::{find_withdrawal_requests_program_address, state::WithdrawalRequests};
 use everlend_income_pools::utils::IncomePoolAccounts;
@@ -29,6 +27,7 @@ use solana_program::{
     sysvar::Sysvar,
 };
 use spl_token::state::Account;
+use std::cmp::Ordering;
 
 use crate::state::{InternalMining, MiningType};
 use crate::utils::{deposit, withdraw};
@@ -545,6 +544,7 @@ impl Processor {
 
         let (internal_mining_pubkey, _) = find_internal_mining_program_address(
             program_id,
+            liquidity_mint_info.key,
             collateral_mint_info.key,
             depositor_info.key,
         );
@@ -702,6 +702,7 @@ impl Processor {
         // Check internal mining account
         let (internal_mining_pubkey, _) = find_internal_mining_program_address(
             program_id,
+            liquidity_mint_info.key,
             collateral_mint_info.key,
             depositor_info.key,
         );
@@ -795,6 +796,7 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
 
         let internal_mining_info = next_account_info(account_info_iter)?;
+        let liquidity_mint_info = next_account_info(account_info_iter)?;
         let collateral_mint_info = next_account_info(account_info_iter)?;
         let depositor_info = next_account_info(account_info_iter)?;
         let depositor_authority_info = next_account_info(account_info_iter)?;
@@ -817,6 +819,7 @@ impl Processor {
         let (internal_mining_pubkey, internal_mining_bump_seed) =
             find_internal_mining_program_address(
                 program_id,
+                liquidity_mint_info.key,
                 collateral_mint_info.key,
                 depositor_info.key,
             );
@@ -832,6 +835,7 @@ impl Processor {
         if !internal_mining_info.owner.eq(program_id) {
             let signers_seeds = &[
                 "internal_mining".as_bytes(),
+                &liquidity_mint_info.key.to_bytes()[..32],
                 &collateral_mint_info.key.to_bytes()[..32],
                 &depositor_info.key.to_bytes()[..32],
                 &[internal_mining_bump_seed],
@@ -995,11 +999,13 @@ impl Processor {
         assert_signer(executor_info)?;
         assert_account_key(executor_info, &depositor.rebalance_executor)?;
 
+        let liquidity_mint_info = next_account_info(account_info_iter)?;
         let collateral_mint_info = next_account_info(account_info_iter)?;
 
         let internal_mining_info = next_account_info(account_info_iter)?;
         let (internal_mining_pubkey, _) = find_internal_mining_program_address(
             program_id,
+            liquidity_mint_info.key,
             collateral_mint_info.key,
             depositor_info.key,
         );
@@ -1027,7 +1033,13 @@ impl Processor {
 
         // TODO add checks
         let eld_config_info = next_account_info(account_info_iter)?;
+
+        // Get reward_pool struct and check liquidity_mint
         let reward_pool_info = next_account_info(account_info_iter)?;
+        // TODO six unpack and check liquidity mint
+        // let reward_pool = RewardPool::try_from_slice(&reward_pool_info.data.borrow()[8..])?;
+        // assert_account_key(liquidity_mint_info, &reward_pool.liquidity_mint)?;
+
         let vault_info = next_account_info(account_info_iter)?;
 
         let eld_reward_program_id = next_account_info(account_info_iter)?;

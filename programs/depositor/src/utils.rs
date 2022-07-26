@@ -176,6 +176,7 @@ pub fn deposit<'a>(
             )?;
         }
         None | Some(MiningType::None) => {
+            msg!("Deposit into collateral pool");
             let collateral_pool_market_info = next_account_info(money_market_account_info_iter)?;
             let collateral_pool_market_authority_info =
                 next_account_info(money_market_account_info_iter)?;
