@@ -480,16 +480,18 @@ impl Processor {
             &[pool_bump_seed],
         ];
 
-        deposit_mining(
-            everlend_rewards_program_info.key,
-            everlend_config.clone(),
-            mining_reward_pool.clone(),
-            mining_reward_acc.clone(),
-            user_transfer_authority_info.clone(),
-            pool_info.to_owned(),
-            mint_amount,
-            &[pool_seeds],
-        )?;
+        if !mining_reward_pool.owner.eq(&Pubkey::default()) {
+            deposit_mining(
+                everlend_rewards_program_info.key,
+                everlend_config.clone(),
+                mining_reward_pool.clone(),
+                mining_reward_acc.clone(),
+                user_transfer_authority_info.clone(),
+                pool_info.to_owned(),
+                mint_amount,
+                &[pool_seeds],
+            )?;
+        }
 
         Ok(())
     }
@@ -820,16 +822,18 @@ impl Processor {
             &[pool_bump_seed],
         ];
 
-        withdraw_mining(
-            everlend_rewards_program_info.key,
-            everlend_config.clone(),
-            mining_reward_pool.clone(),
-            mining_reward_acc.clone(),
-            user_transfer_authority_info.clone(),
-            pool_info.to_owned(),
-            collateral_amount,
-            &[pool_seeds],
-        )?;
+        if !mining_reward_pool.owner.eq(&Pubkey::default()) {
+            withdraw_mining(
+                everlend_rewards_program_info.key,
+                everlend_config.clone(),
+                mining_reward_pool.clone(),
+                mining_reward_acc.clone(),
+                user_transfer_authority_info.clone(),
+                pool_info.to_owned(),
+                collateral_amount,
+                &[pool_seeds],
+            )?;
+        }
 
         Ok(())
     }
