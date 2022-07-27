@@ -11,6 +11,7 @@ pub fn fill_vault<'a>(
     config: AccountInfo<'a>,
     reward_pool: AccountInfo<'a>,
     reward_mint: AccountInfo<'a>,
+    fee_account: AccountInfo<'a>,
     vault: AccountInfo<'a>,
     from: AccountInfo<'a>,
     authority: AccountInfo<'a>,
@@ -25,6 +26,7 @@ pub fn fill_vault<'a>(
             AccountMeta::new(*reward_pool.key, false),
             AccountMeta::new_readonly(*reward_mint.key, false),
             AccountMeta::new(*vault.key, false),
+            AccountMeta::new(*fee_account.key, false),
             AccountMeta::new(*authority.key, true),
             AccountMeta::new(*from.key, false),
             AccountMeta::new_readonly(spl_token::id(), false),
@@ -33,7 +35,15 @@ pub fn fill_vault<'a>(
 
     invoke_signed(
         &ix,
-        &[config, reward_pool, reward_mint, vault, from, authority],
+        &[
+            config,
+            reward_pool,
+            reward_mint,
+            vault,
+            fee_account,
+            from,
+            authority,
+        ],
         signers_seeds,
     )
 }

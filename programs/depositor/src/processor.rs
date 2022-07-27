@@ -1042,6 +1042,7 @@ impl Processor {
 
         let vault_info = next_account_info(account_info_iter)?;
 
+        let fee_account_info = next_account_info(account_info_iter)?;
         let eld_reward_program_id = next_account_info(account_info_iter)?;
 
         let (vault, _) = Pubkey::find_program_address(
@@ -1209,6 +1210,7 @@ impl Processor {
             eld_config_info.clone(),
             reward_pool_info.clone(),
             reward_mint_info.clone(),
+            fee_account_info.clone(),
             vault_info.clone(),
             reward_destination_info.clone(),
             depositor_authority_info.clone(),
