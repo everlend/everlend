@@ -399,8 +399,6 @@ impl Processor {
         let everlend_rewards_program_info = next_account_info(account_info_iter)?;
 
         assert_owned_by(everlend_config, &eld_config::id())?;
-        assert_owned_by(mining_reward_pool, &eld_rewards::id())?;
-        assert_owned_by(mining_reward_acc, &eld_rewards::id())?;
         assert_account_key(everlend_rewards_program_info, &eld_rewards::id())?;
 
         let _token_program_info = next_account_info(account_info_iter)?;
@@ -480,16 +478,21 @@ impl Processor {
             &[pool_bump_seed],
         ];
 
-        deposit_mining(
-            everlend_rewards_program_info.key,
-            everlend_config.clone(),
-            mining_reward_pool.clone(),
-            mining_reward_acc.clone(),
-            user_transfer_authority_info.clone(),
-            pool_info.to_owned(),
-            mint_amount,
-            &[pool_seeds],
-        )?;
+        if !mining_reward_pool.owner.eq(&Pubkey::default()) {
+            assert_owned_by(mining_reward_pool, &eld_rewards::id())?;
+            assert_owned_by(mining_reward_acc, &eld_rewards::id())?;
+
+            deposit_mining(
+                everlend_rewards_program_info.key,
+                everlend_config.clone(),
+                mining_reward_pool.clone(),
+                mining_reward_acc.clone(),
+                user_transfer_authority_info.clone(),
+                pool_info.to_owned(),
+                mint_amount,
+                &[pool_seeds],
+            )?;
+        }
 
         Ok(())
     }
@@ -685,8 +688,6 @@ impl Processor {
         let everlend_rewards_program_info = next_account_info(account_info_iter)?;
 
         assert_owned_by(everlend_config, &eld_config::id())?;
-        assert_owned_by(mining_reward_pool, &eld_rewards::id())?;
-        assert_owned_by(mining_reward_acc, &eld_rewards::id())?;
         assert_account_key(everlend_rewards_program_info, &eld_rewards::id())?;
 
         let rent_info = next_account_info(account_info_iter)?;
@@ -820,16 +821,21 @@ impl Processor {
             &[pool_bump_seed],
         ];
 
-        withdraw_mining(
-            everlend_rewards_program_info.key,
-            everlend_config.clone(),
-            mining_reward_pool.clone(),
-            mining_reward_acc.clone(),
-            user_transfer_authority_info.clone(),
-            pool_info.to_owned(),
-            collateral_amount,
-            &[pool_seeds],
-        )?;
+        if !mining_reward_pool.owner.eq(&Pubkey::default()) {
+            assert_owned_by(mining_reward_pool, &eld_rewards::id())?;
+            assert_owned_by(mining_reward_acc, &eld_rewards::id())?;
+
+            withdraw_mining(
+                everlend_rewards_program_info.key,
+                everlend_config.clone(),
+                mining_reward_pool.clone(),
+                mining_reward_acc.clone(),
+                user_transfer_authority_info.clone(),
+                pool_info.to_owned(),
+                collateral_amount,
+                &[pool_seeds],
+            )?;
+        }
 
         Ok(())
     }
