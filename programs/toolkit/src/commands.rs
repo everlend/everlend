@@ -1,9 +1,15 @@
+use std::fs;
+
+use anchor_lang::AnchorDeserialize;
 use anyhow::bail;
 use everlend_depositor::state::Rebalancing;
+use larix_lending::state::reserve::Reserve;
 use solana_client::client_error::ClientError;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
+use solana_program_test::{find_file, read_file};
 use solana_sdk::signature::Keypair;
+use solana_sdk::signature::Signer;
 use spl_associated_token_account::get_associated_token_address;
 
 use everlend_liquidity_oracle::state::DistributionArray;
@@ -15,11 +21,21 @@ use everlend_registry::{
         TOTAL_DISTRIBUTIONS,
     },
 };
-use everlend_utils::integrations::MoneyMarket;
+use everlend_utils::integrations::{MoneyMarket, StakingMoneyMarket};
 
-use crate::accounts_config::{CollateralPoolAccounts, InitializedAccounts};
+use crate::accounts_config::{
+    save_config_file, CollateralPoolAccounts, DefaultAccounts, InitializedAccounts,
+};
 use crate::collateral_pool::{self, PoolPubkeys};
+use crate::download_account::download_account;
+use crate::liquidity_mining::quarry_liquidity_miner::QuarryLiquidityMiner;
+use crate::liquidity_mining::save_mining_accounts;
+use crate::liquidity_mining::{
+    execute_init_mining_accounts, larix_liquidity_miner::LarixLiquidityMiner,
+    port_liquidity_miner::PortLiquidityMiner, quarry_raw_test, LiquidityMiner,
+};
 use crate::registry::close_registry_config;
+use crate::utils::init_token_account;
 use crate::{
     accounts_config::TokenAccounts,
     depositor, general_pool, income_pools, liquidity_oracle, registry,
@@ -50,9 +66,9 @@ pub async fn command_create_registry(
         income_pools_program_id: everlend_income_pools::id(),
         money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
     };
-    programs.money_market_program_ids[0] = default_accounts.port_finance_program_id;
-    programs.money_market_program_ids[1] = default_accounts.larix_program_id;
-    programs.money_market_program_ids[2] = default_accounts.solend_program_id;
+    programs.money_market_program_ids[0] = default_accounts.port_finance.program_id;
+    programs.money_market_program_ids[1] = default_accounts.larix.program_id;
+    programs.money_market_program_ids[2] = default_accounts.solend.program_id;
 
     println!("programs = {:#?}", programs);
 
@@ -110,9 +126,9 @@ pub async fn command_set_registry_config(
         money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
     };
 
-    programs.money_market_program_ids[0] = default_accounts.port_finance_program_id;
-    programs.money_market_program_ids[1] = default_accounts.larix_program_id;
-    programs.money_market_program_ids[2] = default_accounts.solend_program_id;
+    programs.money_market_program_ids[0] = default_accounts.port_finance.program_id;
+    programs.money_market_program_ids[1] = default_accounts.larix.program_id;
+    programs.money_market_program_ids[2] = default_accounts.solend.program_id;
 
     println!("programs = {:#?}", programs);
 
@@ -138,6 +154,122 @@ pub async fn command_set_registry_config(
         },
     )?;
 
+    Ok(())
+}
+
+pub async fn command_save_larix_accounts(reserve_filepath: &str) -> anyhow::Result<()> {
+    let mut reserve_data = read_file(find_file(reserve_filepath).unwrap());
+    let reserve = Reserve::unpack_from_slice(reserve_data.as_mut_slice()).unwrap();
+    download_account(
+        &reserve.liquidity.supply_pubkey,
+        "larix",
+        "liquidity_supply",
+    )
+    .await;
+    download_account(
+        &reserve.liquidity.fee_receiver,
+        "larix",
+        "liquidity_fee_receiver",
+    )
+    .await;
+    download_account(&reserve.collateral.mint_pubkey, "larix", "collateral_mint").await;
+    download_account(
+        &reserve.collateral.supply_pubkey,
+        "larix",
+        "collateral_supply",
+    )
+    .await;
+    Ok(())
+}
+
+pub async fn command_save_quarry_accounts(config: &Config) -> anyhow::Result<()> {
+    let mut default_accounts = config.get_default_accounts();
+    // let default_accounts = config.get_default_accounts();
+    let file_path = "../tests/tests/fixtures/quarry/quarry.bin";
+    fs::remove_file(file_path)?;
+    println!("quarry {}", default_accounts.quarry.quarry);
+    download_account(&default_accounts.quarry.quarry, "quarry", "quarry").await;
+    let data: Vec<u8> = read_file(find_file(file_path).unwrap());
+    // first 8 bytes are meta information
+    let adjusted = &data[8..];
+    let deserialized = quarry_mine::Quarry::try_from_slice(adjusted)?;
+    println!("rewarder {}", deserialized.rewarder);
+    println!("token mint {}", deserialized.token_mint_key);
+    default_accounts.quarry.rewarder = deserialized.rewarder;
+    default_accounts.quarry.token_mint = deserialized.token_mint_key;
+    save_config_file::<DefaultAccounts, &str>(&default_accounts, "default.devnet.yaml")?;
+    Ok(())
+}
+
+pub fn command_init_mining(
+    config: &Config,
+    staking_money_market: StakingMoneyMarket,
+    token: &String,
+    sub_reward_token_mint: Option<Pubkey>,
+) -> anyhow::Result<()> {
+    let liquidity_miner_option: Option<Box<dyn LiquidityMiner>> = match staking_money_market {
+        StakingMoneyMarket::PortFinance => Some(Box::new(PortLiquidityMiner {})),
+        StakingMoneyMarket::Larix => Some(Box::new(LarixLiquidityMiner {})),
+        StakingMoneyMarket::Quarry => Some(Box::new(QuarryLiquidityMiner {})),
+        _ => None,
+    };
+    if liquidity_miner_option.is_none() {
+        return Err(anyhow::anyhow!("Wrong staking money market"));
+    }
+    let liquidity_miner = liquidity_miner_option.unwrap();
+    let mut mining_pubkey = liquidity_miner.get_mining_pubkey(config, token);
+    if mining_pubkey.eq(&Pubkey::default()) {
+        let new_mining_account = Keypair::new();
+        mining_pubkey = new_mining_account.pubkey();
+        liquidity_miner.create_mining_account(
+            config,
+            token,
+            &new_mining_account,
+            sub_reward_token_mint,
+        )?;
+    };
+    let pubkeys = liquidity_miner.get_pubkeys(config, token);
+    let mining_type =
+        liquidity_miner.get_mining_type(config, token, mining_pubkey, sub_reward_token_mint);
+    execute_init_mining_accounts(config, &pubkeys.unwrap(), mining_type)?;
+    let money_market = match staking_money_market {
+        StakingMoneyMarket::Larix => MoneyMarket::Larix,
+        StakingMoneyMarket::Solend => MoneyMarket::Solend,
+        _ => MoneyMarket::PortFinance,
+    };
+    save_mining_accounts(config, token, money_market, &config.network)?;
+    Ok(())
+}
+
+pub fn command_init_quarry_mining_accounts(config: &Config, token: &String) -> anyhow::Result<()> {
+    let default_accounts = config.get_default_accounts();
+    let mut initialized_accounts = config.get_initialized_accounts();
+    let quarry_mining = initialized_accounts.quarry_mining.get_mut(token).unwrap();
+    let miner_vault = Keypair::new();
+    quarry_raw_test::create_miner(config, &miner_vault)?;
+    quarry_mining.miner_vault = miner_vault.pubkey();
+    println!("miner vault {}", miner_vault.pubkey());
+    let token_source = Keypair::new();
+    init_token_account(config, &token_source, &default_accounts.quarry.token_mint)?;
+    quarry_mining.token_source = token_source.pubkey();
+    println!("token source {}", token_source.pubkey());
+    let rewards_account = Keypair::new();
+    init_token_account(
+        config,
+        &rewards_account,
+        &default_accounts.quarry.rewards_token_mint,
+    )?;
+    quarry_mining.rewards_token_account = rewards_account.pubkey();
+    println!("rewards token account {}", rewards_account.pubkey());
+    let fee_account = Keypair::new();
+    init_token_account(
+        config,
+        &fee_account,
+        &default_accounts.quarry.rewards_token_mint,
+    )?;
+    quarry_mining.fee_token_account = fee_account.pubkey();
+    println!("fee token account {}", fee_account.pubkey());
+    initialized_accounts.save(&format!("accounts.{}.yaml", config.network))?;
     Ok(())
 }
 
@@ -482,8 +614,10 @@ pub async fn command_create_token_accounts(
                 income_pool: income_pool_pubkey,
                 income_pool_token_account,
                 mm_pools: Vec::new(),
+                mining_accounts: Vec::new(),
                 collateral_pools,
                 liquidity_transit: liquidity_transit_pubkey,
+                port_finance_obligation_account: Pubkey::default(),
             },
         );
     }
@@ -616,9 +750,7 @@ pub async fn command_info_reserve_liquidity(config: &Config) -> anyhow::Result<(
     Ok(())
 }
 
-pub async fn command_migrate_depositor(
-    config: &Config,
-) -> anyhow::Result<()> {
+pub async fn command_migrate_depositor(config: &Config) -> anyhow::Result<()> {
     let initialized_accounts = config.get_initialized_accounts();
     // Check that RegistryConfig migrated
     {

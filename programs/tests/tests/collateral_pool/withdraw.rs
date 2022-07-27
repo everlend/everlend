@@ -5,7 +5,7 @@ use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program_test::*;
 use solana_sdk::{
-    pubkey::Pubkey, signer::Signer, transaction::Transaction, transaction::TransactionError 
+    pubkey::Pubkey, signer::Signer, transaction::Transaction, transaction::TransactionError
 };
 
 use crate::utils::{
@@ -31,7 +31,7 @@ async fn setup() -> (
     TestPoolWithdrawAuthority,
     LiquidityProvider,
 ) {
-    let mut context = presetup().await.0;
+    let mut context = presetup().await.context;
 
     let test_pool_market = TestPoolMarket::new();
     test_pool_market.init(&mut context).await.unwrap();
@@ -76,7 +76,7 @@ async fn success() {
     );
     assert_eq!(
         get_token_balance(&mut context, &test_pool.token_account.pubkey()).await,
-        DEPOSIT_AMOUNT - WITHDRAW_AMOUNT, 
+        DEPOSIT_AMOUNT - WITHDRAW_AMOUNT,
     );
 }
 

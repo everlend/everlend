@@ -26,19 +26,19 @@ async fn setup() -> (
     UniversalLiquidityPool,
     LiquidityProvider,
 ) {
-    let (mut context, _, _, _) = presetup().await;
+    let mut env = presetup().await;
 
     let test_pool_market = UlpMarket::new();
-    test_pool_market.init(&mut context).await.unwrap();
+    test_pool_market.init(&mut env.context).await.unwrap();
 
     let test_pool = UniversalLiquidityPool::new(&test_pool_market, None);
     test_pool
-        .create(&mut context, &test_pool_market)
+        .create(&mut env.context, &test_pool_market)
         .await
         .unwrap();
 
     let user = add_liquidity_provider(
-        &mut context,
+        &mut env.context,
         &test_pool.token_mint_pubkey,
         &test_pool.pool_mint.pubkey(),
         9999 * EXP,
@@ -46,7 +46,7 @@ async fn setup() -> (
     .await
     .unwrap();
 
-    (context, test_pool_market, test_pool, user)
+    (env.context, test_pool_market, test_pool, user)
 }
 
 #[tokio::test]

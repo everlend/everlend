@@ -26,7 +26,7 @@ async fn setup() -> (
     UniversalLiquidityPool,
     LiquidityProvider,
 ) {
-    let (mut context, _, _, _) = presetup().await;
+    let mut context = presetup().await.context;
 
     let test_pool_market = UlpMarket::new();
     test_pool_market.init(&mut context).await.unwrap();

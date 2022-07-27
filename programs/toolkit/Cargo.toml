@@ -12,10 +12,13 @@ clap = "2.33.3"
 url = "2.2.2"
 regex = "1.5.5"
 dirs-next = "2.0.0"
+reqwest = "0.11.11"
+base64 = "0.13.0"
 serde = "1.0.130"
 serde_derive = "1.0.103"
 serde_yaml = "0.8.21"
 serde_with = "1.12.0"
+serde_json = "1.0.81"
 solana-clap-utils = "1.9.13"
 solana-cli-config = "1.9.13"
 solana-account-decoder = "1.9.13"
@@ -23,10 +26,14 @@ solana-client = "1.9.13"
 solana-sdk = "1.9.13"
 solana-logger = "1.9.13"
 solana-program = "1.9.13"
+solana-program-test = "1.9.13"
 tokio = "1.9.0"
 spl-associated-token-account = { version = "1.0.3", features = [ "no-entrypoint" ] }
 spl-token = { version = "3.1", features = [ "no-entrypoint" ] }
 spl-token-lending = { git = "https://github.com/everlend/solana-program-library", features = [ "no-entrypoint" ] }
+larix-lending = { git = "https://github.com/everlend/larix-lending", features = [ "no-entrypoint" ] }
+port-finance-staking = { git = "https://github.com/port-finance/variable-rate-lending", features = ["no-entrypoint"] }
+quarry-mine = { version = "5.0.2", features = ["no-entrypoint"] }
 everlend-registry = { path = "../registry", features = [ "no-entrypoint" ] }
 everlend-general-pool = { path = "../general_pool", features = [ "no-entrypoint" ] }
 everlend-collateral-pool = { path = "../collateral_pool", features = [ "no-entrypoint" ] }

@@ -5,6 +5,7 @@ use std::{process::exit, str::FromStr};
 use clap::{
     crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
 };
+use commands_test::{command_test_larix_mining_raw, command_test_quarry_mining_raw};
 use everlend_depositor::find_rebalancing_program_address;
 use everlend_depositor::state::Rebalancing;
 use everlend_utils::find_program_address;
@@ -29,7 +30,7 @@ use everlend_registry::state::{
     RegistryPrograms, RegistryRootAccounts, RegistrySettings, SetRegistryPoolConfigParams,
     TOTAL_DISTRIBUTIONS,
 };
-use everlend_utils::integrations::MoneyMarket;
+use everlend_utils::integrations::{MoneyMarket, StakingMoneyMarket};
 use general_pool::get_withdrawal_requests;
 use utils::*;
 
@@ -42,8 +43,10 @@ mod commands;
 mod commands_multisig;
 mod commands_test;
 mod depositor;
+mod download_account;
 mod general_pool;
 mod income_pools;
+mod liquidity_mining;
 mod liquidity_oracle;
 mod multisig;
 mod registry;
@@ -83,10 +86,19 @@ async fn command_create(
         income_pools_program_id: everlend_income_pools::id(),
         money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
     };
-    programs.money_market_program_ids[0] = default_accounts.port_finance_program_id;
-    programs.money_market_program_ids[1] = default_accounts.larix_program_id;
-    programs.money_market_program_ids[2] = default_accounts.solend_program_id;
+    programs.money_market_program_ids[0] = default_accounts.port_finance.program_id;
+    programs.money_market_program_ids[1] = default_accounts.larix.program_id;
+    programs.money_market_program_ids[2] = default_accounts.solend.program_id;
 
+    registry::set_registry_config(
+        config,
+        &registry_pubkey,
+        programs,
+        RegistryRootAccounts::default(),
+        RegistrySettings {
+            refresh_income_interval: REFRESH_INCOME_INTERVAL,
+        },
+    )?;
     println!("programs = {:#?}", programs);
 
     let general_pool_market_pubkey = general_pool::create_market(config, None, &registry_pubkey)?;
@@ -105,6 +117,22 @@ async fn command_create(
     distribution[0] = 0;
     distribution[1] = 0;
     distribution[2] = 0;
+
+    println!("Registry");
+    let registry_pubkey = registry::init(config, None)?;
+    let mut programs = RegistryPrograms {
+        general_pool_program_id: everlend_general_pool::id(),
+        collateral_pool_program_id: everlend_collateral_pool::id(),
+        liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
+        depositor_program_id: everlend_depositor::id(),
+        income_pools_program_id: everlend_income_pools::id(),
+        money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
+    };
+    programs.money_market_program_ids[0] = default_accounts.port_finance.program_id;
+    programs.money_market_program_ids[1] = default_accounts.larix.program_id;
+    programs.money_market_program_ids[2] = default_accounts.solend.program_id;
+
+    println!("programs = {:#?}", programs);
 
     let mut collateral_pool_markets: [Pubkey; TOTAL_DISTRIBUTIONS] = Default::default();
     collateral_pool_markets[..mm_collateral_pool_markets.len()]
@@ -262,8 +290,10 @@ async fn command_create(
                 income_pool: income_pool_pubkey,
                 income_pool_token_account,
                 mm_pools: Vec::new(),
+                mining_accounts: Vec::new(),
                 collateral_pools,
                 liquidity_transit: liquidity_transit_pubkey,
+                port_finance_obligation_account: Pubkey::default(),
             },
         );
     }
@@ -278,6 +308,7 @@ async fn command_create(
         token_accounts,
         liquidity_oracle: liquidity_oracle_pubkey,
         depositor: depositor_pubkey,
+        quarry_mining: BTreeMap::new(),
         rebalance_executor,
     };
 
@@ -485,6 +516,19 @@ async fn command_run_migrate_pool_market(
     Ok(())
 }
 
+async fn command_create_depositor_transit_account(
+    config: &Config,
+    token_mint: Pubkey,
+    seed: Option<String>,
+) -> anyhow::Result<()> {
+    let initialized_accounts = config.get_initialized_accounts();
+
+    println!("Token mint {}. Seed {:?}", token_mint, seed);
+    depositor::create_transit(config, &initialized_accounts.depositor, &token_mint, seed)?;
+
+    Ok(())
+}
+
 // TODO remove after setup
 async fn command_create_income_pool_safety_fund_token_account(
     config: &Config,
@@ -580,6 +624,67 @@ async fn main() -> anyhow::Result<()> {
                         .required(true)
                         .help("Registry pubkey"),
                 ),
+        )
+        .subcommand(
+            SubCommand::with_name("init-mining")
+                .arg(
+                    Arg::with_name("staking-money-market")
+                        .long("staking-money-market")
+                        .value_name("NUMBER")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Money market index"),
+                )
+                .arg(
+                    Arg::with_name("token")
+                        .long("token")
+                        .short("t")
+                        .value_name("TOKEN")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Token"),
+                )
+                .arg(
+                    Arg::with_name("sub-reward-mint")
+                        .long("sub-reward-mint")
+                        .short("m")
+                        .value_name("REWARD_MINT")
+                        .takes_value(true)
+                        .help("Sub reward token mint"),
+                ),
+        )
+        .subcommand(SubCommand::with_name("save-larix-accounts"))
+        .subcommand(SubCommand::with_name("test-larix-mining-raw"))
+        .subcommand(SubCommand::with_name("save-quarry-accounts"))
+        .subcommand(
+            SubCommand::with_name("init-quarry-mining-accounts")
+                .arg(
+                    Arg::with_name("default")
+                        .long("default")
+                        .value_name("PATH")
+                        .takes_value(true)
+                        .help("Defaults file"),
+                )
+                .arg(
+                    Arg::with_name("token")
+                        .long("token")
+                        .short("t")
+                        .value_name("TOKEN")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Token"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("test-quarry-mining-raw").arg(
+                Arg::with_name("token")
+                    .long("token")
+                    .short("t")
+                    .value_name("TOKEN")
+                    .takes_value(true)
+                    .required(true)
+                    .help("Token"),
+            ),
         )
         .subcommand(
             SubCommand::with_name("set-registry-pool-config")
@@ -683,14 +788,15 @@ async fn main() -> anyhow::Result<()> {
                         .value_name("KEYPAIR")
                         .takes_value(true)
                         .help("Keypair [default: new keypair]"),
-                ).arg(
-                Arg::with_name("rebalance-executor")
-                    .long("rebalance-executor")
-                    .validator(is_pubkey)
-                    .value_name("PUBKEY")
-                    .takes_value(true)
-                    .help("Rebalance executor pubkey"),
-            ),
+                )
+                .arg(
+                    Arg::with_name("rebalance-executor")
+                        .long("rebalance-executor")
+                        .validator(is_pubkey)
+                        .value_name("PUBKEY")
+                        .takes_value(true)
+                        .help("Rebalance executor pubkey"),
+                ),
         )
         .subcommand(
             SubCommand::with_name("create-mm-pool")
@@ -835,14 +941,15 @@ async fn main() -> anyhow::Result<()> {
                         .value_name("PATH")
                         .takes_value(true)
                         .help("Accounts file"),
-                ).arg(
-                Arg::with_name("rebalance-executor")
-                    .long("rebalance-executor")
-                    .validator(is_pubkey)
-                    .value_name("PUBKEY")
-                    .takes_value(true)
-                    .help("Rebalance executor pubkey"),
-            ),
+                )
+                .arg(
+                    Arg::with_name("rebalance-executor")
+                        .long("rebalance-executor")
+                        .validator(is_pubkey)
+                        .value_name("PUBKEY")
+                        .takes_value(true)
+                        .help("Rebalance executor pubkey"),
+                ),
         )
         .subcommand(
             SubCommand::with_name("info")
@@ -1039,8 +1146,7 @@ async fn main() -> anyhow::Result<()> {
                 )
                 .subcommand(SubCommand::with_name("migrate-depositor").about(
                     "Migrate Depositor account. Must be invoke after migrate-registry-config.",
-                ),
-                )
+                ))
                 .subcommand(
                     SubCommand::with_name("migrate-registry-config").about(
                         "Migrate RegistryConfig account. Must be invoke by registry manager.",
@@ -1064,6 +1170,25 @@ async fn main() -> anyhow::Result<()> {
                         .value_name("PATH")
                         .takes_value(true)
                         .help("Accounts file"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("create-depositor-transit-token-account")
+                .about("Run  create depositor transit token account")
+                .arg(
+                    Arg::with_name("seed")
+                        .long("seed")
+                        .value_name("SEED")
+                        .takes_value(true)
+                        .help("Transit seed"),
+                )
+                .arg(
+                    Arg::with_name("token-mint")
+                        .long("token-mint")
+                        .value_name("MINT")
+                        .validator(is_pubkey)
+                        .takes_value(true)
+                        .help("Rewards token mint"),
                 ),
         )
         .get_matches();
@@ -1143,6 +1268,31 @@ async fn main() -> anyhow::Result<()> {
         ("set-registry-config", Some(arg_matches)) => {
             let registry_pubkey = pubkey_of(arg_matches, "registry").unwrap();
             command_set_registry_config(&config, registry_pubkey).await
+        }
+        ("init-mining", Some(arg_matches)) => {
+            let staking_money_market =
+                value_of::<usize>(arg_matches, "staking-money-market").unwrap();
+            let token = value_of::<String>(arg_matches, "token").unwrap();
+            let sub_reward_mint = pubkey_of(arg_matches, "sub-reward-mint");
+            command_init_mining(
+                &config,
+                StakingMoneyMarket::from(staking_money_market),
+                &token,
+                sub_reward_mint,
+            )
+        }
+        ("save-larix-accounts", Some(_)) => {
+            command_save_larix_accounts("../tests/tests/fixtures/larix/reserve_sol.bin").await
+        }
+        ("test-larix-mining-raw", Some(_)) => command_test_larix_mining_raw(&config),
+        ("save-quarry-accounts", Some(_)) => command_save_quarry_accounts(&config).await,
+        ("init-quarry-mining-accounts", Some(arg_matches)) => {
+            let token = value_of::<String>(arg_matches, "token").unwrap();
+            command_init_quarry_mining_accounts(&config, &token)
+        }
+        ("test-quarry-mining-raw", Some(arg_matches)) => {
+            let token = value_of::<String>(arg_matches, "token").unwrap();
+            command_test_quarry_mining_raw(&config, &token)
         }
         ("set-registry-pool-config", Some(arg_matches)) => {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
@@ -1330,6 +1480,11 @@ async fn main() -> anyhow::Result<()> {
             let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
             let case = value_of::<String>(arg_matches, "case");
             command_create_income_pool_safety_fund_token_account(&config, accounts_path, case).await
+        }
+        ("create-depositor-transit-token-account", Some(arg_matches)) => {
+            let token_mint = pubkey_of(arg_matches, "token-mint").unwrap();
+            let seed = value_of::<String>(arg_matches, "seed");
+            command_create_depositor_transit_account(&config, token_mint, seed).await
         }
         _ => unreachable!(),
     }

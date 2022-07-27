@@ -19,22 +19,22 @@ async fn setup(
     LiquidityProvider,
     Pubkey,
 ) {
-    let (mut context, _, _, registry) = presetup().await;
+    let mut env = presetup().await;
 
     let test_pool_market = TestGeneralPoolMarket::new();
     test_pool_market
-        .init(&mut context, &registry.keypair.pubkey())
+        .init(&mut env.context, &env.registry.keypair.pubkey())
         .await
         .unwrap();
 
     let test_pool = TestGeneralPool::new(&test_pool_market, token_mint);
     test_pool
-        .create(&mut context, &test_pool_market)
+        .create(&mut env.context, &test_pool_market)
         .await
         .unwrap();
-    registry
+    env.registry
         .set_registry_pool_config(
-            &mut context,
+            &mut env.context,
             &test_pool.pool_pubkey,
             SetRegistryPoolConfigParams {
                 deposit_minimum: 0,
@@ -45,10 +45,10 @@ async fn setup(
         .unwrap();
 
     let test_pool_borrow_authority =
-        TestGeneralPoolBorrowAuthority::new(&test_pool, context.payer.pubkey());
+        TestGeneralPoolBorrowAuthority::new(&test_pool, env.context.payer.pubkey());
     test_pool_borrow_authority
         .create(
-            &mut context,
+            &mut env.context,
             &test_pool_market,
             &test_pool,
             COLLATERAL_POOL_SHARE_ALLOWED,
@@ -57,7 +57,7 @@ async fn setup(
         .unwrap();
 
     let user = add_liquidity_provider(
-        &mut context,
+        &mut env.context,
         &test_pool.token_mint_pubkey,
         &test_pool.pool_mint.pubkey(),
         101,
@@ -66,20 +66,29 @@ async fn setup(
     .unwrap();
 
     // Fill user account by native token
-    transfer(&mut context, &user.owner.pubkey(), INITIAL_USER_BALANCE)
+    transfer(&mut env.context, &user.owner.pubkey(), INITIAL_USER_BALANCE)
         .await
         .unwrap();
 
-    let mining_acc = test_pool.init_user_mining(&mut context, &test_pool_market, &user).await;
+    let mining_acc = test_pool
+        .init_user_mining(&mut env.context, &test_pool_market, &user)
+        .await;
 
     test_pool
-        .deposit(&mut context, &registry, &test_pool_market, &user, mining_acc, 100)
+        .deposit(
+            &mut env.context,
+            &env.registry,
+            &test_pool_market,
+            &user,
+            mining_acc,
+            100,
+        )
         .await
         .unwrap();
 
     (
-        context,
-        registry,
+        env.context,
+        env.registry,
         test_pool_market,
         test_pool,
         test_pool_borrow_authority,
@@ -90,11 +99,25 @@ async fn setup(
 
 #[tokio::test]
 async fn success() {
-    let (mut context, registry, test_pool_market, test_pool, _pool_borrow_authority, user, mining_acc) =
-        setup(None).await;
+    let (
+        mut context,
+        registry,
+        test_pool_market,
+        test_pool,
+        _pool_borrow_authority,
+        user,
+        mining_acc,
+    ) = setup(None).await;
 
     test_pool
-        .withdraw_request(&mut context, &registry, &test_pool_market, &user, mining_acc, 45)
+        .withdraw_request(
+            &mut context,
+            &registry,
+            &test_pool_market,
+            &user,
+            mining_acc,
+            45,
+        )
         .await
         .unwrap();
 

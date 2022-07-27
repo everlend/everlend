@@ -14,12 +14,15 @@ use everlend_utils::integrations::{self, MoneyMarketPubkeys};
 use solana_account_decoder::parse_token::UiTokenAmount;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
-use std::thread;
+use solana_sdk::{signature::Keypair, signer::Signer};
+use spl_token::native_mint;
+use std::{str::FromStr, thread};
 
 use crate::{
     accounts_config::InitializedAccounts,
     depositor, distribution,
     general_pool::{self, get_withdrawal_request_accounts},
+    liquidity_mining::{larix_raw_test, quarry_raw_test},
     liquidity_oracle,
     utils::Config,
 };
@@ -45,6 +48,7 @@ pub async fn command_run_test(
         token_accounts,
         liquidity_oracle,
         depositor,
+        quarry_mining: _,
         rebalance_executor: _,
     } = initialized_accounts;
 
@@ -62,33 +66,36 @@ pub async fn command_run_test(
 
     let sol_oracle = default_accounts.sol_oracle;
     let port_finance_pubkeys = integrations::spl_token_lending::AccountPubkeys {
-        reserve: default_accounts.port_finance_reserve_sol,
-        reserve_liquidity_supply: default_accounts.port_finance_reserve_sol_supply,
+        reserve: default_accounts.port_finance.reserve_sol,
+        reserve_liquidity_supply: default_accounts.port_finance.reserve_sol_supply,
         reserve_liquidity_oracle: sol_oracle,
-        lending_market: default_accounts.port_finance_lending_market,
+        lending_market: default_accounts.port_finance.lending_market,
     };
     let larix_pubkeys = integrations::larix::AccountPubkeys {
-        reserve: default_accounts.larix_reserve_sol,
-        reserve_liquidity_supply: default_accounts.larix_reserve_sol_supply,
+        reserve: default_accounts.larix.reserve_sol,
+        reserve_liquidity_supply: default_accounts.larix.reserve_sol_supply,
         reserve_liquidity_oracle: sol_oracle,
-        lending_market: default_accounts.larix_lending_market,
+        lending_market: default_accounts.larix.lending_market,
     };
 
     let solend_pubkeys = integrations::solend::AccountPubkeys {
-        reserve: default_accounts.solend_reserve_sol,
+        reserve: default_accounts.solend.reserve_sol,
         reserve_liquidity_supply: default_accounts
-            .solend_reserve_sol_supply
+            .solend
+            .reserve_sol_supply
             .context("`solend_reserve_sol_supply` invalid value")
             .unwrap(),
         reserve_liquidity_pyth_oracle: default_accounts
-            .solend_reserve_pyth_oracle
+            .solend
+            .reserve_pyth_oracle
             .context("`solend_reserve_pyth_oracle` invalid value")
             .unwrap(),
         reserve_liquidity_switchboard_oracle: default_accounts
-            .solend_reserve_switchboard_oracle
+            .solend
+            .reserve_switchboard_oracle
             .context("`solend_reserve_switchboard_oracle` invalid value")
             .unwrap(),
-        lending_market: default_accounts.solend_lending_market,
+        lending_market: default_accounts.solend.lending_market,
     };
 
     let get_balance = |pk: &Pubkey| config.rpc_client.get_token_account_balance(pk);
@@ -150,12 +157,15 @@ pub async fn command_run_test(
             config,
             &registry,
             &depositor,
-            &collateral_pool_markets[i],
-            &sol.collateral_pools[i].pool_token_account,
             &sol.mint,
             &sol.collateral_pools[i].token_mint,
             &programs.money_market_program_ids[i],
             integrations::deposit_accounts(&programs.money_market_program_ids[i], &pubkeys),
+            everlend_depositor::utils::collateral_pool_deposit_accounts(
+                &collateral_pool_markets[i],
+                &sol.collateral_pools[i].token_mint,
+                &sol.collateral_pools[i].pool_token_account,
+            ),
         )
     };
 
@@ -174,12 +184,17 @@ pub async fn command_run_test(
             &depositor,
             &income_pool_market,
             &sol.income_pool_token_account,
-            &collateral_pool_markets[i],
-            &sol.collateral_pools[i].pool_token_account,
             &sol.collateral_pools[i].token_mint,
             &sol.mint,
             &programs.money_market_program_ids[i],
             integrations::withdraw_accounts(&programs.money_market_program_ids[i], &pubkeys),
+            everlend_depositor::utils::collateral_pool_withdraw_accounts(
+                &collateral_pool_markets[i],
+                &sol.collateral_pools[i].token_mint,
+                &sol.collateral_pools[i].pool_token_account,
+                &programs.depositor_program_id,
+                &depositor,
+            ),
         )
     };
 
@@ -235,6 +250,10 @@ pub async fn command_run_test(
             &sol.collateral_token_account,
             &sol.general_pool_token_account,
             &sol.general_pool_mint,
+            // TODO fix mocks
+            &Pubkey::new_unique(),
+            &Pubkey::new_unique(),
+            &Pubkey::new_unique(),
             a,
         )
     };
@@ -251,6 +270,10 @@ pub async fn command_run_test(
             &sol.general_pool_token_account,
             &sol.mint,
             &sol.general_pool_mint,
+            // TODO fix mocks
+            &Pubkey::new_unique(),
+            &Pubkey::new_unique(),
+            &Pubkey::new_unique(),
             a,
         )
     };
@@ -453,5 +476,75 @@ pub async fn command_run_test(
 
     println!("Finished!");
 
+    Ok(())
+}
+
+pub fn command_test_larix_mining_raw(config: &Config) -> anyhow::Result<()> {
+    let token_program_id =
+        Pubkey::from_str("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL").unwrap();
+    let (source_sol, _) = Pubkey::find_program_address(
+        &[
+            &config.fee_payer.pubkey().to_bytes(),
+            &spl_token::id().to_bytes(),
+            &native_mint::id().to_bytes(),
+        ],
+        &token_program_id,
+    );
+    println!("source_sol {}", source_sol);
+    let amount = 100_000_000; //2_500_000_000;
+    let mining_account = Keypair::new();
+    let collateral_transit = Keypair::new();
+    let dividends_account = Keypair::new();
+    let withdraw_account = Keypair::new();
+    larix_raw_test::init_mining_accounts(&config, &mining_account)?;
+    println!("init mining accounts finished");
+    larix_raw_test::deposit_liquidity(&config, amount, &source_sol, &collateral_transit)?;
+
+    let collateral_balance = config
+        .rpc_client
+        .get_token_account_balance(&collateral_transit.pubkey())
+        .unwrap();
+
+    println!("collateral_balance {:?}", collateral_balance);
+
+    let collateral_amount = spl_token::ui_amount_to_amount(
+        collateral_balance.ui_amount.unwrap(),
+        collateral_balance.decimals,
+    );
+
+    println!("deposit liquidity finished");
+    larix_raw_test::deposit_collateral(
+        &config,
+        collateral_amount,
+        &mining_account.pubkey(),
+        &collateral_transit.pubkey(),
+    )?;
+    println!("deposit collateral finished");
+    thread::sleep(time::Duration::from_secs(60));
+    println!("claim dividends finished");
+    larix_raw_test::withdraw_collateral(
+        &config,
+        collateral_amount,
+        &withdraw_account,
+        &mining_account.pubkey(),
+    )?;
+    larix_raw_test::claim_mining(&config, &dividends_account, &mining_account.pubkey())?;
+    println!("withdraw collateral finished");
+    Ok(())
+}
+
+// Please mind: pre-requisites:
+// 1. run init-quarry-mining-accounts
+// 2. transfer some Saber-staked USDC collateral token (quarry_token_mint) on token source
+pub fn command_test_quarry_mining_raw(config: &Config, token: &String) -> anyhow::Result<()> {
+    let amount = 100_000;
+    println!("depositing {}", amount);
+    quarry_raw_test::stake_tokens(config, token, amount)?;
+    println!("stake tokens finished");
+    thread::sleep(time::Duration::from_secs(15));
+    quarry_raw_test::claim_mining_rewards(config, token)?;
+    println!("claim rewards finished");
+    quarry_raw_test::withdraw_tokens(config, token, amount - 1000)?;
+    println!("withdraw tokens finished");
     Ok(())
 }

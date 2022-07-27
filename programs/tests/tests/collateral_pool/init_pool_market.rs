@@ -9,7 +9,7 @@ use crate::utils::{
 
 #[tokio::test]
 async fn success() {
-    let mut context = presetup().await.0;
+    let mut context = presetup().await.context;
 
     let test_pool_market = TestPoolMarket::new();
     test_pool_market.init(&mut context).await.unwrap();

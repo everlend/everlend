@@ -4,7 +4,11 @@ use borsh::BorshDeserialize;
 use everlend_registry::{find_registry_pool_config_program_address, state::RegistryPoolConfig};
 use everlend_utils::{
     assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
-    cpi::{self, rewards::{initialize_mining, deposit_mining, withdraw_mining}}, find_program_address, EverlendError
+    cpi::{
+        self,
+        rewards::{deposit_mining, initialize_mining, withdraw_mining},
+    },
+    find_program_address, EverlendError,
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -15,7 +19,7 @@ use solana_program::{
     program_pack::Pack,
     pubkey::Pubkey,
     rent::Rent,
-    sysvar::Sysvar
+    sysvar::Sysvar,
 };
 use spl_token::state::{Account, Mint};
 
@@ -466,7 +470,8 @@ impl Processor {
             &[signers_seeds],
         )?;
 
-        let (pool_pubkey, pool_bump_seed) = find_pool_program_address(program_id, &pool.pool_market, &pool.token_mint);
+        let (pool_pubkey, pool_bump_seed) =
+            find_pool_program_address(program_id, &pool.pool_market, &pool.token_mint);
         assert_account_key(pool_info, &pool_pubkey)?;
 
         let pool_seeds: &[&[u8]] = &[
@@ -476,14 +481,14 @@ impl Processor {
         ];
 
         deposit_mining(
-            everlend_rewards_program_info.clone(),
+            everlend_rewards_program_info.key,
             everlend_config.clone(),
             mining_reward_pool.clone(),
             mining_reward_acc.clone(),
             user_transfer_authority_info.clone(),
             pool_info.to_owned(),
             mint_amount,
-            &[pool_seeds]
+            &[pool_seeds],
         )?;
 
         Ok(())
@@ -805,7 +810,8 @@ impl Processor {
         )?;
 
         // Mining reward
-        let (pool_pubkey, pool_bump_seed) = find_pool_program_address(program_id, &pool.pool_market, &pool.token_mint);
+        let (pool_pubkey, pool_bump_seed) =
+            find_pool_program_address(program_id, &pool.pool_market, &pool.token_mint);
         assert_account_key(pool_info, &pool_pubkey)?;
 
         let pool_seeds: &[&[u8]] = &[
@@ -815,14 +821,14 @@ impl Processor {
         ];
 
         withdraw_mining(
-            everlend_rewards_program_info.clone(),
+            everlend_rewards_program_info.key,
             everlend_config.clone(),
             mining_reward_pool.clone(),
             mining_reward_acc.clone(),
             user_transfer_authority_info.clone(),
             pool_info.to_owned(),
             collateral_amount,
-            &[pool_seeds]
+            &[pool_seeds],
         )?;
 
         Ok(())
@@ -1042,8 +1048,8 @@ impl Processor {
         Ok(())
     }
 
-     /// Migrate withdraw request
-     pub fn init_user_mining(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+    /// Migrate withdraw request
+    pub fn init_user_mining(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_info = next_account_info(account_info_iter)?;
@@ -1070,7 +1076,7 @@ impl Processor {
         assert_account_key(pool_market_info, &pool.pool_market)?;
 
         let (pool_pubkey, pool_bump_seed) =
-           find_pool_program_address(program_id, &pool.pool_market, &pool.token_mint);
+            find_pool_program_address(program_id, &pool.pool_market, &pool.token_mint);
         assert_account_key(pool_info, &pool_pubkey)?;
 
         let pool_seeds: &[&[u8]] = &[
@@ -1094,29 +1100,29 @@ impl Processor {
         }
 
         initialize_mining(
-            everlend_rewards_program_info.clone(),
+            everlend_rewards_program_info.key,
             everlend_config.clone(),
             mining_reward_pool.clone(),
             mining_reward_acc.clone(),
             user_authority.clone(),
             payer_info.clone(),
             system_program_info.clone(),
-            rent_info.clone()
+            rent_info.clone(),
         )?;
 
         deposit_mining(
-            everlend_rewards_program_info.clone(),
+            everlend_rewards_program_info.key,
             everlend_config.clone(),
             mining_reward_pool.clone(),
             mining_reward_acc.clone(),
             user_authority.clone(),
             pool_info.to_owned(),
             user_account.amount,
-            &[pool_seeds]
+            &[pool_seeds],
         )?;
 
         Ok(())
-     }
+    }
 
     /// Migrate withdraw request
     pub fn migrate_instruction(_program_id: &Pubkey, _accounts: &[AccountInfo]) -> ProgramResult {

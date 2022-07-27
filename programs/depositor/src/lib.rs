@@ -44,3 +44,22 @@ pub fn find_rebalancing_program_address(
         program_id,
     )
 }
+
+/// Find internma mining program address
+pub fn find_internal_mining_program_address(
+    program_id: &Pubkey,
+    liquidity_mint: &Pubkey,
+    // Money market collateral mint
+    collateral_mint: &Pubkey,
+    depositor: &Pubkey,
+) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[
+            "internal_mining".as_bytes(),
+            &liquidity_mint.to_bytes(),
+            &collateral_mint.to_bytes(),
+            &depositor.to_bytes(),
+        ],
+        program_id,
+    )
+}

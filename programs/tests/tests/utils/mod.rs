@@ -22,6 +22,7 @@ pub mod income_pool;
 pub mod income_pool_market;
 pub mod liquidity_oracle;
 pub mod money_market;
+pub mod larix;
 pub mod registry;
 pub mod collateral_pool;
 pub mod collateral_pool_borrow_authority;
@@ -51,10 +52,20 @@ pub use ulp_pool_borrow_authority::*;
 pub use ulp_pool_market::*;
 pub use users::*;
 
+use self::larix::{add_larix, TestLarix};
+
 pub const EXP: u64 = 1_000_000_000;
 pub const REFRESH_INCOME_INTERVAL: u64 = 300; // About 2.5 min
 
 pub type BanksClientResult<T> = transport::Result<T>;
+
+pub struct TestEnvironment {
+    pub context: ProgramTestContext,
+    pub spl_token_lending: TestSPLTokenLending,
+    pub pyth_oracle: TestPythOracle,
+    pub registry: TestRegistry,
+    pub larix: TestLarix,
+}
 
 pub fn program_test() -> ProgramTest {
     let mut program = ProgramTest::new(
@@ -153,15 +164,11 @@ pub fn get_liquidity_mint() -> (Keypair, Pubkey) {
     (keypair, pubkey)
 }
 
-pub async fn presetup() -> (
-    ProgramTestContext,
-    TestSPLTokenLending,
-    TestPythOracle,
-    TestRegistry,
-) {
+pub async fn presetup() -> TestEnvironment {
     let mut test = program_test();
-    let sol_oracle = add_sol_oracle(&mut test);
+    let pyth_oracle = add_sol_oracle(&mut test);
     let spl_token_lending = add_spl_token_lending(&mut test);
+    let larix = add_larix(&mut test);
 
     let mut context = test.start_with_context().await;
     let payer_pubkey = context.payer.pubkey();
@@ -182,6 +189,7 @@ pub async fn presetup() -> (
         money_market_program_ids: DistributionPubkeys::default(),
     };
     programs.money_market_program_ids[0] = spl_token_lending::id();
+    programs.money_market_program_ids[1] = larix_lending::id();
 
     registry
         .set_registry_config(
@@ -195,7 +203,13 @@ pub async fn presetup() -> (
         .await
         .unwrap();
 
-    (context, spl_token_lending, sol_oracle, registry)
+    TestEnvironment {
+        context,
+        spl_token_lending,
+        pyth_oracle,
+        registry,
+        larix,
+    }
 }
 
 pub async fn transfer(

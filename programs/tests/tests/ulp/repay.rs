@@ -28,22 +28,22 @@ async fn setup() -> (
     UniversalLiquidityPoolBorrowAuthority,
     LiquidityProvider,
 ) {
-    let (mut context, _, _, registry) = presetup().await;
+    let mut env = presetup().await;
 
     let test_pool_market = UlpMarket::new();
-    test_pool_market.init(&mut context).await.unwrap();
+    test_pool_market.init(&mut env.context).await.unwrap();
 
     let test_pool = UniversalLiquidityPool::new(&test_pool_market, None);
     test_pool
-        .create(&mut context, &test_pool_market)
+        .create(&mut env.context, &test_pool_market)
         .await
         .unwrap();
 
     let test_pool_borrow_authority =
-        UniversalLiquidityPoolBorrowAuthority::new(&test_pool, context.payer.pubkey());
+        UniversalLiquidityPoolBorrowAuthority::new(&test_pool, env.context.payer.pubkey());
     test_pool_borrow_authority
         .create(
-            &mut context,
+            &mut env.context,
             &test_pool_market,
             &test_pool,
             ULP_SHARE_ALLOWED,
@@ -52,7 +52,7 @@ async fn setup() -> (
         .unwrap();
 
     let user = add_liquidity_provider(
-        &mut context,
+        &mut env.context,
         &test_pool.token_mint_pubkey,
         &test_pool.pool_mint.pubkey(),
         101,
@@ -61,13 +61,13 @@ async fn setup() -> (
     .unwrap();
 
     test_pool
-        .deposit(&mut context, &test_pool_market, &user, 100)
+        .deposit(&mut env.context, &test_pool_market, &user, 100)
         .await
         .unwrap();
 
     (
-        context,
-        registry,
+        env.context,
+        env.registry,
         test_pool_market,
         test_pool,
         test_pool_borrow_authority,

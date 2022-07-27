@@ -13,71 +13,71 @@ use crate::utils::*;
 
 #[tokio::test]
 async fn success() {
-    let (mut context, _, _, registry) = presetup().await;
+    let mut env = presetup().await;
 
     let test_liquidity_oracle = TestLiquidityOracle::new();
-    test_liquidity_oracle.init(&mut context).await.unwrap();
+    test_liquidity_oracle.init(&mut env.context).await.unwrap();
 
     let general_pool_market = TestGeneralPoolMarket::new();
     general_pool_market
-        .init(&mut context, &registry.keypair.pubkey())
+        .init(&mut env.context, &env.registry.keypair.pubkey())
         .await
         .unwrap();
 
     let income_pool_market = TestIncomePoolMarket::new();
     income_pool_market
-        .init(&mut context, &general_pool_market)
+        .init(&mut env.context, &general_pool_market)
         .await
         .unwrap();
 
     let test_depositor = TestDepositor::new();
-    test_depositor.init(&mut context, &registry).await.unwrap();
+    test_depositor.init(&mut env.context, &env.registry).await.unwrap();
 
-    let depositor = test_depositor.get_data(&mut context).await;
+    let depositor = test_depositor.get_data(&mut env.context).await;
 
     assert_eq!(depositor.account_type, AccountType::Depositor);
 }
 
 #[tokio::test]
 async fn fail_second_time_init() {
-    let (mut context, _, _, registry) = presetup().await;
+    let mut env = presetup().await;
 
     let test_liquidity_oracle = TestLiquidityOracle::new();
-    test_liquidity_oracle.init(&mut context).await.unwrap();
+    test_liquidity_oracle.init(&mut env.context).await.unwrap();
 
     let general_pool_market = TestGeneralPoolMarket::new();
     general_pool_market
-        .init(&mut context, &registry.keypair.pubkey())
+        .init(&mut env.context, &env.registry.keypair.pubkey())
         .await
         .unwrap();
 
     let income_pool_market = TestIncomePoolMarket::new();
     income_pool_market
-        .init(&mut context, &general_pool_market)
+        .init(&mut env.context, &general_pool_market)
         .await
         .unwrap();
 
     let test_depositor = TestDepositor::new();
-    test_depositor.init(&mut context, &registry).await.unwrap();
+    test_depositor.init(&mut env.context, &env.registry).await.unwrap();
 
-    let depositor = test_depositor.get_data(&mut context).await;
+    let depositor = test_depositor.get_data(&mut env.context).await;
 
     assert_eq!(depositor.account_type, AccountType::Depositor);
 
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::init(
             &everlend_depositor::id(),
-            &registry.keypair.pubkey(),
+            &env.registry.keypair.pubkey(),
             &test_depositor.depositor.pubkey(),
-            &context.payer.pubkey(),
+            &env.context.payer.pubkey(),
         )],
-        Some(&context.payer.pubkey()),
-        &[&context.payer],
-        context.last_blockhash,
+        Some(&env.context.payer.pubkey()),
+        &[&env.context.payer],
+        env.context.last_blockhash,
     );
 
     assert_eq!(
-        context
+        env.context
             .banks_client
             .process_transaction(tx)
             .await
@@ -89,31 +89,31 @@ async fn fail_second_time_init() {
 
 #[tokio::test]
 async fn fail_with_invalid_registry() {
-    let (mut context, _, _, registry) = presetup().await;
+    let mut env = presetup().await;
 
     let test_liquidity_oracle = TestLiquidityOracle::new();
-    test_liquidity_oracle.init(&mut context).await.unwrap();
+    test_liquidity_oracle.init(&mut env.context).await.unwrap();
 
     let general_pool_market = TestGeneralPoolMarket::new();
     general_pool_market
-        .init(&mut context, &registry.keypair.pubkey())
+        .init(&mut env.context, &env.registry.keypair.pubkey())
         .await
         .unwrap();
 
     let income_pool_market = TestIncomePoolMarket::new();
     income_pool_market
-        .init(&mut context, &general_pool_market)
+        .init(&mut env.context, &general_pool_market)
         .await
         .unwrap();
 
     let test_depositor = TestDepositor::new();
 
-    let rent = context.banks_client.get_rent().await.unwrap();
+    let rent = env.context.banks_client.get_rent().await.unwrap();
 
     let tx = Transaction::new_signed_with_payer(
         &[
             system_instruction::create_account(
-                &context.payer.pubkey(),
+                &env.context.payer.pubkey(),
                 &test_depositor.depositor.pubkey(),
                 rent.minimum_balance(Depositor::LEN),
                 Depositor::LEN as u64,
@@ -123,16 +123,16 @@ async fn fail_with_invalid_registry() {
                 &everlend_depositor::id(),
                 &Pubkey::new_unique(),
                 &test_depositor.depositor.pubkey(),
-                &context.payer.pubkey(),
+                &env.context.payer.pubkey(),
             ),
         ],
-        Some(&context.payer.pubkey()),
-        &[&context.payer, &test_depositor.depositor],
-        context.last_blockhash,
+        Some(&env.context.payer.pubkey()),
+        &[&env.context.payer, &test_depositor.depositor],
+        env.context.last_blockhash,
     );
 
     assert_eq!(
-        context
+        env.context
             .banks_client
             .process_transaction(tx)
             .await
@@ -147,20 +147,20 @@ async fn fail_with_invalid_registry() {
 
 #[tokio::test]
 async fn fail_with_invalid_uncreated_depositor_account() {
-    let (mut context, _, _, registry) = presetup().await;
+    let mut env = presetup().await;
 
     let test_liquidity_oracle = TestLiquidityOracle::new();
-    test_liquidity_oracle.init(&mut context).await.unwrap();
+    test_liquidity_oracle.init(&mut env.context).await.unwrap();
 
     let general_pool_market = TestGeneralPoolMarket::new();
     general_pool_market
-        .init(&mut context, &registry.keypair.pubkey())
+        .init(&mut env.context, &env.registry.keypair.pubkey())
         .await
         .unwrap();
 
     let income_pool_market = TestIncomePoolMarket::new();
     income_pool_market
-        .init(&mut context, &general_pool_market)
+        .init(&mut env.context, &general_pool_market)
         .await
         .unwrap();
 
@@ -169,17 +169,17 @@ async fn fail_with_invalid_uncreated_depositor_account() {
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::init(
             &everlend_depositor::id(),
-            &registry.keypair.pubkey(),
+            &env.registry.keypair.pubkey(),
             &test_depositor.depositor.pubkey(),
-            &context.payer.pubkey(),
+            &env.context.payer.pubkey(),
         )],
-        Some(&context.payer.pubkey()),
-        &[&context.payer],
-        context.last_blockhash,
+        Some(&env.context.payer.pubkey()),
+        &[&env.context.payer],
+        env.context.last_blockhash,
     );
 
     assert_eq!(
-        context
+        env.context
             .banks_client
             .process_transaction(tx)
             .await

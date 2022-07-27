@@ -11,6 +11,81 @@ use solana_program::pubkey::Pubkey;
 
 #[serde_as]
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default)]
+pub struct PortFinanceAccounts {
+    #[serde_as(as = "DisplayFromStr")]
+    pub program_id: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub staking_program_id: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub lending_market: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub reserve_sol: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub reserve_sol_supply: Pubkey,
+}
+
+#[serde_as]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default)]
+pub struct LarixAccounts {
+    #[serde_as(as = "DisplayFromStr")]
+    pub program_id: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub lending_market: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub reserve_sol: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub reserve_sol_supply: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub uncollateralized_ltoken_supply_sol: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub ltoken_mint: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub mining_supply: Pubkey,
+}
+
+#[serde_as]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default)]
+pub struct QuarryAccounts {
+    #[serde_as(as = "DisplayFromStr")]
+    pub mine_program_id: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub rewarder: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub quarry: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub token_mint: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub mint_wrapper: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub mint_wrapper_program: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub minter: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub rewards_token_mint: Pubkey,
+}
+
+#[serde_as]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default)]
+pub struct SolendAccounts {
+    #[serde_as(as = "DisplayFromStr")]
+    pub program_id: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub lending_market: Pubkey,
+    // todo remove option after filling cfg file
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub reserve_pyth_oracle: Option<Pubkey>,
+    // todo remove option after filling cfg file
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub reserve_switchboard_oracle: Option<Pubkey>,
+    #[serde_as(as = "DisplayFromStr")]
+    pub reserve_sol: Pubkey,
+    // todo remove option after filling cfg file
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub reserve_sol_supply: Option<Pubkey>,
+}
+
+#[serde_as]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default)]
 pub struct DefaultAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub sol_mint: Pubkey,
@@ -38,39 +113,15 @@ pub struct DefaultAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub sol_oracle: Pubkey,
 
-    #[serde_as(as = "DisplayFromStr")]
-    pub port_finance_program_id: Pubkey,
-    #[serde_as(as = "DisplayFromStr")]
-    pub port_finance_lending_market: Pubkey,
-    #[serde_as(as = "DisplayFromStr")]
-    pub port_finance_reserve_sol: Pubkey,
-    #[serde_as(as = "DisplayFromStr")]
-    pub port_finance_reserve_sol_supply: Pubkey,
+    pub port_finance: PortFinanceAccounts,
 
-    #[serde_as(as = "DisplayFromStr")]
-    pub larix_program_id: Pubkey,
-    #[serde_as(as = "DisplayFromStr")]
-    pub larix_lending_market: Pubkey,
-    #[serde_as(as = "DisplayFromStr")]
-    pub larix_reserve_sol: Pubkey,
-    #[serde_as(as = "DisplayFromStr")]
-    pub larix_reserve_sol_supply: Pubkey,
+    pub port_accounts: BTreeMap<String, PortAccounts>,
 
-    #[serde_as(as = "DisplayFromStr")]
-    pub solend_program_id: Pubkey,
-    #[serde_as(as = "DisplayFromStr")]
-    pub solend_lending_market: Pubkey,
-    // todo remove option after filling cfg file
-    #[serde_as(as = "Option<DisplayFromStr>")]
-    pub solend_reserve_pyth_oracle: Option<Pubkey>,
-    // todo remove option after filling cfg file
-    #[serde_as(as = "Option<DisplayFromStr>")]
-    pub solend_reserve_switchboard_oracle: Option<Pubkey>,
-    #[serde_as(as = "DisplayFromStr")]
-    pub solend_reserve_sol: Pubkey,
-    // todo remove option after filling cfg file
-    #[serde_as(as = "Option<DisplayFromStr>")]
-    pub solend_reserve_sol_supply: Option<Pubkey>,
+    pub larix: LarixAccounts,
+
+    pub quarry: QuarryAccounts,
+
+    pub solend: SolendAccounts,
 
     #[serde_as(as = "DisplayFromStr")]
     pub multisig_program_id: Pubkey,
@@ -110,14 +161,54 @@ pub struct DefaultAccounts {
 }
 
 #[serde_as]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default)]
+pub struct PortAccounts {
+    #[serde_as(as = "DisplayFromStr")]
+    pub staking_pool: Pubkey,
+}
+
+#[serde_as]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default)]
+pub struct QuarryMining {
+    #[serde_as(as = "DisplayFromStr")]
+    pub token_mint: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub rewards_token_mint: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub miner_vault: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub token_source: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub rewards_token_account: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub fee_token_account: Pubkey,
+}
+
+impl QuarryMining {
+    pub fn default() -> QuarryMining {
+        QuarryMining {
+            token_mint: Pubkey::default(),
+            rewards_token_mint: Pubkey::default(),
+            miner_vault: Pubkey::default(),
+            token_source: Pubkey::default(),
+            rewards_token_account: Pubkey::default(),
+            fee_token_account: Pubkey::default(),
+        }
+    }
+}
+
+#[serde_as]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Default)]
 pub struct InitializedAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub payer: Pubkey,
+
     #[serde_as(as = "DisplayFromStr")]
     pub registry: Pubkey,
+
     #[serde_as(as = "DisplayFromStr")]
     pub general_pool_market: Pubkey,
+
     #[serde_as(as = "DisplayFromStr")]
     pub income_pool_market: Pubkey,
 
@@ -131,8 +222,11 @@ pub struct InitializedAccounts {
 
     #[serde_as(as = "DisplayFromStr")]
     pub liquidity_oracle: Pubkey,
+
     #[serde_as(as = "DisplayFromStr")]
     pub depositor: Pubkey,
+
+    pub quarry_mining: BTreeMap<String, QuarryMining>,
     #[serde_as(as = "DisplayFromStr")]
     pub rebalance_executor: Pubkey,
 }
@@ -165,6 +259,20 @@ pub struct TokenAccounts {
 
     #[serde_as(as = "DisplayFromStr")]
     pub liquidity_transit: Pubkey,
+
+    #[serde_as(as = "DisplayFromStr")]
+    pub port_finance_obligation_account: Pubkey,
+
+    pub mining_accounts: Vec<MiningAccounts>,
+}
+
+#[serde_as]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Default, Copy, Clone)]
+pub struct MiningAccounts {
+    #[serde_as(as = "DisplayFromStr")]
+    pub staking_account: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub internal_mining_account: Pubkey,
 }
 
 #[serde_as]

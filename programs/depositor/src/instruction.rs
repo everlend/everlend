@@ -12,9 +12,10 @@ use everlend_general_pool::find_withdrawal_requests_program_address;
 use everlend_liquidity_oracle::{
     find_liquidity_oracle_token_distribution_program_address, state::DistributionArray,
 };
+use everlend_utils::cpi;
 use everlend_utils::find_program_address;
 
-use crate::{find_rebalancing_program_address, find_transit_program_address};
+use crate::{find_rebalancing_program_address, find_transit_program_address, state::MiningType};
 
 /// Instructions supported by the program
 #[derive(Debug, BorshDeserialize, BorshSerialize, PartialEq)]
@@ -83,10 +84,6 @@ pub enum DepositorInstruction {
     /// [R] Depositor
     /// [R] Depositor authority
     /// [W] Rebalancing account
-    /// [R] MM Pool market
-    /// [R] MM Pool market authority
-    /// [R] MM Pool
-    /// [W] MM Pool token account (for collateral mint)
     /// [W] Liquidity transit account
     /// [R] Liquidity mint
     /// [W] Collateral transit account
@@ -94,7 +91,6 @@ pub enum DepositorInstruction {
     /// [S] Rebalance executor account
     /// [R] Clock sysvar
     /// [R] Token program id
-    /// [R] Everlend collateral pool program id
     /// [R] Money market program id
     Deposit,
 
@@ -109,11 +105,6 @@ pub enum DepositorInstruction {
     /// [R] Income pool market
     /// [R] Income pool
     /// [W] Income pool token account (for liquidity mint)
-    /// [R] MM Pool market
-    /// [R] MM Pool market authority
-    /// [R] MM Pool
-    /// [W] MM Pool token account (for collateral mint)
-    /// [R] MM Pool withdraw authority
     /// [W] Collateral transit account
     /// [W] Collateral mint
     /// [W] Liquidity transit account
@@ -122,14 +113,77 @@ pub enum DepositorInstruction {
     /// [S] Rebalance executor account
     /// [R] Clock sysvar
     /// [R] Token program id
-    /// [R] Everlend collateral program id
     /// [R] Money market program id
     Withdraw,
 
-    /// Migrate depositor to v1
+    /// Initialize account for mining LM rewards
     ///
-    /// Accounts
-    /// [W] Depositor
+    /// Accounts:
+    /// [W] Internal mining account
+    /// [R] Liquidity mint
+    /// [R] Collateral mint (collateral of liquidity asset)
+    /// [R] Depositor
+    /// [R] Depositor authority
+    /// [R] Registry
+    /// [S] Manager
+    /// [R] Rent sysvar
+    /// [R] System program
+    /// For larix mining:
+    /// [R] Mining account
+    /// [R] Lending market
+    /// For PortFinance mining:
+    /// [R] Staking program id
+    /// [R] Staking pool
+    /// [W] Staking account
+    /// For PortFinanceQuarry:
+    ///
+    InitMiningAccount {
+        /// Type of mining
+        mining_type: MiningType,
+    },
+
+    /// Claim mining reward
+    ///
+    /// Accounts:
+    /// [R] Depositor
+    /// [R] Depositor authority
+    /// [R] Money market program id
+    /// [R] Liquidity mint
+    /// [R] Collateral mint
+    /// [R] Internal mining account
+    /// [R] Staking program id
+    /// For larix mining:
+    /// [W] Mining account
+    /// [W] Mine supply
+    /// [W] Destination collateral
+    /// [R] Lending market
+    /// [R] Lending market authority
+    /// [R] Reserve
+    /// [R] Reserve liquidity oracle
+    /// For PortFinance mining:
+    /// [R] Stake account owner
+    /// [W] Stake account
+    /// [W] Staking pool
+    /// [W] Reward token pool
+    /// [W] Reward destination
+    /// [R] Sub reward token pool
+    /// [R] Sub reward destination
+    /// For Quarry mining:
+    /// [W] Mint wrapper
+    /// [R] Mint wrapper program
+    /// [W] Minter
+    /// [W] Rewards token mint
+    /// [W] Rewards token account
+    /// [W] Claim fee token account
+    /// [W] Miner
+    /// [W] Quarry
+    /// [R] Rewarder
+    ClaimMiningReward,
+
+    /// Migrate Depositor
+    ///
+    /// Accounts:
+    /// [R] Depositor
     /// [R] Registry
     /// [W] Rebalance account
     /// [R] Manager
@@ -182,8 +236,7 @@ pub fn create_transit(
     program_id: &Pubkey,
     depositor: &Pubkey,
     mint: &Pubkey,
-    from: &Pubkey,
-    //todo! remove option
+    rebalance_executor: &Pubkey,
     seed: Option<String>,
 ) -> Instruction {
     let seed = seed.unwrap_or_default();
@@ -195,7 +248,7 @@ pub fn create_transit(
         AccountMeta::new(transit, false),
         AccountMeta::new_readonly(*mint, false),
         AccountMeta::new_readonly(depositor_authority, false),
-        AccountMeta::new(*from, true),
+        AccountMeta::new(*rebalance_executor, true),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
@@ -322,43 +375,35 @@ pub fn deposit(
     program_id: &Pubkey,
     registry: &Pubkey,
     depositor: &Pubkey,
-    mm_pool_market: &Pubkey,
-    mm_pool_token_account: &Pubkey,
     liquidity_mint: &Pubkey,
     collateral_mint: &Pubkey,
     rebalance_executor: &Pubkey,
     money_market_program_id: &Pubkey,
     money_market_accounts: Vec<AccountMeta>,
+    collateral_storage_accounts: Vec<AccountMeta>,
 ) -> Instruction {
     let (registry_config, _) =
         everlend_registry::find_config_program_address(&everlend_registry::id(), registry);
     let (depositor_authority, _) = find_program_address(program_id, depositor);
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
 
-    // MM pool
-    let (mm_pool_market_authority, _) =
-        find_program_address(&everlend_collateral_pool::id(), mm_pool_market);
-    let (mm_pool, _) = everlend_collateral_pool::find_pool_program_address(
-        &everlend_collateral_pool::id(),
-        mm_pool_market,
-        collateral_mint,
-    );
-
     let (liquidity_transit, _) =
         find_transit_program_address(program_id, depositor, liquidity_mint, "");
     let (collateral_transit, _) =
         find_transit_program_address(program_id, depositor, collateral_mint, "");
+
+    let (internal_mining, _) = crate::find_internal_mining_program_address(
+        program_id,
+        liquidity_mint,
+        collateral_mint,
+        depositor,
+    );
 
     let mut accounts = vec![
         AccountMeta::new_readonly(registry_config, false),
         AccountMeta::new_readonly(*depositor, false),
         AccountMeta::new_readonly(depositor_authority, false),
         AccountMeta::new(rebalancing, false),
-        // Money market pool
-        AccountMeta::new_readonly(*mm_pool_market, false),
-        AccountMeta::new_readonly(mm_pool_market_authority, false),
-        AccountMeta::new_readonly(mm_pool, false),
-        AccountMeta::new(*mm_pool_token_account, false),
         // Common
         AccountMeta::new(liquidity_transit, false),
         AccountMeta::new_readonly(*liquidity_mint, false),
@@ -368,12 +413,13 @@ pub fn deposit(
         // Programs
         AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
-        AccountMeta::new_readonly(everlend_collateral_pool::id(), false),
         // Money market
         AccountMeta::new_readonly(*money_market_program_id, false),
+        AccountMeta::new_readonly(internal_mining, false),
     ];
 
     accounts.extend(money_market_accounts);
+    accounts.extend(collateral_storage_accounts);
 
     Instruction::new_with_borsh(*program_id, &DepositorInstruction::Deposit, accounts)
 }
@@ -386,13 +432,12 @@ pub fn withdraw(
     depositor: &Pubkey,
     income_pool_market: &Pubkey,
     income_pool_token_account: &Pubkey,
-    mm_pool_market: &Pubkey,
-    mm_pool_token_account: &Pubkey,
     collateral_mint: &Pubkey,
     liquidity_mint: &Pubkey,
     rebalance_executor: &Pubkey,
     money_market_program_id: &Pubkey,
     money_market_accounts: Vec<AccountMeta>,
+    collateral_storage_accounts: Vec<AccountMeta>,
 ) -> Instruction {
     let (registry_config, _) =
         everlend_registry::find_config_program_address(&everlend_registry::id(), registry);
@@ -406,15 +451,6 @@ pub fn withdraw(
         liquidity_mint,
     );
 
-    // MM pool
-    let (mm_pool_market_authority, _) =
-        find_program_address(&everlend_collateral_pool::id(), mm_pool_market);
-    let (mm_pool, _) = everlend_collateral_pool::find_pool_program_address(
-        &everlend_collateral_pool::id(),
-        mm_pool_market,
-        collateral_mint,
-    );
-
     let (collateral_transit, _) =
         find_transit_program_address(program_id, depositor, collateral_mint, "");
     let (liquidity_transit, _) =
@@ -423,10 +459,11 @@ pub fn withdraw(
     let (liquidity_reserve_transit, _) =
         find_transit_program_address(program_id, depositor, liquidity_mint, "reserve");
 
-    let (mm_pool_withdraw_authority, _) = find_pool_withdraw_authority_program_address(
-        &everlend_collateral_pool::id(),
-        &mm_pool,
-        &depositor_authority,
+    let (internal_mining, _internal_mining_bump_seed) = crate::find_internal_mining_program_address(
+        program_id,
+        liquidity_mint,
+        collateral_mint,
+        depositor,
     );
 
     let mut accounts = vec![
@@ -438,12 +475,6 @@ pub fn withdraw(
         AccountMeta::new_readonly(*income_pool_market, false),
         AccountMeta::new_readonly(income_pool, false),
         AccountMeta::new(*income_pool_token_account, false),
-        // Money market pool
-        AccountMeta::new_readonly(*mm_pool_market, false),
-        AccountMeta::new_readonly(mm_pool_market_authority, false),
-        AccountMeta::new_readonly(mm_pool, false),
-        AccountMeta::new(*mm_pool_token_account, false),
-        AccountMeta::new(mm_pool_withdraw_authority, false),
         // Common
         AccountMeta::new(collateral_transit, false),
         AccountMeta::new(*collateral_mint, false),
@@ -455,12 +486,13 @@ pub fn withdraw(
         AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
         AccountMeta::new_readonly(everlend_income_pools::id(), false),
-        AccountMeta::new_readonly(everlend_collateral_pool::id(), false),
         // Money market
         AccountMeta::new_readonly(*money_market_program_id, false),
+        AccountMeta::new_readonly(internal_mining, false),
     ];
 
     accounts.extend(money_market_accounts);
+    accounts.extend(collateral_storage_accounts);
 
     Instruction::new_with_borsh(*program_id, &DepositorInstruction::Withdraw, accounts)
 }
@@ -487,6 +519,124 @@ pub fn migrate_depositor(
     Instruction::new_with_borsh(
         *program_id,
         &DepositorInstruction::MigrateDepositor,
+        accounts,
+    )
+}
+
+/// Argument to init_mining_accounts
+pub struct InitMiningAccountsPubkeys {
+    /// Liquidity mint
+    pub liquidity_mint: Pubkey,
+    /// Collateral mint
+    pub collateral_mint: Pubkey,
+    /// Money market program id
+    pub money_market_program_id: Pubkey,
+    /// Depositor
+    pub depositor: Pubkey,
+    /// Registry
+    pub registry: Pubkey,
+    /// Manager
+    pub manager: Pubkey,
+    /// Lending market
+    pub lending_market: Option<Pubkey>,
+}
+
+/// Init mining account
+pub fn init_mining_account(
+    program_id: &Pubkey,
+    pubkeys: &InitMiningAccountsPubkeys,
+    mining_type: MiningType,
+) -> Instruction {
+    let (internal_mining, _) = crate::find_internal_mining_program_address(
+        program_id,
+        &pubkeys.liquidity_mint,
+        &pubkeys.collateral_mint,
+        &pubkeys.depositor,
+    );
+
+    let (depositor_authority, _) = find_program_address(program_id, &pubkeys.depositor);
+
+    let mut accounts = vec![
+        AccountMeta::new(internal_mining, false),
+        AccountMeta::new_readonly(pubkeys.liquidity_mint, false),
+        AccountMeta::new_readonly(pubkeys.collateral_mint, false),
+        AccountMeta::new_readonly(pubkeys.depositor, false),
+        AccountMeta::new_readonly(depositor_authority, false),
+        AccountMeta::new_readonly(pubkeys.registry, false),
+        AccountMeta::new(pubkeys.manager, true),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+        AccountMeta::new_readonly(system_program::id(), false),
+    ];
+
+    match mining_type {
+        MiningType::Larix {
+            mining_account,
+            additional_reward_token_account,
+        } => {
+            // Mining program equal to money_market_program_id
+            accounts.push(AccountMeta::new_readonly(
+                pubkeys.money_market_program_id,
+                false,
+            ));
+            accounts.push(AccountMeta::new(mining_account, false));
+            accounts.push(AccountMeta::new_readonly(
+                pubkeys.lending_market.unwrap(),
+                false,
+            ));
+
+            if let Some(additional_reward_token_account) = additional_reward_token_account {
+                accounts.push(AccountMeta::new_readonly(
+                    additional_reward_token_account,
+                    false,
+                ));
+            }
+        }
+        MiningType::PortFinance {
+            staking_program_id,
+            staking_account,
+            staking_pool,
+            obligation,
+        } => {
+            accounts.push(AccountMeta::new_readonly(staking_program_id, false));
+            accounts.push(AccountMeta::new_readonly(staking_pool, false));
+            accounts.push(AccountMeta::new(staking_account, false));
+
+            // Init obligation
+            accounts.push(AccountMeta::new_readonly(
+                pubkeys.money_market_program_id,
+                false,
+            ));
+            accounts.push(AccountMeta::new(obligation, false));
+            accounts.push(AccountMeta::new_readonly(
+                pubkeys.lending_market.unwrap(),
+                false,
+            ));
+            accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
+            accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
+        }
+        MiningType::Quarry {
+            quarry_mining_program_id,
+            quarry,
+            rewarder,
+            miner_vault,
+        } => {
+            let (miner_pubkey, _) = cpi::quarry::find_miner_program_address(
+                &quarry_mining_program_id,
+                &quarry,
+                &internal_mining,
+            );
+            accounts.push(AccountMeta::new_readonly(quarry_mining_program_id, false));
+            accounts.push(AccountMeta::new(miner_pubkey, false));
+            accounts.push(AccountMeta::new(quarry, false));
+            accounts.push(AccountMeta::new_readonly(rewarder, false));
+            accounts.push(AccountMeta::new_readonly(miner_vault, false));
+        }
+        MiningType::None => {}
+    }
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &DepositorInstruction::InitMiningAccount { mining_type },
         accounts,
     )
 }

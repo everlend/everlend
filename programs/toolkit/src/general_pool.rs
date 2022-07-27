@@ -1,18 +1,17 @@
 use crate::utils::*;
 use everlend_general_pool::{
     find_pool_borrow_authority_program_address, find_pool_program_address,
-    find_withdrawal_requests_program_address,
-    general_pool_withdraw_sol_accounts, instruction,
+    find_withdrawal_requests_program_address, general_pool_withdraw_sol_accounts, instruction,
     state::{AccountType, Pool, PoolMarket, WithdrawalRequest, WithdrawalRequests},
 };
+use everlend_utils::instructions::{config::initialize, rewards::initialize_pool};
 use solana_client::client_error::ClientError;
-use solana_program::{program_pack::Pack, pubkey::{Pubkey, self}, system_instruction};
+use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_sdk::{
     signature::{write_keypair_file, Keypair},
     signer::Signer,
     transaction::Transaction,
 };
-use everlend_utils::instructions::{config::initialize, rewards::initialize_pool};
 pub fn create_market(
     config: &Config,
     pool_market_keypair: Option<Keypair>,
@@ -128,6 +127,7 @@ pub fn create_pool(
 
     // Initialize mining pool
     let anchor_config = Keypair::new();
+    //TODO save into accounts file
     let (mining_reward_pool, _) = Pubkey::find_program_address(
         &[
             b"reward_pool".as_ref(),
@@ -144,12 +144,11 @@ pub fn create_pool(
                 &anchor_config.pubkey(),
                 &config.fee_payer.pubkey(),
             ),
-
             initialize_pool(
                 &eld_rewards::id(),
                 &anchor_config.pubkey(),
                 &mining_reward_pool,
-                &token_mint,
+                token_mint,
                 &pool_pubkey,
                 &config.fee_payer.pubkey(),
             ),
@@ -387,10 +386,7 @@ pub fn migrate_general_pool_account(config: &Config) -> Result<(), ClientError> 
     Ok(())
 }
 
-pub fn close_pool_market_account(
-    config: &Config,
-    pool_market: &Pubkey,
-) -> Result<(), ClientError> {
+pub fn close_pool_market_account(config: &Config, pool_market: &Pubkey) -> Result<(), ClientError> {
     let tx = Transaction::new_with_payer(
         &[instruction::close_pool_market(
             &everlend_general_pool::id(),

@@ -10,18 +10,18 @@ use solana_sdk::signer::Signer;
 use solana_sdk::transaction::{Transaction, TransactionError};
 
 async fn setup() -> (ProgramTestContext, TestGeneralPoolMarket, TestGeneralPool) {
-    let (mut context, _, _, registry) = presetup().await;
+    let mut env = presetup().await;
 
     let test_pool_market = TestGeneralPoolMarket::new();
-    test_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
+    test_pool_market.init(&mut env.context, &env.registry.keypair.pubkey()).await.unwrap();
 
     let test_pool = TestGeneralPool::new(&test_pool_market, None);
     test_pool
-        .create(&mut context, &test_pool_market)
+        .create(&mut env.context, &test_pool_market)
         .await
         .unwrap();
 
-    (context, test_pool_market, test_pool)
+    (env.context, test_pool_market, test_pool)
 }
 
 #[tokio::test]

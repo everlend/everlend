@@ -3,10 +3,12 @@
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 
 mod depositor;
+mod internal_mining;
 mod rebalancing;
 mod rebalancing_step;
 
 pub use depositor::*;
+pub use internal_mining::*;
 pub use rebalancing::*;
 pub use rebalancing_step::*;
 
@@ -19,6 +21,8 @@ pub enum AccountType {
     Depositor,
     /// Rebalancing
     Rebalancing,
+    /// Internal mining
+    InternalMining,
 }
 
 impl Default for AccountType {

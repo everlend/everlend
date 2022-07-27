@@ -2,13 +2,16 @@ use super::{
     get_account, get_liquidity_mint, collateral_pool_borrow_authority::TestPoolBorrowAuthority,
     BanksClientResult, TestPoolMarket, TestPoolWithdrawAuthority,
 };
-use everlend_collateral_pool::{find_pool_program_address, instruction, state::Pool};
+use everlend_utils::find_program_address;
+use everlend_collateral_pool::{find_pool_program_address, find_pool_withdraw_authority_program_address, instruction, state::Pool};
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
+use solana_program::instruction::AccountMeta;
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
+use crate::utils::TestDepositor;
 use super::collateral_pool_liquidity_provider::{LiquidityProvider};
 
 #[derive(Debug)]
@@ -75,6 +78,27 @@ impl TestPool {
         context.banks_client.process_transaction(tx).await
     }
 
+    pub fn deposit_accounts(
+        &self,
+        test_pool_market: &TestPoolMarket) -> Vec<AccountMeta> {
+
+        let (collateral_pool_market_authority, _) =
+            find_program_address(&everlend_collateral_pool::id(), &test_pool_market.keypair.pubkey());
+        let (collateral_pool, _) = everlend_collateral_pool::find_pool_program_address(
+            &everlend_collateral_pool::id(),
+            &test_pool_market.keypair.pubkey(),
+            &self.token_mint_pubkey,
+        );
+
+        vec![
+            AccountMeta::new_readonly(test_pool_market.keypair.pubkey(), false),
+            AccountMeta::new_readonly(collateral_pool_market_authority, false),
+            AccountMeta::new_readonly(collateral_pool, false),
+            AccountMeta::new(self.token_account.pubkey(), false),
+            AccountMeta::new_readonly(everlend_collateral_pool::id(), false),
+        ]
+    }
+
     pub async fn deposit(
         &self,
         context: &mut ProgramTestContext,
@@ -98,6 +122,38 @@ impl TestPool {
         );
 
         context.banks_client.process_transaction(tx).await
+    }
+
+    pub fn withdraw_accounts(
+        &self,
+        test_pool_market: &TestPoolMarket,
+        depositor: &TestDepositor,
+    ) -> Vec<AccountMeta> {
+
+        let (collateral_pool_market_authority, _) =
+            find_program_address(&everlend_collateral_pool::id(), &test_pool_market.keypair.pubkey());
+        let (collateral_pool, _) = everlend_collateral_pool::find_pool_program_address(
+         &everlend_collateral_pool::id(),
+         &test_pool_market.keypair.pubkey(),
+         &self.token_mint_pubkey,
+         );
+
+        let (depositor_authority, _) = find_program_address(&everlend_depositor::id(), &depositor.depositor.pubkey());
+
+        let (collateral_pool_withdraw_authority, _) = find_pool_withdraw_authority_program_address(
+            &everlend_collateral_pool::id(),
+            &collateral_pool,
+            &depositor_authority,
+        );
+
+            vec![
+                AccountMeta::new_readonly(test_pool_market.keypair.pubkey(), false),
+                AccountMeta::new_readonly(collateral_pool_market_authority, false),
+                AccountMeta::new_readonly(collateral_pool, false),
+                AccountMeta::new(self.token_account.pubkey(), false),
+                AccountMeta::new_readonly(collateral_pool_withdraw_authority, false),
+                AccountMeta::new_readonly(everlend_collateral_pool::id(), false),
+            ]
     }
 
     pub async fn withdraw(

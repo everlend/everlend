@@ -1,5 +1,8 @@
+use larix_lending::instruction::LendingInstruction;
 use solana_program::{
     account_info::AccountInfo,
+    entrypoint::ProgramResult,
+    instruction::{AccountMeta, Instruction},
     program::{invoke, invoke_signed},
     program_error::ProgramError,
     pubkey::Pubkey,
@@ -103,4 +106,191 @@ pub fn redeem<'a>(
         ],
         signers_seeds,
     )
+}
+
+pub fn init_mining<'a>(
+    program_id: &Pubkey,
+    // Random uninitialized lending program account for future Mining account
+    mining_info: AccountInfo<'a>,
+    authority: AccountInfo<'a>,
+    lending_market: AccountInfo<'a>,
+    signers_seeds: &[&[&[u8]]],
+) -> Result<(), ProgramError> {
+    let ix = Instruction {
+        program_id: *program_id,
+        accounts: vec![
+            AccountMeta::new(*mining_info.key, false),
+            AccountMeta::new_readonly(*authority.key, true),
+            AccountMeta::new_readonly(*lending_market.key, false),
+        ],
+        data: LendingInstruction::InitMining.pack(),
+    };
+
+    invoke_signed(
+        &ix,
+        &[mining_info, authority, lending_market],
+        signers_seeds,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn deposit_mining<'a>(
+    program_id: &Pubkey,
+    source_collateral: AccountInfo<'a>,
+    // Contains is reserve account ...bonus.unCollSupply
+    reserve_bonus: AccountInfo<'a>,
+    mining: AccountInfo<'a>,
+    reserve: AccountInfo<'a>,
+    lending_market: AccountInfo<'a>,
+    mining_owner: AccountInfo<'a>,
+    authority: AccountInfo<'a>,
+    // Use u64::MAX for depositing 100% of available amount
+    amount: u64,
+    signers_seeds: &[&[&[u8]]],
+) -> Result<(), ProgramError> {
+    let ix = Instruction {
+        program_id: *program_id,
+        accounts: vec![
+            AccountMeta::new(*source_collateral.key, false),
+            AccountMeta::new(*reserve_bonus.key, false),
+            AccountMeta::new(*mining.key, false),
+            AccountMeta::new_readonly(*reserve.key, false),
+            AccountMeta::new_readonly(*lending_market.key, false),
+            AccountMeta::new_readonly(*mining_owner.key, false),
+            AccountMeta::new_readonly(*authority.key, true),
+            AccountMeta::new_readonly(spl_token::id(), false),
+        ],
+        data: LendingInstruction::DepositMining { amount }.pack(),
+    };
+
+    invoke_signed(
+        &ix,
+        &[
+            source_collateral,
+            reserve_bonus,
+            mining,
+            reserve,
+            lending_market,
+            mining_owner,
+            authority,
+        ],
+        signers_seeds,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn withdraw_mining<'a>(
+    program_id: &Pubkey,
+    source_collateral: AccountInfo<'a>,
+    // Contains is reserve account ...bonus.unCollSupply
+    reserve_bonus: AccountInfo<'a>,
+    mining_info: AccountInfo<'a>,
+    reserve: AccountInfo<'a>,
+    lending_market: AccountInfo<'a>,
+    lending_market_authority: AccountInfo<'a>,
+    mining_owner: AccountInfo<'a>,
+    clock: AccountInfo<'a>,
+    // Use u64::MAX for depositing 100% of available amount
+    amount: u64,
+    signers_seeds: &[&[&[u8]]],
+) -> Result<(), ProgramError> {
+    let ix = Instruction {
+        program_id: *program_id,
+        accounts: vec![
+            AccountMeta::new(*reserve_bonus.key, false),
+            AccountMeta::new(*source_collateral.key, false),
+            AccountMeta::new(*mining_info.key, false),
+            AccountMeta::new_readonly(*reserve.key, false),
+            AccountMeta::new_readonly(*lending_market.key, false),
+            AccountMeta::new_readonly(*lending_market_authority.key, false),
+            AccountMeta::new_readonly(*mining_owner.key, true),
+            AccountMeta::new_readonly(*clock.key, false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+        ],
+        data: LendingInstruction::WithdrawMining { amount }.pack(),
+    };
+
+    invoke_signed(
+        &ix,
+        &[
+            reserve_bonus,
+            source_collateral,
+            mining_info,
+            reserve,
+            lending_market,
+            lending_market_authority,
+            mining_owner,
+            clock,
+        ],
+        signers_seeds,
+    )
+}
+
+pub struct ClaimMineAccounts<'a> {
+    pub destination_collateral: AccountInfo<'a>,
+    pub mining: AccountInfo<'a>,
+    pub reserve: AccountInfo<'a>,
+    pub lending_market: AccountInfo<'a>,
+    pub lending_market_authority: AccountInfo<'a>,
+    pub authority: AccountInfo<'a>,
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn claim_mine<'a>(
+    program_id: &Pubkey,
+    mining: AccountInfo<'a>,
+    mine_supply: AccountInfo<'a>,
+    destination: AccountInfo<'a>,
+    authority: AccountInfo<'a>,
+    lending_market: AccountInfo<'a>,
+    lending_market_authority: AccountInfo<'a>,
+    reserve: AccountInfo<'a>,
+    signers_seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let accounts_meta = vec![
+        AccountMeta::new(*mining.key, false),
+        AccountMeta::new(*mine_supply.key, false),
+        AccountMeta::new(*destination.key, false),
+        AccountMeta::new_readonly(*authority.key, true),
+        AccountMeta::new_readonly(*lending_market.key, false),
+        AccountMeta::new_readonly(*lending_market_authority.key, false),
+        AccountMeta::new_readonly(spl_token::id(), false),
+        AccountMeta::new_readonly(*reserve.key, false),
+    ];
+
+    let accounts = vec![
+        lending_market,
+        lending_market_authority,
+        authority,
+        mining,
+        mine_supply,
+        destination,
+        reserve,
+    ];
+
+    let ix = Instruction {
+        program_id: *program_id,
+        accounts: accounts_meta,
+        data: LendingInstruction::ClaimMiningMine.pack(),
+    };
+
+    invoke_signed(&ix, &accounts, signers_seeds)
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn refresh_mine<'a>(
+    program_id: &Pubkey,
+    mining: AccountInfo<'a>,
+    reserve: AccountInfo<'a>,
+) -> ProgramResult {
+    let ix = Instruction {
+        program_id: *program_id,
+        accounts: vec![
+            AccountMeta::new(*mining.key, false),
+            AccountMeta::new_readonly(*reserve.key, false),
+        ],
+        data: LendingInstruction::RefreshMining.pack(),
+    };
+
+    invoke(&ix, &[mining, reserve])
 }
