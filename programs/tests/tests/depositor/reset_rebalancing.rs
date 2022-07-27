@@ -1,10 +1,6 @@
-#![cfg(feature = "test-bpf")]
-
 use everlend_depositor::find_transit_program_address;
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::{
-    DistributionPubkeys, RegistryRootAccounts, SetRegistryPoolConfigParams,
-};
+use everlend_registry::state::{RegistryRootAccounts, SetRegistryPoolConfigParams};
 use everlend_utils::find_program_address;
 use solana_program_test::*;
 use solana_sdk::signer::Signer;
@@ -17,7 +13,10 @@ async fn setup() -> (TestEnvironment, TestGeneralPool, TestDepositor) {
     let payer_pubkey = env.context.payer.pubkey();
 
     // 0. Prepare lending
-    let reserve = env.spl_token_lending.get_reserve_data(&mut env.context).await;
+    let reserve = env
+        .spl_token_lending
+        .get_reserve_data(&mut env.context)
+        .await;
     println!("{:#?}", reserve);
 
     let collateral_mint = get_mint_data(&mut env.context, &reserve.collateral.mint_pubkey).await;
@@ -59,12 +58,17 @@ async fn setup() -> (TestEnvironment, TestGeneralPool, TestDepositor) {
     .await
     .unwrap();
 
+    let mining_acc = general_pool
+        .init_user_mining(&mut env.context, &general_pool_market, &liquidity_provider)
+        .await;
+
     general_pool
         .deposit(
             &mut env.context,
             &env.registry,
             &general_pool_market,
             &liquidity_provider,
+            mining_acc,
             100 * EXP,
         )
         .await
@@ -89,7 +93,10 @@ async fn setup() -> (TestEnvironment, TestGeneralPool, TestDepositor) {
     mm_pool_market.init(&mut env.context).await.unwrap();
 
     let mm_pool = TestPool::new(&mm_pool_market, Some(reserve.collateral.mint_pubkey));
-    mm_pool.create(&mut env.context, &mm_pool_market).await.unwrap();
+    mm_pool
+        .create(&mut env.context, &mm_pool_market)
+        .await
+        .unwrap();
 
     // 4. Prepare depositor
 
@@ -120,7 +127,10 @@ async fn setup() -> (TestEnvironment, TestGeneralPool, TestDepositor) {
         .unwrap();
 
     let test_depositor = TestDepositor::new();
-    test_depositor.init(&mut env.context, &env.registry).await.unwrap();
+    test_depositor
+        .init(&mut env.context, &env.registry)
+        .await
+        .unwrap();
 
     // 4.2 Create transit account for liquidity token
     test_depositor

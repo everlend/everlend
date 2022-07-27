@@ -1,15 +1,11 @@
-#![cfg(feature = "test-bpf")]
-
 use solana_program::{
     instruction::{AccountMeta, Instruction, InstructionError},
     program_pack::Pack,
     pubkey::Pubkey,
     sysvar,
 };
-use solana_sdk::{
-    signature::{Keypair, Signer},
-};
 use solana_program_test::*;
+use solana_sdk::signature::{Keypair, Signer};
 use solana_sdk::transaction::{Transaction, TransactionError};
 
 use everlend_depositor::{
@@ -47,7 +43,10 @@ async fn setup() -> (
     let payer_pubkey = env.context.payer.pubkey();
 
     // 0. Prepare lending
-    let reserve = env.spl_token_lending.get_reserve_data(&mut env.context).await;
+    let reserve = env
+        .spl_token_lending
+        .get_reserve_data(&mut env.context)
+        .await;
     println!("{:#?}", reserve);
 
     let account = get_account(&mut env.context, &env.spl_token_lending.market_pubkey).await;
@@ -103,12 +102,17 @@ async fn setup() -> (
     .await
     .unwrap();
 
+    let mining_acc = general_pool
+        .init_user_mining(&mut env.context, &general_pool_market, &liquidity_provider)
+        .await;
+
     general_pool
         .deposit(
             &mut env.context,
             &env.registry,
             &general_pool_market,
             &liquidity_provider,
+            mining_acc,
             100 * EXP,
         )
         .await
@@ -133,7 +137,10 @@ async fn setup() -> (
     mm_pool_market.init(&mut env.context).await.unwrap();
 
     let mm_pool = TestPool::new(&mm_pool_market, Some(reserve.collateral.mint_pubkey));
-    mm_pool.create(&mut env.context, &mm_pool_market).await.unwrap();
+    mm_pool
+        .create(&mut env.context, &mm_pool_market)
+        .await
+        .unwrap();
 
     // 4. Prepare depositor
 
@@ -164,7 +171,10 @@ async fn setup() -> (
         .unwrap();
 
     let test_depositor = TestDepositor::new();
-    test_depositor.init(&mut env.context, &env.registry).await.unwrap();
+    test_depositor
+        .init(&mut env.context, &env.registry)
+        .await
+        .unwrap();
 
     // 4.2 Create transit account for liquidity token
     test_depositor
@@ -507,7 +517,8 @@ async fn fail_with_invalid_registry() {
     let withdraw_accounts =
         integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
 
-    let collateral_pool_withdraw_accounts = mm_pool.withdraw_accounts(&mm_pool_market,&test_depositor);
+    let collateral_pool_withdraw_accounts =
+        mm_pool.withdraw_accounts(&mm_pool_market, &test_depositor);
 
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::withdraw(
@@ -581,7 +592,8 @@ async fn fail_with_invalid_depositor() {
     let withdraw_accounts =
         integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
 
-    let collateral_pool_withdraw_accounts = mm_pool.withdraw_accounts(&mm_pool_market,&test_depositor);
+    let collateral_pool_withdraw_accounts =
+        mm_pool.withdraw_accounts(&mm_pool_market, &test_depositor);
 
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::withdraw(
@@ -669,7 +681,8 @@ async fn fail_with_invalid_income_pool_market() {
     let withdraw_accounts =
         integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
 
-    let collateral_pool_withdraw_accounts = mm_pool.withdraw_accounts(&mm_pool_market,&test_depositor);
+    let collateral_pool_withdraw_accounts =
+        mm_pool.withdraw_accounts(&mm_pool_market, &test_depositor);
 
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::withdraw(
@@ -757,7 +770,8 @@ async fn fail_with_invalid_income_pool_token_account() {
     let withdraw_accounts =
         integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
 
-    let collateral_pool_withdraw_accounts = mm_pool.withdraw_accounts(&mm_pool_market,&test_depositor);
+    let collateral_pool_withdraw_accounts =
+        mm_pool.withdraw_accounts(&mm_pool_market, &test_depositor);
 
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::withdraw(
@@ -828,10 +842,13 @@ async fn fail_with_invalid_mm_pool_market() {
     let withdraw_accounts =
         integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
 
-    let collateral_pool_withdraw_accounts = mm_pool.withdraw_accounts(&TestPoolMarket{
-        keypair: Keypair::new(),
-        manager: Keypair::new(),
-    },&test_depositor);
+    let collateral_pool_withdraw_accounts = mm_pool.withdraw_accounts(
+        &TestPoolMarket {
+            keypair: Keypair::new(),
+            manager: Keypair::new(),
+        },
+        &test_depositor,
+    );
 
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::withdraw(
@@ -905,13 +922,14 @@ async fn fail_with_invalid_mm_pool_token_account() {
     let withdraw_accounts =
         integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
 
-    let mock_mm_pool = TestPool{
+    let mock_mm_pool = TestPool {
         pool_pubkey: mm_pool.pool_pubkey,
         token_mint_pubkey: mm_pool.token_mint_pubkey,
         token_account: Keypair::new(),
     };
 
-    let collateral_pool_withdraw_accounts = mock_mm_pool.withdraw_accounts(&mm_pool_market,&test_depositor);
+    let collateral_pool_withdraw_accounts =
+        mock_mm_pool.withdraw_accounts(&mm_pool_market, &test_depositor);
 
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::withdraw(
@@ -982,13 +1000,14 @@ async fn fail_with_invalid_collateral_mint() {
     let withdraw_accounts =
         integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
 
-    let mock_mm_pool = TestPool{
+    let mock_mm_pool = TestPool {
         pool_pubkey: mm_pool.pool_pubkey,
         token_mint_pubkey: collateral_mint.clone(),
         token_account: mm_pool.token_account,
     };
 
-    let collateral_pool_withdraw_accounts = mock_mm_pool.withdraw_accounts(&mm_pool_market,&test_depositor);
+    let collateral_pool_withdraw_accounts =
+        mock_mm_pool.withdraw_accounts(&mm_pool_market, &test_depositor);
 
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::withdraw(
@@ -1062,7 +1081,8 @@ async fn fail_with_invalid_liquidity_mint() {
     let withdraw_accounts =
         integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
 
-    let collateral_pool_withdraw_accounts = mm_pool.withdraw_accounts(&mm_pool_market,&test_depositor);
+    let collateral_pool_withdraw_accounts =
+        mm_pool.withdraw_accounts(&mm_pool_market, &test_depositor);
 
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::withdraw(
@@ -1136,7 +1156,8 @@ async fn fail_with_invalid_mm_program_id() {
     let withdraw_accounts =
         integrations::withdraw_accounts(money_market_program_id, &money_market_pubkeys);
 
-    let collateral_pool_withdraw_accounts = mm_pool.withdraw_accounts(&mm_pool_market,&test_depositor);
+    let collateral_pool_withdraw_accounts =
+        mm_pool.withdraw_accounts(&mm_pool_market, &test_depositor);
 
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::withdraw(
@@ -1210,7 +1231,8 @@ async fn fail_with_invalid_withdraw_accounts() {
     let withdraw_accounts =
         integrations::withdraw_accounts(&Pubkey::new_unique(), &money_market_pubkeys);
 
-    let collateral_pool_withdraw_accounts = mm_pool.withdraw_accounts(&mm_pool_market,&test_depositor);
+    let collateral_pool_withdraw_accounts =
+        mm_pool.withdraw_accounts(&mm_pool_market, &test_depositor);
 
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::withdraw(
@@ -1321,9 +1343,12 @@ async fn fail_with_invalid_withdraw_authority() {
         "reserve",
     );
 
-    let collateral_pool_withdraw_accounts = mm_pool.withdraw_accounts(&mm_pool_market,&TestDepositor{
-        depositor: Keypair::new(),
-    });
+    let collateral_pool_withdraw_accounts = mm_pool.withdraw_accounts(
+        &mm_pool_market,
+        &TestDepositor {
+            depositor: Keypair::new(),
+        },
+    );
 
     let mut accounts = vec![
         AccountMeta::new_readonly(registry_config, false),

@@ -1,7 +1,6 @@
-#![cfg(feature = "test-bpf")]
-
 use crate::utils::*;
 use everlend_general_pool::instruction;
+use everlend_registry::state::SetRegistryPoolConfigParams;
 use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program_test::*;
@@ -9,7 +8,6 @@ use solana_sdk::{
     pubkey::Pubkey, signature::Keypair, signer::Signer, transaction::Transaction,
     transaction::TransactionError,
 };
-use everlend_registry::state::SetRegistryPoolConfigParams;
 use spl_token::error::TokenError;
 
 async fn setup() -> (
@@ -22,7 +20,10 @@ async fn setup() -> (
     let mut env = presetup().await;
 
     let test_pool_market = TestGeneralPoolMarket::new();
-    test_pool_market.init(&mut env.context, &env.registry.keypair.pubkey()).await.unwrap();
+    test_pool_market
+        .init(&mut env.context, &env.registry.keypair.pubkey())
+        .await
+        .unwrap();
 
     let test_pool = TestGeneralPool::new(&test_pool_market, None);
     test_pool
@@ -45,7 +46,10 @@ async fn setup() -> (
         .set_registry_pool_config(
             &mut env.context,
             &test_pool.pool_pubkey,
-            SetRegistryPoolConfigParams { deposit_minimum: 0, withdraw_minimum: 0 }
+            SetRegistryPoolConfigParams {
+                deposit_minimum: 0,
+                withdraw_minimum: 0,
+            },
         )
         .await
         .unwrap();
@@ -59,8 +63,18 @@ async fn setup() -> (
     .await
     .unwrap();
 
+    let mining_acc = test_pool
+        .init_user_mining(&mut env.context, &test_pool_market, &user)
+        .await;
     test_pool
-        .deposit(&mut env.context, &env.registry, &test_pool_market, &user, 100)
+        .deposit(
+            &mut env.context,
+            &env.registry,
+            &test_pool_market,
+            &user,
+            mining_acc,
+            100,
+        )
         .await
         .unwrap();
 

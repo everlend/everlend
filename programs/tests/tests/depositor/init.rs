@@ -1,5 +1,3 @@
-#![cfg(feature = "test-bpf")]
-
 use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program::program_pack::Pack;

@@ -116,7 +116,7 @@ pub enum DepositorInstruction {
     /// [R] Money market program id
     Withdraw,
 
-    /// Initialize accounts for mining LM rewards
+    /// Initialize account for mining LM rewards
     ///
     /// Accounts:
     /// [W] Internal mining account
@@ -137,7 +137,7 @@ pub enum DepositorInstruction {
     /// [W] Staking account
     /// For PortFinanceQuarry:
     ///
-    InitMiningAccounts {
+    InitMiningAccount {
         /// Type of mining
         mining_type: MiningType,
     },
@@ -237,7 +237,6 @@ pub fn create_transit(
     depositor: &Pubkey,
     mint: &Pubkey,
     rebalance_executor: &Pubkey,
-    //todo! remove option
     seed: Option<String>,
 ) -> Instruction {
     let seed = seed.unwrap_or_default();
@@ -542,8 +541,8 @@ pub struct InitMiningAccountsPubkeys {
     pub lending_market: Option<Pubkey>,
 }
 
-/// Inint ming accounts
-pub fn init_mining_accounts(
+/// Init mining account
+pub fn init_mining_account(
     program_id: &Pubkey,
     pubkeys: &InitMiningAccountsPubkeys,
     mining_type: MiningType,
@@ -613,14 +612,12 @@ pub fn init_mining_accounts(
                 false,
             ));
             accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
-            accounts.push(AccountMeta::new_readonly(sysvar::rent::id(), false));
             accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
         }
         MiningType::Quarry {
             quarry_mining_program_id,
             quarry,
             rewarder,
-            token_mint,
             miner_vault,
         } => {
             let (miner_pubkey, _) = cpi::quarry::find_miner_program_address(
@@ -632,15 +629,14 @@ pub fn init_mining_accounts(
             accounts.push(AccountMeta::new(miner_pubkey, false));
             accounts.push(AccountMeta::new(quarry, false));
             accounts.push(AccountMeta::new_readonly(rewarder, false));
-            accounts.push(AccountMeta::new_readonly(token_mint, false));
             accounts.push(AccountMeta::new_readonly(miner_vault, false));
         }
-        _ => {}
+        MiningType::None => {}
     }
 
     Instruction::new_with_borsh(
         *program_id,
-        &DepositorInstruction::InitMiningAccounts { mining_type },
+        &DepositorInstruction::InitMiningAccount { mining_type },
         accounts,
     )
 }

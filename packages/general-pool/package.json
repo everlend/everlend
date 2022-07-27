@@ -1,6 +1,6 @@
 {
   "name": "@everlend/general-pool",
-  "version": "0.0.19",
+  "version": "0.0.21",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -31,7 +31,7 @@
     ]
   },
   "dependencies": {
-    "@everlend/common": "workspace:^0.0.3",
+    "@everlend/common": "^0.0.3",
     "@solana/spl-token": "^0.1.5",
     "@solana/web3.js": "^1.16.1",
     "borsh": "^0.6.0",

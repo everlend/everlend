@@ -1,5 +1,3 @@
-#![cfg(feature = "test-bpf")]
-
 use crate::utils::*;
 use everlend_general_pool::instruction;
 use everlend_general_pool::state::AccountType;

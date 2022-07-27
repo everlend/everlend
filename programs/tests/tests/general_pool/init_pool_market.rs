@@ -1,5 +1,3 @@
-#![cfg(feature = "test-bpf")]
-
 use crate::utils::general_pool_market::TestGeneralPoolMarket;
 use crate::utils::*;
 use everlend_general_pool::instruction;

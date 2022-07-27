@@ -42,7 +42,7 @@ pub fn execute_init_mining_accounts(
     pubkeys: &InitMiningAccountsPubkeys,
     mining_type: MiningType,
 ) -> Result<()> {
-    let init_mining_instruction = everlend_depositor::instruction::init_mining_accounts(
+    let init_mining_instruction = everlend_depositor::instruction::init_mining_account(
         &everlend_depositor::id(),
         pubkeys,
         mining_type,

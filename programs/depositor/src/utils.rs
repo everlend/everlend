@@ -99,7 +99,6 @@ pub fn deposit<'a>(
             quarry_mining_program_id,
             quarry,
             rewarder,
-            token_mint: _,
             miner_vault,
         }) => {
             let quarry_mining_program_id_info = next_account_info(money_market_account_info_iter)?;
@@ -305,7 +304,6 @@ pub fn withdraw<'a>(
             quarry_mining_program_id,
             quarry,
             rewarder,
-            token_mint: _,
             miner_vault,
         }) => {
             let miner_info = next_account_info(money_market_account_info_iter)?;

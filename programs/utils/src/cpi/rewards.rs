@@ -1,9 +1,98 @@
-use anchor_lang::InstructionData;
-use eld_rewards::instruction::FillVault;
-use solana_program::instruction::{AccountMeta, Instruction};
 use solana_program::{
-    account_info::AccountInfo, program::invoke_signed, program_error::ProgramError, pubkey::Pubkey,
+    account_info::AccountInfo,
+    entrypoint::ProgramResult,
+    program::{invoke, invoke_signed},
+    pubkey::Pubkey,
 };
+
+use crate::instructions::rewards;
+
+pub fn initialize_mining<'a>(
+    program_id: &Pubkey,
+    config: AccountInfo<'a>,
+    reward_pool: AccountInfo<'a>,
+    mining: AccountInfo<'a>,
+    user: AccountInfo<'a>,
+    payer: AccountInfo<'a>,
+    system_program: AccountInfo<'a>,
+    rent: AccountInfo<'a>,
+) -> ProgramResult {
+    let ix = rewards::initialize_mining(
+        program_id,
+        config.key,
+        reward_pool.key,
+        mining.key,
+        user.key,
+        payer.key,
+    );
+
+    invoke(
+        &ix,
+        &[
+            config,
+            reward_pool,
+            mining,
+            user,
+            payer,
+            system_program,
+            rent,
+        ],
+    )
+}
+
+pub fn deposit_mining<'a>(
+    program_id: &Pubkey,
+    config: AccountInfo<'a>,
+    reward_pool: AccountInfo<'a>,
+    mining: AccountInfo<'a>,
+    user: AccountInfo<'a>,
+    deposit_authority: AccountInfo<'a>,
+    amount: u64,
+    signers_seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let ix = rewards::deposit_mining(
+        program_id,
+        config.key,
+        reward_pool.key,
+        mining.key,
+        user.key,
+        deposit_authority.key,
+        amount,
+    );
+
+    invoke_signed(
+        &ix,
+        &[config, reward_pool, mining, user, deposit_authority],
+        signers_seeds,
+    )
+}
+
+pub fn withdraw_mining<'a>(
+    program_id: &Pubkey,
+    config: AccountInfo<'a>,
+    reward_pool: AccountInfo<'a>,
+    mining: AccountInfo<'a>,
+    user: AccountInfo<'a>,
+    deposit_authority: AccountInfo<'a>,
+    amount: u64,
+    signers_seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let ix = rewards::withdraw_mining(
+        program_id,
+        config.key,
+        reward_pool.key,
+        mining.key,
+        user.key,
+        deposit_authority.key,
+        amount,
+    );
+
+    invoke_signed(
+        &ix,
+        &[config, reward_pool, mining, user, deposit_authority],
+        signers_seeds,
+    )
+}
 
 #[allow(clippy::too_many_arguments)]
 pub fn fill_vault<'a>(
@@ -17,21 +106,18 @@ pub fn fill_vault<'a>(
     authority: AccountInfo<'a>,
     amount: u64,
     signers_seeds: &[&[&[u8]]],
-) -> Result<(), ProgramError> {
-    let ix = Instruction {
-        program_id: *program_id,
-        data: FillVault { amount }.data(),
-        accounts: vec![
-            AccountMeta::new_readonly(*config.key, false),
-            AccountMeta::new(*reward_pool.key, false),
-            AccountMeta::new_readonly(*reward_mint.key, false),
-            AccountMeta::new(*vault.key, false),
-            AccountMeta::new(*fee_account.key, false),
-            AccountMeta::new(*authority.key, true),
-            AccountMeta::new(*from.key, false),
-            AccountMeta::new_readonly(spl_token::id(), false),
-        ],
-    };
+) -> ProgramResult {
+    let ix = rewards::fill_vault(
+        program_id,
+        config.key,
+        reward_pool.key,
+        reward_mint.key,
+        vault.key,
+        fee_account.key,
+        authority.key,
+        from.key,
+        amount,
+    );
 
     invoke_signed(
         &ix,

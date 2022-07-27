@@ -22,6 +22,8 @@ Everlend is a lending aggregator and optimizer. Get the best rates on your liqui
 ### Running tests
     RUST_LOG=solana=debug cargo test-bpf --test ...
 
+### Run individual test
+    cargo test-bpf ./general_pool -- test tests general_pool::deposit::success --exact
 ##### Create required accounts
     RUST_LOG=solana=debug cargo run create --mints SOL
 

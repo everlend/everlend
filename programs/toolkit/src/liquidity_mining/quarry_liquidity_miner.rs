@@ -102,7 +102,6 @@ impl LiquidityMiner for QuarryLiquidityMiner {
             quarry_mining_program_id: quarry.mine_program_id,
             quarry: quarry.quarry,
             rewarder: quarry.rewarder,
-            token_mint: quarry.token_mint,
             miner_vault: mining_account,
         }
     }

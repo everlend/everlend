@@ -42,8 +42,6 @@ pub enum MiningType {
         ///
         rewarder: Pubkey,
         ///
-        token_mint: Pubkey,
-        ///
         miner_vault: Pubkey,
     },
 }
@@ -76,7 +74,7 @@ impl Sealed for InternalMining {}
 
 impl Pack for InternalMining {
     // 1 + 1 + 1 + 4 * 32
-    // TODO think about len
+    // Make len as max possible enum size
     const LEN: usize = 131;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {

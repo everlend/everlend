@@ -787,8 +787,8 @@ impl Processor {
         Ok(())
     }
 
-    /// Process InitMiningAccounts instruction
-    pub fn init_mining_accounts(
+    /// Process InitMiningAccount instruction
+    pub fn init_mining_account(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
         mining_type: MiningType,
@@ -849,8 +849,9 @@ impl Processor {
                 rent,
             )?;
         } else {
-            // TODO check that account created with requared len
             assert_owned_by(internal_mining_info, program_id)?;
+            // Check that account
+            InternalMining::unpack(&internal_mining_info.data.borrow())?;
         }
 
         let staking_program_id_info = next_account_info(account_info_iter)?;
@@ -895,7 +896,6 @@ impl Processor {
                 )?
             }
             MiningType::PortFinance {
-                // TODO move staking program into config
                 staking_program_id,
                 staking_account,
                 staking_pool,
@@ -918,7 +918,7 @@ impl Processor {
 
                 let lending_market_info = next_account_info(account_info_iter)?;
                 let clock_info = next_account_info(account_info_iter)?;
-                let rent_info = next_account_info(account_info_iter)?;
+                let _spl_token_program = next_account_info(account_info_iter)?;
 
                 cpi::port_finance::init_obligation(
                     money_market_program_id_info.key,
@@ -942,7 +942,6 @@ impl Processor {
                 quarry_mining_program_id,
                 quarry,
                 rewarder,
-                token_mint,
                 miner_vault,
             } => {
                 return Err(EverlendError::TemporaryUnavailable.into());
@@ -953,8 +952,6 @@ impl Processor {
                 assert_account_key(quarry_info, &quarry)?;
                 let rewarder_info = next_account_info(account_info_iter)?;
                 assert_account_key(rewarder_info, &rewarder)?;
-                let token_mint_info = next_account_info(account_info_iter)?;
-                assert_account_key(token_mint_info, &token_mint)?;
                 let miner_vault_info = next_account_info(account_info_iter)?;
                 assert_account_key(miner_vault_info, &miner_vault)?;
                 let (miner_pubkey, _) = cpi::quarry::find_miner_program_address(
@@ -970,7 +967,7 @@ impl Processor {
                     quarry_info.clone(),
                     rewarder_info.clone(),
                     manager_info.clone(),
-                    token_mint_info.clone(),
+                    collateral_mint_info.clone(),
                     miner_vault_info.clone(),
                     &[signers_seeds.as_ref()],
                 )?;
@@ -1027,16 +1024,15 @@ impl Processor {
         let internal_mining_type =
             InternalMining::unpack(&internal_mining_info.data.borrow())?.mining_type;
 
-        // TODO check money market
         let token_program_info = next_account_info(account_info_iter)?;
         let staking_program_id_info = next_account_info(account_info_iter)?;
 
-        // TODO add checks
+        // TODO add check of eld_config
         let eld_config_info = next_account_info(account_info_iter)?;
 
         // Get reward_pool struct and check liquidity_mint
         let reward_pool_info = next_account_info(account_info_iter)?;
-        // TODO six unpack and check liquidity mint
+        // TODO fix unpack and check liquidity mint
         // let reward_pool = RewardPool::try_from_slice(&reward_pool_info.data.borrow()[8..])?;
         // assert_account_key(liquidity_mint_info, &reward_pool.liquidity_mint)?;
 
@@ -1086,7 +1082,6 @@ impl Processor {
                     //TODO Deposit into rewards pool
                 }
 
-                // TODO think about necessary
                 cpi::larix::refresh_mine(
                     staking_program_id_info.key,
                     mining_account_info.clone(),
@@ -1171,7 +1166,6 @@ impl Processor {
                 quarry_mining_program_id,
                 quarry,
                 rewarder,
-                token_mint: _,
                 miner_vault: _,
             } => {
                 assert_account_key(staking_program_id_info, &quarry_mining_program_id)?;
@@ -1273,9 +1267,9 @@ impl Processor {
                 Self::migrate_depositor(program_id, accounts)
             }
 
-            DepositorInstruction::InitMiningAccounts { mining_type } => {
-                msg!("DepositorInstruction: InitMiningAccounts");
-                Self::init_mining_accounts(program_id, accounts, mining_type)
+            DepositorInstruction::InitMiningAccount { mining_type } => {
+                msg!("DepositorInstruction: InitMiningAccount");
+                Self::init_mining_account(program_id, accounts, mining_type)
             }
 
             DepositorInstruction::ClaimMiningReward => {

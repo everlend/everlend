@@ -1,6 +1,4 @@
-#![cfg(feature = "test-bpf")]
-
-use everlend_registry::state::{RegistryRootAccounts};
+use everlend_registry::state::RegistryRootAccounts;
 use solana_program::instruction::InstructionError;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::*;
@@ -9,12 +7,12 @@ use solana_sdk::{signer::Signer, transaction::TransactionError};
 
 use everlend_depositor::find_transit_program_address;
 use everlend_liquidity_oracle::state::DistributionArray;
+use everlend_registry::state::SetRegistryPoolConfigParams;
 use everlend_utils::{
     find_program_address,
     integrations::{self, MoneyMarketPubkeys},
     EverlendError,
 };
-use everlend_registry::state::SetRegistryPoolConfigParams;
 
 use crate::utils::*;
 
@@ -41,7 +39,10 @@ async fn setup() -> (
     let payer_pubkey = env.context.payer.pubkey();
 
     // 0. Prepare lending
-    let reserve = env.spl_token_lending.get_reserve_data(&mut env.context).await;
+    let reserve = env
+        .spl_token_lending
+        .get_reserve_data(&mut env.context)
+        .await;
     println!("{:#?}", reserve);
 
     let collateral_mint = get_mint_data(&mut env.context, &reserve.collateral.mint_pubkey).await;
@@ -50,7 +51,10 @@ async fn setup() -> (
     // 1. Prepare general pool
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut env.context, &env.registry.keypair.pubkey()).await.unwrap();
+    general_pool_market
+        .init(&mut env.context, &env.registry.keypair.pubkey())
+        .await
+        .unwrap();
 
     let general_pool = TestGeneralPool::new(&general_pool_market, None);
     general_pool
@@ -61,7 +65,10 @@ async fn setup() -> (
         .set_registry_pool_config(
             &mut env.context,
             &general_pool.pool_pubkey,
-            SetRegistryPoolConfigParams { deposit_minimum: 0, withdraw_minimum: 0 }
+            SetRegistryPoolConfigParams {
+                deposit_minimum: 0,
+                withdraw_minimum: 0,
+            },
         )
         .await
         .unwrap();
@@ -77,12 +84,17 @@ async fn setup() -> (
     .await
     .unwrap();
 
+    let mining_acc = general_pool
+        .init_user_mining(&mut env.context, &general_pool_market, &liquidity_provider)
+        .await;
+
     general_pool
         .deposit(
             &mut env.context,
             &env.registry,
             &general_pool_market,
             &liquidity_provider,
+            mining_acc,
             100 * EXP,
         )
         .await
@@ -107,7 +119,10 @@ async fn setup() -> (
     mm_pool_market.init(&mut env.context).await.unwrap();
 
     let mm_pool = TestPool::new(&mm_pool_market, Some(reserve.collateral.mint_pubkey));
-    mm_pool.create(&mut env.context, &mm_pool_market).await.unwrap();
+    mm_pool
+        .create(&mut env.context, &mm_pool_market)
+        .await
+        .unwrap();
 
     // 4. Prepare depositor
 
@@ -138,7 +153,10 @@ async fn setup() -> (
         .unwrap();
 
     let test_depositor = TestDepositor::new();
-    test_depositor.init(&mut env.context, &env.registry).await.unwrap();
+    test_depositor
+        .init(&mut env.context, &env.registry)
+        .await
+        .unwrap();
 
     // 4.2 Create transit account for liquidity token
     test_depositor
@@ -194,8 +212,8 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    let ten = [1,2,3,4,5,6,7,8,9,0];
-    let collateral_pool_markets = ten.map(|_| { mm_pool_market.keypair.pubkey().clone() });
+    let ten = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
+    let collateral_pool_markets = ten.map(|_| mm_pool_market.keypair.pubkey().clone());
     let mut roots = RegistryRootAccounts {
         general_pool_market: general_pool_market.keypair.pubkey(),
         income_pool_market: income_pool_market.keypair.pubkey(),
@@ -210,7 +228,15 @@ async fn setup() -> (
 
     // 6. Prepare withdraw authority
     let withdraw_authority = TestPoolWithdrawAuthority::new(&mm_pool, &depositor_authority);
-    withdraw_authority.create(&mut env.context, &mm_pool_market, &mm_pool, &depositor_authority).await.unwrap();
+    withdraw_authority
+        .create(
+            &mut env.context,
+            &mm_pool_market,
+            &mm_pool,
+            &depositor_authority,
+        )
+        .await
+        .unwrap();
 
     (
         env.context,

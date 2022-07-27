@@ -161,7 +161,11 @@ pub async fn command_run_test(
             &sol.collateral_pools[i].token_mint,
             &programs.money_market_program_ids[i],
             integrations::deposit_accounts(&programs.money_market_program_ids[i], &pubkeys),
-            everlend_depositor::utils::collateral_pool_deposit_accounts(&collateral_pool_markets[i],&sol.collateral_pools[i].token_mint, &sol.collateral_pools[i].pool_token_account),
+            everlend_depositor::utils::collateral_pool_deposit_accounts(
+                &collateral_pool_markets[i],
+                &sol.collateral_pools[i].token_mint,
+                &sol.collateral_pools[i].pool_token_account,
+            ),
         )
     };
 
@@ -184,7 +188,13 @@ pub async fn command_run_test(
             &sol.mint,
             &programs.money_market_program_ids[i],
             integrations::withdraw_accounts(&programs.money_market_program_ids[i], &pubkeys),
-            everlend_depositor::utils::collateral_pool_withdraw_accounts(&collateral_pool_markets[i],&sol.collateral_pools[i].token_mint, &sol.collateral_pools[i].pool_token_account, &programs.depositor_program_id, &depositor),
+            everlend_depositor::utils::collateral_pool_withdraw_accounts(
+                &collateral_pool_markets[i],
+                &sol.collateral_pools[i].token_mint,
+                &sol.collateral_pools[i].pool_token_account,
+                &programs.depositor_program_id,
+                &depositor,
+            ),
         )
     };
 
@@ -240,6 +250,10 @@ pub async fn command_run_test(
             &sol.collateral_token_account,
             &sol.general_pool_token_account,
             &sol.general_pool_mint,
+            // TODO fix mocks
+            &Pubkey::new_unique(),
+            &Pubkey::new_unique(),
+            &Pubkey::new_unique(),
             a,
         )
     };
@@ -256,6 +270,10 @@ pub async fn command_run_test(
             &sol.general_pool_token_account,
             &sol.mint,
             &sol.general_pool_mint,
+            // TODO fix mocks
+            &Pubkey::new_unique(),
+            &Pubkey::new_unique(),
+            &Pubkey::new_unique(),
             a,
         )
     };

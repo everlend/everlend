@@ -208,6 +208,10 @@ pub enum LiquidityPoolsInstruction {
     /// Migrate account data
     ///
     MigrationInstruction,
+
+    /// Init user mining account
+    ///
+    InitUserMining,
 }
 
 /// Creates 'InitPoolMarket' instruction.
@@ -367,6 +371,9 @@ pub fn deposit(
     token_account: &Pubkey,
     pool_mint: &Pubkey,
     user_transfer_authority: &Pubkey,
+    mining_reward_pool: &Pubkey,
+    mining_reward_acc: &Pubkey,
+    config: &Pubkey,
     amount: u64,
 ) -> Instruction {
     let (pool_market_authority, _) = find_program_address(program_id, pool_market);
@@ -384,6 +391,10 @@ pub fn deposit(
         AccountMeta::new(*pool_mint, false),
         AccountMeta::new_readonly(pool_market_authority, false),
         AccountMeta::new_readonly(*user_transfer_authority, true),
+        AccountMeta::new(*mining_reward_pool, false),
+        AccountMeta::new(*mining_reward_acc, false),
+        AccountMeta::new_readonly(*config, false),
+        AccountMeta::new_readonly(eld_rewards::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
     ];
 
@@ -448,6 +459,9 @@ pub fn withdraw_request(
     token_mint: &Pubkey,
     pool_mint: &Pubkey,
     user_transfer_authority: &Pubkey,
+    mining_reward_pool: &Pubkey,
+    mining_reward_acc: &Pubkey,
+    config: &Pubkey,
     collateral_amount: u64,
 ) -> Instruction {
     let (withdrawal_requests, _) =
@@ -474,6 +488,10 @@ pub fn withdraw_request(
         AccountMeta::new(*token_account, false),
         AccountMeta::new(collateral_transit, false),
         AccountMeta::new(*user_transfer_authority, true),
+        AccountMeta::new(*mining_reward_pool, false),
+        AccountMeta::new(*mining_reward_acc, false),
+        AccountMeta::new_readonly(*config, false),
+        AccountMeta::new_readonly(eld_rewards::id(), false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
@@ -611,6 +629,41 @@ pub fn close_pool_market(
         accounts,
     )
 }
+
+/// Creates 'Borrow' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn init_user_mining(
+    program_id: &Pubkey,
+    pool_market: &Pubkey,
+    pool: &Pubkey,
+    user_collateral_token_account: &Pubkey,
+    user_authority: &Pubkey,
+    payer: &Pubkey,
+    mining_reward_pool: &Pubkey,
+    mining_reward_acc: &Pubkey,
+    config: &Pubkey,
+) -> Instruction {
+    let accounts = vec![
+        AccountMeta::new_readonly(*pool_market, false),
+        AccountMeta::new_readonly(*pool, false),
+        AccountMeta::new_readonly(*user_collateral_token_account, false),
+        AccountMeta::new_readonly(*user_authority, false),
+        AccountMeta::new(*payer, true),
+        AccountMeta::new(*mining_reward_pool, false),
+        AccountMeta::new(*mining_reward_acc, false),
+        AccountMeta::new_readonly(*config, false),
+        AccountMeta::new_readonly(eld_rewards::id(), false),
+        AccountMeta::new_readonly(system_program::id(), false),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &LiquidityPoolsInstruction::InitUserMining,
+        accounts,
+    )
+}
+
 
 /// Creates 'Migration' instruction.
 #[allow(clippy::too_many_arguments)]
