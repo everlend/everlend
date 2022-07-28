@@ -207,6 +207,16 @@ export const prepareDepositTx = async (
   }
 
   destination = destination ?? (await findAssociatedTokenAccount(payerPublicKey, poolMint))
+  !(await connection.getAccountInfo(destination)) &&
+    tx.add(
+      new CreateAssociatedTokenAccount(
+        { feePayer: payerPublicKey },
+        {
+          associatedTokenAddress: destination,
+          tokenMint: poolMint,
+        },
+      ),
+    )
 
   tx.add(
     new DepositTx(
