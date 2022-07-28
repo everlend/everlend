@@ -4,7 +4,10 @@ use everlend_general_pool::{
     find_withdrawal_requests_program_address, general_pool_withdraw_sol_accounts, instruction,
     state::{AccountType, Pool, PoolMarket, WithdrawalRequest, WithdrawalRequests},
 };
-use everlend_utils::instructions::{config::initialize, rewards::initialize_pool};
+use everlend_utils::instructions::{
+    config::initialize,
+    rewards::{initialize_mining, initialize_pool},
+};
 use solana_client::client_error::ClientError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_sdk::{
@@ -454,10 +457,6 @@ pub fn get_withdrawal_request_accounts(
 #[allow(clippy::too_many_arguments)]
 pub fn init_user_mining(
     config: &Config,
-    registry_pubkey: &Pubkey,
-    pool_market_pubkey: &Pubkey,
-    pool_pubkey: &Pubkey,
-    user_collateral_token_account: &Pubkey,
     user_authority: &Pubkey,
     payer: &Pubkey,
     mining_reward_pool: &Pubkey,
@@ -465,16 +464,13 @@ pub fn init_user_mining(
     anchor_config: &Pubkey,
 ) -> Result<(), ClientError> {
     let tx = Transaction::new_with_payer(
-        &[instruction::init_user_mining(
-            &everlend_general_pool::id(),
-            pool_market_pubkey,
-            pool_pubkey,
-            user_collateral_token_account,
-            user_authority,
-            payer,
+        &[initialize_mining(
+            &eld_rewards::id(),
+            anchor_config,
             mining_reward_pool,
             mining_reward_acc,
-            anchor_config,
+            user_authority,
+            payer,
         )],
         Some(&config.fee_payer.pubkey()),
     );

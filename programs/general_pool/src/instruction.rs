@@ -638,7 +638,8 @@ pub fn init_user_mining(
     pool: &Pubkey,
     user_collateral_token_account: &Pubkey,
     user_authority: &Pubkey,
-    payer: &Pubkey,
+    registry: &Pubkey,
+    manager: &Pubkey,
     mining_reward_pool: &Pubkey,
     mining_reward_acc: &Pubkey,
     config: &Pubkey,
@@ -648,7 +649,8 @@ pub fn init_user_mining(
         AccountMeta::new_readonly(*pool, false),
         AccountMeta::new_readonly(*user_collateral_token_account, false),
         AccountMeta::new_readonly(*user_authority, false),
-        AccountMeta::new(*payer, true),
+        AccountMeta::new_readonly(*registry, false),
+        AccountMeta::new(*manager, true),
         AccountMeta::new(*mining_reward_pool, false),
         AccountMeta::new(*mining_reward_acc, false),
         AccountMeta::new_readonly(*config, false),
@@ -663,7 +665,6 @@ pub fn init_user_mining(
         accounts,
     )
 }
-
 
 /// Creates 'Migration' instruction.
 #[allow(clippy::too_many_arguments)]
