@@ -39,6 +39,11 @@ pub fn assert_uninitialized<T: Uninitialized>(account: &T) -> ProgramResult {
 /// Assert owned by
 pub fn assert_owned_by(account: &AccountInfo, owner: &Pubkey) -> ProgramResult {
     if account.owner != owner {
+        msg!(
+            "Assert owner error. Got {} Expected {}",
+            *account.owner,
+            *owner
+        );
         Err(EverlendError::InvalidAccountOwner.into())
     } else {
         Ok(())
