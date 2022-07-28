@@ -1089,6 +1089,9 @@ impl Processor {
         let pool = Pool::unpack(&pool_info.data.borrow())?;
         assert_account_key(pool_market_info, &pool.pool_market)?;
 
+        let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+        assert_account_key(registry_info, &pool_market.registry)?;
+
         let (pool_pubkey, pool_bump_seed) =
             find_pool_program_address(program_id, &pool.pool_market, &pool.token_mint);
         assert_account_key(pool_info, &pool_pubkey)?;
