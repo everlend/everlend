@@ -1,14 +1,15 @@
-use super::{BanksClientResult, TestRegistry};
 use super::{
     general_pool_borrow_authority::TestGeneralPoolBorrowAuthority, get_account, get_liquidity_mint,
     LiquidityProvider, TestGeneralPoolMarket, User,
 };
+use super::{BanksClientResult, TestRegistry};
 use everlend_general_pool::state::{WithdrawalRequest, WithdrawalRequests};
 use everlend_general_pool::{
     find_pool_program_address, find_transit_sol_unwrap_address,
     find_withdrawal_request_program_address, find_withdrawal_requests_program_address, instruction,
     state::Pool,
 };
+use everlend_utils::instructions::rewards::initialize_mining;
 use everlend_utils::instructions::{config::initialize, rewards::initialize_pool};
 use solana_program::{
     instruction::AccountMeta, program_pack::Pack, pubkey::Pubkey, system_instruction,
@@ -45,7 +46,7 @@ impl TestGeneralPool {
 
         let config = Keypair::new();
 
-       let (mining_reward_pool, _) = Pubkey::find_program_address(
+        let (mining_reward_pool, _) = Pubkey::find_program_address(
             &[
                 b"reward_pool".as_ref(),
                 &config.pubkey().to_bytes(),
@@ -157,7 +158,6 @@ impl TestGeneralPool {
                     &self.config.pubkey(),
                     &context.payer.pubkey(),
                 ),
-
                 initialize_pool(
                     &eld_rewards::id(),
                     &self.config.pubkey(),
@@ -168,10 +168,7 @@ impl TestGeneralPool {
                 ),
             ],
             Some(&context.payer.pubkey()),
-            &[
-                &context.payer,
-                &self.config,
-            ],
+            &[&context.payer, &self.config],
             context.last_blockhash,
         );
 
@@ -391,7 +388,7 @@ impl TestGeneralPool {
     pub async fn init_user_mining(
         &self,
         context: &mut ProgramTestContext,
-        test_pool_market: &TestGeneralPoolMarket,
+        _test_pool_market: &TestGeneralPoolMarket,
         user: &LiquidityProvider,
     ) -> Pubkey {
         let (mining_account, _) = Pubkey::find_program_address(
@@ -404,29 +401,21 @@ impl TestGeneralPool {
         );
 
         let tx = Transaction::new_signed_with_payer(
-            &[
-                instruction::init_user_mining(
-                    &everlend_general_pool::id(),
-                    &test_pool_market.keypair.pubkey(),
-                    &self.pool_pubkey,
-                    &user.pool_account,
-                    &user.owner.pubkey(),
-                    &context.payer.pubkey(),
-                    &self.mining_reward_pool,
-                    &mining_account,
-                    &self.config.pubkey(),
-                ),
-            ],
+            &[initialize_mining(
+                &eld_rewards::id(),
+                &self.config.pubkey(),
+                &self.mining_reward_pool,
+                &mining_account,
+                &user.owner.pubkey(),
+                &context.payer.pubkey(),
+            )],
             Some(&context.payer.pubkey()),
-            &[
-                &context.payer,
-            ],
+            &[&context.payer],
             context.last_blockhash,
         );
 
         context.banks_client.process_transaction(tx).await.unwrap();
         mining_account
-
     }
 
     pub async fn migrate_withdraw_requests_account(
