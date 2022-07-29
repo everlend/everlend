@@ -447,6 +447,10 @@ impl Processor {
                 .ok_or(ProgramError::InvalidArgument)? as u64
         };
 
+        if mint_amount == 0 {
+            return Err(EverlendError::DepositAmountTooSmall.into());
+        }
+
         // Transfer token from source to token account
         cpi::spl_token::transfer(
             source_info.clone(),

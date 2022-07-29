@@ -631,7 +631,9 @@ pub fn init_mining_account(
             accounts.push(AccountMeta::new_readonly(rewarder, false));
             accounts.push(AccountMeta::new_readonly(miner_vault, false));
         }
-        MiningType::None => {}
+        MiningType::None => {
+            accounts.push(AccountMeta::new_readonly(system_program::id(), false));
+        }
     }
 
     Instruction::new_with_borsh(

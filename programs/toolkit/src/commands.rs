@@ -12,17 +12,6 @@ use solana_sdk::signature::Keypair;
 use solana_sdk::signature::Signer;
 use spl_associated_token_account::get_associated_token_address;
 
-use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::{DeprecatedRegistryConfig, Registry, SetRegistryPoolConfigParams};
-use everlend_registry::{
-    find_config_program_address,
-    state::{
-        RegistryConfig, RegistryPrograms, RegistryRootAccounts, RegistrySettings,
-        TOTAL_DISTRIBUTIONS,
-    },
-};
-use everlend_utils::integrations::{MoneyMarket, StakingMoneyMarket};
-
 use crate::accounts_config::{
     save_config_file, CollateralPoolAccounts, DefaultAccounts, InitializedAccounts,
 };
@@ -44,6 +33,16 @@ use crate::{
         REFRESH_INCOME_INTERVAL,
     },
 };
+use everlend_liquidity_oracle::state::DistributionArray;
+use everlend_registry::state::{DeprecatedRegistryConfig, Registry, SetRegistryPoolConfigParams};
+use everlend_registry::{
+    find_config_program_address,
+    state::{
+        RegistryConfig, RegistryPrograms, RegistryRootAccounts, RegistrySettings,
+        TOTAL_DISTRIBUTIONS,
+    },
+};
+use everlend_utils::integrations::{MoneyMarket, StakingMoneyMarket};
 
 pub async fn command_create_registry(
     config: &Config,
@@ -213,7 +212,9 @@ pub fn command_init_mining(
         StakingMoneyMarket::Quarry => Some(Box::new(QuarryLiquidityMiner {})),
         _ => None,
     };
+
     if liquidity_miner_option.is_none() {
+        // TODO process of None update
         return Err(anyhow::anyhow!("Wrong staking money market"));
     }
     let liquidity_miner = liquidity_miner_option.unwrap();

@@ -70,6 +70,11 @@ pub fn deposit<'a>(
 
     let collateral_amount = Account::unpack_unchecked(&collateral_transit.data.borrow())?.amount;
 
+    // TODO check collateral_amount
+    if collateral_amount == 0 {
+        return Ok(collateral_amount);
+    }
+
     match internal_mining_type {
         Some(MiningType::Larix { mining_account, .. }) => {
             let reserve_bonus_info = next_account_info(money_market_account_info_iter)?;
