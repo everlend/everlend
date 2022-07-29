@@ -20,6 +20,10 @@ port_finance:
 port_accounts:
   SOL:
     staking_pool: 11111111111111111111111111111111
+  USDC:
+    staking_pool: DUrhzzdSKbTkosroCGc2pKiPuREBmn8QL3FxmpcJx7QN
+  mSOL:
+    staking_pool: GoNeG1rhoZMuLqy6aUNfzyHjkCe9dwFuWTFwENPfU3q8
 larix:
   program_id: 7Zb1bGi32pfsrBkzWdqd4dFhUXwp5Nybr1zuaEwN34hy
   lending_market: 5geyZJdffDBNoMqEbogbPvdgH9ue7NREobtW8M3C1qfe
