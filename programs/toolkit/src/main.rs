@@ -558,6 +558,59 @@ async fn command_create_income_pool_safety_fund_token_account(
     Ok(())
 }
 
+async fn command_update_manager(
+    config: &Config,
+    accounts_path: &str,
+    program: String,
+    source: Keypair,
+    target: Keypair,
+) -> anyhow::Result<()> {
+    let accounts = InitializedAccounts::load(accounts_path).unwrap();
+
+    match program.as_str() {
+        "collateral-pool" => {
+            for p in accounts.collateral_pool_markets {
+                println!("Updating collateral pool manager: Pool market: {}", p);
+                crate::collateral_pool::update_manager(config, &p, &source, &target)?;
+            }
+        }
+        "general-pool" => {
+            println!(
+                "Updating general pool manager: Market {}",
+                accounts.general_pool_market
+            );
+            crate::general_pool::update_manager(
+                config,
+                &accounts.general_pool_market,
+                &source,
+                &target,
+            )?;
+        }
+        "income-pools" => {
+            println!(
+                "Updating income pool manager: Market {}",
+                accounts.income_pool_market
+            );
+            crate::income_pools::update_manager(
+                config,
+                &accounts.income_pool_market,
+                &source,
+                &target,
+            )?;
+        }
+        "registry" => {
+            println!("Updating registry manager: Registry {}", accounts.registry);
+            crate::registry::update_manager(config, &accounts.registry, &source, &target)?;
+        }
+        _ => {
+            return Err(anyhow::anyhow!("wrong program"));
+        }
+    }
+    println!("Program {:?}", program);
+
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let matches = App::new(crate_name!())
@@ -1155,7 +1208,7 @@ async fn main() -> anyhow::Result<()> {
         )
         .subcommand(
             SubCommand::with_name("create-safety-fund-token-account")
-                .about("Run  create income pool safety fund token account")
+                .about("Run create income pool safety fund token account")
                 .arg(
                     Arg::with_name("case")
                         .value_name("NAME")
@@ -1174,7 +1227,7 @@ async fn main() -> anyhow::Result<()> {
         )
         .subcommand(
             SubCommand::with_name("create-depositor-transit-token-account")
-                .about("Run  create depositor transit token account")
+                .about("Run create depositor transit token account")
                 .arg(
                     Arg::with_name("seed")
                         .long("seed")
@@ -1189,6 +1242,40 @@ async fn main() -> anyhow::Result<()> {
                         .validator(is_pubkey)
                         .takes_value(true)
                         .help("Rewards token mint"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("update-manager")
+                .about("Update pool manager account")
+                .arg(
+                    Arg::with_name("source")
+                        .validator(is_keypair)
+                        .long("source-keypair")
+                        .value_name("SOURCE")
+                        .takes_value(true)
+                        .help("Old manager keypair"),
+                )
+                .arg(
+                    Arg::with_name("target")
+                        .validator(is_keypair)
+                        .long("target-keypair")
+                        .value_name("TARGET")
+                        .takes_value(true)
+                        .help("New manager keypair"),
+                )
+                .arg(
+                    Arg::with_name("accounts")
+                        .short("A")
+                        .long("accounts")
+                        .value_name("PATH")
+                        .takes_value(true)
+                        .help("Accounts file"),
+                )
+                .arg(
+                    Arg::with_name("program")
+                        .value_name("NAME")
+                        .takes_value(true)
+                        .help("Program to update manager: collateral-pool|general-pool|income-pools|registry|ulp"),
                 ),
         )
         .get_matches();
@@ -1485,6 +1572,14 @@ async fn main() -> anyhow::Result<()> {
             let token_mint = pubkey_of(arg_matches, "token-mint").unwrap();
             let seed = value_of::<String>(arg_matches, "seed");
             command_create_depositor_transit_account(&config, token_mint, seed).await
+        }
+        ("update-manager", Some(arg_matches)) => {
+            let program = value_of::<String>(arg_matches, "program").unwrap();
+            let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
+            let source = keypair_of(arg_matches, "source").unwrap();
+            let target = keypair_of(arg_matches, "target").unwrap();
+
+            command_update_manager(&config, accounts_path, program, source, target).await
         }
         _ => unreachable!(),
     }

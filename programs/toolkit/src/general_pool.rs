@@ -4,10 +4,7 @@ use everlend_general_pool::{
     find_withdrawal_requests_program_address, general_pool_withdraw_sol_accounts, instruction,
     state::{AccountType, Pool, PoolMarket, WithdrawalRequest, WithdrawalRequests},
 };
-use everlend_utils::instructions::{
-    config::initialize,
-    rewards::{initialize_mining, initialize_pool},
-};
+use everlend_utils::instructions::{config::initialize, rewards::initialize_pool};
 use solana_client::client_error::ClientError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_sdk::{
@@ -454,28 +451,52 @@ pub fn get_withdrawal_request_accounts(
     .collect())
 }
 
-#[allow(clippy::too_many_arguments)]
-pub fn init_user_mining(
+// #[allow(clippy::too_many_arguments)]
+// pub fn init_user_mining(
+//     config: &Config,
+//     user_authority: &Pubkey,
+//     payer: &Pubkey,
+//     mining_reward_pool: &Pubkey,
+//     mining_reward_acc: &Pubkey,
+//     anchor_config: &Pubkey,
+// ) -> Result<(), ClientError> {
+//     let tx = Transaction::new_with_payer(
+//         &[initialize_mining(
+//             &eld_rewards::id(),
+//             anchor_config,
+//             mining_reward_pool,
+//             mining_reward_acc,
+//             user_authority,
+//             payer,
+//         )],
+//         Some(&config.fee_payer.pubkey()),
+//     );
+
+//     config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+
+//     Ok(())
+// }
+
+pub fn update_manager(
     config: &Config,
-    user_authority: &Pubkey,
-    payer: &Pubkey,
-    mining_reward_pool: &Pubkey,
-    mining_reward_acc: &Pubkey,
-    anchor_config: &Pubkey,
+    pool_market: &Pubkey,
+    manager: &Keypair,
+    new_manager: &Keypair,
 ) -> Result<(), ClientError> {
     let tx = Transaction::new_with_payer(
-        &[initialize_mining(
-            &eld_rewards::id(),
-            anchor_config,
-            mining_reward_pool,
-            mining_reward_acc,
-            user_authority,
-            payer,
+        &[instruction::update_manager(
+            &everlend_general_pool::id(),
+            pool_market,
+            &manager.pubkey(),
+            &new_manager.pubkey(),
         )],
         Some(&config.fee_payer.pubkey()),
     );
 
-    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+    config.sign_and_send_and_confirm_transaction(
+        tx,
+        vec![config.fee_payer.as_ref(), manager, new_manager],
+    )?;
 
     Ok(())
 }

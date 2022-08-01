@@ -197,3 +197,20 @@ pub fn set_registry_pool_config(
         accounts,
     )
 }
+
+/// Creates 'UpdateManager' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn update_manager(
+    program_id: &Pubkey,
+    registry: &Pubkey,
+    manager: &Pubkey,
+    new_manager: &Pubkey,
+) -> Instruction {
+    let accounts = vec![
+        AccountMeta::new(*registry, false),
+        AccountMeta::new(*manager, true),
+        AccountMeta::new_readonly(*new_manager, true),
+    ];
+
+    Instruction::new_with_borsh(*program_id, &RegistryInstruction::UpdateManager, accounts)
+}
