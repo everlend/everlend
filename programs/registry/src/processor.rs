@@ -1,12 +1,12 @@
 //! Program state processor
 
 use crate::{
-    find_config_program_address,
+    find_config_program_address, find_registry_pool_config_program_address,
     instruction::RegistryInstruction,
     state::{
-        InitRegistryConfigParams, Registry, RegistryConfig,
-        SetRegistryPoolConfigParams, RegistryPoolConfig,
-    }, find_registry_pool_config_program_address,
+        InitRegistryConfigParams, Registry, RegistryConfig, RegistryPoolConfig,
+        SetRegistryPoolConfigParams,
+    },
 };
 use borsh::BorshDeserialize;
 use solana_program::{
@@ -25,12 +25,7 @@ use everlend_utils::{
 };
 
 use crate::state::DeprecatedRegistryConfig;
-use crate::{
-    state::{
-        InitRegistryParams, RegistryPrograms,
-        RegistryRootAccounts, RegistrySettings,
-    },
-};
+use crate::state::{InitRegistryParams, RegistryPrograms, RegistryRootAccounts, RegistrySettings};
 
 /// Program state handler.
 pub struct Processor {}
@@ -242,10 +237,10 @@ impl Processor {
         assert_account_key(manager_info, &registry.manager)?;
 
         let (registry_pool_config_pubkey, bump_seed) = find_registry_pool_config_program_address(
-                program_id,
-                registry_info.key,
-                general_pool_info.key,
-            );
+            program_id,
+            registry_info.key,
+            general_pool_info.key,
+        );
         assert_account_key(registry_pool_config_info, &registry_pool_config_pubkey)?;
 
         let mut registry_pool_config = match registry_pool_config_info.lamports() {
@@ -272,7 +267,8 @@ impl Processor {
                 registry_pool_config
             }
             _ => {
-                let registry_pool_config = RegistryPoolConfig::unpack(&registry_pool_config_info.data.borrow())?;
+                let registry_pool_config =
+                    RegistryPoolConfig::unpack(&registry_pool_config_info.data.borrow())?;
                 assert_account_key(registry_info, &registry_pool_config.registry)?;
                 assert_account_key(general_pool_info, &registry_pool_config.general_pool)?;
 
@@ -284,7 +280,32 @@ impl Processor {
 
         registry_pool_config.set(params);
 
-        RegistryPoolConfig::pack(registry_pool_config, *registry_pool_config_info.data.borrow_mut())?;
+        RegistryPoolConfig::pack(
+            registry_pool_config,
+            *registry_pool_config_info.data.borrow_mut(),
+        )?;
+
+        Ok(())
+    }
+
+    /// Process UpdateManager instruction
+    pub fn update_manager(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let registry_info = next_account_info(account_info_iter)?;
+        let manager_info = next_account_info(account_info_iter)?;
+        let new_manager_info = next_account_info(account_info_iter)?;
+
+        assert_signer(manager_info)?;
+        assert_signer(new_manager_info)?;
+
+        assert_owned_by(registry_info, program_id)?;
+
+        let mut registry = Registry::unpack(&registry_info.data.borrow())?;
+        assert_account_key(manager_info, &registry.manager)?;
+
+        registry.manager = *new_manager_info.key;
+
+        Registry::pack(registry, *registry_info.data.borrow_mut())?;
 
         Ok(())
     }
@@ -325,6 +346,11 @@ impl Processor {
             RegistryInstruction::SetRegistryPoolConfig { params } => {
                 msg!("RegistryInstruction: SetRegistryPoolConfig");
                 Self::set_registry_pool_config(program_id, params, accounts)
+            }
+
+            RegistryInstruction::UpdateManager => {
+                msg!("RegistryInstruction: UpdateManager");
+                Self::update_manager(program_id, accounts)
             }
         }
     }

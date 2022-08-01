@@ -212,6 +212,15 @@ pub enum LiquidityPoolsInstruction {
     /// Init user mining account
     ///
     InitUserMining,
+
+    /// Update pool market manager
+    ///
+    /// Accounts:
+    /// [W] Pool market
+    /// [WS] Old manager
+    /// [RS] New manager
+    ///
+    UpdateManager,
 }
 
 /// Creates 'InitPoolMarket' instruction.
