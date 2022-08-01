@@ -157,6 +157,15 @@ pub enum CollateralPoolsInstruction {
         /// Interest amount
         interest_amount: u64,
     },
+
+    /// Update pool market manager
+    ///
+    /// Accounts:
+    /// [W] Pool market
+    /// [WS] Old manager
+    /// [RS] New manager
+    ///
+    UpdateManager,
 }
 
 /// Creates 'InitPoolMarket' instruction.
