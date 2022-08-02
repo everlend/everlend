@@ -7,9 +7,11 @@ use solana_sdk::{
 };
 
 use everlend_registry::{
-    find_registry_pool_config_program_address,
-    find_config_program_address,
-    state::{Registry, RegistryPrograms, RegistryRootAccounts, RegistrySettings, SetRegistryPoolConfigParams},
+    find_config_program_address, find_registry_pool_config_program_address,
+    state::{
+        Registry, RegistryPrograms, RegistryRootAccounts, RegistrySettings,
+        SetRegistryPoolConfigParams,
+    },
 };
 
 use crate::utils::*;
@@ -130,13 +132,35 @@ pub fn set_registry_pool_config(
 
     config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
-    let (registry_pool_config_pubkey, _) =
-        find_registry_pool_config_program_address(
-            &everlend_registry::id(),
-            registry_pubkey,
-            general_pool,
-        );
+    let (registry_pool_config_pubkey, _) = find_registry_pool_config_program_address(
+        &everlend_registry::id(),
+        registry_pubkey,
+        general_pool,
+    );
 
     Ok(registry_pool_config_pubkey)
 }
 
+pub fn update_manager(
+    config: &Config,
+    registry: &Pubkey,
+    manager: &Keypair,
+    new_manager: &Keypair,
+) -> Result<(), ClientError> {
+    let tx = Transaction::new_with_payer(
+        &[everlend_registry::instruction::update_manager(
+            &everlend_registry::id(),
+            registry,
+            &manager.pubkey(),
+            &new_manager.pubkey(),
+        )],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    config.sign_and_send_and_confirm_transaction(
+        tx,
+        vec![config.fee_payer.as_ref(), manager, new_manager],
+    )?;
+
+    Ok(())
+}

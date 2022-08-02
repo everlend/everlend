@@ -139,19 +139,41 @@ pub fn create_income_pool_safety_fund_token_account(
     );
 
     let tx = Transaction::new_with_payer(
-        &[
-            instruction::create_safety_pool_token_account(
-                &everlend_income_pools::id(),
-                token_mint,
-                income_pool_market_pubkey,
-                &income_pool_pubkey,
-                &config.fee_payer.pubkey(),
-            ),
-        ],
+        &[instruction::create_safety_pool_token_account(
+            &everlend_income_pools::id(),
+            token_mint,
+            income_pool_market_pubkey,
+            &income_pool_pubkey,
+            &config.fee_payer.pubkey(),
+        )],
         Some(&config.fee_payer.pubkey()),
     );
 
     config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+
+    Ok(())
+}
+
+pub fn update_manager(
+    config: &Config,
+    pool_market: &Pubkey,
+    manager: &Keypair,
+    new_manager: &Keypair,
+) -> Result<(), ClientError> {
+    let tx = Transaction::new_with_payer(
+        &[instruction::update_manager(
+            &everlend_income_pools::id(),
+            pool_market,
+            &manager.pubkey(),
+            &new_manager.pubkey(),
+        )],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    config.sign_and_send_and_confirm_transaction(
+        tx,
+        vec![config.fee_payer.as_ref(), manager, new_manager],
+    )?;
 
     Ok(())
 }

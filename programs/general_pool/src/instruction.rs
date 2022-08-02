@@ -212,6 +212,15 @@ pub enum LiquidityPoolsInstruction {
     /// Init user mining account
     ///
     InitUserMining,
+
+    /// Update pool market manager
+    ///
+    /// Accounts:
+    /// [W] Pool market
+    /// [WS] Old manager
+    /// [RS] New manager
+    ///
+    UpdateManager,
 }
 
 /// Creates 'InitPoolMarket' instruction.
@@ -674,6 +683,27 @@ pub fn migrate_instruction(program_id: &Pubkey) -> Instruction {
     Instruction::new_with_borsh(
         *program_id,
         &LiquidityPoolsInstruction::MigrationInstruction,
+        accounts,
+    )
+}
+
+/// Creates 'UpdateManager' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn update_manager(
+    program_id: &Pubkey,
+    pool_market: &Pubkey,
+    manager: &Pubkey,
+    new_manager: &Pubkey,
+) -> Instruction {
+    let accounts = vec![
+        AccountMeta::new(*pool_market, false),
+        AccountMeta::new(*manager, true),
+        AccountMeta::new_readonly(*new_manager, true),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &LiquidityPoolsInstruction::UpdateManager,
         accounts,
     )
 }

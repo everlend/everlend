@@ -1,6 +1,9 @@
 //! Instruction types
 
-use crate::{find_config_program_address, state::{SetRegistryPoolConfigParams}, find_registry_pool_config_program_address};
+use crate::{
+    find_config_program_address, find_registry_pool_config_program_address,
+    state::SetRegistryPoolConfigParams,
+};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
     instruction::{AccountMeta, Instruction},
@@ -8,9 +11,7 @@ use solana_program::{
     system_program, sysvar,
 };
 
-use crate::{
-    state::{RegistryPrograms, RegistryRootAccounts, RegistrySettings},
-};
+use crate::state::{RegistryPrograms, RegistryRootAccounts, RegistrySettings};
 
 /// Instructions supported by the program
 #[allow(clippy::large_enum_variant)]
@@ -74,6 +75,15 @@ pub enum RegistryInstruction {
         /// Set pool config params
         params: SetRegistryPoolConfigParams,
     },
+
+    /// Update pool market manager
+    ///
+    /// Accounts:
+    /// [W] Registry
+    /// [WS] Old manager
+    /// [RS] New manager
+    ///
+    UpdateManager,
 }
 
 /// Creates 'Init' instruction.
@@ -169,7 +179,8 @@ pub fn set_registry_pool_config(
     pool: &Pubkey,
     params: SetRegistryPoolConfigParams,
 ) -> Instruction {
-    let (registry_pool_config, _) = find_registry_pool_config_program_address(&crate::id(), registry, pool);
+    let (registry_pool_config, _) =
+        find_registry_pool_config_program_address(&crate::id(), registry, pool);
 
     let accounts = vec![
         AccountMeta::new_readonly(*registry, false),
@@ -185,4 +196,21 @@ pub fn set_registry_pool_config(
         &RegistryInstruction::SetRegistryPoolConfig { params },
         accounts,
     )
+}
+
+/// Creates 'UpdateManager' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn update_manager(
+    program_id: &Pubkey,
+    registry: &Pubkey,
+    manager: &Pubkey,
+    new_manager: &Pubkey,
+) -> Instruction {
+    let accounts = vec![
+        AccountMeta::new(*registry, false),
+        AccountMeta::new(*manager, true),
+        AccountMeta::new_readonly(*new_manager, true),
+    ];
+
+    Instruction::new_with_borsh(*program_id, &RegistryInstruction::UpdateManager, accounts)
 }

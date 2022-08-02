@@ -17,12 +17,13 @@ use solana_program::{
 
 use crate::{
     find_pool_borrow_authority_program_address, find_pool_program_address,
+    find_pool_withdraw_authority_program_address,
     instruction::CollateralPoolsInstruction,
     state::{
         InitPoolBorrowAuthorityParams, InitPoolMarketParams, InitPoolParams, Pool,
-        PoolBorrowAuthority, PoolMarket, PoolWithdrawAuthority
+        PoolBorrowAuthority, PoolMarket, PoolWithdrawAuthority,
     },
-    utils::*, find_pool_withdraw_authority_program_address,
+    utils::*,
 };
 
 /// Program state handler.
@@ -310,12 +311,16 @@ impl Processor {
         let pool = Pool::unpack(&pool_info.data.borrow())?;
         assert_account_key(pool_market_info, &pool.pool_market)?;
 
-        let (pool_withdraw_authority_pubkey, bump_seed) = find_pool_withdraw_authority_program_address(
-            program_id,
-            pool_info.key,
-            withdraw_authority_info.key,
-        );
-        assert_account_key(pool_withdraw_authority_info, &pool_withdraw_authority_pubkey)?;
+        let (pool_withdraw_authority_pubkey, bump_seed) =
+            find_pool_withdraw_authority_program_address(
+                program_id,
+                pool_info.key,
+                withdraw_authority_info.key,
+            );
+        assert_account_key(
+            pool_withdraw_authority_info,
+            &pool_withdraw_authority_pubkey,
+        )?;
 
         let signers_seeds = &[
             &pool_info.key.to_bytes()[..32],
@@ -583,6 +588,28 @@ impl Processor {
         Ok(())
     }
 
+    /// Process UpdateManager instruction
+    pub fn update_manager(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let pool_market_info = next_account_info(account_info_iter)?;
+        let manager_info = next_account_info(account_info_iter)?;
+        let new_manager_info = next_account_info(account_info_iter)?;
+
+        assert_signer(manager_info)?;
+        assert_signer(new_manager_info)?;
+
+        assert_owned_by(pool_market_info, program_id)?;
+
+        let mut pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+        assert_account_key(manager_info, &pool_market.manager)?;
+
+        pool_market.manager = *new_manager_info.key;
+
+        PoolMarket::pack(pool_market, *pool_market_info.data.borrow_mut())?;
+
+        Ok(())
+    }
+
     /// Instruction processing router
     pub fn process_instruction(
         program_id: &Pubkey,
@@ -627,7 +654,6 @@ impl Processor {
                 Self::delete_pool_withdraw_authority(program_id, accounts)
             }
 
-
             CollateralPoolsInstruction::Deposit { amount } => {
                 msg!("CollateralPoolsInstruction: Deposit");
                 Self::deposit(program_id, amount, accounts)
@@ -649,6 +675,11 @@ impl Processor {
             } => {
                 msg!("CollateralPoolsInstruction: Repay");
                 Self::repay(program_id, amount, interest_amount, accounts)
+            }
+
+            CollateralPoolsInstruction::UpdateManager => {
+                msg!("CollateralPoolsInstruction: UpdateManager");
+                Self::update_manager(program_id, accounts)
             }
         }
     }

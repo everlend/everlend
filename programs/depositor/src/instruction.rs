@@ -1,7 +1,6 @@
 //! Instruction types
 
 use borsh::{BorshDeserialize, BorshSerialize};
-use everlend_collateral_pool::find_pool_withdraw_authority_program_address;
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
