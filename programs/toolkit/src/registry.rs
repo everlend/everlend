@@ -149,7 +149,7 @@ pub fn update_manager(
 ) -> Result<(), ClientError> {
     let tx = Transaction::new_with_payer(
         &[everlend_registry::instruction::update_manager(
-            &everlend_general_pool::id(),
+            &everlend_registry::id(),
             registry,
             &manager.pubkey(),
             &new_manager.pubkey(),

@@ -175,7 +175,7 @@ pub fn update_manager(
 ) -> Result<(), ClientError> {
     let tx = Transaction::new_with_payer(
         &[instruction::update_manager(
-            &everlend_general_pool::id(),
+            &everlend_collateral_pool::id(),
             pool_market,
             &manager.pubkey(),
             &new_manager.pubkey(),
