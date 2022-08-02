@@ -939,38 +939,38 @@ impl Processor {
                 )?;
             }
             MiningType::Quarry {
-                quarry_mining_program_id,
-                quarry,
-                rewarder,
-                miner_vault,
+                quarry_mining_program_id: _,
+                quarry: _,
+                rewarder: _,
+                miner_vault: _,
             } => {
                 return Err(EverlendError::TemporaryUnavailable.into());
 
-                assert_account_key(staking_program_id_info, &quarry_mining_program_id)?;
-                let miner_info = next_account_info(account_info_iter)?;
-                let quarry_info = next_account_info(account_info_iter)?;
-                assert_account_key(quarry_info, &quarry)?;
-                let rewarder_info = next_account_info(account_info_iter)?;
-                assert_account_key(rewarder_info, &rewarder)?;
-                let miner_vault_info = next_account_info(account_info_iter)?;
-                assert_account_key(miner_vault_info, &miner_vault)?;
-                let (miner_pubkey, _) = cpi::quarry::find_miner_program_address(
-                    staking_program_id_info.key,
-                    quarry_info.key,
-                    depositor_authority_info.key,
-                );
-                assert_account_key(miner_info, &miner_pubkey)?;
-                cpi::quarry::create_miner(
-                    staking_program_id_info.key,
-                    depositor_authority_info.clone(),
-                    miner_info.clone(),
-                    quarry_info.clone(),
-                    rewarder_info.clone(),
-                    manager_info.clone(),
-                    collateral_mint_info.clone(),
-                    miner_vault_info.clone(),
-                    &[signers_seeds.as_ref()],
-                )?;
+                // assert_account_key(staking_program_id_info, &quarry_mining_program_id)?;
+                // let miner_info = next_account_info(account_info_iter)?;
+                // let quarry_info = next_account_info(account_info_iter)?;
+                // assert_account_key(quarry_info, &quarry)?;
+                // let rewarder_info = next_account_info(account_info_iter)?;
+                // assert_account_key(rewarder_info, &rewarder)?;
+                // let miner_vault_info = next_account_info(account_info_iter)?;
+                // assert_account_key(miner_vault_info, &miner_vault)?;
+                // let (miner_pubkey, _) = cpi::quarry::find_miner_program_address(
+                //     staking_program_id_info.key,
+                //     quarry_info.key,
+                //     depositor_authority_info.key,
+                // );
+                // assert_account_key(miner_info, &miner_pubkey)?;
+                // cpi::quarry::create_miner(
+                //     staking_program_id_info.key,
+                //     depositor_authority_info.clone(),
+                //     miner_info.clone(),
+                //     quarry_info.clone(),
+                //     rewarder_info.clone(),
+                //     manager_info.clone(),
+                //     collateral_mint_info.clone(),
+                //     miner_vault_info.clone(),
+                //     &[signers_seeds.as_ref()],
+                // )?;
             }
             MiningType::None => {}
         }

@@ -16,32 +16,42 @@ pub enum MiningType {
     ///
     Larix {
         ///
+        #[allow(dead_code)]
         mining_account: Pubkey,
         /// ATA for additional reward
+        #[allow(dead_code)]
         additional_reward_token_account: Option<Pubkey>,
     },
     ///
     PortFinance {
         ///
         // TODO move to config
+        #[allow(dead_code)]
         staking_program_id: Pubkey,
         ///
+        #[allow(dead_code)]
         staking_account: Pubkey,
         ///
+        #[allow(dead_code)]
         staking_pool: Pubkey,
         ///
+        #[allow(dead_code)]
         obligation: Pubkey,
     },
     ///
     Quarry {
         ///
         // TODO move to config
+        #[allow(dead_code)]
         quarry_mining_program_id: Pubkey,
         ///
+        #[allow(dead_code)]
         quarry: Pubkey,
         ///
+        #[allow(dead_code)]
         rewarder: Pubkey,
         ///
+        #[allow(dead_code)]
         miner_vault: Pubkey,
     },
 }
