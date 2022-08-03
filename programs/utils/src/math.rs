@@ -28,17 +28,6 @@ pub fn percent_ratio(a: u64, b: u64) -> Result<u64, ProgramError> {
     Ok(res as u64)
 }
 
-pub fn share(amount: u64, percent: u64) -> Result<u64, ProgramError> {
-    let res = div_up(
-        (percent as u128)
-            .checked_mul(amount as u128)
-            .ok_or(EverlendError::MathOverflow)?,
-        PRECISION_SCALER,
-    )?;
-
-    Ok(res as u64)
-}
-
 pub fn share_floor(amount: u64, percent: u64) -> Result<u64, ProgramError> {
     let res = (percent as u128)
         .checked_mul(amount as u128)
@@ -47,26 +36,4 @@ pub fn share_floor(amount: u64, percent: u64) -> Result<u64, ProgramError> {
         .ok_or(EverlendError::MathOverflow)?;
 
     Ok(res as u64)
-}
-
-fn div_up(a: u128, b: u128) -> Result<u128, ProgramError> {
-    let res = a
-        .checked_add(b)
-        .ok_or(EverlendError::MathOverflow)?
-        .checked_sub(1)
-        .ok_or(EverlendError::MathOverflow)?
-        .checked_div(b)
-        .ok_or(EverlendError::MathOverflow)?;
-
-    Ok(res)
-}
-
-#[cfg(test)]
-pub mod tests {
-    use super::*;
-
-    #[test]
-    fn test_div_up() {
-        assert_eq!(div_up(100, 33).unwrap(), 4);
-    }
 }

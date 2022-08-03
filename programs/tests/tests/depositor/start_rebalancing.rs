@@ -1,12 +1,16 @@
-use everlend_registry::state::RegistryRootAccounts;
+use std::vec;
+
+use everlend_depositor::state::Rebalancing;
+use everlend_registry::state::{DistributionPubkeys, RegistryRootAccounts, RegistrySettings};
 use solana_program::instruction::InstructionError;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::*;
+use solana_sdk::signature::Keypair;
 use solana_sdk::transaction::Transaction;
 use solana_sdk::{signer::Signer, transaction::TransactionError};
 
 use everlend_depositor::find_transit_program_address;
-use everlend_liquidity_oracle::state::DistributionArray;
+use everlend_liquidity_oracle::state::{DistributionArray, TokenDistribution};
 use everlend_registry::state::SetRegistryPoolConfigParams;
 use everlend_utils::{
     find_program_address,
@@ -843,4 +847,50 @@ async fn fail_with_invalid_liquidity_oracle() {
             InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
         )
     );
+}
+
+#[tokio::test]
+async fn rebalancing_math_round() {
+    let mut d: DistributionArray = DistributionArray::default();
+    let mut p = DistributionPubkeys::default();
+    p[0] = Keypair::new().pubkey();
+    p[1] = Keypair::new().pubkey();
+    p[2] = Keypair::new().pubkey();
+
+    let distr_amount: u64 = 4610400063;
+    let mut distribution = TokenDistribution::default();
+    let mut r = Rebalancing::default();
+
+    for (i, elem) in vec![
+        (300_000_000, 300_000_000, 400_000_000),
+        (300_000_000, 40_000_000, 660_000_000),
+        (100_000_000, 100_000_000, 800_000_000),
+        (0, 0, 1000_000_000),
+        (300_000_000, 200_000_000, 500_000_000),
+    ]
+    .iter()
+    .enumerate()
+    {
+        d[0] = elem.0;
+        d[1] = elem.1;
+        d[2] = elem.2;
+
+        distribution.update(i as u64 + 1, d);
+        let sum = r.compute(&p, distribution.clone(), distr_amount).unwrap();
+        println!("{}", sum);
+        assert_eq!(distr_amount >= sum, true);
+
+        let sum_refresh = r
+            .compute_with_refresh_income(
+                &p,
+                &RegistrySettings {
+                    refresh_income_interval: 0,
+                },
+                i as u64 + 1,
+                distr_amount,
+            )
+            .unwrap();
+        println!("{}", sum_refresh);
+        assert_eq!(distr_amount >= sum_refresh, true);
+    }
 }

@@ -59,13 +59,15 @@ impl Rebalancing {
         money_market_program_ids: &DistributionPubkeys,
         token_distribution: TokenDistribution,
         distributed_liquidity: u64,
-    ) -> Result<(), ProgramError> {
+    ) -> Result<u64, ProgramError> {
         if token_distribution.updated_at <= self.token_distribution.updated_at {
             return Err(EverlendError::TokenDistributionIsStale.into());
         }
 
         // Reset steps
         self.steps = Vec::new();
+
+        let mut new_total = 0;
 
         // Compute steps
         for (index, _) in money_market_program_ids
@@ -79,8 +81,8 @@ impl Rebalancing {
             let percent = token_distribution.distribution[index];
 
             let prev_distribution_liquidity =
-                math::share(self.distributed_liquidity, prev_percent)?;
-            let distribution_liquidity = math::share(distributed_liquidity, percent)?;
+                math::share_floor(self.distributed_liquidity, prev_percent)?;
+            let distribution_liquidity = math::share_floor(distributed_liquidity, percent)?;
 
             let liquidity_amount =
                 math::abs_diff(distribution_liquidity, prev_distribution_liquidity)?;
@@ -94,6 +96,8 @@ impl Rebalancing {
                         liquidity_amount,
                         None, // Will be calculated at the deposit stage
                     ));
+
+                    new_total += prev_distribution_liquidity + liquidity_amount;
                 }
                 // Withdraw
                 Ordering::Less => {
@@ -105,8 +109,10 @@ impl Rebalancing {
                         .ok_or(EverlendError::MathOverflow)?;
 
                     // Compute collateral amount depending on amount percent
-                    let collateral_amount =
-                        math::share(self.received_collateral[index], collateral_percent as u64)?;
+                    let collateral_amount = math::share_floor(
+                        self.received_collateral[index],
+                        collateral_percent as u64,
+                    )?;
 
                     self.add_step(RebalancingStep::new(
                         index as u8,
@@ -114,8 +120,10 @@ impl Rebalancing {
                         liquidity_amount,
                         Some(collateral_amount),
                     ));
+
+                    new_total += prev_distribution_liquidity - liquidity_amount;
                 }
-                Ordering::Equal => {}
+                Ordering::Equal => new_total += prev_distribution_liquidity,
             }
         }
 
@@ -126,7 +134,7 @@ impl Rebalancing {
         self.token_distribution = token_distribution;
         self.distributed_liquidity = distributed_liquidity;
 
-        Ok(())
+        Ok(new_total)
     }
 
     /// Generate new steps for withdraw all funds and deposit them back in MM pools
@@ -136,10 +144,12 @@ impl Rebalancing {
         settings: &RegistrySettings,
         income_refreshed_at: Slot,
         distributed_liquidity: u64,
-    ) -> Result<(), ProgramError> {
+    ) -> Result<u64, ProgramError> {
         if self.income_refreshed_at + settings.refresh_income_interval > income_refreshed_at {
             return Err(EverlendError::IncomeRefreshed.into());
         }
+
+        let mut new_total = 0;
 
         // Reset steps
         self.steps = Vec::new();
@@ -158,8 +168,9 @@ impl Rebalancing {
                 continue;
             }
 
-            let prev_distribution_liquidity = math::share(self.distributed_liquidity, percent)?;
-            let distribution_liquidity = math::share(distributed_liquidity, percent)?;
+            let prev_distribution_liquidity =
+                math::share_floor(self.distributed_liquidity, percent)?;
+            let distribution_liquidity = math::share_floor(distributed_liquidity, percent)?;
             let collateral_amount = self.received_collateral[index];
 
             if prev_distribution_liquidity.gt(&0) {
@@ -178,6 +189,8 @@ impl Rebalancing {
                     distribution_liquidity,
                     None, // Will be calculated at the deposit stage
                 ));
+
+                new_total += distribution_liquidity
             }
         }
 
@@ -188,7 +201,7 @@ impl Rebalancing {
         self.income_refreshed_at = income_refreshed_at;
         self.distributed_liquidity = distributed_liquidity;
 
-        Ok(())
+        Ok(new_total)
     }
 
     /// Set current rebalancing
