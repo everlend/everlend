@@ -779,6 +779,28 @@ async fn main() -> anyhow::Result<()> {
                 ),
         )
         .subcommand(
+            SubCommand::with_name("update-liquidity-oracle-authority")
+                .about("Update liquidity oracle authority")
+                .arg(
+                    Arg::with_name("authority")
+                        .long("authority")
+                        .validator(is_keypair)
+                        .value_name("AUTHORITY")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Old manager keypair"),
+                )
+                .arg(
+                    Arg::with_name("new-authority")
+                        .long("new-authority")
+                        .validator(is_keypair)
+                        .value_name("NEW-AUTHORITY")
+                        .takes_value(true)
+                        .required(true)
+                        .help("New manager keypair"),
+                ),
+        )
+        .subcommand(
             SubCommand::with_name("create-depositor")
                 .about("Create a new depositor")
                 .arg(
@@ -1323,6 +1345,12 @@ async fn main() -> anyhow::Result<()> {
         ("create-liquidity-oracle", Some(arg_matches)) => {
             let keypair = keypair_of(arg_matches, "keypair");
             command_create_liquidity_oracle(&config, keypair).await
+        }
+        ("update-liquidity-oracle-authority", Some(arg_matches)) => {
+            let authority = keypair_of(arg_matches, "authority").unwrap();
+            let new_authority = keypair_of(arg_matches, "new-authority").unwrap();
+
+            command_update_liquidity_oracle(&config, authority, new_authority).await
         }
         ("create-depositor", Some(arg_matches)) => {
             let keypair = keypair_of(arg_matches, "keypair");

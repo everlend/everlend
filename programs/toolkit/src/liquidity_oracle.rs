@@ -52,6 +52,28 @@ pub fn init(config: &Config, oracle_keypair: Option<Keypair>) -> Result<Pubkey, 
     Ok(oracle_keypair.pubkey())
 }
 
+pub fn update(
+    config: &Config,
+    oracle: Pubkey,
+    authority: Keypair,
+    new_authority: Keypair,
+) -> Result<(), ClientError> {
+    let tx = Transaction::new_with_payer(
+        &[instruction::update_liquidity_oracle_authority(
+            &everlend_liquidity_oracle::id(),
+            &oracle,
+            &authority.pubkey(),
+            &new_authority.pubkey(),
+        )],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    config
+        .sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref(), &authority])?;
+
+    Ok(())
+}
+
 pub fn create_token_distribution(
     config: &Config,
     oracle_pubkey: &Pubkey,

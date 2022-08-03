@@ -1,17 +1,5 @@
 use std::fs;
 
-use anchor_lang::AnchorDeserialize;
-use anyhow::bail;
-use everlend_depositor::state::Rebalancing;
-use larix_lending::state::reserve::Reserve;
-use solana_client::client_error::ClientError;
-use solana_program::program_pack::Pack;
-use solana_program::pubkey::Pubkey;
-use solana_program_test::{find_file, read_file};
-use solana_sdk::signature::Keypair;
-use solana_sdk::signature::Signer;
-use spl_associated_token_account::get_associated_token_address;
-
 use crate::accounts_config::{
     save_config_file, CollateralPoolAccounts, DefaultAccounts, InitializedAccounts,
 };
@@ -33,6 +21,9 @@ use crate::{
         REFRESH_INCOME_INTERVAL,
     },
 };
+use anchor_lang::AnchorDeserialize;
+use anyhow::bail;
+use everlend_depositor::state::Rebalancing;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::state::{DeprecatedRegistryConfig, Registry, SetRegistryPoolConfigParams};
 use everlend_registry::{
@@ -43,6 +34,14 @@ use everlend_registry::{
     },
 };
 use everlend_utils::integrations::{MoneyMarket, StakingMoneyMarket};
+use larix_lending::state::reserve::Reserve;
+use solana_client::client_error::ClientError;
+use solana_program::program_pack::Pack;
+use solana_program::pubkey::Pubkey;
+use solana_program_test::{find_file, read_file};
+use solana_sdk::signature::Keypair;
+use solana_sdk::signature::Signer;
+use spl_associated_token_account::get_associated_token_address;
 
 pub async fn command_create_registry(
     config: &Config,
@@ -214,7 +213,6 @@ pub fn command_init_mining(
     };
 
     if liquidity_miner_option.is_none() {
-        // TODO process of None update
         return Err(anyhow::anyhow!("Wrong staking money market"));
     }
     let liquidity_miner = liquidity_miner_option.unwrap();
@@ -358,6 +356,20 @@ pub async fn command_create_liquidity_oracle(
     initialiazed_accounts
         .save(&format!("accounts.{}.yaml", config.network))
         .unwrap();
+
+    Ok(())
+}
+
+pub async fn command_update_liquidity_oracle(
+    config: &Config,
+    authority: Keypair,
+    new_authority: Keypair,
+) -> anyhow::Result<()> {
+    let initialiazed_accounts = config.get_initialized_accounts();
+
+    println!("oracle {} new authority {}", initialiazed_accounts.liquidity_oracle, new_authority.pubkey());
+
+    liquidity_oracle::update(config, initialiazed_accounts.liquidity_oracle, authority, new_authority)?;
 
     Ok(())
 }
