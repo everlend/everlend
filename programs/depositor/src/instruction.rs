@@ -146,11 +146,22 @@ pub enum DepositorInstruction {
     /// Accounts:
     /// [R] Depositor
     /// [R] Depositor authority
-    /// [R] Money market program id
+    /// [S] Executor
     /// [R] Liquidity mint
     /// [R] Collateral mint
     /// [R] Internal mining account
+    ///
+    /// [R] Token program id
     /// [R] Staking program id
+    /// [R] ELD reward program id
+    /// [R] ELD config
+    /// [W] Reward pool
+    /// Reward fill accounts
+    /// [R] Reward mint
+    /// [W] Reward transit account
+    /// [W] Vault
+    /// [W] Vault fee account
+    /// If mining has subreward add `Reward fill accounts` for subreward token
     /// For larix mining:
     /// [W] Mining account
     /// [W] Mine supply
@@ -177,7 +188,10 @@ pub enum DepositorInstruction {
     /// [W] Miner
     /// [W] Quarry
     /// [R] Rewarder
-    ClaimMiningReward,
+    ClaimMiningReward {
+        ///
+        is_sub_rewards_presented: bool,
+    },
 
     /// Migrate Depositor
     ///
