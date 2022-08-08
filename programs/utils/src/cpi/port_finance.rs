@@ -171,6 +171,67 @@ pub fn init_obligation<'a>(
 }
 
 #[allow(clippy::too_many_arguments)]
+pub fn deposit_reserve_liquidity_and_obligation_collateral<'a>(
+    program_id: &Pubkey,
+    source_liquidity: AccountInfo<'a>,
+    destination_collateral: AccountInfo<'a>,
+    deposit_reserve: AccountInfo<'a>,
+    reserve_liquidity_supply: AccountInfo<'a>,
+    reserve_collateral_mint: AccountInfo<'a>,
+    obligation: AccountInfo<'a>,
+    lending_market: AccountInfo<'a>,
+    obligation_owner: AccountInfo<'a>,
+    user_transfer_authority: AccountInfo<'a>,
+    option_stake_account: AccountInfo<'a>,
+    option_staking_pool: AccountInfo<'a>,
+    staking_program: AccountInfo<'a>,
+    lending_market_authority: AccountInfo<'a>,
+    clock: AccountInfo<'a>,
+    collateral_amount: u64,
+    signers_seeds: &[&[&[u8]]],
+) -> Result<(), ProgramError> {
+    let instruction =
+        port_variable_rate_lending_instructions::instruction::deposit_reserve_liquidity_and_obligation_collateral(
+            *program_id,
+            collateral_amount,
+            *source_liquidity.key,
+            *destination_collateral.key,
+            *deposit_reserve.key,
+            *reserve_liquidity_supply.key,
+            *reserve_collateral_mint.key,
+            *lending_market.key,
+            *obligation.key,
+            *lending_market.key,
+            *obligation_owner.key,
+            *user_transfer_authority.key,
+            // TODO work with option pool
+            Some(*option_stake_account.key),
+            Some(*option_staking_pool.key),
+        );
+
+    invoke_signed(
+        &instruction,
+        &[
+            source_liquidity,
+            destination_collateral,
+            reserve_liquidity_supply,
+            reserve_collateral_mint,
+            lending_market,
+            lending_market_authority,
+            user_transfer_authority,
+            clock,
+            deposit_reserve,
+            obligation,
+            obligation_owner,
+            option_stake_account,
+            option_staking_pool,
+            staking_program,
+        ],
+        signers_seeds,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
 pub fn deposit_obligation_collateral<'a>(
     program_id: &Pubkey,
     source_collateral: AccountInfo<'a>,
@@ -343,51 +404,3 @@ pub fn claim_reward<'a>(
 
     invoke_signed(&instruction, &accounts, signers_seeds)
 }
-
-// pub fn deposit_staking<'a>(
-//     program_id: &Pubkey,
-//     stake_account: AccountInfo<'a>,
-//     staking_pool: AccountInfo<'a>,
-//     stake_account_owner: AccountInfo<'a>,
-//     clock: AccountInfo<'a>,
-//     amount: u64,
-//     signers_seeds: &[&[&[u8]]],
-// ) -> Result<(), ProgramError> {
-//     let ix = port_finance_staking::instruction::deposit(
-//         *program_id,
-//         amount,
-//         *stake_account_owner.key,
-//         *stake_account.key,
-//         *staking_pool.key,
-//     );
-//
-//     invoke_signed(
-//         &ix,
-//         &[stake_account_owner, stake_account, staking_pool, clock],
-//         signers_seeds,
-//     )
-// }
-
-// pub fn withdraw_staking<'a>(
-//     program_id: &Pubkey,
-//     stake_account: AccountInfo<'a>,
-//     staking_pool: AccountInfo<'a>,
-//     stake_account_owner: AccountInfo<'a>,
-//     clock: AccountInfo<'a>,
-//     amount: u64,
-//     signers_seeds: &[&[&[u8]]],
-// ) -> Result<(), ProgramError> {
-//     let ix = port_finance_staking::instruction::withdraw(
-//         *program_id,
-//         amount,
-//         *stake_account_owner.key,
-//         *stake_account.key,
-//         *staking_pool.key,
-//     );
-//
-//     invoke_signed(
-//         &ix,
-//         &[stake_account_owner, stake_account, staking_pool, clock],
-//         signers_seeds,
-//     )
-// }

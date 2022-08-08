@@ -3,6 +3,7 @@
 //! Depositor contract
 
 pub mod instruction;
+pub mod money_market;
 pub mod processor;
 pub mod state;
 pub mod utils;
@@ -45,7 +46,7 @@ pub fn find_rebalancing_program_address(
     )
 }
 
-/// Find internma mining program address
+/// Find internal mining program address
 pub fn find_internal_mining_program_address(
     program_id: &Pubkey,
     liquidity_mint: &Pubkey,
