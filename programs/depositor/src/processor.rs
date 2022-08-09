@@ -988,7 +988,7 @@ impl Processor {
     pub fn claim_mining_reward(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
-        is_sub_rewards_presented: bool,
+        with_subrewards: bool,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
 
@@ -1051,8 +1051,12 @@ impl Processor {
                 mining_account,
                 additional_reward_token_account,
             } => {
+                if with_subrewards != additional_reward_token_account.is_some() {
+                    return Err(ProgramError::InvalidArgument);
+                };
+
                 // Parse and check additional reward token account
-                if is_sub_rewards_presented == additional_reward_token_account.is_some() {
+                if with_subrewards {
                     let sub_reward_accounts = parse_fill_reward_accounts(
                         program_id,
                         depositor_info.key,
@@ -1070,8 +1074,6 @@ impl Processor {
                     )?;
 
                     fill_sub_rewards_accounts = Some(sub_reward_accounts);
-                } else {
-                    return Err(ProgramError::InvalidArgument);
                 };
 
                 let mining_account_info = next_account_info(account_info_iter)?;
@@ -1112,7 +1114,7 @@ impl Processor {
                 staking_program_id,
                 ..
             } => {
-                if is_sub_rewards_presented {
+                if with_subrewards {
                     let sub_reward_accounts = parse_fill_reward_accounts(
                         program_id,
                         depositor_info.key,
@@ -1141,7 +1143,7 @@ impl Processor {
 
                 // let sub_reward_token_pool_option :Option<AccountInfo>;
                 // let sub_reward_destination_option :Option<AccountInfo>;
-                let sub_reward = if is_sub_rewards_presented {
+                let sub_reward = if with_subrewards {
                     let sub_reward_token_pool = next_account_info(account_info_iter)?;
 
                     // Make local copy
@@ -1290,10 +1292,10 @@ impl Processor {
             }
 
             DepositorInstruction::ClaimMiningReward {
-                is_sub_rewards_presented,
+                with_subrewards,
             } => {
                 msg!("DepositorInstruction: ClaimMiningReward");
-                Self::claim_mining_reward(program_id, accounts, is_sub_rewards_presented)
+                Self::claim_mining_reward(program_id, accounts, with_subrewards)
             }
         }
     }

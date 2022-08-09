@@ -190,7 +190,7 @@ pub enum DepositorInstruction {
     /// [R] Rewarder
     ClaimMiningReward {
         ///
-        is_sub_rewards_presented: bool,
+        with_subrewards: bool,
     },
 
     /// Migrate Depositor
