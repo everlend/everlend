@@ -1,6 +1,9 @@
 //! Utils
 
-use crate::state::{InternalMining, MiningType};
+use crate::{
+    find_transit_program_address,
+    state::{InternalMining, MiningType},
+};
 use everlend_collateral_pool::{
     find_pool_withdraw_authority_program_address, utils::CollateralPoolAccounts,
 };
@@ -828,3 +831,62 @@ pub fn collateral_pool_withdraw_accounts(
         AccountMeta::new_readonly(everlend_collateral_pool::id(), false),
     ]
 }
+
+/// ELD Fill reward accounts for token container
+#[derive(Clone)]
+pub struct FillRewardAccounts<'a> {
+    /// Rewards mint tokne
+    pub reward_mint_info: AccountInfo<'a>,
+    /// Reward transit account
+    pub reward_transit_info: AccountInfo<'a>,
+    /// Reward vault
+    pub vault_info: AccountInfo<'a>,
+    /// Reward fee account
+    pub fee_account_info: AccountInfo<'a>,
+}
+
+/// Collateral pool deposit account
+#[allow(clippy::too_many_arguments)]
+pub fn parse_fill_reward_accounts<'a>(
+    program_id: &Pubkey,
+    depositor_id: &Pubkey,
+    reward_pool_id: &Pubkey,
+    eld_reward_program_id: &Pubkey,
+    account_info_iter: &mut Iter<AccountInfo<'a>>,
+    check_transit_reward_destination: bool,
+) -> Result<FillRewardAccounts<'a>, ProgramError> {
+    let reward_mint_info = next_account_info(account_info_iter)?;
+    let reward_transit_info = next_account_info(account_info_iter)?;
+
+    // Check rewards destination account only if needed
+    if check_transit_reward_destination {
+        let (reward_token_account, _) = find_transit_program_address(
+            program_id,
+            depositor_id,
+            reward_mint_info.key,
+            "lm_reward",
+        );
+        assert_account_key(reward_transit_info, &reward_token_account)?;
+    }
+
+    let vault_info = next_account_info(account_info_iter)?;
+    let fee_account_info = next_account_info(account_info_iter)?;
+
+    let (vault, _) = Pubkey::find_program_address(
+        &[
+            b"vault".as_ref(),
+            &reward_pool_id.to_bytes(),
+            &reward_mint_info.key.to_bytes(),
+        ],
+        eld_reward_program_id,
+    );
+    assert_account_key(vault_info, &vault)?;
+
+    Ok(FillRewardAccounts {
+        reward_mint_info: reward_mint_info.clone(),
+        reward_transit_info: reward_transit_info.clone(),
+        vault_info: vault_info.clone(),
+        fee_account_info: fee_account_info.clone(),
+    })
+}
+
