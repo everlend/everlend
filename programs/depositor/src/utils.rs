@@ -121,7 +121,7 @@ pub fn deposit<'a>(
             let (miner_pubkey, _) = cpi::quarry::find_miner_program_address(
                 &quarry_mining_program_id,
                 &quarry,
-                &internal_mining.key,
+                internal_mining.key,
             );
             assert_account_key(miner_info, &miner_pubkey)?;
             cpi::quarry::stake_tokens(
@@ -889,4 +889,3 @@ pub fn parse_fill_reward_accounts<'a>(
         fee_account_info: fee_account_info.clone(),
     })
 }
-

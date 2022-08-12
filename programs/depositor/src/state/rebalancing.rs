@@ -6,7 +6,7 @@ use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 pub use deprecated::DeprecatedRebalancing;
 use everlend_liquidity_oracle::state::{DistributionArray, TokenDistribution};
 use everlend_registry::state::{DistributionPubkeys, RegistrySettings, TOTAL_DISTRIBUTIONS};
-use everlend_utils::{math, share_floor, EverlendError, PRECISION_SCALER};
+use everlend_utils::{math, EverlendError, PRECISION_SCALER};
 use solana_program::{
     clock::Slot,
     msg,
