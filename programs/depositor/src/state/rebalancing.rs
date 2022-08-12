@@ -6,7 +6,7 @@ use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 pub use deprecated::DeprecatedRebalancing;
 use everlend_liquidity_oracle::state::{DistributionArray, TokenDistribution};
 use everlend_registry::state::{DistributionPubkeys, RegistrySettings, TOTAL_DISTRIBUTIONS};
-use everlend_utils::{math, EverlendError, PRECISION_SCALER};
+use everlend_utils::{math, share_floor, EverlendError, PRECISION_SCALER};
 use solana_program::{
     clock::Slot,
     msg,
@@ -29,7 +29,10 @@ pub struct Rebalancing {
     /// Mint
     pub mint: Pubkey,
 
-    /// Distributed liquidity
+    /// Amount to distribute
+    pub amount_to_distribute: u64,
+
+    /// Sum of distributed liquidity into MMs including roundings
     pub distributed_liquidity: u64,
 
     /// Received collateral in each market
@@ -58,16 +61,15 @@ impl Rebalancing {
         &mut self,
         money_market_program_ids: &DistributionPubkeys,
         token_distribution: TokenDistribution,
-        distributed_liquidity: u64,
-    ) -> Result<u64, ProgramError> {
+        amount_to_distribute: u64,
+    ) -> Result<(), ProgramError> {
         if token_distribution.updated_at <= self.token_distribution.updated_at {
             return Err(EverlendError::TokenDistributionIsStale.into());
         }
 
         // Reset steps
         self.steps = Vec::new();
-
-        let mut new_total = 0;
+        let mut distributed_liquidity: u64 = 0;
 
         // Compute steps
         for (index, _) in money_market_program_ids
@@ -78,34 +80,33 @@ impl Rebalancing {
         {
             // Spread percents
             let prev_percent = self.token_distribution.distribution[index];
-            let percent = token_distribution.distribution[index];
+            let new_percent = token_distribution.distribution[index];
 
-            let prev_distribution_liquidity =
-                math::share_floor(self.distributed_liquidity, prev_percent)?;
-            let distribution_liquidity = math::share_floor(distributed_liquidity, percent)?;
+            let prev_amount = math::share_floor(self.amount_to_distribute, prev_percent)?;
+            let new_amount = math::share_floor(amount_to_distribute, new_percent)?;
 
-            let liquidity_amount =
-                math::abs_diff(distribution_liquidity, prev_distribution_liquidity)?;
+            let amount = math::abs_diff(new_amount, prev_amount)?;
 
-            match distribution_liquidity.cmp(&prev_distribution_liquidity) {
+            // Update distributed_liquidity
+            distributed_liquidity = distributed_liquidity
+                .checked_add(new_amount)
+                .ok_or(EverlendError::MathOverflow)?;
+
+            match new_amount.cmp(&prev_amount) {
                 // Deposit
                 Ordering::Greater => {
                     self.add_step(RebalancingStep::new(
                         index as u8,
                         RebalancingOperation::Deposit,
-                        liquidity_amount,
+                        amount,
                         None, // Will be calculated at the deposit stage
                     ));
-
-                    new_total += prev_distribution_liquidity + liquidity_amount;
                 }
                 // Withdraw
                 Ordering::Less => {
+                    // TODO: we used total even
                     let collateral_percent = PRECISION_SCALER
-                        .checked_sub(math::percent_ratio(
-                            distribution_liquidity,
-                            prev_distribution_liquidity,
-                        )? as u128)
+                        .checked_sub(math::percent_ratio(new_amount, prev_amount)? as u128)
                         .ok_or(EverlendError::MathOverflow)?;
 
                     // Compute collateral amount depending on amount percent
@@ -117,13 +118,11 @@ impl Rebalancing {
                     self.add_step(RebalancingStep::new(
                         index as u8,
                         RebalancingOperation::Withdraw,
-                        liquidity_amount,
+                        amount,
                         Some(collateral_amount),
                     ));
-
-                    new_total += prev_distribution_liquidity - liquidity_amount;
                 }
-                Ordering::Equal => new_total += prev_distribution_liquidity,
+                Ordering::Equal => {}
             }
         }
 
@@ -132,9 +131,10 @@ impl Rebalancing {
             .sort_by(|a, b| a.operation.partial_cmp(&b.operation).unwrap());
 
         self.token_distribution = token_distribution;
+        self.amount_to_distribute = amount_to_distribute;
         self.distributed_liquidity = distributed_liquidity;
 
-        Ok(new_total)
+        Ok(())
     }
 
     /// Generate new steps for withdraw all funds and deposit them back in MM pools
@@ -143,13 +143,13 @@ impl Rebalancing {
         money_market_program_ids: &DistributionPubkeys,
         settings: &RegistrySettings,
         income_refreshed_at: Slot,
-        distributed_liquidity: u64,
-    ) -> Result<u64, ProgramError> {
+        amount_to_distribute: u64,
+    ) -> Result<(), ProgramError> {
         if self.income_refreshed_at + settings.refresh_income_interval > income_refreshed_at {
             return Err(EverlendError::IncomeRefreshed.into());
         }
 
-        let mut new_total = 0;
+        let mut distributed_liquidity: u64 = 0;
 
         // Reset steps
         self.steps = Vec::new();
@@ -168,29 +168,31 @@ impl Rebalancing {
                 continue;
             }
 
-            let prev_distribution_liquidity =
-                math::share_floor(self.distributed_liquidity, percent)?;
-            let distribution_liquidity = math::share_floor(distributed_liquidity, percent)?;
+            let prev_amount = math::share_floor(self.amount_to_distribute, percent)?;
+            let new_amount = math::share_floor(amount_to_distribute, percent)?;
+
             let collateral_amount = self.received_collateral[index];
 
-            if prev_distribution_liquidity.gt(&0) {
+            if prev_amount.gt(&0) {
                 self.add_step(RebalancingStep::new(
                     index as u8,
                     RebalancingOperation::Withdraw,
-                    prev_distribution_liquidity,
+                    prev_amount,
                     Some(collateral_amount),
                 ));
             }
 
-            if distribution_liquidity.gt(&0) {
+            if new_amount.gt(&0) {
                 self.add_step(RebalancingStep::new(
                     index as u8,
                     RebalancingOperation::Deposit,
-                    distribution_liquidity,
+                    new_amount,
                     None, // Will be calculated at the deposit stage
                 ));
 
-                new_total += distribution_liquidity
+                distributed_liquidity = distributed_liquidity
+                    .checked_add(new_amount)
+                    .ok_or(EverlendError::MathOverflow)?;
             }
         }
 
@@ -199,9 +201,10 @@ impl Rebalancing {
             .sort_by(|a, b| a.operation.partial_cmp(&b.operation).unwrap());
 
         self.income_refreshed_at = income_refreshed_at;
+        self.amount_to_distribute = amount_to_distribute;
         self.distributed_liquidity = distributed_liquidity;
 
-        Ok(new_total)
+        Ok(())
     }
 
     /// Set current rebalancing
@@ -277,18 +280,6 @@ impl Rebalancing {
 
         self.steps.iter().all(|&step| step.executed_at.is_some())
     }
-
-    /// Compute unused liquidity
-    pub fn unused_liquidity(&self) -> Result<u64, ProgramError> {
-        let total_percent: u64 = self.token_distribution.distribution.iter().sum();
-
-        math::share_floor(
-            self.distributed_liquidity,
-            PRECISION_SCALER
-                .checked_sub(total_percent as u128)
-                .ok_or(EverlendError::MathOverflow)? as u64,
-        )
-    }
 }
 
 /// Initialize a Rebalancing params
@@ -301,8 +292,8 @@ pub struct InitRebalancingParams {
 
 impl Sealed for Rebalancing {}
 impl Pack for Rebalancing {
-    // 1 + 32 + 32 + 8 + (8 * 10) + 89 + (4 + 8 * 28) + 8 = 478
-    const LEN: usize = 73
+    // 1 + 32 + 32 + 8 + 8 + (8 * 10) + 89 + (4 + 8 * 28) + 8 = 478
+    const LEN: usize = 81
         + (8 * TOTAL_DISTRIBUTIONS)
         + TokenDistribution::LEN
         + (4 + TOTAL_REBALANCING_STEP * RebalancingStep::LEN)
@@ -430,71 +421,6 @@ pub mod tests {
 
         println!("rebalancing = {:#?}", rebalancing);
     }
-
-    #[test]
-    fn unused_liquidity() {
-        let pk = Pubkey::new_unique();
-        let mut rebalancing: Rebalancing = Default::default();
-        rebalancing.init(InitRebalancingParams {
-            depositor: pk,
-            mint: pk,
-        });
-
-        let mut money_market_program_ids = DistributionPubkeys::default();
-        money_market_program_ids[0] = pk;
-        money_market_program_ids[1] = pk;
-
-        let mut token_distribution: TokenDistribution = Default::default();
-        let mut distribution = DistributionArray::default();
-        distribution[0] = 1000000000;
-        distribution[1] = 0;
-
-        token_distribution.update(2, distribution);
-
-        rebalancing
-            .compute(
-                &money_market_program_ids,
-                token_distribution.clone(),
-                2100000,
-            )
-            .unwrap();
-
-        rebalancing
-            .execute_step(RebalancingOperation::Deposit, Some(2100000), 3)
-            .unwrap();
-
-        distribution[0] = 999999999;
-        token_distribution.update(4, distribution);
-        rebalancing
-            .compute(
-                &money_market_program_ids,
-                token_distribution.clone(),
-                2100000,
-            )
-            .unwrap();
-
-        println!("rebalancing = {:#?}", rebalancing);
-        println!(
-            "unused_liquidity = {:#?}",
-            rebalancing.unused_liquidity().unwrap()
-        );
-
-        distribution[0] = 999999998;
-        token_distribution.update(7, distribution);
-        rebalancing
-            .compute(
-                &money_market_program_ids,
-                token_distribution.clone(),
-                2100000,
-            )
-            .unwrap();
-
-        println!("rebalancing = {:#?}", rebalancing);
-        println!(
-            "unused_liquidity = {:#?}",
-            rebalancing.unused_liquidity().unwrap()
-        );
-    }
 }
 
 mod deprecated {
@@ -513,7 +439,7 @@ mod deprecated {
         /// Mint
         pub mint: Pubkey,
 
-        /// Distributed liquidity
+        /// Real distributed liquidity (with all roundings)
         pub distributed_liquidity: u64,
 
         /// Received collateral in each market
@@ -527,19 +453,16 @@ mod deprecated {
 
         /// Income refreshed mark to avoid frequent refresh
         pub income_refreshed_at: Slot,
-        // Space for future values
-        // 20
     }
 
     impl Sealed for DeprecatedRebalancing {}
     impl Pack for DeprecatedRebalancing {
-        // 1 + 32 + 32 + 8 + (8 * 10) + 89 + (4 + 4 * 28) + 8 + 20 = 386
+        // 1 + 32 + 32 + 8 + (8 * 10) + 89 + (4 + 8 * 28) + 8 = 478
         const LEN: usize = 73
             + (8 * TOTAL_DISTRIBUTIONS)
             + TokenDistribution::LEN
-            + (4 + 4 * RebalancingStep::LEN)
-            + 8
-            + 20;
+            + (4 + TOTAL_REBALANCING_STEP * RebalancingStep::LEN)
+            + 8;
 
         fn pack_into_slice(&self, dst: &mut [u8]) {
             let mut slice = dst;

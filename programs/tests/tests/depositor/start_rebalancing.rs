@@ -1,24 +1,21 @@
-use std::vec;
-
-use everlend_depositor::state::Rebalancing;
+use crate::utils::*;
+use everlend_depositor::find_transit_program_address;
+use everlend_depositor::state::{Rebalancing, RebalancingOperation};
+use everlend_liquidity_oracle::state::{DistributionArray, TokenDistribution};
+use everlend_registry::state::SetRegistryPoolConfigParams;
 use everlend_registry::state::{DistributionPubkeys, RegistryRootAccounts, RegistrySettings};
+use everlend_utils::{
+    find_program_address,
+    integrations::{self, MoneyMarketPubkeys},
+    EverlendError,
+};
 use solana_program::instruction::InstructionError;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::*;
 use solana_sdk::signature::Keypair;
 use solana_sdk::transaction::Transaction;
 use solana_sdk::{signer::Signer, transaction::TransactionError};
-
-use everlend_depositor::find_transit_program_address;
-use everlend_liquidity_oracle::state::{DistributionArray, TokenDistribution};
-use everlend_registry::state::SetRegistryPoolConfigParams;
-use everlend_utils::{
-    find_program_address,
-    integrations::{self, MoneyMarketPubkeys},
-    EverlendError,
-};
-
-use crate::utils::*;
+use std::vec;
 
 async fn setup() -> (
     ProgramTestContext,
@@ -876,21 +873,88 @@ async fn rebalancing_math_round() {
         d[2] = elem.2;
 
         distribution.update(i as u64 + 1, d);
-        let sum = r.compute(&p, distribution.clone(), distr_amount).unwrap();
-        println!("{}", sum);
-        assert_eq!(distr_amount >= sum, true);
+        r.compute(&p, distribution.clone(), distr_amount).unwrap();
+        println!("{}", r.distributed_liquidity);
+        assert_eq!(distr_amount >= r.distributed_liquidity, true);
 
-        let sum_refresh = r
-            .compute_with_refresh_income(
-                &p,
-                &RegistrySettings {
-                    refresh_income_interval: 0,
-                },
-                i as u64 + 1,
-                distr_amount,
-            )
-            .unwrap();
-        println!("{}", sum_refresh);
-        assert_eq!(distr_amount >= sum_refresh, true);
+        r.compute_with_refresh_income(
+            &p,
+            &RegistrySettings {
+                refresh_income_interval: 0,
+            },
+            i as u64 + 1,
+            distr_amount,
+        )
+        .unwrap();
+        println!("{}", r.distributed_liquidity);
+        assert_eq!(distr_amount >= r.distributed_liquidity, true);
+    }
+}
+
+#[tokio::test]
+async fn rebalancing_check_steps() {
+    let mut d: DistributionArray = DistributionArray::default();
+    let mut p = DistributionPubkeys::default();
+    p[0] = Keypair::new().pubkey();
+    p[1] = Keypair::new().pubkey();
+
+    let distr_amount: u64 = 10001;
+    let mut distribution = TokenDistribution::default();
+    let mut r = Rebalancing::default();
+
+    struct TestCase {
+        distribution: (u64, u64),
+        steps: Vec<(u8, RebalancingOperation, u64, Option<u64>)>,
+    }
+
+    for (i, elem) in vec![
+        TestCase {
+            distribution: (500_000_000, 0),
+            steps: vec![(0, RebalancingOperation::Deposit, 5000, None)],
+        },
+        TestCase {
+            distribution: (500_000_000, 500_000_000),
+            steps: vec![(1, RebalancingOperation::Deposit, 5000, None)],
+        },
+        TestCase {
+            distribution: (1000_000_000, 0),
+            steps: vec![
+                (1, RebalancingOperation::Withdraw, 5000, Some(5000)),
+                (0, RebalancingOperation::Deposit, 5001, None),
+            ],
+        },
+        TestCase {
+            distribution: (900_000_000, 100_000_000),
+            steps: vec![
+                (0, RebalancingOperation::Withdraw, 1001, Some(1001)),
+                (1, RebalancingOperation::Deposit, 1000, None),
+            ],
+        },
+    ]
+    .iter()
+    .enumerate()
+    {
+        d[0] = elem.distribution.0;
+        d[1] = elem.distribution.1;
+
+        distribution.update(i as u64 + 1, d);
+        r.compute(&p, distribution.clone(), distr_amount).unwrap();
+
+        println!("{:?}", r.steps);
+
+        for (idx, s) in r.clone().steps.iter().enumerate() {
+            let mm_index = elem.steps[idx].0;
+            let operation = elem.steps[idx].1;
+            let liquidity_amount = elem.steps[idx].2;
+            let collateral_amount = elem.steps[idx].3;
+
+            assert_eq!(s.money_market_index, mm_index);
+            assert_eq!(s.operation, operation);
+            assert_eq!(s.liquidity_amount, liquidity_amount);
+            assert_eq!(s.collateral_amount, collateral_amount);
+
+            r.execute_step(s.operation, Some(liquidity_amount), (i + 2) as u64)
+                .unwrap();
+        }
     }
 }
