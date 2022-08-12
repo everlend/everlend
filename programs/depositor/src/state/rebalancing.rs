@@ -104,7 +104,6 @@ impl Rebalancing {
                 }
                 // Withdraw
                 Ordering::Less => {
-                    // TODO: we used total even
                     let collateral_percent = PRECISION_SCALER
                         .checked_sub(math::percent_ratio(new_amount, prev_amount)? as u128)
                         .ok_or(EverlendError::MathOverflow)?;
