@@ -393,6 +393,7 @@ impl Processor {
     pub fn set_rebalancing(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
+        amount_to_distribute: u64,
         distributed_liquidity: u64,
         distribution_array: DistributionArray,
     ) -> ProgramResult {
@@ -444,7 +445,11 @@ impl Processor {
             return Err(EverlendError::RebalancingIsCompleted.into());
         }
 
-        rebalancing.set(distributed_liquidity, distribution_array)?;
+        rebalancing.set(
+            amount_to_distribute,
+            distributed_liquidity,
+            distribution_array,
+        )?;
 
         Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
 
@@ -1259,6 +1264,7 @@ impl Processor {
             }
 
             DepositorInstruction::SetRebalancing {
+                amount_to_distribute,
                 distributed_liquidity,
                 distribution_array,
             } => {
@@ -1266,6 +1272,7 @@ impl Processor {
                 Self::set_rebalancing(
                     program_id,
                     accounts,
+                    amount_to_distribute,
                     distributed_liquidity,
                     distribution_array,
                 )

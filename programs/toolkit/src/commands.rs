@@ -367,9 +367,18 @@ pub async fn command_update_liquidity_oracle(
 ) -> anyhow::Result<()> {
     let initialiazed_accounts = config.get_initialized_accounts();
 
-    println!("oracle {} new authority {}", initialiazed_accounts.liquidity_oracle, new_authority.pubkey());
+    println!(
+        "oracle {} new authority {}",
+        initialiazed_accounts.liquidity_oracle,
+        new_authority.pubkey()
+    );
 
-    liquidity_oracle::update(config, initialiazed_accounts.liquidity_oracle, authority, new_authority)?;
+    liquidity_oracle::update(
+        config,
+        initialiazed_accounts.liquidity_oracle,
+        authority,
+        new_authority,
+    )?;
 
     Ok(())
 }
@@ -672,6 +681,7 @@ pub async fn command_cancel_withdraw_request(
 pub async fn command_reset_rebalancing(
     config: &Config,
     rebalancing_pubkey: &Pubkey,
+    amount_to_distribute: u64,
     distributed_liquidity: u64,
     distribution_vec: Vec<u64>,
 ) -> anyhow::Result<()> {
@@ -688,6 +698,7 @@ pub async fn command_reset_rebalancing(
         &initialiazed_accounts.registry,
         &rebalancing.depositor,
         &rebalancing.mint,
+        amount_to_distribute,
         distributed_liquidity,
         distribution_array,
     )?;
