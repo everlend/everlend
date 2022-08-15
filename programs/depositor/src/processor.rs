@@ -1,6 +1,6 @@
 //! Program state processor
 
-use std::cmp::Ordering;
+use std::cmp::{min, Ordering};
 
 use borsh::BorshDeserialize;
 use everlend_general_pool::{find_withdrawal_requests_program_address, state::WithdrawalRequests};
@@ -348,7 +348,12 @@ impl Processor {
                 )?;
             }
             Ordering::Less => {
-                if !withdrawal_requests.liquidity_supply.is_zero() {
+                let repay_amount = min(
+                    withdrawal_requests.liquidity_supply,
+                    liquidity_transit.amount,
+                );
+
+                if !repay_amount.is_zero() {
                     msg!("Repay to General Pool");
                     everlend_general_pool::cpi::repay(
                         general_pool_market_info.clone(),
@@ -358,7 +363,7 @@ impl Processor {
                         liquidity_transit_info.clone(),
                         general_pool_token_account_info.clone(),
                         depositor_authority_info.clone(),
-                        amount,
+                        repay_amount,
                         0,
                         &[signers_seeds],
                     )?;
