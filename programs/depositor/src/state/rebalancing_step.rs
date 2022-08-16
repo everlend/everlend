@@ -63,9 +63,8 @@ impl RebalancingStep {
     }
 
     /// Execute operation
-    pub fn execute(&mut self, slot: Slot) -> Result<(), ProgramError> {
+    pub fn set_executed_at(&mut self, slot: Slot) {
         self.executed_at = Some(slot);
-        Ok(())
     }
 }
 

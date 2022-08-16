@@ -1,5 +1,6 @@
 use crate::EverlendError;
 use solana_program::program_error::ProgramError;
+use spl_math::precise_number::PreciseNumber;
 
 /// Scale for precision
 pub const PRECISION_SCALER: u128 = 1_000_000_000;
@@ -14,18 +15,26 @@ pub fn abs_diff(a: u64, b: u64) -> Result<u64, ProgramError> {
     Ok(res as u64)
 }
 
-pub fn percent_ratio(a: u64, b: u64) -> Result<u64, ProgramError> {
-    if b == 0 {
+pub fn percent_ratio(amount: u64, total: u64, collateral_amount: u64) -> Result<u64, ProgramError> {
+    if total == 0 {
         return Ok(0);
     }
 
-    let res = (a as u128)
-        .checked_mul(PRECISION_SCALER)
-        .ok_or(EverlendError::MathOverflow)?
-        .checked_div(b as u128)
+    let amount = PreciseNumber::new(amount.into()).ok_or(EverlendError::MathOverflow)?;
+    let total = PreciseNumber::new(total.into()).ok_or(EverlendError::MathOverflow)?;
+
+    let percentage = amount
+        .checked_div(&total)
         .ok_or(EverlendError::MathOverflow)?;
 
-    Ok(res as u64)
+    let collateral_amount = PreciseNumber::new(collateral_amount.into())
+        .ok_or(EverlendError::MathOverflow)?
+        .checked_mul(&percentage)
+        .ok_or(EverlendError::MathOverflow)?
+        .to_imprecise()
+        .ok_or(EverlendError::MathOverflow)?;
+
+    Ok(collateral_amount as u64)
 }
 
 pub fn share_floor(amount: u64, percent: u64) -> Result<u64, ProgramError> {

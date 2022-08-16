@@ -4,6 +4,7 @@ use everlend_depositor::state::{Rebalancing, RebalancingOperation};
 use everlend_liquidity_oracle::state::{DistributionArray, TokenDistribution};
 use everlend_registry::state::SetRegistryPoolConfigParams;
 use everlend_registry::state::{DistributionPubkeys, RegistryRootAccounts, RegistrySettings};
+use everlend_utils::{abs_diff, percent_ratio};
 use everlend_utils::{
     find_program_address,
     integrations::{self, MoneyMarketPubkeys},
@@ -957,4 +958,54 @@ async fn rebalancing_check_steps() {
                 .unwrap();
         }
     }
+}
+
+#[tokio::test]
+async fn rebalancing_check_steps2() {
+    let mut p = DistributionPubkeys::default();
+    p[0] = Keypair::new().pubkey();
+    p[1] = Keypair::new().pubkey();
+    p[2] = Keypair::new().pubkey();
+
+    let mut d: DistributionArray = DistributionArray::default();
+    d[0] = 500_000_000;
+    d[1] = 500_000_000;
+
+    let mut distribution = TokenDistribution::default();
+    distribution.distribution = d;
+
+    let mut received_collateral = [0; 10];
+    received_collateral[0] = 5218140718;
+    received_collateral[1] = 12821948839;
+
+    let mut r = Rebalancing::default();
+    r.amount_to_distribute = 25643897678;
+    r.distributed_liquidity = 25643897678;
+    r.received_collateral = received_collateral;
+    r.token_distribution = distribution.clone();
+
+    d[0] = 333_333_333;
+    d[1] = 333_333_333;
+    d[2] = 333_333_333;
+
+    distribution.update(10, d);
+
+    let amount_to_distribute = 25365814993;
+    r.compute(&p, distribution.clone(), amount_to_distribute)
+        .unwrap();
+
+    println!("{:?}", r.steps);
+}
+
+#[tokio::test]
+async fn rebalancing_percent_ratio() {
+    let prev_amount = 12821948839;
+    let new_amount = 8455271655;
+
+    let collateral_amount = prev_amount; // same as liquidity
+    let amount = abs_diff(new_amount, prev_amount).unwrap();
+    assert_eq!(amount, 4366677184);
+
+    let collateral_amount = percent_ratio(amount, prev_amount, collateral_amount).unwrap();
+    assert_eq!(collateral_amount, 4366677184);
 }

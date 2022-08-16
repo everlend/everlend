@@ -6,7 +6,7 @@ use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 pub use deprecated::DeprecatedRebalancing;
 use everlend_liquidity_oracle::state::{DistributionArray, TokenDistribution};
 use everlend_registry::state::{DistributionPubkeys, RegistrySettings, TOTAL_DISTRIBUTIONS};
-use everlend_utils::{math, EverlendError, PRECISION_SCALER};
+use everlend_utils::{math, EverlendError};
 use solana_program::{
     clock::Slot,
     msg,
@@ -104,15 +104,8 @@ impl Rebalancing {
                 }
                 // Withdraw
                 Ordering::Less => {
-                    let collateral_percent = PRECISION_SCALER
-                        .checked_sub(math::percent_ratio(new_amount, prev_amount)? as u128)
-                        .ok_or(EverlendError::MathOverflow)?;
-
-                    // Compute collateral amount depending on amount percent
-                    let collateral_amount = math::share_floor(
-                        self.received_collateral[index],
-                        collateral_percent as u64,
-                    )?;
+                    let collateral_amount =
+                        math::percent_ratio(amount, prev_amount, self.received_collateral[index])?;
 
                     self.add_step(RebalancingStep::new(
                         index as u8,
@@ -249,7 +242,7 @@ impl Rebalancing {
             return Err(EverlendError::InvalidRebalancingOperation.into());
         }
 
-        step.execute(slot)?;
+        step.set_executed_at(slot);
 
         let money_market_index = usize::from(step.money_market_index);
         let collateral_amount =
