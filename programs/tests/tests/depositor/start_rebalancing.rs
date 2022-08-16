@@ -995,6 +995,13 @@ async fn rebalancing_check_steps_math() {
         .unwrap();
 
     println!("{:?}", r.steps);
+
+    assert_eq!(r.steps[0].liquidity_amount, 4366677184);
+    assert_eq!(r.steps[0].collateral_amount, Some(1777103957));
+    assert_eq!(r.steps[1].liquidity_amount, 4366677184);
+    assert_eq!(r.steps[1].collateral_amount, Some(4366677184));
+    assert_eq!(r.steps[2].liquidity_amount, 8455271655);
+    assert_eq!(r.steps[2].collateral_amount, None);
 }
 
 #[tokio::test]
