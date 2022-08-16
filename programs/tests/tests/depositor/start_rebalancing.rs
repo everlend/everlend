@@ -961,7 +961,7 @@ async fn rebalancing_check_steps() {
 }
 
 #[tokio::test]
-async fn rebalancing_check_steps2() {
+async fn rebalancing_check_steps_math() {
     let mut p = DistributionPubkeys::default();
     p[0] = Keypair::new().pubkey();
     p[1] = Keypair::new().pubkey();
