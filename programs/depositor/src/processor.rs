@@ -781,12 +781,12 @@ impl Processor {
             account_type: deprecated_rebalancing.account_type,
             depositor: deprecated_rebalancing.depositor,
             mint: deprecated_rebalancing.mint,
-            distributed_liquidity: deprecated_rebalancing.distributed_liquidity,
             received_collateral: deprecated_rebalancing.received_collateral,
             token_distribution: deprecated_rebalancing.token_distribution,
             steps: deprecated_rebalancing.steps,
             income_refreshed_at: deprecated_rebalancing.income_refreshed_at,
-            amount_to_distribute: deprecated_rebalancing.distributed_liquidity,
+            amount_to_distribute: 0,
+            distributed_liquidity: 0,
         };
 
         Rebalancing::pack(rebalancing, *rebalance_info.data.borrow_mut())?;
