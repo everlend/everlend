@@ -6,14 +6,14 @@ use crate::{
     find_transit_program_address,
     state::{InternalMining, MiningType},
 };
-use everlend_collateral_pool::{find_pool_withdraw_authority_program_address};
+use everlend_collateral_pool::find_pool_withdraw_authority_program_address;
 use everlend_income_pools::utils::IncomePoolAccounts;
 use everlend_registry::state::{RegistryPrograms, RegistryRootAccounts};
 use everlend_utils::{
-    assert_owned_by, cpi, find_program_address, integrations, EverlendError,
+    assert_account_key, assert_owned_by, cpi, find_program_address, integrations, EverlendError,
 };
 use solana_program::{
-    account_info::AccountInfo,
+    account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
     instruction::AccountMeta,
     msg,

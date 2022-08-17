@@ -1,5 +1,7 @@
 use super::CollateralStorage;
-use everlend_collateral_pool::{cpi, find_pool_withdraw_authority_program_address, utils::CollateralPoolAccounts};
+use everlend_collateral_pool::{
+    cpi, find_pool_withdraw_authority_program_address, utils::CollateralPoolAccounts,
+};
 use everlend_registry::state::{RegistryPrograms, RegistryRootAccounts};
 use everlend_utils::{assert_account_key, assert_owned_by};
 use solana_program::{
