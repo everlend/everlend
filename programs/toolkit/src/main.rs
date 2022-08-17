@@ -957,13 +957,22 @@ async fn main() -> anyhow::Result<()> {
                         .help("Rebalancing pubkey"),
                 )
                 .arg(
-                    Arg::with_name("amount")
-                        .long("amount")
+                    Arg::with_name("amount-to-distribute")
+                        .long("amount-to-distribute")
                         .validator(is_amount)
                         .value_name("NUMBER")
                         .takes_value(true)
                         .required(true)
-                        .help("Liquidity amount"),
+                        .help("Amount to distribute"),
+                )
+                .arg(
+                    Arg::with_name("distributed-liquidity")
+                        .long("distributed-liquidity")
+                        .validator(is_amount)
+                        .value_name("NUMBER")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Distributed liduidity"),
                 )
                 .arg(
                     Arg::with_name("distribution")
@@ -1472,11 +1481,15 @@ async fn main() -> anyhow::Result<()> {
         }
         ("reset-rebalancing", Some(arg_matches)) => {
             let rebalancing_pubkey = pubkey_of(arg_matches, "rebalancing").unwrap();
-            let distributed_liquidity = value_of::<u64>(arg_matches, "amount").unwrap();
+            let amount_to_distribute =
+                value_of::<u64>(arg_matches, "amount-to-distribute").unwrap();
+            let distributed_liquidity =
+                value_of::<u64>(arg_matches, "distributed-liquidity").unwrap();
             let distribution: Vec<u64> = values_of::<u64>(arg_matches, "distribution").unwrap();
             command_reset_rebalancing(
                 &config,
                 &rebalancing_pubkey,
+                amount_to_distribute,
                 distributed_liquidity,
                 distribution,
             )

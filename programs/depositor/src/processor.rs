@@ -1,5 +1,7 @@
 //! Program state processor
 
+use std::cmp::min;
+
 use borsh::BorshDeserialize;
 use everlend_general_pool::{find_withdrawal_requests_program_address, state::WithdrawalRequests};
 use everlend_income_pools::utils::IncomePoolAccounts;
@@ -16,6 +18,7 @@ use everlend_utils::{
     assert_account_key, assert_initialized, assert_owned_by, assert_rent_exempt, assert_signer,
     assert_uninitialized, cpi, find_program_address, EverlendError,
 };
+use num_traits::Zero;
 use solana_program::program_error::ProgramError;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -28,7 +31,6 @@ use solana_program::{
     sysvar::Sysvar,
 };
 use spl_token::state::Account;
-use std::cmp::Ordering;
 
 use crate::state::{InternalMining, MiningType};
 use crate::utils::{deposit, parse_fill_reward_accounts, withdraw, FillRewardAccounts};
@@ -294,63 +296,62 @@ impl Processor {
         );
         assert_account_key(withdrawal_requests_info, &withdrawal_requests_pubkey)?;
 
-        let withdrawal_requests =
-            WithdrawalRequests::unpack(&withdrawal_requests_info.data.borrow())?;
-
         // Check transit: liquidity
         let (liquidity_transit_pubkey, _) =
             find_transit_program_address(program_id, depositor_info.key, mint_info.key, "");
         assert_account_key(liquidity_transit_info, &liquidity_transit_pubkey)?;
 
-        // Calculate total liquidity supply
-        let general_pool_token_account =
-            Account::unpack_unchecked(&general_pool_token_account_info.data.borrow())?;
+        let general_pool = Account::unpack(&general_pool_token_account_info.data.borrow())?;
+        let liquidity_transit = Account::unpack(&liquidity_transit_info.data.borrow())?;
+        let withdrawal_requests =
+            WithdrawalRequests::unpack(&withdrawal_requests_info.data.borrow())?;
 
-        let liquidity_transit_supply = Account::unpack(&liquidity_transit_info.data.borrow())?
+        let available_liquidity = rebalancing
+            .distributed_liquidity
+            .checked_add(liquidity_transit.amount)
+            .ok_or(EverlendError::MathOverflow)?;
+
+        msg!("available_liquidity: {}", available_liquidity);
+
+        // Calculate liquidity to distribute
+        let amount_to_distribute = general_pool
             .amount
-            .saturating_sub(rebalancing.unused_liquidity()?);
-        msg!("liquidity_transit_supply: {}", liquidity_transit_supply);
-
-        let release_withdrawal_requests_amount = withdrawal_requests
-            .liquidity_supply
-            .saturating_sub(liquidity_transit_supply);
-
-        let new_distributed_liquidity = general_pool_token_account
-            .amount
-            .checked_add(rebalancing.distributed_liquidity)
+            .checked_add(available_liquidity)
             .ok_or(EverlendError::MathOverflow)?
-            .checked_sub(release_withdrawal_requests_amount)
+            .checked_sub(withdrawal_requests.liquidity_supply)
             .ok_or(EverlendError::MathOverflow)?;
-        msg!("new_distributed_liquidity: {}", new_distributed_liquidity);
 
-        let borrow_amount =
-            new_distributed_liquidity.saturating_sub(rebalancing.distributed_liquidity);
-        let amount = (borrow_amount as i64)
-            .checked_sub(liquidity_transit_supply as i64)
-            .ok_or(EverlendError::MathOverflow)?;
-        msg!("amount: {}", amount);
+        msg!("amount_to_distribute: {}", amount_to_distribute);
 
         let (depositor_authority_pubkey, bump_seed) =
             find_program_address(program_id, depositor_info.key);
         assert_account_key(depositor_authority_info, &depositor_authority_pubkey)?;
         let signers_seeds = &[&depositor_info.key.to_bytes()[..32], &[bump_seed]];
 
-        match amount.cmp(&0) {
-            Ordering::Greater => {
-                msg!("Borrow from General Pool");
-                everlend_general_pool::cpi::borrow(
-                    general_pool_market_info.clone(),
-                    general_pool_market_authority_info.clone(),
-                    general_pool_info.clone(),
-                    general_pool_borrow_authority_info.clone(),
-                    liquidity_transit_info.clone(),
-                    general_pool_token_account_info.clone(),
-                    depositor_authority_info.clone(),
-                    amount.checked_abs().ok_or(EverlendError::MathOverflow)? as u64,
-                    &[signers_seeds],
-                )?;
-            }
-            Ordering::Less => {
+        if amount_to_distribute.gt(&available_liquidity) {
+            let borrow_amount = amount_to_distribute
+                .checked_sub(available_liquidity)
+                .ok_or(EverlendError::MathOverflow)?;
+
+            msg!("Borrow from General Pool");
+            everlend_general_pool::cpi::borrow(
+                general_pool_market_info.clone(),
+                general_pool_market_authority_info.clone(),
+                general_pool_info.clone(),
+                general_pool_borrow_authority_info.clone(),
+                liquidity_transit_info.clone(),
+                general_pool_token_account_info.clone(),
+                depositor_authority_info.clone(),
+                borrow_amount,
+                &[signers_seeds],
+            )?;
+        } else if !withdrawal_requests.liquidity_supply.is_zero() {
+            let repay_amount = withdrawal_requests
+                .liquidity_supply
+                .saturating_sub(general_pool.amount);
+
+            let repay_amount = min(repay_amount, liquidity_transit.amount);
+            if !repay_amount.is_zero() {
                 msg!("Repay to General Pool");
                 everlend_general_pool::cpi::repay(
                     general_pool_market_info.clone(),
@@ -360,12 +361,11 @@ impl Processor {
                     liquidity_transit_info.clone(),
                     general_pool_token_account_info.clone(),
                     depositor_authority_info.clone(),
-                    amount.checked_abs().ok_or(EverlendError::MathOverflow)? as u64,
+                    repay_amount,
                     0,
                     &[signers_seeds],
                 )?;
             }
-            Ordering::Equal => {}
         }
 
         // Compute rebalancing steps
@@ -375,13 +375,13 @@ impl Processor {
                 &programs.money_market_program_ids,
                 &settings,
                 clock.slot,
-                new_distributed_liquidity,
+                amount_to_distribute,
             )?;
         } else {
             rebalancing.compute(
                 &programs.money_market_program_ids,
                 new_token_distribution,
-                new_distributed_liquidity,
+                amount_to_distribute,
             )?;
         }
 
@@ -394,6 +394,7 @@ impl Processor {
     pub fn set_rebalancing(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
+        amount_to_distribute: u64,
         distributed_liquidity: u64,
         distribution_array: DistributionArray,
     ) -> ProgramResult {
@@ -445,7 +446,11 @@ impl Processor {
             return Err(EverlendError::RebalancingIsCompleted.into());
         }
 
-        rebalancing.set(distributed_liquidity, distribution_array)?;
+        rebalancing.set(
+            amount_to_distribute,
+            distributed_liquidity,
+            distribution_array,
+        )?;
 
         Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
 
@@ -781,6 +786,7 @@ impl Processor {
             token_distribution: deprecated_rebalancing.token_distribution,
             steps: deprecated_rebalancing.steps,
             income_refreshed_at: deprecated_rebalancing.income_refreshed_at,
+            amount_to_distribute: deprecated_rebalancing.distributed_liquidity,
         };
 
         Rebalancing::pack(rebalancing, *rebalance_info.data.borrow_mut())?;
@@ -1259,6 +1265,7 @@ impl Processor {
             }
 
             DepositorInstruction::SetRebalancing {
+                amount_to_distribute,
                 distributed_liquidity,
                 distribution_array,
             } => {
@@ -1266,6 +1273,7 @@ impl Processor {
                 Self::set_rebalancing(
                     program_id,
                     accounts,
+                    amount_to_distribute,
                     distributed_liquidity,
                     distribution_array,
                 )
@@ -1291,13 +1299,10 @@ impl Processor {
                 Self::init_mining_account(program_id, accounts, mining_type)
             }
 
-            DepositorInstruction::ClaimMiningReward {
-                with_subrewards,
-            } => {
+            DepositorInstruction::ClaimMiningReward { with_subrewards } => {
                 msg!("DepositorInstruction: ClaimMiningReward");
                 Self::claim_mining_reward(program_id, accounts, with_subrewards)
             }
         }
     }
 }
-

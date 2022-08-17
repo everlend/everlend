@@ -141,6 +141,7 @@ pub fn reset_rebalancing(
     registry_pubkey: &Pubkey,
     depositor_pubkey: &Pubkey,
     token_mint: &Pubkey,
+    amount_to_distribute: u64,
     distributed_liquidity: u64,
     distribution_array: DistributionArray,
 ) -> Result<(Pubkey, Rebalancing), ClientError> {
@@ -151,6 +152,7 @@ pub fn reset_rebalancing(
             depositor_pubkey,
             token_mint,
             &config.fee_payer.pubkey(),
+            amount_to_distribute,
             distributed_liquidity,
             distribution_array,
         )],
