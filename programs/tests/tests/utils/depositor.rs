@@ -132,6 +132,7 @@ impl TestDepositor {
         context: &mut ProgramTestContext,
         registry: &TestRegistry,
         liquidity_mint: &Pubkey,
+        amount_to_distribute: u64,
         distributed_liquidity: u64,
         distribution_array: DistributionArray,
     ) -> BanksClientResult<()> {
@@ -142,6 +143,7 @@ impl TestDepositor {
                 &self.depositor.pubkey(),
                 liquidity_mint,
                 &registry.manager.pubkey(),
+                amount_to_distribute,
                 distributed_liquidity,
                 distribution_array,
             )],
@@ -207,7 +209,7 @@ impl TestDepositor {
 
         let withdraw_accounts =
             integrations::withdraw_accounts(money_market_program_id, money_market_pubkeys);
-        let collateral_storage_withdraw_accounts =  mm_pool.withdraw_accounts(mm_pool_market,self);
+        let collateral_storage_withdraw_accounts = mm_pool.withdraw_accounts(mm_pool_market, self);
 
         let tx = Transaction::new_signed_with_payer(
             &[everlend_depositor::instruction::withdraw(

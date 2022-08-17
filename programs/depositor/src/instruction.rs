@@ -146,11 +146,22 @@ pub enum DepositorInstruction {
     /// Accounts:
     /// [R] Depositor
     /// [R] Depositor authority
-    /// [R] Money market program id
+    /// [S] Executor
     /// [R] Liquidity mint
     /// [R] Collateral mint
     /// [R] Internal mining account
+    ///
+    /// [R] Token program id
     /// [R] Staking program id
+    /// [R] ELD reward program id
+    /// [R] ELD config
+    /// [W] Reward pool
+    /// Reward fill accounts
+    /// [R] Reward mint
+    /// [W] Reward transit account
+    /// [W] Vault
+    /// [W] Vault fee account
+    /// If mining has subreward add `Reward fill accounts` for subreward token
     /// For larix mining:
     /// [W] Mining account
     /// [W] Mine supply
@@ -177,7 +188,10 @@ pub enum DepositorInstruction {
     /// [W] Miner
     /// [W] Quarry
     /// [R] Rewarder
-    ClaimMiningReward,
+    ClaimMiningReward {
+        ///
+        with_subrewards: bool,
+    },
 
     /// Migrate Depositor
     ///
@@ -199,9 +213,11 @@ pub enum DepositorInstruction {
     /// [WS] Manager
     /// [R] System program
     SetRebalancing {
-        ///Manual setup of prev distributed liquidity
+        /// Manual setup of amount to distribute
+        amount_to_distribute: u64,
+        /// Manual setup of prev distributed liquidity
         distributed_liquidity: u64,
-        ///Manual setup of prev distribution array
+        /// Manual setup of prev distribution array
         distribution_array: DistributionArray,
     },
 }
@@ -344,6 +360,7 @@ pub fn reset_rebalancing(
     depositor: &Pubkey,
     liquidity_mint: &Pubkey,
     manager: &Pubkey,
+    amount_to_distribute: u64,
     distributed_liquidity: u64,
     distribution_array: DistributionArray,
 ) -> Instruction {
@@ -361,6 +378,7 @@ pub fn reset_rebalancing(
     Instruction::new_with_borsh(
         *program_id,
         &DepositorInstruction::SetRebalancing {
+            amount_to_distribute,
             distributed_liquidity,
             distribution_array,
         },

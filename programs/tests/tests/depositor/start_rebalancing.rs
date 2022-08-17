@@ -1,20 +1,22 @@
-use everlend_registry::state::RegistryRootAccounts;
-use solana_program::instruction::InstructionError;
-use solana_program::pubkey::Pubkey;
-use solana_program_test::*;
-use solana_sdk::transaction::Transaction;
-use solana_sdk::{signer::Signer, transaction::TransactionError};
-
+use crate::utils::*;
 use everlend_depositor::find_transit_program_address;
-use everlend_liquidity_oracle::state::DistributionArray;
+use everlend_depositor::state::{Rebalancing, RebalancingOperation};
+use everlend_liquidity_oracle::state::{DistributionArray, TokenDistribution};
 use everlend_registry::state::SetRegistryPoolConfigParams;
+use everlend_registry::state::{DistributionPubkeys, RegistryRootAccounts, RegistrySettings};
+use everlend_utils::{abs_diff, percent_ratio};
 use everlend_utils::{
     find_program_address,
     integrations::{self, MoneyMarketPubkeys},
     EverlendError,
 };
-
-use crate::utils::*;
+use solana_program::instruction::InstructionError;
+use solana_program::pubkey::Pubkey;
+use solana_program_test::*;
+use solana_sdk::signature::Keypair;
+use solana_sdk::transaction::Transaction;
+use solana_sdk::{signer::Signer, transaction::TransactionError};
+use std::vec;
 
 async fn setup() -> (
     ProgramTestContext,
@@ -843,4 +845,174 @@ async fn fail_with_invalid_liquidity_oracle() {
             InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
         )
     );
+}
+
+#[tokio::test]
+async fn rebalancing_math_round() {
+    let mut d: DistributionArray = DistributionArray::default();
+    let mut p = DistributionPubkeys::default();
+    p[0] = Keypair::new().pubkey();
+    p[1] = Keypair::new().pubkey();
+    p[2] = Keypair::new().pubkey();
+
+    let distr_amount: u64 = 4610400063;
+    let mut distribution = TokenDistribution::default();
+    let mut r = Rebalancing::default();
+
+    for (i, elem) in vec![
+        (300_000_000, 300_000_000, 400_000_000),
+        (300_000_000, 40_000_000, 660_000_000),
+        (100_000_000, 100_000_000, 800_000_000),
+        (0, 0, 1000_000_000),
+        (300_000_000, 200_000_000, 500_000_000),
+    ]
+    .iter()
+    .enumerate()
+    {
+        d[0] = elem.0;
+        d[1] = elem.1;
+        d[2] = elem.2;
+
+        distribution.update(i as u64 + 1, d);
+        r.compute(&p, distribution.clone(), distr_amount).unwrap();
+        println!("{}", r.distributed_liquidity);
+        assert_eq!(distr_amount >= r.distributed_liquidity, true);
+
+        r.compute_with_refresh_income(
+            &p,
+            &RegistrySettings {
+                refresh_income_interval: 0,
+            },
+            i as u64 + 1,
+            distr_amount,
+        )
+        .unwrap();
+        println!("{}", r.distributed_liquidity);
+        assert_eq!(distr_amount >= r.distributed_liquidity, true);
+    }
+}
+
+#[tokio::test]
+async fn rebalancing_check_steps() {
+    let mut d: DistributionArray = DistributionArray::default();
+    let mut p = DistributionPubkeys::default();
+    p[0] = Keypair::new().pubkey();
+    p[1] = Keypair::new().pubkey();
+
+    let distr_amount: u64 = 10001;
+    let mut distribution = TokenDistribution::default();
+    let mut r = Rebalancing::default();
+
+    struct TestCase {
+        distribution: (u64, u64),
+        steps: Vec<(u8, RebalancingOperation, u64, Option<u64>)>,
+    }
+
+    for (i, elem) in vec![
+        TestCase {
+            distribution: (500_000_000, 0),
+            steps: vec![(0, RebalancingOperation::Deposit, 5000, None)],
+        },
+        TestCase {
+            distribution: (500_000_000, 500_000_000),
+            steps: vec![(1, RebalancingOperation::Deposit, 5000, None)],
+        },
+        TestCase {
+            distribution: (1000_000_000, 0),
+            steps: vec![
+                (1, RebalancingOperation::Withdraw, 5000, Some(5000)),
+                (0, RebalancingOperation::Deposit, 5001, None),
+            ],
+        },
+        TestCase {
+            distribution: (900_000_000, 100_000_000),
+            steps: vec![
+                (0, RebalancingOperation::Withdraw, 1001, Some(1001)),
+                (1, RebalancingOperation::Deposit, 1000, None),
+            ],
+        },
+    ]
+    .iter()
+    .enumerate()
+    {
+        d[0] = elem.distribution.0;
+        d[1] = elem.distribution.1;
+
+        distribution.update(i as u64 + 1, d);
+        r.compute(&p, distribution.clone(), distr_amount).unwrap();
+
+        println!("{:?}", r.steps);
+
+        for (idx, s) in r.clone().steps.iter().enumerate() {
+            let mm_index = elem.steps[idx].0;
+            let operation = elem.steps[idx].1;
+            let liquidity_amount = elem.steps[idx].2;
+            let collateral_amount = elem.steps[idx].3;
+
+            assert_eq!(s.money_market_index, mm_index);
+            assert_eq!(s.operation, operation);
+            assert_eq!(s.liquidity_amount, liquidity_amount);
+            assert_eq!(s.collateral_amount, collateral_amount);
+
+            r.execute_step(s.operation, Some(liquidity_amount), (i + 2) as u64)
+                .unwrap();
+        }
+    }
+}
+
+#[tokio::test]
+async fn rebalancing_check_steps_math() {
+    let mut p = DistributionPubkeys::default();
+    p[0] = Keypair::new().pubkey();
+    p[1] = Keypair::new().pubkey();
+    p[2] = Keypair::new().pubkey();
+
+    let mut d: DistributionArray = DistributionArray::default();
+    d[0] = 500_000_000;
+    d[1] = 500_000_000;
+
+    let mut distribution = TokenDistribution::default();
+    distribution.distribution = d;
+
+    let mut received_collateral = [0; 10];
+    received_collateral[0] = 5218140718;
+    received_collateral[1] = 12821948839;
+
+    let mut r = Rebalancing::default();
+    r.amount_to_distribute = 25643897678;
+    r.distributed_liquidity = 25643897678;
+    r.received_collateral = received_collateral;
+    r.token_distribution = distribution.clone();
+
+    d[0] = 333_333_333;
+    d[1] = 333_333_333;
+    d[2] = 333_333_333;
+
+    distribution.update(10, d);
+
+    let amount_to_distribute = 25365814993;
+    r.compute(&p, distribution.clone(), amount_to_distribute)
+        .unwrap();
+
+    println!("{:?}", r.steps);
+
+    assert_eq!(r.steps[0].liquidity_amount, 4366677184);
+    assert_eq!(r.steps[0].collateral_amount, Some(1777103957));
+    assert_eq!(r.steps[1].liquidity_amount, 4366677184);
+    assert_eq!(r.steps[1].collateral_amount, Some(4366677184));
+    assert_eq!(r.steps[2].liquidity_amount, 8455271655);
+    assert_eq!(r.steps[2].collateral_amount, None);
+}
+
+#[tokio::test]
+async fn rebalancing_percent_ratio() {
+    let prev_amount = 12821948839;
+    let new_amount = 8455271655;
+
+    let collateral_amount = prev_amount; // same as liquidity
+    let amount = abs_diff(new_amount, prev_amount).unwrap();
+    assert_eq!(amount, 4366677184);
+
+    let collateral_amount = percent_ratio(amount, prev_amount, collateral_amount).unwrap();
+    assert_eq!(collateral_amount, 4366677184);
 }
