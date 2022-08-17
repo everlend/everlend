@@ -1,4 +1,5 @@
 pub mod larix;
+pub mod metaplex;
 pub mod port_finance;
 pub mod quarry;
 pub mod rewards;
