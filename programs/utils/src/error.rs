@@ -93,6 +93,10 @@ pub enum EverlendError {
     /// Money market mining not initialized
     #[error("Mining not initialized")]
     MiningNotInitialized,
+
+    /// Reserve threshold exceeded
+    #[error("Reserve threshold exceeded")]
+    ReserveThreshold,
 }
 
 impl PrintProgramError for EverlendError {

@@ -10,7 +10,7 @@ use everlend_collateral_pool::find_pool_withdraw_authority_program_address;
 use everlend_income_pools::utils::IncomePoolAccounts;
 use everlend_registry::state::{RegistryPrograms, RegistryRootAccounts};
 use everlend_utils::{
-    assert_account_key, assert_owned_by, cpi, find_program_address, integrations, EverlendError,
+    abs_diff, assert_account_key, cpi, find_program_address, integrations, EverlendError,
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -23,6 +23,8 @@ use solana_program::{
 };
 use spl_token::state::Account;
 use std::{cmp::Ordering, slice::Iter};
+
+const RESERVE_THRESHOLD: u64 = 2;
 
 /// Deposit
 #[allow(clippy::too_many_arguments)]
@@ -199,30 +201,32 @@ pub fn withdraw<'a, 'b>(
 
     // Received liquidity amount may be less
     // https://blog.neodyme.io/posts/lending_disclosure
-    let income_amount: i64 = (received_amount as i64)
-        .checked_sub(expected_liquidity_amount as i64)
-        .ok_or(EverlendError::MathOverflow)?;
-    msg!("income_amount: {}", income_amount);
+    let diff = abs_diff(received_amount, expected_liquidity_amount)?;
 
     // Deposit to income pool if income amount > 0
-    match income_amount.cmp(&0) {
+    match received_amount.cmp(&expected_liquidity_amount) {
         Ordering::Greater => {
+            msg!("income_amount: {}", diff);
             everlend_income_pools::cpi::deposit(
                 income_pool_accounts,
                 liquidity_transit.clone(),
                 authority.clone(),
-                income_amount as u64,
+                diff,
                 signers_seeds,
             )?;
         }
         Ordering::Less => {
+            msg!("income_amount: -{}", diff);
+            if diff.gt(&RESERVE_THRESHOLD) {
+                // throw error,  this amount is too big, probably something is wrong
+                return Err(EverlendError::ReserveThreshold.into());
+            }
+
             cpi::spl_token::transfer(
                 liquidity_reserve_transit.clone(),
                 liquidity_transit.clone(),
                 authority.clone(),
-                income_amount
-                    .checked_abs()
-                    .ok_or(EverlendError::MathOverflow)? as u64,
+                diff,
                 signers_seeds,
             )?;
         }
