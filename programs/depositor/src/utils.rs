@@ -154,8 +154,8 @@ pub fn withdraw<'a, 'b>(
         msg!("Withdraw from Mining and Redeem from Money market");
         money_market.money_market_redeem_and_withdraw_mining(
             collateral_mint.clone(),
-            liquidity_transit.clone(),
             collateral_transit.clone(),
+            liquidity_transit.clone(),
             authority.clone(),
             clock.clone(),
             collateral_amount,
