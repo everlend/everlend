@@ -79,7 +79,7 @@ impl<'a> MoneyMarket<'a> for Larix<'a> {
         destination_collateral: AccountInfo<'a>,
         authority: AccountInfo<'a>,
         _clock: AccountInfo<'a>,
-        amount: u64,
+        liquidity_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<u64, ProgramError> {
         larix::refresh_reserve(
@@ -98,7 +98,7 @@ impl<'a> MoneyMarket<'a> for Larix<'a> {
             self.lending_market.clone(),
             self.lending_market_authority.clone(),
             authority,
-            amount,
+            liquidity_amount,
             signers_seeds,
         )?;
 
@@ -115,7 +115,7 @@ impl<'a> MoneyMarket<'a> for Larix<'a> {
         destination_liquidity: AccountInfo<'a>,
         authority: AccountInfo<'a>,
         _clock: AccountInfo<'a>,
-        amount: u64,
+        collateral_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
         larix::refresh_reserve(
@@ -134,7 +134,7 @@ impl<'a> MoneyMarket<'a> for Larix<'a> {
             self.lending_market.clone(),
             self.lending_market_authority.clone(),
             authority,
-            amount,
+            collateral_amount,
             signers_seeds,
         )
     }

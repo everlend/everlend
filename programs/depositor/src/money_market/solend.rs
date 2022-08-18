@@ -53,7 +53,7 @@ impl<'a> MoneyMarket<'a> for Solend<'a> {
         destination_collateral: AccountInfo<'a>,
         authority: AccountInfo<'a>,
         clock: AccountInfo<'a>,
-        amount: u64,
+        liquidity_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<u64, ProgramError> {
         solend::refresh_reserve(
@@ -75,7 +75,7 @@ impl<'a> MoneyMarket<'a> for Solend<'a> {
             self.lending_market_authority.clone(),
             authority,
             clock,
-            amount,
+            liquidity_amount,
             signers_seeds,
         )?;
 
@@ -92,7 +92,7 @@ impl<'a> MoneyMarket<'a> for Solend<'a> {
         destination_liquidity: AccountInfo<'a>,
         authority: AccountInfo<'a>,
         clock: AccountInfo<'a>,
-        amount: u64,
+        collateral_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
         solend::refresh_reserve(
@@ -114,7 +114,7 @@ impl<'a> MoneyMarket<'a> for Solend<'a> {
             self.lending_market_authority.clone(),
             authority,
             clock,
-            amount,
+            collateral_amount,
             signers_seeds,
         )
     }
