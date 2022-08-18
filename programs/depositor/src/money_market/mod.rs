@@ -31,7 +31,7 @@ pub trait CollateralStorage<'a> {
         collateral_transit: AccountInfo<'a>,
         authority: AccountInfo<'a>,
         clock: AccountInfo<'a>,
-        liquidity_amount: u64,
+        collateral_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError>;
 }
@@ -46,7 +46,7 @@ pub trait MoneyMarket<'a> {
         destination_collateral: AccountInfo<'a>,
         authority: AccountInfo<'a>,
         clock: AccountInfo<'a>,
-        amount: u64,
+        liquidity_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<u64, ProgramError>;
     ///
@@ -57,7 +57,7 @@ pub trait MoneyMarket<'a> {
         destination_liquidity: AccountInfo<'a>,
         authority: AccountInfo<'a>,
         clock: AccountInfo<'a>,
-        liquidity_amount: u64,
+        collateral_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError>;
     ///
@@ -68,7 +68,7 @@ pub trait MoneyMarket<'a> {
         collateral_transit: AccountInfo<'a>,
         authority: AccountInfo<'a>,
         clock: AccountInfo<'a>,
-        amount: u64,
+        liquidity_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<u64, ProgramError>;
     ///
@@ -79,7 +79,7 @@ pub trait MoneyMarket<'a> {
         liquidity_destination: AccountInfo<'a>,
         authority: AccountInfo<'a>,
         clock: AccountInfo<'a>,
-        amount: u64,
+        collateral_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError>;
 }

@@ -127,7 +127,7 @@ pub fn withdraw<'a, 'b>(
     internal_mining: AccountInfo<'a>,
     money_market_account_info_iter: &'b mut Iter<AccountInfo<'a>>,
     collateral_amount: u64,
-    liquidity_amount: u64,
+    expected_liquidity_amount: u64,
     signers_seeds: &[&[&[u8]]],
 ) -> ProgramResult {
     let liquidity_transit_supply = Account::unpack(&liquidity_transit.data.borrow())?.amount;
@@ -156,7 +156,7 @@ pub fn withdraw<'a, 'b>(
             collateral_transit.clone(),
             authority.clone(),
             clock.clone(),
-            liquidity_amount,
+            collateral_amount,
             signers_seeds,
         )?;
     } else {
@@ -185,7 +185,7 @@ pub fn withdraw<'a, 'b>(
             liquidity_transit.clone(),
             authority.clone(),
             clock.clone(),
-            liquidity_amount,
+            collateral_amount,
             signers_seeds,
         )?;
     };
@@ -195,12 +195,12 @@ pub fn withdraw<'a, 'b>(
         .checked_sub(liquidity_transit_supply)
         .ok_or(EverlendError::MathOverflow)?;
     msg!("received_amount: {}", received_amount);
-    msg!("liquidity_amount: {}", liquidity_amount);
+    msg!("expected_liquidity_amount: {}", expected_liquidity_amount);
 
     // Received liquidity amount may be less
     // https://blog.neodyme.io/posts/lending_disclosure
     let income_amount: i64 = (received_amount as i64)
-        .checked_sub(liquidity_amount as i64)
+        .checked_sub(expected_liquidity_amount as i64)
         .ok_or(EverlendError::MathOverflow)?;
     msg!("income_amount: {}", income_amount);
 
