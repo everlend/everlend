@@ -14,7 +14,7 @@ pub fn create_metadata<'a>(
     mint_authority: AccountInfo<'a>,
     payer: AccountInfo<'a>,
     _system: AccountInfo<'a>,
-    _rent: AccountInfo<'a>,
+    rent: AccountInfo<'a>,
     name: String,
     symbol: String,
     uri: String,
@@ -54,7 +54,7 @@ pub fn create_metadata<'a>(
 
     invoke_signed(
         &ix,
-        &[metadata_account, pool_mint, mint_authority, payer],
+        &[metadata_account, pool_mint, mint_authority, payer, rent],
         signers_seeds,
     )
 }
