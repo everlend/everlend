@@ -85,6 +85,18 @@ pub enum EverlendError {
     /// Withdraw request amount below allowed minimum
     #[error("Withdraw amount too small")]
     WithdrawAmountTooSmall,
+
+    /// Money market mining not implemented
+    #[error("Mining not implemented")]
+    MiningNotImplemented,
+
+    /// Money market mining not initialized
+    #[error("Mining not initialized")]
+    MiningNotInitialized,
+
+    /// Reserve threshold exceeded
+    #[error("Reserve threshold exceeded")]
+    ReserveThreshold,
 }
 
 impl PrintProgramError for EverlendError {
