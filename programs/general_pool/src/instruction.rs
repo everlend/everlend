@@ -221,6 +221,17 @@ pub enum LiquidityPoolsInstruction {
     /// [RS] New manager
     ///
     UpdateManager,
+
+    /// SetTokenMetadata
+    ///
+    SetTokenMetadata {
+        /// The on-chain name of the token, limited to 32 bytes. For instance "Degen Ape #1".
+        name: String,
+        /// The on-chain symbol of the token, limited to 10 bytes. For instance "DAPE".
+        symbol: String,
+        /// The URI of the token, limited to 200 bytes. This URI points to an off-chain JSON file that contains additional data
+        uri: String,
+    },
 }
 
 /// Creates 'InitPoolMarket' instruction.
