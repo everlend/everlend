@@ -4,6 +4,7 @@ use solana_program::{instruction::AccountMeta, pubkey::Pubkey};
 pub mod larix;
 pub mod solend;
 pub mod spl_token_lending;
+pub mod tulip;
 
 // Program IDs
 pub const SPL_TOKEN_LENDING_PROGRAM_ID: &str = "Bp1MJ1qr4g8t9AQJjm5H6zDB2NmRrkJL8H8zuvb1g7oV";

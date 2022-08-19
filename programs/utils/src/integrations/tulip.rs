@@ -1,0 +1,36 @@
+use solana_program::pubkey::Pubkey;
+
+#[derive(Debug, Clone, Default)]
+pub struct AccountPubkeys {
+    reserve: Pubkey,
+    reserve_liquidity_supply: Pubkey,
+    lending_market: Pubkey,
+    reserve_liquidity_oracle: Pubkey,
+}
+
+pub mod accounts {
+    use super::AccountPubkeys;
+    use crate::find_program_address;
+    use solana_program::{instruction::AccountMeta, pubkey::Pubkey};
+
+    pub fn deposit(program_id: &Pubkey, pubkeys: &AccountPubkeys) -> Vec<AccountMeta> {
+        deposit_or_withdraw(program_id, pubkeys)
+    }
+
+    pub fn withdraw(program_id: &Pubkey, pubkeys: &AccountPubkeys) -> Vec<AccountMeta> {
+        deposit_or_withdraw(program_id, pubkeys)
+    }
+
+    fn deposit_or_withdraw(program_id: &Pubkey, pubkeys: &AccountPubkeys) -> Vec<AccountMeta> {
+        let (lending_market_authority, _) =
+            find_program_address(program_id, &pubkeys.lending_market);
+
+        vec![
+            AccountMeta::new(pubkeys.reserve, false),
+            AccountMeta::new(pubkeys.reserve_liquidity_supply, false),
+            AccountMeta::new_readonly(pubkeys.lending_market, false),
+            AccountMeta::new_readonly(lending_market_authority, false),
+            AccountMeta::new(pubkeys.reserve_liquidity_oracle, false),
+        ]
+    }
+}

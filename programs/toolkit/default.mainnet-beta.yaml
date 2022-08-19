@@ -48,6 +48,11 @@ solend:
   reserve_switchboard_oracle: AdtRGGhmqvom3Jemp5YNrxd9q9unX36BZk1pujkkXijL
   reserve_sol: 8PbodeaosQP19SjYFx855UMqWxH2HynZLdBXmsrbac36
   reserve_sol_supply: FR1tYTYEcMhBiuETNs1b5DZft2pT6oEJBixDZ1Qe1WHw
+tulip:
+  program_id: 4bcFeLv4nydFrsZqV5CgwCVrPhkQKsXtzfy2KyMz7ozM
+  lending_market: D1cqtVThyebK9KXKGXrCEuiqaNf5L4UfM1vHgCqiJxym
+  reserve_liquidity_supply: CPs1jJ5XAjhcAJsmTToWksAiPEqoLwKMbb1Z83rzaaaU
+  reserve_sol: FzbfXR7sopQL29Ubu312tkqWMxSre4dYSrFyYAjUYiC4
 sol_collateral:
   - 8ezDtNNhX91t1NbSLe8xV2PcCEfoQjEm2qDVGjt3rjhg
   - ArWoXQYvvERzuoeGTpyyvf7pNNVEPB3x7kQg5W6zQdaB

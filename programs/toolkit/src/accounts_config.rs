@@ -86,6 +86,19 @@ pub struct SolendAccounts {
 
 #[serde_as]
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default)]
+pub struct TulipAccounts {
+    #[serde_as(as = "DisplayFromStr")]
+    pub program_id: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub reserve_liquidity_supply: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub lending_market: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub reserve_liquidity_oracle: Pubkey,
+}
+
+#[serde_as]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default)]
 pub struct DefaultAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub sol_mint: Pubkey,
@@ -122,6 +135,8 @@ pub struct DefaultAccounts {
     pub quarry: QuarryAccounts,
 
     pub solend: SolendAccounts,
+
+    pub tulip: TulipAccounts,
 
     #[serde_as(as = "DisplayFromStr")]
     pub multisig_program_id: Pubkey,

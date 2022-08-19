@@ -89,6 +89,7 @@ async fn command_create(
     programs.money_market_program_ids[0] = default_accounts.port_finance.program_id;
     programs.money_market_program_ids[1] = default_accounts.larix.program_id;
     programs.money_market_program_ids[2] = default_accounts.solend.program_id;
+    programs.money_market_program_ids[3] = default_accounts.tulip.program_id;
 
     registry::set_registry_config(
         config,
@@ -131,6 +132,7 @@ async fn command_create(
     programs.money_market_program_ids[0] = default_accounts.port_finance.program_id;
     programs.money_market_program_ids[1] = default_accounts.larix.program_id;
     programs.money_market_program_ids[2] = default_accounts.solend.program_id;
+    programs.money_market_program_ids[3] = default_accounts.tulip.program_id;
 
     println!("programs = {:#?}", programs);
 
