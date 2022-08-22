@@ -28,9 +28,9 @@ pub fn deposit<'a>(
     reserve_liquidity_supply: AccountInfo<'a>,
     lending_market: AccountInfo<'a>,
     lending_market_authority: AccountInfo<'a>,
-    authority: AccountInfo<'a>,
+    user_transfer_authority: AccountInfo<'a>,
     clock: AccountInfo<'a>,
-    token: AccountInfo<'a>,
+    token_program: AccountInfo<'a>,
     amount: u64,
     signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
@@ -43,7 +43,7 @@ pub fn deposit<'a>(
         *reserve_liquidity_supply.key,
         *reserve_collateral_mint.key,
         *lending_market.key,
-        *authority.key,
+        *user_transfer_authority.key,
     );
 
     invoke_signed(
@@ -56,9 +56,9 @@ pub fn deposit<'a>(
             reserve_collateral_mint.clone(),
             lending_market.clone(),
             lending_market_authority.clone(),
-            authority.clone(),
+            user_transfer_authority.clone(),
             clock.clone(),
-            token.clone(),
+            token_program.clone(),
         ],
         signers_seeds,
     )
@@ -76,7 +76,7 @@ pub fn redeem<'a>(
     lending_market_authority: AccountInfo<'a>,
     authority: AccountInfo<'a>,
     clock: AccountInfo<'a>,
-    token: AccountInfo<'a>,
+    token_program: AccountInfo<'a>,
     amount: u64,
     signed_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
@@ -104,7 +104,7 @@ pub fn redeem<'a>(
             lending_market_authority.clone(),
             authority.clone(),
             clock.clone(),
-            token.clone(),
+            token_program.clone(),
         ],
         signed_seeds,
     )
