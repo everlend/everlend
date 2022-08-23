@@ -30,7 +30,6 @@ pub fn deposit<'a>(
     lending_market_authority: AccountInfo<'a>,
     user_transfer_authority: AccountInfo<'a>,
     clock: AccountInfo<'a>,
-    token_program: AccountInfo<'a>,
     amount: u64,
     signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
@@ -58,7 +57,6 @@ pub fn deposit<'a>(
             lending_market_authority.clone(),
             user_transfer_authority.clone(),
             clock.clone(),
-            token_program.clone(),
         ],
         signers_seeds,
     )
@@ -76,7 +74,6 @@ pub fn redeem<'a>(
     lending_market_authority: AccountInfo<'a>,
     authority: AccountInfo<'a>,
     clock: AccountInfo<'a>,
-    token_program: AccountInfo<'a>,
     amount: u64,
     signed_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
@@ -104,7 +101,6 @@ pub fn redeem<'a>(
             lending_market_authority.clone(),
             authority.clone(),
             clock.clone(),
-            token_program.clone(),
         ],
         signed_seeds,
     )

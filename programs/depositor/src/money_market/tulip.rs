@@ -17,7 +17,6 @@ pub struct Tulip<'a> {
     lending_market: AccountInfo<'a>,
     lending_market_authority: AccountInfo<'a>,
     reserve_liquidity_oracle: AccountInfo<'a>,
-    token_program: AccountInfo<'a>,
 }
 
 impl<'a, 'b> Tulip<'a> {
@@ -31,7 +30,6 @@ impl<'a, 'b> Tulip<'a> {
         let lending_market_info = next_account_info(account_info_iter)?;
         let lending_market_authority_info = next_account_info(account_info_iter)?;
         let reserve_liquidity_oracle_info = next_account_info(account_info_iter)?;
-        let token_program_info = next_account_info(account_info_iter)?;
 
         Ok(Tulip {
             money_market_program_id,
@@ -40,7 +38,6 @@ impl<'a, 'b> Tulip<'a> {
             lending_market: lending_market_info.clone(),
             lending_market_authority: lending_market_authority_info.clone(),
             reserve_liquidity_oracle: reserve_liquidity_oracle_info.clone(),
-            token_program: token_program_info.clone(),
         })
     }
 }
@@ -75,7 +72,6 @@ impl<'a> MoneyMarket<'a> for Tulip<'a> {
             self.lending_market_authority.clone(),
             authority,
             clock,
-            self.token_program.clone(),
             amount,
             signers_seeds,
         )?;
@@ -115,7 +111,6 @@ impl<'a> MoneyMarket<'a> for Tulip<'a> {
             self.lending_market_authority.clone(),
             authority,
             clock,
-            self.token_program.clone(),
             amount,
             signers_seeds,
         )
