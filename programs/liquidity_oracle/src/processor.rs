@@ -146,7 +146,7 @@ impl Processor {
             rent,
         )?;
 
-        distribution.update(clock.slot, value);
+        distribution.update(clock.slot, value)?;
 
         TokenDistribution::pack(distribution, *token_distribution_account.data.borrow_mut())?;
 
@@ -191,7 +191,7 @@ impl Processor {
         let mut distribution =
             TokenDistribution::unpack(&token_distribution_account.data.borrow())?;
 
-        distribution.update(clock.slot, value);
+        distribution.update(clock.slot, value)?;
 
         TokenDistribution::pack(distribution, *token_distribution_account.data.borrow_mut())?;
 
