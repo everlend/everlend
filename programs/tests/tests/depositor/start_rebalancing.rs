@@ -873,7 +873,7 @@ async fn rebalancing_math_round() {
         d[1] = elem.1;
         d[2] = elem.2;
 
-        distribution.update(i as u64 + 1, d);
+        distribution.update(i as u64 + 1, d).unwrap();
         r.compute(&p, distribution.clone(), distr_amount).unwrap();
         println!("{}", r.distributed_liquidity);
         assert_eq!(distr_amount >= r.distributed_liquidity, true);
@@ -938,7 +938,7 @@ async fn rebalancing_check_steps() {
         d[0] = elem.distribution.0;
         d[1] = elem.distribution.1;
 
-        distribution.update(i as u64 + 1, d);
+        distribution.update(i as u64 + 1, d).unwrap();
         r.compute(&p, distribution.clone(), distr_amount).unwrap();
 
         println!("{:?}", r.steps);
@@ -988,7 +988,7 @@ async fn rebalancing_check_steps_math() {
     d[1] = 333_333_333;
     d[2] = 333_333_333;
 
-    distribution.update(10, d);
+    distribution.update(10, d).unwrap();
 
     let amount_to_distribute = 25365814993;
     r.compute(&p, distribution.clone(), amount_to_distribute)

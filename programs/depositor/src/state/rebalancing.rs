@@ -362,7 +362,7 @@ pub mod tests {
         distribution[0] = 900_000_000u64;
         distribution[1] = 100_000_000u64;
 
-        token_distribution.update(2, distribution);
+        token_distribution.update(2, distribution).unwrap();
 
         rebalancing
             .compute(
@@ -397,7 +397,7 @@ pub mod tests {
         distribution[0] = 1_000_000_000u64;
         distribution[1] = 0;
 
-        token_distribution.update(2, distribution);
+        token_distribution.update(2, distribution).unwrap();
 
         rebalancing
             .compute(&money_market_program_ids, token_distribution.clone(), 1)
@@ -408,7 +408,7 @@ pub mod tests {
             .unwrap();
 
         distribution[0] = 0;
-        token_distribution.update(4, distribution);
+        token_distribution.update(4, distribution).unwrap();
         rebalancing
             .compute(&money_market_program_ids, token_distribution.clone(), 1)
             .unwrap();
