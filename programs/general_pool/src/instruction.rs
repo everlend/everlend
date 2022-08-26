@@ -124,6 +124,9 @@ pub enum LiquidityPoolsInstruction {
     /// [R] System program
     Withdraw,
 
+    /// TODO: describe method
+    TransferDeposit,
+
     /// Borrow funds from the pool
     ///
     /// Accounts:
@@ -421,6 +424,47 @@ pub fn deposit(
     Instruction::new_with_borsh(
         *program_id,
         &LiquidityPoolsInstruction::Deposit { amount },
+        accounts,
+    )
+}
+/// Creates 'TransferDeposit' instruction
+#[allow(clippy::too_many_arguments)]
+pub fn transfer(
+    program_id: &Pubkey,
+    pool_market: &Pubkey,
+    pool: &Pubkey,
+    source: &Pubkey,
+    destination: &Pubkey,
+    pool_mint: &Pubkey,
+    user_transfer_authority: &Pubkey,
+    destination_user_transfer_authority: &Pubkey,
+    mining_reward_pool: &Pubkey,
+    mining_reward_acc: &Pubkey,
+    destination_mining_reward_acc: &Pubkey,
+    config: &Pubkey,
+) -> Instruction {
+    let (pool_market_authority, _) = find_program_address(program_id, pool_market);
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*pool, false),
+        AccountMeta::new(*source, false),
+        AccountMeta::new(*destination, false),
+        AccountMeta::new_readonly(*pool_market, false),
+        AccountMeta::new(*pool_mint, false),
+        AccountMeta::new_readonly(pool_market_authority, false),
+        AccountMeta::new_readonly(*user_transfer_authority, true),
+        AccountMeta::new_readonly(*destination_user_transfer_authority, true),
+        AccountMeta::new(*mining_reward_pool, false),
+        AccountMeta::new(*mining_reward_acc, false),
+        AccountMeta::new(*destination_mining_reward_acc, false),
+        AccountMeta::new_readonly(*config, false),
+        AccountMeta::new_readonly(eld_rewards::id(), false),
+        AccountMeta::new_readonly(spl_token::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &LiquidityPoolsInstruction::TransferDeposit,
         accounts,
     )
 }

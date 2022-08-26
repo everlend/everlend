@@ -94,6 +94,37 @@ pub fn withdraw_mining<'a>(
     )
 }
 
+
+#[allow(clippy::too_many_arguments)]
+pub fn transfer_mining<'a>(
+    program_id: &Pubkey,
+    config: AccountInfo<'a>,
+    reward_pool: AccountInfo<'a>,
+    mining: AccountInfo<'a>,
+    destination_mining: AccountInfo<'a>,
+    user: AccountInfo<'a>,
+    destination_user: AccountInfo<'a>,
+    deposit_authority: AccountInfo<'a>,
+    signers_seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let ix = rewards::transfer_mining(
+        program_id,
+        config.key,
+        reward_pool.key,
+        mining.key,
+        destination_mining.key,
+        user.key,
+        destination_user.key,
+        deposit_authority.key,
+    );
+
+    invoke_signed(
+        &ix,
+        &[config, reward_pool, mining, destination_mining, user, destination_user, deposit_authority],
+        signers_seeds,
+    )
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn fill_vault<'a>(
     program_id: &Pubkey,

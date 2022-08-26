@@ -82,6 +82,10 @@ pub enum EverlendError {
     #[error("Deposit amount too small")]
     DepositAmountTooSmall,
 
+    /// Transfer amount below allowed minimum
+    #[error("Transfer amount too small")]
+    TransferAmountTooSmall,
+
     /// Withdraw request amount below allowed minimum
     #[error("Withdraw amount too small")]
     WithdrawAmountTooSmall,

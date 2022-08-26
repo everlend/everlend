@@ -1048,6 +1048,19 @@ checksum = "3f107b87b6afc2a64fd13cac55fe06d6c8859f12d4b14cbcdd2c67d0976781be"
 [[package]]
 name = "eld-config"
 version = "0.1.0"
+source = "git+ssh://git@github.com/everlend/everlend-next.git?branch=feat/transfer_mining#023d37011e836deffeb8bc62c95681b349fee25a"
+dependencies = [
+ "anchor-lang",
+ "anchor-spl",
+ "bs58 0.4.0",
+ "port-anchor-adaptor",
+ "thiserror",
+ "uint 0.9.1",
+]
+
+[[package]]
+name = "eld-config"
+version = "0.1.0"
 source = "git+ssh://git@github.com/everlend/everlend-next.git?branch=main#7123caff3b6982979a2fd5aeabe173e38ffd5dd5"
 dependencies = [
  "anchor-lang",
@@ -1061,12 +1074,12 @@ dependencies = [
 [[package]]
 name = "eld-rewards"
 version = "0.1.0"
-source = "git+ssh://git@github.com/everlend/everlend-next.git?branch=main#7123caff3b6982979a2fd5aeabe173e38ffd5dd5"
+source = "git+ssh://git@github.com/everlend/everlend-next.git?branch=feat/transfer_mining#023d37011e836deffeb8bc62c95681b349fee25a"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
  "bs58 0.4.0",
- "eld-config",
+ "eld-config 0.1.0 (git+ssh://git@github.com/everlend/everlend-next.git?branch=feat/transfer_mining)",
  "thiserror",
 ]
 
@@ -1174,7 +1187,7 @@ name = "everlend-general-pool"
 version = "0.1.0"
 dependencies = [
  "borsh 0.9.3",
- "eld-config",
+ "eld-config 0.1.0 (git+ssh://git@github.com/everlend/everlend-next.git?branch=main)",
  "eld-rewards",
  "everlend-registry",
  "everlend-utils",
@@ -1237,7 +1250,7 @@ dependencies = [
 name = "everlend-tests"
 version = "0.1.0"
 dependencies = [
- "eld-config",
+ "eld-config 0.1.0 (git+ssh://git@github.com/everlend/everlend-next.git?branch=main)",
  "eld-rewards",
  "everlend-collateral-pool",
  "everlend-depositor",
@@ -1265,7 +1278,7 @@ dependencies = [
  "bs58 0.2.5",
  "clap",
  "dirs-next",
- "eld-config",
+ "eld-config 0.1.0 (git+ssh://git@github.com/everlend/everlend-next.git?branch=main)",
  "eld-rewards",
  "everlend-collateral-pool",
  "everlend-depositor",
@@ -1323,7 +1336,7 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "borsh 0.9.3",
- "eld-config",
+ "eld-config 0.1.0 (git+ssh://git@github.com/everlend/everlend-next.git?branch=main)",
  "eld-rewards",
  "larix-lending",
  "mpl-token-metadata",
