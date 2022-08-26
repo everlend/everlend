@@ -24,7 +24,7 @@ use solana_program::{
 use spl_token::state::Account;
 use std::{cmp::Ordering, slice::Iter};
 
-const RESERVE_THRESHOLD: u64 = 2;
+const RESERVE_THRESHOLD: u64 = 10;
 
 /// Deposit
 #[allow(clippy::too_many_arguments)]
