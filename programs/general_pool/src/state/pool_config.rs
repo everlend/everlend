@@ -10,12 +10,10 @@ use solana_program::{
 use super::*;
 /// Pool config
 #[repr(C)]
-#[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
+#[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema)]
 pub struct PoolConfig {
     /// Account type - PoolConfig
     pub account_type: AccountType,
-    /// Bump seed
-    pub bump: u8,
     /// Minimum amount for deposit
     pub deposit_minimum: u64,
     /// Minimum amount for withdraw request
@@ -24,20 +22,29 @@ pub struct PoolConfig {
 
 impl PoolConfig {
     /// Init pool config
-    pub fn init(&mut self) {
-        self.account_type = AccountType::PoolConfig;
+    pub fn default() -> PoolConfig {
+        PoolConfig {
+            account_type: AccountType::PoolConfig,
+            deposit_minimum: 0,
+            withdraw_minimum: 0,
+        }
     }
 
     /// Set pool config
     pub fn set(&mut self, params: SetPoolConfigParams) {
-        self.deposit_minimum = params.deposit_minimum;
-        self.withdraw_minimum = params.withdraw_minimum;
+        if params.deposit_minimum.is_some() {
+            self.deposit_minimum = params.deposit_minimum.unwrap();
+        }
+
+        if params.withdraw_minimum.is_some() {
+            self.withdraw_minimum = params.withdraw_minimum.unwrap();
+        }
     }
 }
 
 impl Sealed for PoolConfig {}
 impl Pack for PoolConfig {
-    const LEN: usize = 1 + 1 + 8 + 8;
+    const LEN: usize = 1 + 8 + 8;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;
@@ -64,7 +71,7 @@ impl IsInitialized for PoolConfig {
 #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, PartialEq, Clone, Copy)]
 pub struct SetPoolConfigParams {
     /// Minimum amount for deposit
-    pub deposit_minimum: u64,
+    deposit_minimum: Option<u64>,
     /// Minimum amount for withdraw request
-    pub withdraw_minimum: u64,
+    withdraw_minimum: Option<u64>,
 }

@@ -13,6 +13,7 @@ use crate::{
     find_pool_borrow_authority_program_address, find_pool_config_program_address,
     find_pool_program_address, find_transit_program_address,
     find_withdrawal_request_program_address, find_withdrawal_requests_program_address,
+    state::SetPoolConfigParams,
 };
 
 /// Instructions supported by the program
@@ -228,6 +229,20 @@ pub enum LiquidityPoolsInstruction {
         symbol: String,
         /// The URI of the token, limited to 200 bytes. This URI points to an off-chain JSON file that contains additional data
         uri: String,
+    },
+
+    /// Set pool config
+    ///
+    /// Accounts:
+    /// [R] Pool Market
+    /// [R] Pool
+    /// [W] Pool config
+    /// [WS] Manager
+    /// [R] Rent sysvar
+    /// [R] Sytem program
+    SetPoolConfig {
+        /// Pool config update params
+        params: SetPoolConfigParams,
     },
 }
 
@@ -706,6 +721,32 @@ pub fn update_manager(
     Instruction::new_with_borsh(
         *program_id,
         &LiquidityPoolsInstruction::UpdateManager,
+        accounts,
+    )
+}
+
+/// Creates 'SetRegistryPoolConfig' instruction.
+pub fn set_pool_config(
+    program_id: &Pubkey,
+    pool_market: &Pubkey,
+    pool: &Pubkey,
+    manager: &Pubkey,
+    params: SetPoolConfigParams,
+) -> Instruction {
+    let (pool_config, _) = find_pool_config_program_address(program_id, pool);
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*pool_market, false),
+        AccountMeta::new_readonly(*pool, false),
+        AccountMeta::new(pool_config, false),
+        AccountMeta::new(*manager, true),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+        AccountMeta::new_readonly(system_program::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &LiquidityPoolsInstruction::SetPoolConfig { params },
         accounts,
     )
 }
