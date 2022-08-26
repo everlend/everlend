@@ -1248,7 +1248,7 @@ impl Processor {
         Ok(())
     }
 
-    /// Process SetRegistryPoolConfig instruction
+    /// Setup pool limits and more settings
     pub fn set_pool_config(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
