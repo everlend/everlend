@@ -461,7 +461,7 @@ impl TestGeneralPool {
         context.banks_client.process_transaction(tx).await
     }
 
-    pub async fn get_registry_pool_config(&self, context: &mut ProgramTestContext) -> PoolConfig {
+    pub async fn get_pool_config(&self, context: &mut ProgramTestContext) -> PoolConfig {
         let account = get_account(context, &self.pool_config_pubkey).await;
         PoolConfig::unpack_unchecked(&account.data).unwrap()
     }

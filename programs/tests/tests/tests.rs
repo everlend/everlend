@@ -44,6 +44,7 @@ mod general_pool {
     mod repay;
     mod update_manager;
     mod update_pool_borrow_authority;
+    mod update_pool_config;
     mod withdraw;
     mod withdraw_request;
 }
