@@ -4,11 +4,13 @@ use std::fmt;
 
 mod pool;
 mod pool_borrow_authority;
+mod pool_config;
 mod pool_market;
 mod withdrawal_request;
 
 pub use pool::*;
 pub use pool_borrow_authority::*;
+pub use pool_config::*;
 pub use pool_market::*;
 pub use withdrawal_request::*;
 
@@ -27,6 +29,8 @@ pub enum AccountType {
     WithdrawRequests,
     /// Withdraw request
     WithdrawRequest,
+    /// Pool config
+    PoolConfig,
 }
 
 impl Default for AccountType {

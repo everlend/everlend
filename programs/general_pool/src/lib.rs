@@ -105,6 +105,11 @@ pub fn find_transit_sol_unwrap_address(
     Pubkey::find_program_address(&[br"unwrap", &withdrawal_request.to_bytes()], program_id)
 }
 
+/// Calculates address of pool config
+pub fn find_pool_config_program_address(program_id: &Pubkey, pool: &Pubkey) -> (Pubkey, u8) {
+    Pubkey::find_program_address(&["config".as_bytes(), &pool.to_bytes()], program_id)
+}
+
 /// Generate withdraw accounts for SOL mint
 pub fn general_pool_withdraw_sol_accounts(
     program_id: &Pubkey,

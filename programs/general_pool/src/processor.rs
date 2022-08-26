@@ -1,8 +1,6 @@
 //! Program state processor
 use borsh::BorshDeserialize;
-use everlend_registry::{
-    find_registry_pool_config_program_address, state::Registry, state::RegistryPoolConfig,
-};
+use everlend_registry::state::Registry;
 use everlend_utils::{
     assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
     cpi::{
@@ -25,7 +23,6 @@ use solana_program::{
 };
 use spl_token::state::{Account, Mint};
 
-use crate::state::{InitWithdrawalRequestParams, InitWithdrawalRequestsParams, WITHDRAW_DELAY};
 use crate::{
     find_pool_borrow_authority_program_address, find_pool_program_address,
     find_transit_program_address, find_transit_sol_unwrap_address,
@@ -33,10 +30,14 @@ use crate::{
     instruction::LiquidityPoolsInstruction,
     state::{
         InitPoolBorrowAuthorityParams, InitPoolMarketParams, InitPoolParams, Pool,
-        PoolBorrowAuthority, PoolMarket, WithdrawalRequest, WithdrawalRequests,
+        PoolBorrowAuthority, PoolConfig, PoolMarket, WithdrawalRequest, WithdrawalRequests,
     },
     utils::*,
     withdrawal_requests_seed,
+};
+use crate::{
+    find_pool_config_program_address,
+    state::{InitWithdrawalRequestParams, InitWithdrawalRequestsParams, WITHDRAW_DELAY},
 };
 
 /// Program state handler.
@@ -76,6 +77,7 @@ impl Processor {
         let account_info_iter = &mut accounts.iter();
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_info = next_account_info(account_info_iter)?;
+        let pool_config = next_account_info(account_info_iter)?;
         let withdrawal_requests_info = next_account_info(account_info_iter)?;
         let token_mint_info = next_account_info(account_info_iter)?;
         let token_account_info = next_account_info(account_info_iter)?;
@@ -214,6 +216,9 @@ impl Processor {
         });
 
         Pool::pack(pool, *pool_info.data.borrow_mut())?;
+
+        // TODO: Create Pool config
+        // find_pool_config_program_address
 
         Ok(())
     }
@@ -384,8 +389,7 @@ impl Processor {
     /// Process Deposit instruction
     pub fn deposit(program_id: &Pubkey, amount: u64, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
-        let registry_info = next_account_info(account_info_iter)?;
-        let registry_pool_config_info = next_account_info(account_info_iter)?;
+        let pool_config_info = next_account_info(account_info_iter)?;
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_info = next_account_info(account_info_iter)?;
         let source_info = next_account_info(account_info_iter)?;
@@ -406,7 +410,6 @@ impl Processor {
         let _token_program_info = next_account_info(account_info_iter)?;
 
         assert_signer(user_transfer_authority_info)?;
-        assert_owned_by(registry_pool_config_info, &everlend_registry::id())?;
         assert_owned_by(pool_market_info, program_id)?;
         assert_owned_by(pool_info, program_id)?;
 
@@ -418,20 +421,11 @@ impl Processor {
         assert_account_key(token_account_info, &pool.token_account)?;
         assert_account_key(pool_mint_info, &pool.pool_mint)?;
 
-        let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
-        // Check registry
-        assert_account_key(registry_info, &pool_market.registry)?;
+        let (pool_config_pubkey, _) = find_pool_config_program_address(program_id, pool_info.key);
+        assert_account_key(pool_config_info, &pool_config_pubkey)?;
 
-        let (registry_pool_config_pubkey, _) = find_registry_pool_config_program_address(
-            &everlend_registry::id(),
-            registry_info.key,
-            pool_info.key,
-        );
-        assert_account_key(registry_pool_config_info, &registry_pool_config_pubkey)?;
-
-        let registry_pool_config =
-            RegistryPoolConfig::unpack(&registry_pool_config_info.data.borrow())?;
-        if amount < registry_pool_config.deposit_minimum {
+        let pool_config = PoolConfig::unpack(&pool_config_info.data.borrow())?;
+        if amount < pool_config.deposit_minimum {
             return Err(EverlendError::DepositAmountTooSmall.into());
         }
 
@@ -673,8 +667,7 @@ impl Processor {
         accounts: &[AccountInfo],
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
-        let registry_info = next_account_info(account_info_iter)?;
-        let registry_pool_config_info = next_account_info(account_info_iter)?;
+        let pool_config_info = next_account_info(account_info_iter)?;
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_info = next_account_info(account_info_iter)?;
         let pool_mint_info = next_account_info(account_info_iter)?;
@@ -703,7 +696,6 @@ impl Processor {
 
         assert_signer(user_transfer_authority_info)?;
 
-        assert_owned_by(registry_pool_config_info, &everlend_registry::id())?;
         assert_owned_by(pool_market_info, program_id)?;
         assert_owned_by(pool_info, program_id)?;
         assert_owned_by(withdrawal_requests_info, program_id)?;
@@ -752,17 +744,11 @@ impl Processor {
             .checked_div(total_minted as u128)
             .ok_or(EverlendError::MathOverflow)? as u64;
 
-        let (registry_pool_config_pubkey, _) = find_registry_pool_config_program_address(
-            &everlend_registry::id(),
-            registry_info.key,
-            pool_info.key,
-        );
-        assert_account_key(registry_pool_config_info, &registry_pool_config_pubkey)?;
-        let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
-        assert_account_key(registry_info, &pool_market.registry)?;
-        let registry_pool_config =
-            RegistryPoolConfig::unpack(&registry_pool_config_info.data.borrow())?;
-        if liquidity_amount < registry_pool_config.withdraw_minimum {
+        let (pool_config_pubkey, _) = find_pool_config_program_address(program_id, pool_info.key);
+        assert_account_key(pool_config_info, &pool_config_pubkey)?;
+
+        let pool_config = PoolConfig::unpack(&pool_config_info.data.borrow())?;
+        if liquidity_amount < pool_config.withdraw_minimum {
             return Err(EverlendError::WithdrawAmountTooSmall.into());
         }
 
