@@ -33,6 +33,7 @@ pub enum LiquidityPoolsInstruction {
     /// Accounts:
     /// [R] Pool market
     /// [W] Pool
+    /// [W] Pool Config
     /// [W] Withdrawals requests account
     /// [R] Token mint
     /// [W] Token account
@@ -280,6 +281,7 @@ pub fn create_pool(
 ) -> Instruction {
     let (pool_market_authority, _) = find_program_address(program_id, pool_market);
     let (pool, _) = find_pool_program_address(program_id, pool_market, token_mint);
+    let (pool_config, _) = find_pool_config_program_address(program_id, &pool);
     let (transit_collateral, _) = find_transit_program_address(program_id, pool_market, pool_mint);
     let (withdrawal_requests, _) =
         find_withdrawal_requests_program_address(program_id, pool_market, token_mint);
@@ -287,6 +289,7 @@ pub fn create_pool(
     let accounts = vec![
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new(pool, false),
+        AccountMeta::new(pool_config, false),
         AccountMeta::new(withdrawal_requests, false),
         AccountMeta::new_readonly(*token_mint, false),
         AccountMeta::new(*token_account, false),

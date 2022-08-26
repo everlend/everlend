@@ -71,7 +71,7 @@ impl IsInitialized for PoolConfig {
 #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, PartialEq, Clone, Copy)]
 pub struct SetPoolConfigParams {
     /// Minimum amount for deposit
-    deposit_minimum: Option<u64>,
+    pub deposit_minimum: Option<u64>,
     /// Minimum amount for withdraw request
-    withdraw_minimum: Option<u64>,
+    pub withdraw_minimum: Option<u64>,
 }

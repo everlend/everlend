@@ -2,7 +2,6 @@ use crate::utils::*;
 use everlend_depositor::find_transit_program_address;
 use everlend_depositor::state::{Rebalancing, RebalancingOperation};
 use everlend_liquidity_oracle::state::{DistributionArray, TokenDistribution};
-use everlend_registry::state::SetRegistryPoolConfigParams;
 use everlend_registry::state::{DistributionPubkeys, RegistryRootAccounts, RegistrySettings};
 use everlend_utils::{abs_diff, percent_ratio};
 use everlend_utils::{
@@ -63,17 +62,6 @@ async fn setup() -> (
         .create(&mut env.context, &general_pool_market)
         .await
         .unwrap();
-    env.registry
-        .set_registry_pool_config(
-            &mut env.context,
-            &general_pool.pool_pubkey,
-            SetRegistryPoolConfigParams {
-                deposit_minimum: 0,
-                withdraw_minimum: 0,
-            },
-        )
-        .await
-        .unwrap();
 
     // 1.1 Add liquidity to general pool
 
@@ -93,7 +81,6 @@ async fn setup() -> (
     general_pool
         .deposit(
             &mut env.context,
-            &env.registry,
             &general_pool_market,
             &liquidity_provider,
             mining_acc,
