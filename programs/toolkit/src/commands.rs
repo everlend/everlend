@@ -24,8 +24,9 @@ use crate::{
 use anchor_lang::AnchorDeserialize;
 use anyhow::bail;
 use everlend_depositor::state::Rebalancing;
+use everlend_general_pool::state::SetPoolConfigParams;
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::{DeprecatedRegistryConfig, Registry, SetRegistryPoolConfigParams};
+use everlend_registry::state::{DeprecatedRegistryConfig, Registry};
 use everlend_registry::{
     find_config_program_address,
     state::{
@@ -272,16 +273,16 @@ pub fn command_init_quarry_mining_accounts(config: &Config, token: &String) -> a
     Ok(())
 }
 
-pub async fn command_set_registry_pool_config(
+pub async fn command_set_pool_config(
     config: &Config,
     accounts_path: &str,
     general_pool_pubkey: Pubkey,
-    params: SetRegistryPoolConfigParams,
+    params: SetPoolConfigParams,
 ) -> anyhow::Result<()> {
     let initialized_accounts = InitializedAccounts::load(accounts_path).unwrap();
-    registry::set_registry_pool_config(
+    general_pool::set_pool_config(
         config,
-        &initialized_accounts.registry,
+        &initialized_accounts.general_pool_market,
         &general_pool_pubkey,
         params,
     )?;

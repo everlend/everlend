@@ -2,7 +2,9 @@ use crate::utils::*;
 use everlend_general_pool::{
     find_pool_borrow_authority_program_address, find_pool_program_address,
     find_withdrawal_requests_program_address, general_pool_withdraw_sol_accounts, instruction,
-    state::{AccountType, Pool, PoolMarket, WithdrawalRequest, WithdrawalRequests},
+    state::{
+        AccountType, Pool, PoolMarket, SetPoolConfigParams, WithdrawalRequest, WithdrawalRequests,
+    },
 };
 use everlend_utils::instructions::{config::initialize, rewards::initialize_pool};
 use solana_client::client_error::ClientError;
@@ -210,7 +212,6 @@ pub fn create_pool_borrow_authority(
 #[allow(clippy::too_many_arguments)]
 pub fn deposit(
     config: &Config,
-    registry_pubkey: &Pubkey,
     pool_market_pubkey: &Pubkey,
     pool_pubkey: &Pubkey,
     source: &Pubkey,
@@ -225,7 +226,6 @@ pub fn deposit(
     let tx = Transaction::new_with_payer(
         &[instruction::deposit(
             &everlend_general_pool::id(),
-            registry_pubkey,
             pool_market_pubkey,
             pool_pubkey,
             source,
@@ -249,7 +249,6 @@ pub fn deposit(
 #[allow(clippy::too_many_arguments)]
 pub fn withdraw_request(
     config: &Config,
-    registry_pubkey: &Pubkey,
     pool_market_pubkey: &Pubkey,
     pool_pubkey: &Pubkey,
     source: &Pubkey,
@@ -272,7 +271,6 @@ pub fn withdraw_request(
     let tx = Transaction::new_with_payer(
         &[instruction::withdraw_request(
             &everlend_general_pool::id(),
-            registry_pubkey,
             pool_market_pubkey,
             pool_pubkey,
             source,
@@ -497,6 +495,28 @@ pub fn update_manager(
         tx,
         vec![config.fee_payer.as_ref(), manager, new_manager],
     )?;
+
+    Ok(())
+}
+
+pub fn set_pool_config(
+    config: &Config,
+    pool_market: &Pubkey,
+    pool: &Pubkey,
+    params: SetPoolConfigParams,
+) -> Result<(), ClientError> {
+    let tx = Transaction::new_with_payer(
+        &[instruction::set_pool_config(
+            &everlend_general_pool::id(),
+            pool_market,
+            pool,
+            &config.fee_payer.pubkey(),
+            params,
+        )],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
     Ok(())
 }
