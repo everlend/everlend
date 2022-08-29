@@ -1,5 +1,5 @@
 use anchor_lang::InstructionData;
-use eld_rewards::instruction::{InitializePool, FillVault, InitializeMining, DepositMining, WithdrawMining, TransferMining};
+use eld_rewards::instruction::{InitializePool, FillVault, InitializeMining, DepositMining, WithdrawMining};
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
@@ -121,30 +121,5 @@ pub fn withdraw_mining(
             AccountMeta::new_readonly(*deposit_authority, true),
         ],
         data: WithdrawMining{amount}.data(),
-    }
-}
-
-pub fn transfer_mining(
-    program_id: &Pubkey,
-    config: &Pubkey,
-    reward_pool: &Pubkey,
-    mining: &Pubkey,
-    destination_mining: &Pubkey,
-    user: &Pubkey,
-    destination_user: &Pubkey,
-    deposit_authority: &Pubkey,
-) -> Instruction {
-    Instruction {
-        program_id: *program_id,
-        accounts: vec![
-            AccountMeta::new_readonly(*config, false),
-            AccountMeta::new(*reward_pool, false),
-            AccountMeta::new(*mining, false),
-            AccountMeta::new(*destination_mining, false),
-            AccountMeta::new_readonly(*user, false),
-            AccountMeta::new_readonly(*destination_user, false),
-            AccountMeta::new_readonly(*deposit_authority, true),
-        ],
-        data: TransferMining.data(),
     }
 }

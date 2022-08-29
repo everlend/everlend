@@ -101,6 +101,27 @@ pub enum LiquidityPoolsInstruction {
         amount: u64,
     },
 
+    /// Move pool tokens to destination user account
+    ///
+    /// Accounts:
+    /// [R] Pool
+    /// [W] Source account
+    /// [W] Destination account
+    /// [R] Pool market
+    /// [W] Pool mint account
+    /// [RS] User transfer authority
+    /// [RS] Destination user transfer authority
+    /// [W] Mining reward pool
+    /// [W] Mining reward user account
+    /// [W] Destination mining reward user account
+    /// [R] Everlend config account
+    /// [R] Everlend rewards program account
+    /// [R] Token program id
+    TransferDeposit {
+        /// Amount to transfer
+        amount: u64
+    },
+
     /// Burn pool tokens and withdraw funds from the pool
     ///
     /// Accounts:
@@ -123,9 +144,6 @@ pub enum LiquidityPoolsInstruction {
     /// [R] Rent sysvar
     /// [R] System program
     Withdraw,
-
-    /// TODO: describe method
-    TransferDeposit,
 
     /// Borrow funds from the pool
     ///
@@ -427,9 +445,10 @@ pub fn deposit(
         accounts,
     )
 }
+
 /// Creates 'TransferDeposit' instruction
 #[allow(clippy::too_many_arguments)]
-pub fn transfer(
+pub fn transfer_deposit(
     program_id: &Pubkey,
     pool_market: &Pubkey,
     pool: &Pubkey,
@@ -442,16 +461,14 @@ pub fn transfer(
     mining_reward_acc: &Pubkey,
     destination_mining_reward_acc: &Pubkey,
     config: &Pubkey,
+    amount: u64,
 ) -> Instruction {
-    let (pool_market_authority, _) = find_program_address(program_id, pool_market);
-
     let accounts = vec![
         AccountMeta::new_readonly(*pool, false),
         AccountMeta::new(*source, false),
         AccountMeta::new(*destination, false),
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new(*pool_mint, false),
-        AccountMeta::new_readonly(pool_market_authority, false),
         AccountMeta::new_readonly(*user_transfer_authority, true),
         AccountMeta::new_readonly(*destination_user_transfer_authority, true),
         AccountMeta::new(*mining_reward_pool, false),
@@ -464,7 +481,7 @@ pub fn transfer(
 
     Instruction::new_with_borsh(
         *program_id,
-        &LiquidityPoolsInstruction::TransferDeposit,
+        &LiquidityPoolsInstruction::TransferDeposit { amount },
         accounts,
     )
 }

@@ -208,7 +208,7 @@ impl TestGeneralPool {
         context.banks_client.process_transaction(tx).await
     }
 
-    pub async fn transfer(
+    pub async fn transfer_deposit(
         &self,
         context: &mut ProgramTestContext,
         test_pool_market: &TestGeneralPoolMarket,
@@ -216,14 +216,15 @@ impl TestGeneralPool {
         destination_user: &LiquidityProvider,
         mining_account: Pubkey,
         destination_mining_account: Pubkey,
+        amount: u64,
     ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
-            &[instruction::transfer(
+            &[instruction::transfer_deposit(
                 &everlend_general_pool::id(),
                 &test_pool_market.keypair.pubkey(),
                 &self.pool_pubkey,
-                &user.token_account,
-                &destination_user.token_account,
+                &user.pool_account,
+                &destination_user.pool_account,
                 &self.pool_mint.pubkey(),
                 &user.owner.pubkey(),
                 &destination_user.owner.pubkey(),
@@ -231,6 +232,7 @@ impl TestGeneralPool {
                 &mining_account,
                 &destination_mining_account,
                 &self.config.pubkey(),
+                amount
             )],
             Some(&context.payer.pubkey()),
             &[&context.payer, &user.owner, &destination_user.owner],

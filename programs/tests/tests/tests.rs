@@ -42,6 +42,7 @@ mod general_pool {
     mod deposit;
     mod init_pool_market;
     mod repay;
+    mod transfer_deposit;
     mod update_manager;
     mod update_pool_borrow_authority;
     mod withdraw;
