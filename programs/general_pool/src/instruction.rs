@@ -101,27 +101,6 @@ pub enum LiquidityPoolsInstruction {
         amount: u64,
     },
 
-    /// Move pool tokens to destination user account
-    ///
-    /// Accounts:
-    /// [R] Pool
-    /// [W] Source account
-    /// [W] Destination account
-    /// [R] Pool market
-    /// [W] Pool mint account
-    /// [RS] User transfer authority
-    /// [RS] Destination user transfer authority
-    /// [W] Mining reward pool
-    /// [W] Mining reward user account
-    /// [W] Destination mining reward user account
-    /// [R] Everlend config account
-    /// [R] Everlend rewards program account
-    /// [R] Token program id
-    TransferDeposit {
-        /// Amount to transfer
-        amount: u64
-    },
-
     /// Burn pool tokens and withdraw funds from the pool
     ///
     /// Accounts:
@@ -252,6 +231,27 @@ pub enum LiquidityPoolsInstruction {
         symbol: String,
         /// The URI of the token, limited to 200 bytes. This URI points to an off-chain JSON file that contains additional data
         uri: String,
+    },
+
+    /// Move pool tokens to destination user account
+    ///
+    /// Accounts:
+    /// [R] Pool
+    /// [W] Source account
+    /// [W] Destination account
+    /// [R] Pool market
+    /// [W] Pool mint account
+    /// [RS] User transfer authority
+    /// [RS] Destination user transfer authority
+    /// [W] Mining reward pool
+    /// [W] Mining reward user account
+    /// [W] Destination mining reward user account
+    /// [R] Everlend config account
+    /// [R] Everlend rewards program account
+    /// [R] Token program id
+    TransferDeposit {
+        /// Amount to transfer
+        amount: u64
     },
 }
 
