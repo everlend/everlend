@@ -1,6 +1,6 @@
 //! Instruction types
 
-use crate::{find_config_program_address, instructions::UpdateRegistryData};
+use crate::instructions::UpdateRegistryData;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
     instruction::{AccountMeta, Instruction},
@@ -77,8 +77,6 @@ pub fn set_registry_config(
     manager: &Pubkey,
     data: UpdateRegistryData,
 ) -> Instruction {
-    let (registry_config, _) = find_config_program_address(program_id, registry);
-
     let accounts = vec![
         AccountMeta::new(*registry, false),
         AccountMeta::new(*manager, true),
