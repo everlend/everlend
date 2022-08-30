@@ -1,6 +1,5 @@
 use crate::utils::*;
 use everlend_general_pool::instruction;
-use everlend_registry::state::SetRegistryPoolConfigParams;
 use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program_test::*;
@@ -42,17 +41,6 @@ async fn setup() -> (
         )
         .await
         .unwrap();
-    env.registry
-        .set_registry_pool_config(
-            &mut env.context,
-            &test_pool.pool_pubkey,
-            SetRegistryPoolConfigParams {
-                deposit_minimum: 0,
-                withdraw_minimum: 0,
-            },
-        )
-        .await
-        .unwrap();
 
     let user = add_liquidity_provider(
         &mut env.context,
@@ -67,14 +55,7 @@ async fn setup() -> (
         .init_user_mining(&mut env.context, &test_pool_market, &user)
         .await;
     test_pool
-        .deposit(
-            &mut env.context,
-            &env.registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            100,
-        )
+        .deposit(&mut env.context, &test_pool_market, &user, mining_acc, 100)
         .await
         .unwrap();
 

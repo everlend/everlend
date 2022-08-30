@@ -1,6 +1,6 @@
 use crate::utils::*;
 use everlend_general_pool::instruction;
-use everlend_registry::state::SetRegistryPoolConfigParams;
+use everlend_general_pool::state::SetPoolConfigParams;
 use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program_test::*;
@@ -12,7 +12,6 @@ use spl_token::error::TokenError;
 
 async fn setup() -> (
     ProgramTestContext,
-    TestRegistry,
     TestGeneralPoolMarket,
     TestGeneralPool,
     LiquidityProvider,
@@ -31,17 +30,6 @@ async fn setup() -> (
         .create(&mut env.context, &test_pool_market)
         .await
         .unwrap();
-    env.registry
-        .set_registry_pool_config(
-            &mut env.context,
-            &test_pool.pool_pubkey,
-            SetRegistryPoolConfigParams {
-                deposit_minimum: 0,
-                withdraw_minimum: 0,
-            },
-        )
-        .await
-        .unwrap();
 
     let user = add_liquidity_provider(
         &mut env.context,
@@ -56,29 +44,15 @@ async fn setup() -> (
         .init_user_mining(&mut env.context, &test_pool_market, &user)
         .await;
 
-    (
-        env.context,
-        env.registry,
-        test_pool_market,
-        test_pool,
-        user,
-        mining_acc,
-    )
+    (env.context, test_pool_market, test_pool, user, mining_acc)
 }
 
 #[tokio::test]
 async fn success() {
-    let (mut context, test_registry, test_pool_market, test_pool, user, mining_acc) = setup().await;
+    let (mut context, test_pool_market, test_pool, user, mining_acc) = setup().await;
 
     test_pool
-        .deposit(
-            &mut context,
-            &test_registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            100,
-        )
+        .deposit(&mut context, &test_pool_market, &user, mining_acc, 100)
         .await
         .unwrap();
 
@@ -90,19 +64,12 @@ async fn success() {
 
 #[tokio::test]
 async fn success_with_rate() {
-    let (mut context, test_registry, test_pool_market, test_pool, user, mining_acc) = setup().await;
+    let (mut context, test_pool_market, test_pool, user, mining_acc) = setup().await;
     let a = (100 * EXP, 50 * EXP, 100 * EXP); // Deposit -> Raise -> Deposit
 
     // 0. Deposit to 100
     test_pool
-        .deposit(
-            &mut context,
-            &test_registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            a.0,
-        )
+        .deposit(&mut context, &test_pool_market, &user, mining_acc, a.0)
         .await
         .unwrap();
 
@@ -121,14 +88,7 @@ async fn success_with_rate() {
 
     // 2. More deposit with changed rate
     test_pool
-        .deposit(
-            &mut context,
-            &test_registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            a.2,
-        )
+        .deposit(&mut context, &test_pool_market, &user, mining_acc, a.2)
         .await
         .unwrap();
 
@@ -146,12 +106,11 @@ const AMOUNT: u64 = 100 * EXP;
 
 #[tokio::test]
 async fn fail_with_invalid_pool_mint_pubkey_argument() {
-    let (mut context, test_registry, test_pool_market, test_pool, user, mining_acc) = setup().await;
+    let (mut context, test_pool_market, test_pool, user, mining_acc) = setup().await;
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
             &everlend_general_pool::id(),
-            &test_registry.keypair.pubkey(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &user.token_account,
@@ -183,12 +142,11 @@ async fn fail_with_invalid_pool_mint_pubkey_argument() {
 
 #[tokio::test]
 async fn fail_with_invalid_token_account_pubkey_argument() {
-    let (mut context, test_registry, test_pool_market, test_pool, user, mining_acc) = setup().await;
+    let (mut context, test_pool_market, test_pool, user, mining_acc) = setup().await;
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
             &everlend_general_pool::id(),
-            &test_registry.keypair.pubkey(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &user.token_account,
@@ -220,14 +178,13 @@ async fn fail_with_invalid_token_account_pubkey_argument() {
 
 #[tokio::test]
 async fn fail_with_invalid_destination_argument() {
-    let (mut context, test_registry, test_pool_market, test_pool, user, mining_acc) = setup().await;
+    let (mut context, test_pool_market, test_pool, user, mining_acc) = setup().await;
 
     // Create new pool
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
             &everlend_general_pool::id(),
-            &test_registry.keypair.pubkey(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &user.token_account,
@@ -262,12 +219,11 @@ async fn fail_with_invalid_destination_argument() {
 
 #[tokio::test]
 async fn fail_with_invalid_source_argument() {
-    let (mut context, test_registry, test_pool_market, test_pool, user, mining_acc) = setup().await;
+    let (mut context, test_pool_market, test_pool, user, mining_acc) = setup().await;
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
             &everlend_general_pool::id(),
-            &test_registry.keypair.pubkey(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             //Wrong source
@@ -302,14 +258,13 @@ async fn fail_with_invalid_source_argument() {
 
 #[tokio::test]
 async fn fail_with_invalid_user_transfer_authority() {
-    let (mut context, test_registry, test_pool_market, test_pool, user, mining_acc) = setup().await;
+    let (mut context, test_pool_market, test_pool, user, mining_acc) = setup().await;
 
     let wrong_authority = Keypair::new();
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
             &everlend_general_pool::id(),
-            &test_registry.keypair.pubkey(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &user.token_account,
@@ -344,13 +299,11 @@ async fn fail_with_invalid_user_transfer_authority() {
 
 #[tokio::test]
 async fn fail_with_invalid_pool_market_argument() {
-    let (mut context, test_registry, _test_pool_market, test_pool, user, mining_acc) =
-        setup().await;
+    let (mut context, _test_pool_market, test_pool, user, mining_acc) = setup().await;
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
             &everlend_general_pool::id(),
-            &test_registry.keypair.pubkey(),
             // Wrong pool market
             &Pubkey::new_unique(),
             &test_pool.pool_pubkey,
@@ -385,12 +338,11 @@ async fn fail_with_invalid_pool_market_argument() {
 
 #[tokio::test]
 async fn fail_with_invalid_pool_argument() {
-    let (mut context, test_registry, test_pool_market, test_pool, user, mining_acc) = setup().await;
+    let (mut context, test_pool_market, test_pool, user, mining_acc) = setup().await;
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
             &everlend_general_pool::id(),
-            &test_registry.keypair.pubkey(),
             &test_pool_market.keypair.pubkey(),
             //Wrong pool
             &Pubkey::new_unique(),
@@ -425,21 +377,24 @@ async fn fail_with_invalid_pool_argument() {
 
 #[tokio::test]
 async fn fail_with_amount_too_small() {
-    let (mut context, test_registry, test_pool_market, test_pool, user, mining_acc) = setup().await;
+    let (mut context, test_pool_market, test_pool, user, mining_acc) = setup().await;
     let deposit_amount = 1000;
-    let pool_config_params = SetRegistryPoolConfigParams {
-        deposit_minimum: 1100,
-        withdraw_minimum: 1100,
-    };
-    test_registry
-        .set_registry_pool_config(&mut context, &test_pool.pool_pubkey, pool_config_params)
+
+    test_pool
+        .set_pool_config(
+            &mut context,
+            &test_pool_market,
+            SetPoolConfigParams {
+                deposit_minimum: Some(1100),
+                withdraw_minimum: Some(1100),
+            },
+        )
         .await
         .unwrap();
 
     let tx = Transaction::new_signed_with_payer(
         &[instruction::deposit(
             &everlend_general_pool::id(),
-            &test_registry.keypair.pubkey(),
             &test_pool_market.keypair.pubkey(),
             &test_pool.pool_pubkey,
             &user.token_account,

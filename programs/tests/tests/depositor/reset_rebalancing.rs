@@ -1,6 +1,6 @@
 use everlend_depositor::find_transit_program_address;
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::{RegistryRootAccounts, SetRegistryPoolConfigParams};
+use everlend_registry::state::RegistryRootAccounts;
 use everlend_utils::find_program_address;
 use solana_program_test::*;
 use solana_sdk::signer::Signer;
@@ -35,17 +35,6 @@ async fn setup() -> (TestEnvironment, TestGeneralPool, TestDepositor) {
         .create(&mut env.context, &general_pool_market)
         .await
         .unwrap();
-    env.registry
-        .set_registry_pool_config(
-            &mut env.context,
-            &general_pool.pool_pubkey,
-            SetRegistryPoolConfigParams {
-                deposit_minimum: 0,
-                withdraw_minimum: 0,
-            },
-        )
-        .await
-        .unwrap();
 
     // 1.1 Add liquidity to general pool
 
@@ -65,7 +54,6 @@ async fn setup() -> (TestEnvironment, TestGeneralPool, TestDepositor) {
     general_pool
         .deposit(
             &mut env.context,
-            &env.registry,
             &general_pool_market,
             &liquidity_provider,
             mining_acc,

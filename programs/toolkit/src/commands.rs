@@ -1,8 +1,6 @@
 use std::fs;
 
-use crate::accounts_config::{
-    save_config_file, CollateralPoolAccounts, DefaultAccounts, InitializedAccounts,
-};
+use crate::accounts_config::{save_config_file, CollateralPoolAccounts, DefaultAccounts};
 use crate::collateral_pool::{self, PoolPubkeys};
 use crate::download_account::download_account;
 use crate::liquidity_mining::quarry_liquidity_miner::QuarryLiquidityMiner;
@@ -24,8 +22,9 @@ use crate::{
 use anchor_lang::AnchorDeserialize;
 use anyhow::bail;
 use everlend_depositor::state::Rebalancing;
+use everlend_general_pool::state::SetPoolConfigParams;
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::{DeprecatedRegistryConfig, Registry, SetRegistryPoolConfigParams};
+use everlend_registry::state::{DeprecatedRegistryConfig, Registry};
 use everlend_registry::{
     find_config_program_address,
     state::{
@@ -272,17 +271,16 @@ pub fn command_init_quarry_mining_accounts(config: &Config, token: &String) -> a
     Ok(())
 }
 
-pub async fn command_set_registry_pool_config(
+pub async fn command_set_pool_config(
     config: &Config,
-    accounts_path: &str,
-    general_pool_pubkey: Pubkey,
-    params: SetRegistryPoolConfigParams,
+    pool_pubkey: Pubkey,
+    params: SetPoolConfigParams,
 ) -> anyhow::Result<()> {
-    let initialized_accounts = InitializedAccounts::load(accounts_path).unwrap();
-    registry::set_registry_pool_config(
+    let initialized_accounts = config.get_initialized_accounts();
+    general_pool::set_pool_config(
         config,
-        &initialized_accounts.registry,
-        &general_pool_pubkey,
+        &initialized_accounts.general_pool_market,
+        &pool_pubkey,
         params,
     )?;
 

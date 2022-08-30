@@ -8,6 +8,7 @@ use clap::{
 use commands_test::{command_test_larix_mining_raw, command_test_quarry_mining_raw};
 use everlend_depositor::find_rebalancing_program_address;
 use everlend_depositor::state::Rebalancing;
+use everlend_general_pool::state::SetPoolConfigParams;
 use everlend_utils::find_program_address;
 use regex::Regex;
 use solana_clap_utils::{
@@ -27,8 +28,7 @@ use accounts_config::*;
 use commands::*;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::state::{
-    RegistryPrograms, RegistryRootAccounts, RegistrySettings, SetRegistryPoolConfigParams,
-    TOTAL_DISTRIBUTIONS,
+    RegistryPrograms, RegistryRootAccounts, RegistrySettings, TOTAL_DISTRIBUTIONS,
 };
 use everlend_utils::integrations::{MoneyMarket, StakingMoneyMarket};
 use general_pool::get_withdrawal_requests;
@@ -180,16 +180,6 @@ async fn command_create(
 
         let (general_pool_pubkey, general_pool_token_account, general_pool_mint) =
             general_pool::create_pool(config, &general_pool_market_pubkey, mint)?;
-
-        registry::set_registry_pool_config(
-            config,
-            &registry_pubkey,
-            &general_pool_pubkey,
-            SetRegistryPoolConfigParams {
-                deposit_minimum: 0,
-                withdraw_minimum: 0,
-            },
-        )?;
 
         let token_account = get_associated_token_address(&payer_pubkey, mint);
         let pool_account =
@@ -740,19 +730,11 @@ async fn main() -> anyhow::Result<()> {
             ),
         )
         .subcommand(
-            SubCommand::with_name("set-registry-pool-config")
-                .about("Set a new registry pool config")
+            SubCommand::with_name("set-pool-config")
+                .about("Create or update pool config")
                 .arg(
-                    Arg::with_name("accounts")
-                        .short("A")
-                        .long("accounts")
-                        .value_name("PATH")
-                        .takes_value(true)
-                        .help("Accounts file"),
-                )
-                .arg(
-                    Arg::with_name("general-pool")
-                        .long("general-pool")
+                    Arg::with_name("pool")
+                        .long("pool")
                         .short("P")
                         .validator(is_pubkey)
                         .value_name("ADDRESS")
@@ -1412,16 +1394,16 @@ async fn main() -> anyhow::Result<()> {
             let token = value_of::<String>(arg_matches, "token").unwrap();
             command_test_quarry_mining_raw(&config, &token)
         }
-        ("set-registry-pool-config", Some(arg_matches)) => {
-            let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
-            let general_pool = pubkey_of(arg_matches, "general-pool").unwrap();
-            let deposit_minimum = value_of::<u64>(arg_matches, "min-deposit").unwrap_or(0);
-            let withdraw_minimum = value_of::<u64>(arg_matches, "min-withdraw").unwrap_or(0);
-            let params = SetRegistryPoolConfigParams {
+        ("set-pool-config", Some(arg_matches)) => {
+            let pool = pubkey_of(arg_matches, "pool").unwrap();
+            let deposit_minimum = value_of::<u64>(arg_matches, "min-deposit");
+            let withdraw_minimum = value_of::<u64>(arg_matches, "min-withdraw");
+            let params = SetPoolConfigParams {
                 deposit_minimum,
                 withdraw_minimum,
             };
-            command_set_registry_pool_config(&config, accounts_path, general_pool, params).await
+
+            command_set_pool_config(&config, pool, params).await
         }
         ("create-general-pool-market", Some(arg_matches)) => {
             let keypair = keypair_of(arg_matches, "keypair");
