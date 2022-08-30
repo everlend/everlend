@@ -240,7 +240,7 @@ pub enum LiquidityPoolsInstruction {
     /// [W] Pool config
     /// [WS] Manager
     /// [R] Rent sysvar
-    /// [R] Sytem program
+    /// [R] System program
     SetPoolConfig {
         /// Pool config update params
         params: SetPoolConfigParams,
