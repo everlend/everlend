@@ -438,11 +438,15 @@ impl Processor {
 
         let (pool_config_pubkey, _) = find_pool_config_program_address(program_id, pool_info.key);
         assert_account_key(pool_config_info, &pool_config_pubkey)?;
-        assert_owned_by(pool_config_info, program_id)?;
 
-        let pool_config = PoolConfig::unpack(&pool_config_info.data.borrow())?;
-        if amount < pool_config.deposit_minimum {
-            return Err(EverlendError::DepositAmountTooSmall.into());
+        // Check only if account exists
+        if !pool_config_info.owner.eq(&Pubkey::default()) {
+            assert_owned_by(pool_config_info, program_id)?;
+
+            let pool_config = PoolConfig::unpack(&pool_config_info.data.borrow())?;
+            if amount < pool_config.deposit_minimum {
+                return Err(EverlendError::DepositAmountTooSmall.into());
+            }
         }
 
         let total_incoming =
@@ -762,11 +766,14 @@ impl Processor {
 
         let (pool_config_pubkey, _) = find_pool_config_program_address(program_id, pool_info.key);
         assert_account_key(pool_config_info, &pool_config_pubkey)?;
-        assert_owned_by(pool_config_info, program_id)?;
 
-        let pool_config = PoolConfig::unpack(&pool_config_info.data.borrow())?;
-        if liquidity_amount < pool_config.withdraw_minimum {
-            return Err(EverlendError::WithdrawAmountTooSmall.into());
+        if !pool_config_info.owner.eq(&Pubkey::default()) {
+            assert_owned_by(pool_config_info, program_id)?;
+
+            let pool_config = PoolConfig::unpack(&pool_config_info.data.borrow())?;
+            if liquidity_amount < pool_config.withdraw_minimum {
+                return Err(EverlendError::WithdrawAmountTooSmall.into());
+            }
         }
 
         // Transfer
