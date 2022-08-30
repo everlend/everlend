@@ -46,15 +46,23 @@ solend:
   reserve_switchboard_oracle: AdtRGGhmqvom3Jemp5YNrxd9q9unX36BZk1pujkkXijL
   reserve_sol: 5VVLD7BQp8y3bTgyF5ezm1ResyMTR3PhYsT4iHFU8Sxz
   reserve_sol_supply: furd3XUtjXZ2gRvSsoUts9A5m8cMJNqdsyR2Rt8vY9s
+tulip:
+  program_id: CbTkd91iCd48cMsqGejvYh9K2dwmy76hF8CQH4gt4Ykx
+  lending_market: 6Z76FPMsFVXggtL2npzQ6nx6ghBGo1CCtueEYPvjFHz6
+  reserve_liquidity_oracle: rekSA4si7yyWMmr9U1kDjk9yYTBnPBSrArnE491drGk
+  reserve_liquidity_supply: HaswPBzu8wCBMvsnVPyj3zcV2x7tgz5WHay7dUHfqyFP
+  reserve_sol: Zb3AcFwZ3HDSdpPHYWGqTnEE1yFQR4LyE6jjLTvSTQw
 multisig_program_id: 3ktyhEXgbiUyDG7RXCzzXWzjXJpThpqqePhJb85eVqFa
 sol_collateral:
   - Hk4Rp3kaPssB6hnjah3Mrqpt5CAXWGoqFT5dVsWA3TaM
   - qy9PvM4J3ZdJJ7cyEFymotHrA1hTWspccA9RhDsQa24
   - FzwZWRMc3GCqjSrcpVX3ueJc6UpcV6iWWb7ZMsTXE3Gf
+  - 4vb2gBGaL6Q1Pmt4KeiGFEMko5ofivbRLoJQzN1tsTLn
 usdc_collateral:
   - HyxraiKfdajDbYTC6MVRToEUBdevBN5M5gfyR4LC3WSF
   - CLgRwCmZ49wbKxQjqEs5tHrNvx8ZoXjybN8hsiRwEVPm
   - "11111111111111111111111111111111"
+  - BP59edV1ycdJAUThDRLSsybasVtCmFXryyNbRaNEsxTw
 usdt_collateral:
   - 4xEXmSfLFPkZaxdL98XkoxKpXEvchPVs21GYqa8DvbAm
   - BQ4wqguD9D2dyzraCW7R4sV5fxUdXaVteT8bL2w4uPbV

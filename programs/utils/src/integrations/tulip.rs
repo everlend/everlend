@@ -2,10 +2,10 @@ use solana_program::pubkey::Pubkey;
 
 #[derive(Debug, Clone, Default)]
 pub struct AccountPubkeys {
-    reserve: Pubkey,
-    reserve_liquidity_supply: Pubkey,
-    lending_market: Pubkey,
-    reserve_liquidity_oracle: Pubkey,
+    pub reserve: Pubkey,
+    pub reserve_liquidity_supply: Pubkey,
+    pub lending_market: Pubkey,
+    pub reserve_liquidity_oracle: Pubkey,
 }
 
 pub mod accounts {

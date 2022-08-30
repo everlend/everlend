@@ -51,6 +51,7 @@ solend:
 tulip:
   program_id: 4bcFeLv4nydFrsZqV5CgwCVrPhkQKsXtzfy2KyMz7ozM
   lending_market: D1cqtVThyebK9KXKGXrCEuiqaNf5L4UfM1vHgCqiJxym
+  reserve_liquidity_oracle: DQAcms41gjYzidRooXRE9GQM1jAauPXDcEpMbVh4FEc7
   reserve_liquidity_supply: CPs1jJ5XAjhcAJsmTToWksAiPEqoLwKMbb1Z83rzaaaU
   reserve_sol: FzbfXR7sopQL29Ubu312tkqWMxSre4dYSrFyYAjUYiC4
 sol_collateral:

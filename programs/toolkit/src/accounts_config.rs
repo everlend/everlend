@@ -90,11 +90,13 @@ pub struct TulipAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub program_id: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
-    pub reserve_liquidity_supply: Pubkey,
-    #[serde_as(as = "DisplayFromStr")]
     pub lending_market: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
     pub reserve_liquidity_oracle: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub reserve_liquidity_supply: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub reserve_sol: Pubkey,
 }
 
 #[serde_as]

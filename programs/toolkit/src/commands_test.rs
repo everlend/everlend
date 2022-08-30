@@ -98,6 +98,13 @@ pub async fn command_run_test(
         lending_market: default_accounts.solend.lending_market,
     };
 
+    let tulip_pubkeys = integrations::tulip::AccountPubkeys {
+        lending_market: default_accounts.tulip.lending_market,
+        reserve_liquidity_oracle: default_accounts.tulip.reserve_liquidity_oracle,
+        reserve: default_accounts.tulip.reserve_sol,
+        reserve_liquidity_supply: default_accounts.tulip.reserve_liquidity_supply,
+    };
+
     let get_balance = |pk: &Pubkey| config.rpc_client.get_token_account_balance(pk);
 
     let print_balance = |v: (UiTokenAmount, UiTokenAmount)| {
@@ -150,6 +157,7 @@ pub async fn command_run_test(
             0 => MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
             1 => MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
             2 => MoneyMarketPubkeys::Solend(solend_pubkeys.clone()),
+            3 => MoneyMarketPubkeys::Tulip(tulip_pubkeys.clone()),
             _ => panic!("wrong pubkey idx"),
         };
 
@@ -175,6 +183,7 @@ pub async fn command_run_test(
             0 => MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
             1 => MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
             2 => MoneyMarketPubkeys::Solend(solend_pubkeys.clone()),
+            3 => MoneyMarketPubkeys::Tulip(tulip_pubkeys.clone()),
             _ => panic!("wrong pubkey idx"),
         };
 
