@@ -730,19 +730,11 @@ async fn main() -> anyhow::Result<()> {
             ),
         )
         .subcommand(
-            SubCommand::with_name("set-registry-pool-config")
-                .about("Set a new registry pool config")
+            SubCommand::with_name("set-pool-config")
+                .about("Create or update pool config")
                 .arg(
-                    Arg::with_name("accounts")
-                        .short("A")
-                        .long("accounts")
-                        .value_name("PATH")
-                        .takes_value(true)
-                        .help("Accounts file"),
-                )
-                .arg(
-                    Arg::with_name("general-pool")
-                        .long("general-pool")
+                    Arg::with_name("pool")
+                        .long("pool")
                         .short("P")
                         .validator(is_pubkey)
                         .value_name("ADDRESS")
@@ -1403,15 +1395,15 @@ async fn main() -> anyhow::Result<()> {
             command_test_quarry_mining_raw(&config, &token)
         }
         ("set-pool-config", Some(arg_matches)) => {
-            let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
-            let general_pool = pubkey_of(arg_matches, "general-pool").unwrap();
+            let pool = pubkey_of(arg_matches, "pool").unwrap();
             let deposit_minimum = value_of::<u64>(arg_matches, "min-deposit");
             let withdraw_minimum = value_of::<u64>(arg_matches, "min-withdraw");
             let params = SetPoolConfigParams {
                 deposit_minimum,
                 withdraw_minimum,
             };
-            command_set_pool_config(&config, accounts_path, general_pool, params).await
+
+            command_set_pool_config(&config, pool, params).await
         }
         ("create-general-pool-market", Some(arg_matches)) => {
             let keypair = keypair_of(arg_matches, "keypair");

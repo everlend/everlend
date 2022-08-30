@@ -1,8 +1,6 @@
 use std::fs;
 
-use crate::accounts_config::{
-    save_config_file, CollateralPoolAccounts, DefaultAccounts, InitializedAccounts,
-};
+use crate::accounts_config::{save_config_file, CollateralPoolAccounts, DefaultAccounts};
 use crate::collateral_pool::{self, PoolPubkeys};
 use crate::download_account::download_account;
 use crate::liquidity_mining::quarry_liquidity_miner::QuarryLiquidityMiner;
@@ -275,15 +273,14 @@ pub fn command_init_quarry_mining_accounts(config: &Config, token: &String) -> a
 
 pub async fn command_set_pool_config(
     config: &Config,
-    accounts_path: &str,
-    general_pool_pubkey: Pubkey,
+    pool_pubkey: Pubkey,
     params: SetPoolConfigParams,
 ) -> anyhow::Result<()> {
-    let initialized_accounts = InitializedAccounts::load(accounts_path).unwrap();
+    let initialized_accounts = config.get_initialized_accounts();
     general_pool::set_pool_config(
         config,
         &initialized_accounts.general_pool_market,
-        &general_pool_pubkey,
+        &pool_pubkey,
         params,
     )?;
 
