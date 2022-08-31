@@ -41,18 +41,8 @@ pub enum MiningType {
     ///
     Quarry {
         ///
-        // TODO move to config
-        #[allow(dead_code)]
-        quarry_mining_program_id: Pubkey,
-        ///
-        #[allow(dead_code)]
-        quarry: Pubkey,
-        ///
         #[allow(dead_code)]
         rewarder: Pubkey,
-        ///
-        #[allow(dead_code)]
-        miner_vault: Pubkey,
     },
 }
 

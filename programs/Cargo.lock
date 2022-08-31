@@ -1164,6 +1164,7 @@ dependencies = [
  "num-traits",
  "solana-program",
  "solana-sdk",
+ "spl-associated-token-account",
  "spl-token 3.2.0",
  "spl-token-lending",
  "thiserror",
@@ -1333,6 +1334,7 @@ dependencies = [
  "port-finance-staking",
  "port-variable-rate-lending-instructions",
  "quarry-mine",
+ "quarry-redeemer",
  "solana-program",
  "solana-sdk",
  "solend-program",
@@ -2636,6 +2638,18 @@ name = "quarry-mint-wrapper"
 version = "5.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fac1378091d73027acafd27a44f3a810c930dbb4ba1145d03d86f6af59d014f1"
+dependencies = [
+ "anchor-lang",
+ "anchor-spl",
+ "solana-security-txt",
+ "vipers",
+]
+
+[[package]]
+name = "quarry-redeemer"
+version = "5.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "939916b55c3a08c0515fe2030ea0218b233ef1987761c8c3676471ba66f5059a"
 dependencies = [
  "anchor-lang",
  "anchor-spl",

@@ -5,6 +5,7 @@ use solana_program::{account_info::AccountInfo, program_error::ProgramError};
 mod collateral_pool;
 mod larix;
 mod port_finance;
+mod quarry;
 mod solend;
 mod spl_lending;
 

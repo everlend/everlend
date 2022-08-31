@@ -4,7 +4,7 @@ use crate::liquidity_mining::execute_account_creation;
 use crate::utils::*;
 use anyhow::Result;
 use everlend_depositor::{instruction::InitMiningAccountsPubkeys, state::MiningType};
-use everlend_utils::integrations::StakingMoneyMarket;
+use everlend_utils::integrations::{MoneyMarket, StakingMoneyMarket};
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::signature::write_keypair_file;
@@ -59,6 +59,7 @@ impl LiquidityMiner for QuarryLiquidityMiner {
         mining_account: &Keypair,
         _sub_reward_token_mint: Option<Pubkey>,
     ) -> Result<()> {
+        //TODO reformat mining account creation
         println!("Create and Init quarry mining accont");
         println!("Mining account: {}", mining_account.pubkey());
         execute_account_creation(
@@ -76,8 +77,9 @@ impl LiquidityMiner for QuarryLiquidityMiner {
         let initialized_accounts = config.get_initialized_accounts();
         let (mint_map, collateral_mint_map) = get_asset_maps(default_accounts.clone());
         let liquidity_mint = mint_map.get(token).unwrap();
+        // Get by Port Finance index  cause Quarry work now only with Port
         let collateral_mint =
-            collateral_mint_map.get(token).unwrap()[StakingMoneyMarket::Quarry as usize].unwrap();
+            collateral_mint_map.get(token).unwrap()[MoneyMarket::PortFinance as usize].unwrap();
         Some(InitMiningAccountsPubkeys {
             liquidity_mint: *liquidity_mint,
             collateral_mint,
@@ -93,16 +95,16 @@ impl LiquidityMiner for QuarryLiquidityMiner {
         &self,
         config: &Config,
         _token: &String,
-        mining_account: Pubkey,
+        _mining_account: Pubkey,
         _sub_reward_token_mint: Option<Pubkey>,
     ) -> MiningType {
         let default_accounts = config.get_default_accounts();
         let quarry = default_accounts.quarry;
         MiningType::Quarry {
-            quarry_mining_program_id: quarry.mine_program_id,
-            quarry: quarry.quarry,
+            // quarry_mining_program_id: quarry.mine_program_id,
+            // quarry: quarry.quarry,
+            // miner_vault: mining_account,
             rewarder: quarry.rewarder,
-            miner_vault: mining_account,
         }
     }
 }

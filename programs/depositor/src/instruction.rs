@@ -6,7 +6,7 @@ use solana_program::{
     pubkey::Pubkey,
     system_program, sysvar,
 };
-
+use spl_associated_token_account::get_associated_token_address;
 use everlend_general_pool::find_withdrawal_requests_program_address;
 use everlend_liquidity_oracle::{
     find_liquidity_oracle_token_distribution_program_address, state::DistributionArray,
@@ -632,17 +632,26 @@ pub fn init_mining_account(
             accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
         }
         MiningType::Quarry {
-            quarry_mining_program_id,
-            quarry,
+            // quarry_mining_program_id,
+            // quarry,
             rewarder,
-            miner_vault,
+            // miner_vault,
         } => {
-            let (miner_pubkey, _) = cpi::quarry::find_miner_program_address(
-                &quarry_mining_program_id,
-                &quarry,
-                &internal_mining,
+
+            let (quarry, _) = cpi::quarry::find_quarry_program_address(
+                &cpi::quarry::id(),
+                &rewarder,
+                &pubkeys.liquidity_mint,
             );
-            accounts.push(AccountMeta::new_readonly(quarry_mining_program_id, false));
+            let (miner_pubkey, _) = cpi::quarry::find_miner_program_address(
+                &cpi::quarry::id(),
+                &quarry,
+                &depositor_authority,
+            );
+
+            let miner_vault = get_associated_token_address(&miner_pubkey, &pubkeys.liquidity_mint);
+
+            accounts.push(AccountMeta::new_readonly(cpi::quarry::id(), false));
             accounts.push(AccountMeta::new(miner_pubkey, false));
             accounts.push(AccountMeta::new(quarry, false));
             accounts.push(AccountMeta::new_readonly(rewarder, false));
