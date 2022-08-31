@@ -6,7 +6,7 @@ use solana_program::{account_info::AccountInfo, pubkey::Pubkey};
 
 use crate::instruction::RegistryInstruction;
 use crate::instructions::{
-    InitContext, UpdateManagerContext, UpdateMoneyMarketsContext, UpdateRegistryContext,
+    InitContext, UpdateManagerContext, UpdateMarketsContext, UpdateRegistryContext,
 };
 
 /// Instruction processing router
@@ -33,9 +33,9 @@ pub fn process_instruction(
             UpdateRegistryContext::new(program_id, accounts)?.process(program_id, data)
         }
 
-        RegistryInstruction::UpdateMoneyMarkets { data } => {
-            msg!("RegistryInstruction: UpdateMoneyMarkets");
-            UpdateMoneyMarketsContext::new(program_id, accounts)?.process(program_id, data)
+        RegistryInstruction::UpdateMarkets { data } => {
+            msg!("RegistryInstruction: UpdateMarkets");
+            UpdateMarketsContext::new(program_id, accounts)?.process(program_id, data)
         }
     }
 }

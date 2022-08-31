@@ -1,6 +1,6 @@
 //! Instruction types
 
-use crate::{instructions::UpdateRegistryData, state::DistributionPubkeys};
+use crate::instructions::{UpdateMarketsData, UpdateRegistryData};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
     instruction::{AccountMeta, Instruction},
@@ -45,9 +45,9 @@ pub enum RegistryInstruction {
     /// Accounts:
     /// [W] Registry
     /// [WS] Manager
-    UpdateMoneyMarkets {
-        /// Money markets ids
-        data: DistributionPubkeys,
+    UpdateMarkets {
+        /// MoneyMarkets data to update
+        data: UpdateMarketsData,
     },
 }
 
