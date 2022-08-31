@@ -9,7 +9,7 @@ use everlend_liquidity_oracle::{
     find_liquidity_oracle_token_distribution_program_address,
     state::{DistributionArray, TokenDistribution},
 };
-use everlend_registry::state::Registry;
+use everlend_registry::state::{Registry, RegistryMarketsConfig};
 use everlend_utils::{
     assert_account_key, assert_initialized, assert_owned_by, assert_rent_exempt, assert_signer,
     assert_uninitialized, cpi, find_program_address, EverlendError,
@@ -195,6 +195,9 @@ impl Processor {
         assert_account_key(general_pool_market_info, &registry.general_pool_market)?;
         assert_account_key(liquidity_oracle_info, &registry.liquidity_oracle)?;
 
+        let registry_markets =
+            RegistryMarketsConfig::unpack_from_slice(&registry_info.data.borrow())?;
+
         // Check rebalancing
         let (rebalancing_pubkey, bump_seed) =
             find_rebalancing_program_address(program_id, depositor_info.key, mint_info.key);
@@ -355,14 +358,14 @@ impl Processor {
         msg!("Computing");
         if refresh_income {
             rebalancing.compute_with_refresh_income(
-                &registry.money_market_program_ids,
+                &registry_markets.money_markets,
                 registry.refresh_income_interval,
                 clock.slot,
                 amount_to_distribute,
             )?;
         } else {
             rebalancing.compute(
-                &registry.money_market_program_ids,
+                &registry_markets.money_markets,
                 new_token_distribution,
                 amount_to_distribute,
             )?;
@@ -475,7 +478,8 @@ impl Processor {
         assert_account_key(executor_info, &depositor.rebalance_executor)?;
 
         assert_account_key(registry_info, &depositor.registry)?;
-        let registry = Registry::unpack(&registry_info.data.borrow())?;
+        let registry_markets =
+            RegistryMarketsConfig::unpack_from_slice(&registry_info.data.borrow())?;
 
         // Check rebalancing
         let (rebalancing_pubkey, _) = find_rebalancing_program_address(
@@ -519,7 +523,7 @@ impl Processor {
 
         let step = rebalancing.next_step();
 
-        if registry.money_market_program_ids[usize::from(step.money_market_index)]
+        if registry_markets.money_markets[usize::from(step.money_market_index)]
             != *money_market_program_info.key
         {
             return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
@@ -539,7 +543,7 @@ impl Processor {
         } else {
             deposit(
                 program_id,
-                &registry,
+                &registry_markets,
                 collateral_transit_info.clone(),
                 collateral_mint_info.clone(),
                 liquidity_transit_info.clone(),
@@ -611,7 +615,8 @@ impl Processor {
         assert_account_key(executor_info, &depositor.rebalance_executor)?;
 
         assert_account_key(registry_info, &depositor.registry)?;
-        let registry = Registry::unpack(&registry_info.data.borrow())?;
+        let registry_markets =
+            RegistryMarketsConfig::unpack_from_slice(&registry_info.data.borrow())?;
 
         // Check rebalancing
         let (rebalancing_pubkey, _) = find_rebalancing_program_address(
@@ -667,7 +672,7 @@ impl Processor {
 
         let step = rebalancing.next_step();
 
-        if registry.money_market_program_ids[usize::from(step.money_market_index)]
+        if registry_markets.money_markets[usize::from(step.money_market_index)]
             != *money_market_program_info.key
         {
             return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
@@ -685,7 +690,7 @@ impl Processor {
         msg!("Withdraw");
         withdraw(
             program_id,
-            &registry,
+            &registry_markets,
             income_pool_accounts,
             collateral_transit_info.clone(),
             collateral_mint_info.clone(),
