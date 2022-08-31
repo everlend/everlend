@@ -1,3 +1,4 @@
+use everlend_registry::instructions::UpdateRegistryData;
 use solana_program::instruction::InstructionError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::*;
@@ -6,7 +7,7 @@ use solana_sdk::signer::Signer;
 use solana_sdk::transaction::{Transaction, TransactionError};
 
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::{DistributionPubkeys, RegistryRootAccounts};
+use everlend_registry::state::DistributionPubkeys;
 use everlend_utils::{
     find_program_address,
     integrations::{self, MoneyMarketPubkeys},
@@ -176,15 +177,22 @@ async fn setup() -> (
         .await
         .unwrap();
 
-    let mut roots = RegistryRootAccounts {
-        general_pool_market: general_pool_market.keypair.pubkey(),
-        income_pool_market: income_pool_market.keypair.pubkey(),
-        collateral_pool_markets: DistributionPubkeys::default(),
-        liquidity_oracle: test_liquidity_oracle.keypair.pubkey(),
-    };
-    roots.collateral_pool_markets[0] = mm_pool_market.keypair.pubkey();
+    let mut collateral_pool_markets = DistributionPubkeys::default();
+    collateral_pool_markets[0] = mm_pool_market.keypair.pubkey();
+
     env.registry
-        .set_registry_root_accounts(&mut env.context, roots)
+        .update_registry(
+            &mut env.context,
+            UpdateRegistryData {
+                general_pool_market: Some(general_pool_market.keypair.pubkey()),
+                income_pool_market: Some(income_pool_market.keypair.pubkey()),
+                liquidity_oracle: Some(test_liquidity_oracle.keypair.pubkey()),
+                liquidity_oracle_manager: None,
+                money_market_program_ids: None,
+                collateral_pool_markets: Some(collateral_pool_markets),
+                refresh_income_interval: None,
+            },
+        )
         .await
         .unwrap();
 

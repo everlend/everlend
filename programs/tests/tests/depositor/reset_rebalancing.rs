@@ -1,6 +1,5 @@
 use everlend_depositor::find_transit_program_address;
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::RegistryRootAccounts;
 use everlend_utils::find_program_address;
 use solana_program_test::*;
 use solana_sdk::signer::Signer;

@@ -5,7 +5,7 @@ use solana_program::{
     program_pack::Pack, pubkey::Pubkey, slot_history::Slot,
 };
 
-use crate::state::{DistributionPubkeys, Registry};
+use crate::state::Registry;
 
 /// Instruction data
 #[derive(BorshDeserialize, BorshSerialize, PartialEq, Debug)]
@@ -18,10 +18,6 @@ pub struct UpdateRegistryData {
     pub liquidity_oracle: Option<Pubkey>,
     ///
     pub liquidity_oracle_manager: Option<Pubkey>,
-    ///
-    pub money_market_program_ids: Option<DistributionPubkeys>,
-    ///
-    pub collateral_pool_markets: Option<DistributionPubkeys>,
     ///
     pub refresh_income_interval: Option<Slot>,
 }
@@ -67,14 +63,6 @@ impl<'a> UpdateRegistryContext<'a> {
 
         if let Some(liquidity_oracle_manager) = data.liquidity_oracle_manager {
             r.liquidity_oracle_manager = liquidity_oracle_manager;
-        }
-
-        if let Some(money_market_program_ids) = data.money_market_program_ids {
-            r.money_market_program_ids = money_market_program_ids;
-        }
-
-        if let Some(collateral_pool_markets) = data.collateral_pool_markets {
-            r.collateral_pool_markets = collateral_pool_markets;
         }
 
         if let Some(refresh_income_interval) = data.refresh_income_interval {

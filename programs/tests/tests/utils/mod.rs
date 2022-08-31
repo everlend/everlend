@@ -1,9 +1,7 @@
 #![allow(dead_code)]
 
 use everlend_registry::instructions::UpdateRegistryData;
-use everlend_registry::state::{
-    DistributionPubkeys, RegistryPrograms, RegistryRootAccounts, RegistrySettings,
-};
+use everlend_registry::state::DistributionPubkeys;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::*;
 use solana_program_test::{ProgramTest, ProgramTestContext};
@@ -102,7 +100,7 @@ pub fn program_test() -> ProgramTest {
     program.add_program(
         "everlend_registry",
         everlend_registry::id(),
-        processor!(everlend_registry::processor::Processor::process_instruction),
+        processor!(everlend_registry::processor::process_instruction),
     );
     program.add_program(
         "spl_token_lending",

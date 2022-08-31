@@ -1,10 +1,8 @@
 use everlend_registry::{
     instructions::UpdateRegistryData,
-    state::{
-        AccountType, DistributionPubkeys, RegistryPrograms, RegistryRootAccounts, RegistrySettings,
-    },
+    state::{AccountType, DistributionPubkeys},
 };
-use solana_program::{example_mocks::solana_sdk::signature::Keypair, pubkey::Pubkey};
+use solana_program::example_mocks::solana_sdk::signature::Keypair;
 use solana_program_test::*;
 
 use crate::utils::*;
@@ -34,25 +32,28 @@ async fn success() {
         .await
         .unwrap();
 
-    test_registry
-        .set_registry_root_accounts(&mut context, RegistryRootAccounts::default())
-        .await
-        .unwrap();
-
     let r = test_registry.get_data(&mut context).await;
+
     println!("data = {:?}", r);
-    assert_eq!(r.account_type, AccountType::RegistryConfig);
-    assert_eq!(r.general_pool_market, data.general_pool_market.ok());
-    assert_eq!(r.income_pool_market, data.income_pool_market.ok());
-    assert_eq!(r.liquidity_oracle, data.liquidity_oracle.ok());
+
+    assert_eq!(r.account_type, AccountType::Registry);
+    assert_eq!(r.general_pool_market, data.general_pool_market.unwrap());
+    assert_eq!(r.income_pool_market, data.income_pool_market.unwrap());
+    assert_eq!(r.liquidity_oracle, data.liquidity_oracle.unwrap());
     assert_eq!(
         r.liquidity_oracle_manager,
-        data.liquidity_oracle_manager.ok()
+        data.liquidity_oracle_manager.unwrap()
     );
     assert_eq!(
         r.money_market_program_ids,
-        data.money_market_program_ids.ok()
+        data.money_market_program_ids.unwrap()
     );
-    assert_eq!(r.collateral_pool_markets, data.collateral_pool_markets.ok());
-    assert_eq!(r.refresh_income_interval, data.refresh_income_interval.ok());
+    assert_eq!(
+        r.collateral_pool_markets,
+        data.collateral_pool_markets.unwrap()
+    );
+    assert_eq!(
+        r.refresh_income_interval,
+        data.refresh_income_interval.unwrap()
+    );
 }
