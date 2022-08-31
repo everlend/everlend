@@ -29,6 +29,8 @@ pub struct Registry {
     pub general_pool_market: Pubkey,
     /// Income pool market
     pub income_pool_market: Pubkey,
+    /// Liquidity oracle
+    pub liquidity_oracle: Pubkey,
     /// Manager that can upgrade Liquidity Oracle
     pub liquidity_oracle_manager: Pubkey,
     /// Program ids for money markets
@@ -53,7 +55,7 @@ impl Registry {
 impl Sealed for Registry {}
 impl Pack for Registry {
     const LEN: usize =
-        1 + (32 + 32 + 32 + 32 + (32 * TOTAL_DISTRIBUTIONS) + (32 * TOTAL_DISTRIBUTIONS) + 8);
+        1 + (32 + 32 + 32 + 32 + 32 + (32 * TOTAL_DISTRIBUTIONS) + (32 * TOTAL_DISTRIBUTIONS) + 8);
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;

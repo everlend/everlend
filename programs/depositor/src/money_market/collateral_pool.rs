@@ -2,7 +2,7 @@ use super::CollateralStorage;
 use everlend_collateral_pool::{
     cpi, find_pool_withdraw_authority_program_address, utils::CollateralPoolAccounts,
 };
-use everlend_registry::state::{RegistryPrograms, RegistryRootAccounts};
+use everlend_registry::state::Registry;
 use everlend_utils::{assert_account_key, assert_owned_by};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -26,8 +26,7 @@ use std::slice::Iter;
 impl<'a> CollateralPool<'a> {
     ///
     pub fn init(
-        registry_programs: &RegistryPrograms,
-        root_accounts: &RegistryRootAccounts,
+        registry: &Registry,
         collateral_mint: AccountInfo<'a>,
         authority: AccountInfo<'a>,
         account_info_iter: &mut Iter<AccountInfo<'a>>,
@@ -39,17 +38,11 @@ impl<'a> CollateralPool<'a> {
         let collateral_pool_token_account_info = next_account_info(account_info_iter)?;
 
         // Check external programs
-        assert_owned_by(
-            collateral_pool_market_info,
-            &registry_programs.collateral_pool_program_id,
-        )?;
-        assert_owned_by(
-            collateral_pool_info,
-            &registry_programs.collateral_pool_program_id,
-        )?;
+        assert_owned_by(collateral_pool_market_info, &everlend_collateral_pool::id())?;
+        assert_owned_by(collateral_pool_info, &everlend_collateral_pool::id())?;
 
         // Check collateral pool market
-        if !root_accounts
+        if !registry
             .collateral_pool_markets
             .contains(collateral_pool_market_info.key)
         {
@@ -58,7 +51,7 @@ impl<'a> CollateralPool<'a> {
 
         // Check collateral pool
         let (collateral_pool_pubkey, _) = everlend_collateral_pool::find_pool_program_address(
-            &registry_programs.collateral_pool_program_id,
+            &everlend_collateral_pool::id(),
             collateral_pool_market_info.key,
             collateral_mint.key,
         );
@@ -80,7 +73,7 @@ impl<'a> CollateralPool<'a> {
 
             let (collateral_pool_withdraw_authority_pubkey, _) =
                 find_pool_withdraw_authority_program_address(
-                    &registry_programs.collateral_pool_program_id,
+                    &everlend_collateral_pool::id(),
                     collateral_pool_info.key,
                     authority.key,
                 );

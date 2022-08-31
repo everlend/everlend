@@ -35,7 +35,7 @@ pub enum RegistryInstruction {
     /// Accounts:
     /// [W] Registry
     /// [WS] Manager
-    SetRegistryConfig {
+    UpdateRegistry {
         /// Registry data to update
         data: UpdateRegistryData,
     },
@@ -70,8 +70,8 @@ pub fn update_manager(
     Instruction::new_with_borsh(*program_id, &RegistryInstruction::UpdateManager, accounts)
 }
 
-/// Creates 'SetRegistryConfig' instruction.
-pub fn set_registry_config(
+/// Creates 'UpdateRegistry' instruction.
+pub fn update_registry(
     program_id: &Pubkey,
     registry: &Pubkey,
     manager: &Pubkey,
@@ -84,7 +84,7 @@ pub fn set_registry_config(
 
     Instruction::new_with_borsh(
         *program_id,
-        &RegistryInstruction::SetRegistryConfig { data },
+        &RegistryInstruction::UpdateRegistry { data },
         accounts,
     )
 }

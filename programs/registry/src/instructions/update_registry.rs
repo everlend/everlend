@@ -15,6 +15,8 @@ pub struct UpdateRegistryData {
     ///
     pub income_pool_market: Option<Pubkey>,
     ///
+    pub liquidity_oracle: Option<Pubkey>,
+    ///
     pub liquidity_oracle_manager: Option<Pubkey>,
     ///
     pub money_market_program_ids: Option<DistributionPubkeys>,
@@ -57,6 +59,10 @@ impl<'a> UpdateRegistryContext<'a> {
 
         if let Some(income_pool_market) = data.income_pool_market {
             r.income_pool_market = income_pool_market;
+        }
+
+        if let Some(liquidity_oracle) = data.liquidity_oracle {
+            r.liquidity_oracle = liquidity_oracle;
         }
 
         if let Some(liquidity_oracle_manager) = data.liquidity_oracle_manager {

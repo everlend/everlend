@@ -1,7 +1,5 @@
 //! Program entrypoint
-
-// #![cfg(all(target_arch = "bpf", not(feature = "no-entrypoint")))]
-
+#![cfg(all(target_arch = "bpf", not(feature = "no-entrypoint")))]
 use borsh::BorshDeserialize;
 use everlend_utils::EverlendError;
 use solana_program::msg;
@@ -46,8 +44,8 @@ fn process_instruction(
             UpdateManagerContext::new(program_id, accounts)?.process(program_id)
         }
 
-        RegistryInstruction::SetRegistryConfig { data } => {
-            msg!("RegistryInstruction: SetRegistryConfig");
+        RegistryInstruction::UpdateRegistry { data } => {
+            msg!("RegistryInstruction: UpdateRegistry");
             UpdateRegistryContext::new(program_id, accounts)?.process(program_id, data)
         }
     }
