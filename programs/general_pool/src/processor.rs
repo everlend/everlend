@@ -524,7 +524,6 @@ impl Processor {
         let _token_program_info = next_account_info(account_info_iter)?;
 
         assert_signer(user_transfer_authority_info)?;
-        assert_signer(destination_user_transfer_authority_info)?;
         assert_owned_by(pool_info, program_id)?;
 
         // Get pool state

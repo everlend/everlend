@@ -235,7 +235,7 @@ impl TestGeneralPool {
                 amount
             )],
             Some(&context.payer.pubkey()),
-            &[&context.payer, &user.owner, &destination_user.owner],
+            &[&context.payer, &user.owner],
             context.last_blockhash,
         );
 

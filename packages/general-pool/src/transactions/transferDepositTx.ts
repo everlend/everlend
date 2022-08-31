@@ -63,7 +63,7 @@ export class TransferDepositTx extends Transaction {
           { pubkey: poolMarket, isSigner: false, isWritable: false },
           { pubkey: poolMint, isSigner: false, isWritable: true },
           { pubkey: feePayer, isSigner: true, isWritable: false },
-          { pubkey: destinationUserAuthority, isSigner: true, isWritable: false },
+          { pubkey: destinationUserAuthority, isSigner: false, isWritable: false },
           { pubkey: rewardPool, isSigner: false, isWritable: true },
           { pubkey: rewardAccount, isSigner: false, isWritable: true },
           { pubkey: destinationRewardAccount, isSigner: false, isWritable: true },

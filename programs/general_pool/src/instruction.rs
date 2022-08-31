@@ -242,7 +242,7 @@ pub enum LiquidityPoolsInstruction {
     /// [R] Pool market
     /// [W] Pool mint account
     /// [RS] User transfer authority
-    /// [RS] Destination user transfer authority
+    /// [R] Destination user transfer authority
     /// [W] Mining reward pool
     /// [W] Mining reward user account
     /// [W] Destination mining reward user account
@@ -470,7 +470,7 @@ pub fn transfer_deposit(
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new(*pool_mint, false),
         AccountMeta::new_readonly(*user_transfer_authority, true),
-        AccountMeta::new_readonly(*destination_user_transfer_authority, true),
+        AccountMeta::new_readonly(*destination_user_transfer_authority, false),
         AccountMeta::new(*mining_reward_pool, false),
         AccountMeta::new(*mining_reward_acc, false),
         AccountMeta::new(*destination_mining_reward_acc, false),
