@@ -2,7 +2,7 @@ use super::CollateralStorage;
 use everlend_collateral_pool::{
     cpi, find_pool_withdraw_authority_program_address, utils::CollateralPoolAccounts,
 };
-use everlend_registry::state::RegistryMarketsConfig;
+use everlend_registry::state::RegistryMarkets;
 use everlend_utils::{assert_account_key, assert_owned_by};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -26,7 +26,7 @@ use std::slice::Iter;
 impl<'a> CollateralPool<'a> {
     ///
     pub fn init(
-        registry_markets: &RegistryMarketsConfig,
+        registry_markets: &RegistryMarkets,
         collateral_mint: AccountInfo<'a>,
         authority: AccountInfo<'a>,
         account_info_iter: &mut Iter<AccountInfo<'a>>,

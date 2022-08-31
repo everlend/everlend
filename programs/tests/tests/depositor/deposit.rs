@@ -1,4 +1,4 @@
-use everlend_registry::instructions::UpdateRegistryData;
+use everlend_registry::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
 use solana_program::instruction::InstructionError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::*;
@@ -188,9 +188,18 @@ async fn setup() -> (
                 income_pool_market: Some(income_pool_market.keypair.pubkey()),
                 liquidity_oracle: Some(test_liquidity_oracle.keypair.pubkey()),
                 liquidity_oracle_manager: None,
-                money_market_program_ids: None,
-                collateral_pool_markets: Some(collateral_pool_markets),
                 refresh_income_interval: None,
+            },
+        )
+        .await
+        .unwrap();
+
+    env.registry
+        .update_registry_markets(
+            &mut env.context,
+            UpdateRegistryMarketsData {
+                money_markets: None,
+                collateral_pool_markets: Some(collateral_pool_markets),
             },
         )
         .await

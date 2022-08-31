@@ -8,7 +8,7 @@ use solana_program::{
 use crate::state::Registry;
 
 /// Instruction data
-#[derive(BorshDeserialize, BorshSerialize, PartialEq, Debug)]
+#[derive(BorshDeserialize, BorshSerialize, Clone, PartialEq, Debug)]
 pub struct UpdateRegistryData {
     ///
     pub general_pool_market: Option<Pubkey>,

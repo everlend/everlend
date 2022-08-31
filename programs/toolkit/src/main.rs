@@ -27,9 +27,7 @@ use spl_associated_token_account::get_associated_token_address;
 use accounts_config::*;
 use commands::*;
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::{
-    RegistryPrograms, RegistryRootAccounts, RegistrySettings, TOTAL_DISTRIBUTIONS,
-};
+use everlend_registry::state::TOTAL_DISTRIBUTIONS;
 use everlend_utils::integrations::{MoneyMarket, StakingMoneyMarket};
 use general_pool::get_withdrawal_requests;
 use utils::*;
@@ -78,18 +76,26 @@ async fn command_create(
 
     println!("Registry");
     let registry_pubkey = registry::init(config, None)?;
-    let mut programs = RegistryPrograms {
-        general_pool_program_id: everlend_general_pool::id(),
-        collateral_pool_program_id: everlend_collateral_pool::id(),
-        liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
-        depositor_program_id: everlend_depositor::id(),
-        income_pools_program_id: everlend_income_pools::id(),
-        money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
-    };
-    programs.money_market_program_ids[0] = default_accounts.port_finance.program_id;
-    programs.money_market_program_ids[1] = default_accounts.larix.program_id;
-    programs.money_market_program_ids[2] = default_accounts.solend.program_id;
-    programs.money_market_program_ids[3] = default_accounts.tulip.program_id;
+
+    let mut money_market_program_ids = DistributionPubkeys::default();
+    money_market_program_ids[0] = default_accounts.port_finance.program_id;
+    money_market_program_ids[1] = default_accounts.larix.program_id;
+    money_market_program_ids[2] = default_accounts.solend.program_id;
+    money_market_program_ids[3] = default_accounts.tulip.program_id;
+
+    env.registry
+        .update_registry(
+            &mut env.context,
+            UpdateRegistryData {
+                general_pool_market: Some(general_pool_market.keypair.pubkey()),
+                income_pool_market: Some(income_pool_market.keypair.pubkey()),
+                liquidity_oracle: Some(test_liquidity_oracle.keypair.pubkey()),
+                liquidity_oracle_manager: None,
+                refresh_income_interval: None,
+            },
+        )
+        .await
+        .unwrap();
 
     registry::set_registry_config(
         config,

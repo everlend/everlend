@@ -289,9 +289,6 @@ pub fn start_rebalancing(
     rebalance_executor: &Pubkey,
     refresh_income: bool,
 ) -> Instruction {
-    let (registry_config, _) =
-        everlend_registry::find_config_program_address(&everlend_registry::id(), registry);
-
     let (depositor_authority, _) = find_program_address(program_id, depositor);
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, mint);
     let (token_distribution, _) = find_liquidity_oracle_token_distribution_program_address(
@@ -322,7 +319,7 @@ pub fn start_rebalancing(
     let (liquidity_transit, _) = find_transit_program_address(program_id, depositor, mint, "");
 
     let accounts = vec![
-        AccountMeta::new_readonly(registry_config, false),
+        AccountMeta::new_readonly(*registry, false),
         AccountMeta::new_readonly(*depositor, false),
         AccountMeta::new_readonly(depositor_authority, false),
         AccountMeta::new(rebalancing, false),
@@ -399,8 +396,6 @@ pub fn deposit(
     money_market_accounts: Vec<AccountMeta>,
     collateral_storage_accounts: Vec<AccountMeta>,
 ) -> Instruction {
-    let (registry_config, _) =
-        everlend_registry::find_config_program_address(&everlend_registry::id(), registry);
     let (depositor_authority, _) = find_program_address(program_id, depositor);
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
 
@@ -417,7 +412,7 @@ pub fn deposit(
     );
 
     let mut accounts = vec![
-        AccountMeta::new_readonly(registry_config, false),
+        AccountMeta::new_readonly(*registry, false),
         AccountMeta::new_readonly(*depositor, false),
         AccountMeta::new_readonly(depositor_authority, false),
         AccountMeta::new(rebalancing, false),
@@ -456,8 +451,6 @@ pub fn withdraw(
     money_market_accounts: Vec<AccountMeta>,
     collateral_storage_accounts: Vec<AccountMeta>,
 ) -> Instruction {
-    let (registry_config, _) =
-        everlend_registry::find_config_program_address(&everlend_registry::id(), registry);
     let (depositor_authority, _) = find_program_address(program_id, depositor);
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
 
@@ -484,7 +477,7 @@ pub fn withdraw(
     );
 
     let mut accounts = vec![
-        AccountMeta::new_readonly(registry_config, false),
+        AccountMeta::new_readonly(*registry, false),
         AccountMeta::new_readonly(*depositor, false),
         AccountMeta::new_readonly(depositor_authority, false),
         AccountMeta::new(rebalancing, false),

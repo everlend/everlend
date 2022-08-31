@@ -1,5 +1,8 @@
 use super::{get_account, BanksClientResult};
-use everlend_registry::{instructions::UpdateRegistryData, state::Registry};
+use everlend_registry::{
+    instructions::{UpdateRegistryData, UpdateRegistryMarketsData},
+    state::{Registry, RegistryMarkets},
+};
 use solana_program::{program_pack::Pack, system_instruction};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{
@@ -26,21 +29,18 @@ impl TestRegistry {
         Registry::unpack_unchecked(&account.data).unwrap()
     }
 
+    pub async fn get_registry_markets(&self, context: &mut ProgramTestContext) -> RegistryMarkets {
+        let account = get_account(context, &self.keypair.pubkey()).await;
+        RegistryMarkets::unpack_from_slice(&account.data).unwrap()
+    }
+
     pub async fn init(&self, context: &mut ProgramTestContext) -> BanksClientResult<()> {
-        let rent = context.banks_client.get_rent().await.unwrap();
         let tx = Transaction::new_signed_with_payer(
             &[
                 system_instruction::transfer(
                     &context.payer.pubkey(),
                     &self.manager.pubkey(),
                     999999999,
-                ),
-                system_instruction::create_account(
-                    &context.payer.pubkey(),
-                    &self.keypair.pubkey(),
-                    rent.minimum_balance(Registry::LEN),
-                    Registry::LEN as u64,
-                    &everlend_registry::id(),
                 ),
                 everlend_registry::instruction::init(
                     &everlend_registry::id(),
@@ -49,7 +49,7 @@ impl TestRegistry {
                 ),
             ],
             Some(&context.payer.pubkey()),
-            &[&context.payer, &self.keypair],
+            &[&context.payer, &self.keypair, &self.manager],
             context.last_blockhash,
         );
 
@@ -68,8 +68,28 @@ impl TestRegistry {
                 &self.manager.pubkey(),
                 data,
             )],
-            Some(&context.payer.pubkey()),
-            &[&context.payer, &self.manager],
+            Some(&self.manager.pubkey()),
+            &[&self.keypair, &self.manager],
+            context.last_blockhash,
+        );
+
+        context.banks_client.process_transaction(tx).await
+    }
+
+    pub async fn update_registry_markets(
+        &self,
+        context: &mut ProgramTestContext,
+        data: UpdateRegistryMarketsData,
+    ) -> BanksClientResult<()> {
+        let tx = Transaction::new_signed_with_payer(
+            &[everlend_registry::instruction::update_registry_markets(
+                &everlend_registry::id(),
+                &self.keypair.pubkey(),
+                &self.manager.pubkey(),
+                data,
+            )],
+            Some(&self.manager.pubkey()),
+            &[&self.keypair, &self.manager],
             context.last_blockhash,
         );
 

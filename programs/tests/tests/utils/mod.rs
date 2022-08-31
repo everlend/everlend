@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use everlend_registry::instructions::UpdateRegistryData;
+use everlend_registry::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
 use everlend_registry::state::DistributionPubkeys;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::*;
@@ -183,9 +183,18 @@ pub async fn presetup() -> TestEnvironment {
                 income_pool_market: None,
                 liquidity_oracle: None,
                 liquidity_oracle_manager: None,
-                money_market_program_ids: Some(mm_program_ids),
-                collateral_pool_markets: None,
                 refresh_income_interval: Some(REFRESH_INCOME_INTERVAL),
+            },
+        )
+        .await
+        .unwrap();
+
+    registry
+        .update_registry_markets(
+            &mut context,
+            UpdateRegistryMarketsData {
+                money_markets: Some(mm_program_ids),
+                collateral_pool_markets: None,
             },
         )
         .await

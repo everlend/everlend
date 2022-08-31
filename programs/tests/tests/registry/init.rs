@@ -1,10 +1,8 @@
+use everlend_registry::state::AccountType;
 use solana_program::instruction::InstructionError;
 use solana_program_test::*;
 use solana_sdk::signer::Signer;
-use solana_sdk::transaction::{Transaction, TransactionError};
-
-use everlend_registry::instruction;
-use everlend_registry::state::AccountType;
+use solana_sdk::transaction::TransactionError;
 
 use crate::utils::*;
 
@@ -18,6 +16,7 @@ async fn success() {
     let registry = test_registry.get_data(&mut context).await;
 
     assert_eq!(registry.account_type, AccountType::Registry);
+    assert_eq!(registry.manager, test_registry.manager.pubkey());
 }
 
 #[tokio::test]
@@ -33,24 +32,10 @@ async fn fail_second_time_init() {
 
     context.warp_to_slot(3).unwrap();
 
-    let tx = Transaction::new_signed_with_payer(
-        &[instruction::init(
-            &everlend_registry::id(),
-            &test_registry.keypair.pubkey(),
-            &test_registry.manager.pubkey(),
-        )],
-        Some(&context.payer.pubkey()),
-        &[&context.payer],
-        context.last_blockhash,
-    );
+    let err = test_registry.init(&mut context).await.unwrap_err().unwrap();
 
     assert_eq!(
-        context
-            .banks_client
-            .process_transaction(tx)
-            .await
-            .unwrap_err()
-            .unwrap(),
-        TransactionError::InstructionError(0, InstructionError::AccountAlreadyInitialized)
+        err,
+        TransactionError::InstructionError(1, InstructionError::AccountAlreadyInitialized)
     );
 }

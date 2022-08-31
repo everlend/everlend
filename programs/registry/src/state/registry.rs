@@ -90,15 +90,15 @@ impl Uninitialized for Registry {
 /// Registry programs
 #[repr(C)]
 #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default, PartialEq, Copy, Clone)]
-pub struct RegistryMarketsConfig {
+pub struct RegistryMarkets {
     /// Money market program ids
     pub money_markets: DistributionPubkeys,
     /// Collateral pool market program ids
     pub collateral_pool_markets: DistributionPubkeys,
 }
 
-impl Sealed for RegistryMarketsConfig {}
-impl Pack for RegistryMarketsConfig {
+impl Sealed for RegistryMarkets {}
+impl Pack for RegistryMarkets {
     const LEN: usize = REGISTRY_MARKETS_LEN;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {

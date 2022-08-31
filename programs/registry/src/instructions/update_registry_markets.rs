@@ -5,44 +5,45 @@ use solana_program::{
     program_pack::Pack, pubkey::Pubkey,
 };
 
-use crate::state::{DistributionPubkeys, Registry, RegistryMarketsConfig};
+use crate::state::{DistributionPubkeys, Registry, RegistryMarkets};
 
 /// Instruction data
-#[derive(BorshDeserialize, BorshSerialize, PartialEq, Debug)]
-pub struct UpdateMarketsData {
+#[derive(BorshDeserialize, BorshSerialize, Clone, PartialEq, Debug)]
+
+pub struct UpdateRegistryMarketsData {
     ///
     pub money_markets: Option<DistributionPubkeys>,
     ///
     pub collateral_pool_markets: Option<DistributionPubkeys>,
 }
 /// Instruction context
-pub struct UpdateMarketsContext<'a> {
+pub struct UpdateRegistryMarketsContext<'a> {
     manager: AccountInfo<'a>,
     registry: AccountInfo<'a>,
 }
 
-impl<'a> UpdateMarketsContext<'a> {
+impl<'a> UpdateRegistryMarketsContext<'a> {
     /// New instruction context
     pub fn new(
         program_id: &Pubkey,
         accounts: &[AccountInfo<'a>],
-    ) -> Result<UpdateMarketsContext<'a>, ProgramError> {
+    ) -> Result<UpdateRegistryMarketsContext<'a>, ProgramError> {
         let account_info_iter = &mut accounts.iter();
         let registry_info = next_account(account_info_iter, program_id)?;
         let manager_info = next_signer_account(account_info_iter)?;
 
-        Ok(UpdateMarketsContext {
+        Ok(UpdateRegistryMarketsContext {
             manager: manager_info.clone(),
             registry: registry_info.clone(),
         })
     }
 
     /// Process instruction
-    pub fn process(&self, _program_id: &Pubkey, data: UpdateMarketsData) -> ProgramResult {
+    pub fn process(&self, _program_id: &Pubkey, data: UpdateRegistryMarketsData) -> ProgramResult {
         let r = Registry::unpack(&self.registry.data.borrow())?;
         assert_account_key(&self.manager, &r.manager)?;
 
-        let mut markets = RegistryMarketsConfig::unpack_from_slice(&self.registry.data.borrow())?;
+        let mut markets = RegistryMarkets::unpack_from_slice(&self.registry.data.borrow())?;
         if let Some(pubkeys) = data.money_markets {
             markets.money_markets = pubkeys;
         }
@@ -51,7 +52,7 @@ impl<'a> UpdateMarketsContext<'a> {
             markets.collateral_pool_markets = pubkeys;
         }
 
-        RegistryMarketsConfig::pack(markets, *self.registry.data.borrow_mut())?;
+        RegistryMarkets::pack_into_slice(&markets, *self.registry.data.borrow_mut());
 
         Ok(())
     }

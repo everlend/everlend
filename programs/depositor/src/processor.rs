@@ -9,7 +9,7 @@ use everlend_liquidity_oracle::{
     find_liquidity_oracle_token_distribution_program_address,
     state::{DistributionArray, TokenDistribution},
 };
-use everlend_registry::state::{Registry, RegistryMarketsConfig};
+use everlend_registry::state::{Registry, RegistryMarkets};
 use everlend_utils::{
     assert_account_key, assert_initialized, assert_owned_by, assert_rent_exempt, assert_signer,
     assert_uninitialized, cpi, find_program_address, EverlendError,
@@ -195,8 +195,7 @@ impl Processor {
         assert_account_key(general_pool_market_info, &registry.general_pool_market)?;
         assert_account_key(liquidity_oracle_info, &registry.liquidity_oracle)?;
 
-        let registry_markets =
-            RegistryMarketsConfig::unpack_from_slice(&registry_info.data.borrow())?;
+        let registry_markets = RegistryMarkets::unpack_from_slice(&registry_info.data.borrow())?;
 
         // Check rebalancing
         let (rebalancing_pubkey, bump_seed) =
@@ -478,8 +477,7 @@ impl Processor {
         assert_account_key(executor_info, &depositor.rebalance_executor)?;
 
         assert_account_key(registry_info, &depositor.registry)?;
-        let registry_markets =
-            RegistryMarketsConfig::unpack_from_slice(&registry_info.data.borrow())?;
+        let registry_markets = RegistryMarkets::unpack_from_slice(&registry_info.data.borrow())?;
 
         // Check rebalancing
         let (rebalancing_pubkey, _) = find_rebalancing_program_address(
@@ -615,8 +613,7 @@ impl Processor {
         assert_account_key(executor_info, &depositor.rebalance_executor)?;
 
         assert_account_key(registry_info, &depositor.registry)?;
-        let registry_markets =
-            RegistryMarketsConfig::unpack_from_slice(&registry_info.data.borrow())?;
+        let registry_markets = RegistryMarkets::unpack_from_slice(&registry_info.data.borrow())?;
 
         // Check rebalancing
         let (rebalancing_pubkey, _) = find_rebalancing_program_address(

@@ -8,7 +8,7 @@ use crate::{
 };
 use everlend_collateral_pool::find_pool_withdraw_authority_program_address;
 use everlend_income_pools::utils::IncomePoolAccounts;
-use everlend_registry::state::RegistryMarketsConfig;
+use everlend_registry::state::RegistryMarkets;
 use everlend_utils::{
     abs_diff, assert_account_key, cpi, find_program_address, integrations, EverlendError,
 };
@@ -30,7 +30,7 @@ const RESERVE_THRESHOLD: u64 = 10;
 #[allow(clippy::too_many_arguments)]
 pub fn deposit<'a, 'b>(
     program_id: &Pubkey,
-    registry_markets: &RegistryMarketsConfig,
+    registry_markets: &RegistryMarkets,
     collateral_transit: AccountInfo<'a>,
     collateral_mint: AccountInfo<'a>,
     liquidity_transit: AccountInfo<'a>,
@@ -114,7 +114,7 @@ pub fn deposit<'a, 'b>(
 #[allow(clippy::too_many_arguments)]
 pub fn withdraw<'a, 'b>(
     program_id: &Pubkey,
-    registry_markets: &RegistryMarketsConfig,
+    registry_markets: &RegistryMarkets,
     income_pool_accounts: IncomePoolAccounts<'a>,
     collateral_transit: AccountInfo<'a>,
     collateral_mint: AccountInfo<'a>,
@@ -234,7 +234,7 @@ pub fn withdraw<'a, 'b>(
 
 /// Money market
 pub fn money_market<'a, 'b>(
-    registry_markets: &RegistryMarketsConfig,
+    registry_markets: &RegistryMarkets,
     money_market_program: AccountInfo<'a>,
     money_market_account_info_iter: &'b mut Iter<AccountInfo<'a>>,
     internal_mining_type: Option<MiningType>,

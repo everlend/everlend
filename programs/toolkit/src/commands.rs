@@ -24,14 +24,7 @@ use anyhow::bail;
 use everlend_depositor::state::Rebalancing;
 use everlend_general_pool::state::SetPoolConfigParams;
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::{DeprecatedRegistryConfig, Registry};
-use everlend_registry::{
-    find_config_program_address,
-    state::{
-        RegistryConfig, RegistryPrograms, RegistryRootAccounts, RegistrySettings,
-        TOTAL_DISTRIBUTIONS,
-    },
-};
+use everlend_registry::state::Registry;
 use everlend_utils::integrations::{MoneyMarket, StakingMoneyMarket};
 use larix_lending::state::reserve::Reserve;
 use solana_client::client_error::ClientError;

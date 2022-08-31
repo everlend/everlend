@@ -1,6 +1,6 @@
 //! Instruction types
 
-use crate::instructions::{UpdateMarketsData, UpdateRegistryData};
+use crate::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
     instruction::{AccountMeta, Instruction},
@@ -15,7 +15,7 @@ pub enum RegistryInstruction {
     /// Initializes a new registry
     ///
     /// Accounts:
-    /// [W] Registry account - uninitialized
+    /// [WS] Registry account - uninitialized
     /// [WS] Manager
     /// [R] System program
     /// [R] Rent sysvar
@@ -24,37 +24,37 @@ pub enum RegistryInstruction {
     /// Update pool market manager
     ///
     /// Accounts:
-    /// [W] Registry
-    /// [WS] Old manager
-    /// [RS] New manager
+    /// [WS] Registry
+    /// [S] Old manager
+    /// [S] New manager
     ///
     UpdateManager,
 
     /// Set a registry config
     ///
     /// Accounts:
-    /// [W] Registry
-    /// [WS] Manager
+    /// [WS] Registry
+    /// [S] Manager
     UpdateRegistry {
         /// Registry data to update
         data: UpdateRegistryData,
     },
 
-    /// Update money markets
+    /// Update registry markets
     ///
     /// Accounts:
-    /// [W] Registry
-    /// [WS] Manager
-    UpdateMarkets {
+    /// [WS] Registry
+    /// [S] Manager
+    UpdateRegistryMarkets {
         /// MoneyMarkets data to update
-        data: UpdateMarketsData,
+        data: UpdateRegistryMarketsData,
     },
 }
 
 /// Creates 'Init' instruction.
 pub fn init(program_id: &Pubkey, registry: &Pubkey, manager: &Pubkey) -> Instruction {
     let accounts = vec![
-        AccountMeta::new(*registry, false),
+        AccountMeta::new(*registry, true),
         AccountMeta::new(*manager, true),
         AccountMeta::new_readonly(system_program::id(), false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
@@ -72,7 +72,7 @@ pub fn update_manager(
     new_manager: &Pubkey,
 ) -> Instruction {
     let accounts = vec![
-        AccountMeta::new(*registry, false),
+        AccountMeta::new(*registry, true),
         AccountMeta::new(*manager, true),
         AccountMeta::new_readonly(*new_manager, true),
     ];
@@ -88,13 +88,32 @@ pub fn update_registry(
     data: UpdateRegistryData,
 ) -> Instruction {
     let accounts = vec![
-        AccountMeta::new(*registry, false),
+        AccountMeta::new(*registry, true),
         AccountMeta::new(*manager, true),
     ];
 
     Instruction::new_with_borsh(
         *program_id,
         &RegistryInstruction::UpdateRegistry { data },
+        accounts,
+    )
+}
+
+/// Creates 'UpdateRegistryMarkets' instruction.
+pub fn update_registry_markets(
+    program_id: &Pubkey,
+    registry: &Pubkey,
+    manager: &Pubkey,
+    data: UpdateRegistryMarketsData,
+) -> Instruction {
+    let accounts = vec![
+        AccountMeta::new(*registry, true),
+        AccountMeta::new(*manager, true),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &RegistryInstruction::UpdateRegistryMarkets { data },
         accounts,
     )
 }
