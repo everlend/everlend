@@ -71,3 +71,30 @@ async fn fail_second_time_init() {
         TransactionError::InstructionError(0, InstructionError::AccountAlreadyInitialized)
     );
 }
+
+#[tokio::test]
+async fn fail_incorrect_max_distribution() {
+    let mut context = program_test().start_with_context().await;
+    let token_mint: Pubkey = Pubkey::new_unique();
+
+    let test_liquidity_oracle = TestLiquidityOracle::new();
+    test_liquidity_oracle.init(&mut context).await.unwrap();
+
+    context.warp_to_slot(WARP_SLOT).unwrap();
+
+    let mut distribution = DistributionArray::default();
+    distribution[0] = 1000000001u64;
+
+    let test_token_distribution = TestTokenDistribution::new(token_mint, distribution);
+    let authority = context.payer.pubkey();
+
+
+    assert_eq!(
+    test_token_distribution
+        .init(&mut context, &test_liquidity_oracle, authority)
+        .await
+        .unwrap_err()
+        .unwrap(),
+        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
+    );
+}

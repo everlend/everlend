@@ -1,6 +1,6 @@
 //! Utils
 
-use crate::money_market::{CollateralPool, CollateralStorage, MoneyMarket};
+use crate::money_market::{CollateralPool, CollateralStorage, MoneyMarket, Tulip};
 use crate::money_market::{Larix, PortFinance, SPLLending, Solend};
 use crate::{
     find_transit_program_address,
@@ -24,7 +24,7 @@ use solana_program::{
 use spl_token::state::Account;
 use std::{cmp::Ordering, slice::Iter};
 
-const RESERVE_THRESHOLD: u64 = 2;
+const RESERVE_THRESHOLD: u64 = 10;
 
 /// Deposit
 #[allow(clippy::too_many_arguments)]
@@ -246,6 +246,7 @@ pub fn money_market<'a, 'b>(
     let port_finance_program_id = registry_programs.money_market_program_ids[0];
     let larix_program_id = registry_programs.money_market_program_ids[1];
     let solend_program_id = registry_programs.money_market_program_ids[2];
+    let tulip_program_id = registry_programs.money_market_program_ids[3];
 
     // Only for tests
     if money_market_program.key.to_string() == integrations::SPL_TOKEN_LENDING_PROGRAM_ID {
@@ -274,6 +275,11 @@ pub fn money_market<'a, 'b>(
     if *money_market_program.key == solend_program_id {
         let solend = Solend::init(*money_market_program.key, money_market_account_info_iter)?;
         return Ok(Box::new(solend));
+    }
+
+    if *money_market_program.key == tulip_program_id {
+        let tulip = Tulip::init(*money_market_program.key, money_market_account_info_iter)?;
+        return Ok(Box::new(tulip));
     }
 
     Err(EverlendError::IncorrectInstructionProgramId.into())

@@ -2,7 +2,6 @@ use crate::utils::*;
 use everlend_depositor::find_transit_program_address;
 use everlend_depositor::state::{Rebalancing, RebalancingOperation};
 use everlend_liquidity_oracle::state::{DistributionArray, TokenDistribution};
-use everlend_registry::state::SetRegistryPoolConfigParams;
 use everlend_registry::state::{DistributionPubkeys, RegistryRootAccounts, RegistrySettings};
 use everlend_utils::{abs_diff, percent_ratio};
 use everlend_utils::{
@@ -63,17 +62,6 @@ async fn setup() -> (
         .create(&mut env.context, &general_pool_market)
         .await
         .unwrap();
-    env.registry
-        .set_registry_pool_config(
-            &mut env.context,
-            &general_pool.pool_pubkey,
-            SetRegistryPoolConfigParams {
-                deposit_minimum: 0,
-                withdraw_minimum: 0,
-            },
-        )
-        .await
-        .unwrap();
 
     // 1.1 Add liquidity to general pool
 
@@ -93,7 +81,6 @@ async fn setup() -> (
     general_pool
         .deposit(
             &mut env.context,
-            &env.registry,
             &general_pool_market,
             &liquidity_provider,
             mining_acc,
@@ -873,7 +860,7 @@ async fn rebalancing_math_round() {
         d[1] = elem.1;
         d[2] = elem.2;
 
-        distribution.update(i as u64 + 1, d);
+        distribution.update(i as u64 + 1, d).unwrap();
         r.compute(&p, distribution.clone(), distr_amount).unwrap();
         println!("{}", r.distributed_liquidity);
         assert_eq!(distr_amount >= r.distributed_liquidity, true);
@@ -938,7 +925,7 @@ async fn rebalancing_check_steps() {
         d[0] = elem.distribution.0;
         d[1] = elem.distribution.1;
 
-        distribution.update(i as u64 + 1, d);
+        distribution.update(i as u64 + 1, d).unwrap();
         r.compute(&p, distribution.clone(), distr_amount).unwrap();
 
         println!("{:?}", r.steps);
@@ -988,7 +975,7 @@ async fn rebalancing_check_steps_math() {
     d[1] = 333_333_333;
     d[2] = 333_333_333;
 
-    distribution.update(10, d);
+    distribution.update(10, d).unwrap();
 
     let amount_to_distribute = 25365814993;
     r.compute(&p, distribution.clone(), amount_to_distribute)

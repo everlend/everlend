@@ -3,7 +3,7 @@
 use super::AccountType;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use everlend_registry::state::TOTAL_DISTRIBUTIONS;
-use everlend_utils::Uninitialized;
+use everlend_utils::{Uninitialized, PRECISION_SCALER};
 use solana_program::{
     clock::Slot,
     msg,
@@ -33,9 +33,19 @@ impl TokenDistribution {
     }
 
     /// Update a liquidity oracle token distribution
-    pub fn update(&mut self, slot: Slot, distribution: DistributionArray) {
+    pub fn update(
+        &mut self,
+        slot: Slot,
+        distribution: DistributionArray,
+    ) -> Result<(), ProgramError> {
         self.updated_at = slot;
+        // Total distribution always should be < 1 * PRECISION_SCALER
+        if distribution.iter().sum::<u64>() > (1 * PRECISION_SCALER) as u64 {
+            return Err(ProgramError::InvalidArgument);
+        }
         self.distribution = distribution;
+
+        Ok(())
     }
 }
 

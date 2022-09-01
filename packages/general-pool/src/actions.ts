@@ -19,7 +19,6 @@ import { GeneralPoolsProgram } from './program'
 import {
   CreateAssociatedTokenAccount,
   findAssociatedTokenAccount,
-  findRegistryPoolConfigAccount,
 } from '@everlend/common'
 import {
   BorrowTx,
@@ -138,7 +137,6 @@ export const prepareCreatePoolTx = async (
  *
  * @param actionOptions
  * @param pool the general pool public key for a specific token, e.g. there can be a general pool for USDT or USDC etc.
- * @param registry the public key of the registry (the program that stores a registry config).
  * @param amount the amount of tokens in lamports to deposit.
  * @param rewardProgramId reward program id
  * @param config const
@@ -154,7 +152,6 @@ export const prepareCreatePoolTx = async (
 export const prepareDepositTx = async (
   { connection, payerPublicKey }: ActionOptions,
   pool: PublicKey,
-  registry: PublicKey,
   amount: BN,
   rewardProgramId: PublicKey,
   config: PublicKey,
@@ -170,7 +167,7 @@ export const prepareDepositTx = async (
   const poolMarketAuthority = await GeneralPoolsProgram.findProgramAddress([poolMarket.toBuffer()])
 
   const tx = new Transaction()
-  const registryPoolConfig = await findRegistryPoolConfigAccount(registry, pool)
+  const poolConfig = await GeneralPoolsProgram.findProgramAddress([Buffer.from('config'), pool.toBuffer()])
 
   // Wrapping SOL
   let closeTokenAccountIx: TransactionInstruction
@@ -223,8 +220,7 @@ export const prepareDepositTx = async (
     new DepositTx(
       { feePayer: payerPublicKey },
       {
-        registryPoolConfig,
-        registry,
+        poolConfig,
         poolMarket,
         pool,
         source,
@@ -257,7 +253,6 @@ export const prepareDepositTx = async (
  *
  * @param actionOptions
  * @param pool the general pool public key for a specific token, e.g. there can be a general pool for USDT or USDC etc.
- * @param registry the public key of the registry (the program that stores a registry config).
  * @param collateralAmount the amount of collateral tokens in lamports which will be taken from a user.
  * @param rewardProgramId reward program id
  * @param config const
@@ -273,7 +268,6 @@ export const prepareDepositTx = async (
 export const prepareWithdrawalRequestTx = async (
   { connection, payerPublicKey }: ActionOptions,
   pool: PublicKey,
-  registry: PublicKey,
   collateralAmount: BN,
   rewardProgramId: PublicKey,
   config: PublicKey,
@@ -297,7 +291,8 @@ export const prepareWithdrawalRequestTx = async (
 
   const tx = new Transaction()
 
-  const registryPoolConfig = await findRegistryPoolConfigAccount(registry, pool)
+  const poolConfig = await GeneralPoolsProgram.findProgramAddress([Buffer.from('config'), pool.toBuffer()])
+
   // Create destination account for token mint if doesn't exist
   destination = destination ?? (await findAssociatedTokenAccount(payerPublicKey, tokenMint))
   !(await connection.getAccountInfo(destination)) &&
@@ -315,8 +310,7 @@ export const prepareWithdrawalRequestTx = async (
     new WithdrawalRequestTx(
       { feePayer: payerPublicKey },
       {
-        registry,
-        registryPoolConfig,
+        poolConfig,
         poolMarket,
         pool,
         withdrawRequests,

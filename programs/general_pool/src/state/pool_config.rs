@@ -5,45 +5,46 @@ use solana_program::{
     msg,
     program_error::ProgramError,
     program_pack::{IsInitialized, Pack, Sealed},
-    pubkey::Pubkey,
 };
 
 use super::*;
 /// Pool config
 #[repr(C)]
-#[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
-pub struct RegistryPoolConfig {
-    /// Account type - RegistryPoolConfig
+#[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema)]
+pub struct PoolConfig {
+    /// Account type - PoolConfig
     pub account_type: AccountType,
-    /// Registry
-    pub registry: Pubkey,
-    /// General pool program
-    pub general_pool: Pubkey,
     /// Minimum amount for deposit
     pub deposit_minimum: u64,
     /// Minimum amount for withdraw request
     pub withdraw_minimum: u64,
 }
 
-impl RegistryPoolConfig {
+impl PoolConfig {
     /// Init pool config
-    pub fn init(&mut self, registry: Pubkey, general_pool: Pubkey) {
-        self.registry = registry;
-        self.general_pool = general_pool;
-        self.account_type = AccountType::RegistryPoolConfig;
+    pub fn default() -> PoolConfig {
+        PoolConfig {
+            account_type: AccountType::PoolConfig,
+            deposit_minimum: 0,
+            withdraw_minimum: 0,
+        }
     }
 
     /// Set pool config
-    pub fn set(&mut self, params: SetRegistryPoolConfigParams) {
-        self.deposit_minimum = params.deposit_minimum;
-        self.withdraw_minimum = params.withdraw_minimum;
+    pub fn set(&mut self, params: SetPoolConfigParams) {
+        if params.deposit_minimum.is_some() {
+            self.deposit_minimum = params.deposit_minimum.unwrap();
+        }
+
+        if params.withdraw_minimum.is_some() {
+            self.withdraw_minimum = params.withdraw_minimum.unwrap();
+        }
     }
 }
 
-impl Sealed for RegistryPoolConfig {}
-impl Pack for RegistryPoolConfig {
-    // 1 + 32 + 32 + 8 + 8 = 81
-    const LEN: usize = 81;
+impl Sealed for PoolConfig {}
+impl Pack for PoolConfig {
+    const LEN: usize = 1 + 8 + 8;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;
@@ -60,17 +61,17 @@ impl Pack for RegistryPoolConfig {
     }
 }
 
-impl IsInitialized for RegistryPoolConfig {
+impl IsInitialized for PoolConfig {
     fn is_initialized(&self) -> bool {
-        self.account_type == AccountType::RegistryPoolConfig
+        self.account_type == AccountType::PoolConfig
     }
 }
 
 /// Set pool config params
 #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, PartialEq, Clone, Copy)]
-pub struct SetRegistryPoolConfigParams {
+pub struct SetPoolConfigParams {
     /// Minimum amount for deposit
-    pub deposit_minimum: u64,
+    pub deposit_minimum: Option<u64>,
     /// Minimum amount for withdraw request
-    pub withdraw_minimum: u64,
+    pub withdraw_minimum: Option<u64>,
 }

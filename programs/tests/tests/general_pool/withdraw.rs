@@ -1,11 +1,11 @@
 use crate::utils::*;
 use everlend_general_pool::state::WITHDRAW_DELAY;
 use everlend_general_pool::{find_transit_program_address, instruction};
-use everlend_registry::state::SetRegistryPoolConfigParams;
 use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::*;
+use solana_sdk::signature::Keypair;
 use solana_sdk::signer::Signer;
 use solana_sdk::transaction::{Transaction, TransactionError};
 
@@ -17,7 +17,6 @@ async fn setup(
     token_mint: Option<Pubkey>,
 ) -> (
     ProgramTestContext,
-    TestRegistry,
     TestGeneralPoolMarket,
     TestGeneralPool,
     TestGeneralPoolBorrowAuthority,
@@ -35,17 +34,6 @@ async fn setup(
     let test_pool = TestGeneralPool::new(&test_pool_market, token_mint);
     test_pool
         .create(&mut env.context, &test_pool_market)
-        .await
-        .unwrap();
-    env.registry
-        .set_registry_pool_config(
-            &mut env.context,
-            &test_pool.pool_pubkey,
-            SetRegistryPoolConfigParams {
-                deposit_minimum: 0,
-                withdraw_minimum: 0,
-            },
-        )
         .await
         .unwrap();
 
@@ -80,20 +68,12 @@ async fn setup(
         .await;
 
     test_pool
-        .deposit(
-            &mut env.context,
-            &env.registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            100,
-        )
+        .deposit(&mut env.context, &test_pool_market, &user, mining_acc, 100)
         .await
         .unwrap();
 
     (
         env.context,
-        env.registry,
         test_pool_market,
         test_pool,
         test_pool_borrow_authority,
@@ -104,25 +84,11 @@ async fn setup(
 
 #[tokio::test]
 async fn success_with_sol() {
-    let (
-        mut context,
-        test_registry,
-        test_pool_market,
-        test_pool,
-        _pool_borrow_authority,
-        user,
-        mining_acc,
-    ) = setup(Some(spl_token::native_mint::id())).await;
+    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user, mining_acc) =
+        setup(Some(spl_token::native_mint::id())).await;
 
     test_pool
-        .deposit(
-            &mut context,
-            &test_registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            100,
-        )
+        .deposit(&mut context, &test_pool_market, &user, mining_acc, 100)
         .await
         .unwrap();
 
@@ -136,7 +102,6 @@ async fn success_with_sol() {
     test_pool
         .withdraw_request(
             &mut context,
-            &test_registry,
             &test_pool_market,
             &user,
             mining_acc,
@@ -181,39 +146,18 @@ async fn success_with_sol() {
 
 #[tokio::test]
 async fn success() {
-    let (
-        mut context,
-        test_registry,
-        test_pool_market,
-        test_pool,
-        _pool_borrow_authority,
-        user,
-        mining_acc,
-    ) = setup(None).await;
+    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user, mining_acc) =
+        setup(None).await;
 
     test_pool
-        .deposit(
-            &mut context,
-            &test_registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            100,
-        )
+        .deposit(&mut context, &test_pool_market, &user, mining_acc, 100)
         .await
         .unwrap();
 
     context.warp_to_slot(3).unwrap();
 
     test_pool
-        .withdraw_request(
-            &mut context,
-            &test_registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            45,
-        )
+        .withdraw_request(&mut context, &test_pool_market, &user, mining_acc, 45)
         .await
         .unwrap();
 
@@ -251,38 +195,17 @@ async fn success() {
 
 #[tokio::test]
 async fn fail_with_invalid_ticket() {
-    let (
-        mut context,
-        test_registry,
-        test_pool_market,
-        test_pool,
-        _pool_borrow_authority,
-        user,
-        mining_acc,
-    ) = setup(None).await;
+    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user, mining_acc) =
+        setup(None).await;
 
     test_pool
-        .deposit(
-            &mut context,
-            &test_registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            100,
-        )
+        .deposit(&mut context, &test_pool_market, &user, mining_acc, 100)
         .await
         .unwrap();
     context.warp_to_slot(3).unwrap();
 
     test_pool
-        .withdraw_request(
-            &mut context,
-            &test_registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            45,
-        )
+        .withdraw_request(&mut context, &test_pool_market, &user, mining_acc, 45)
         .await
         .unwrap();
     context.warp_to_slot(3 + WITHDRAW_DELAY - 1).unwrap();
@@ -302,39 +225,18 @@ async fn fail_with_invalid_ticket() {
 
 #[tokio::test]
 async fn fail_with_invalid_pool_market() {
-    let (
-        mut context,
-        test_registry,
-        test_pool_market,
-        test_pool,
-        _pool_borrow_authority,
-        user,
-        mining_acc,
-    ) = setup(None).await;
+    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user, mining_acc) =
+        setup(None).await;
 
     test_pool
-        .deposit(
-            &mut context,
-            &test_registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            100,
-        )
+        .deposit(&mut context, &test_pool_market, &user, mining_acc, 100)
         .await
         .unwrap();
 
     context.warp_to_slot(3).unwrap();
 
     test_pool
-        .withdraw_request(
-            &mut context,
-            &test_registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            45,
-        )
+        .withdraw_request(&mut context, &test_pool_market, &user, mining_acc, 45)
         .await
         .unwrap();
 
@@ -380,39 +282,18 @@ async fn fail_with_invalid_pool_market() {
 
 #[tokio::test]
 async fn fail_with_invalid_pool() {
-    let (
-        mut context,
-        test_registry,
-        test_pool_market,
-        test_pool,
-        _pool_borrow_authority,
-        user,
-        mining_acc,
-    ) = setup(None).await;
+    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user, mining_acc) =
+        setup(None).await;
 
     test_pool
-        .deposit(
-            &mut context,
-            &test_registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            100,
-        )
+        .deposit(&mut context, &test_pool_market, &user, mining_acc, 100)
         .await
         .unwrap();
 
     context.warp_to_slot(3).unwrap();
 
     test_pool
-        .withdraw_request(
-            &mut context,
-            &test_registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            45,
-        )
+        .withdraw_request(&mut context, &test_pool_market, &user, mining_acc, 45)
         .await
         .unwrap();
 
@@ -458,39 +339,18 @@ async fn fail_with_invalid_pool() {
 
 #[tokio::test]
 async fn fail_with_invalid_destination() {
-    let (
-        mut context,
-        test_registry,
-        test_pool_market,
-        test_pool,
-        _pool_borrow_authority,
-        user,
-        mining_acc,
-    ) = setup(None).await;
+    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user, mining_acc) =
+        setup(None).await;
 
     test_pool
-        .deposit(
-            &mut context,
-            &test_registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            100,
-        )
+        .deposit(&mut context, &test_pool_market, &user, mining_acc, 100)
         .await
         .unwrap();
 
     context.warp_to_slot(3).unwrap();
 
     test_pool
-        .withdraw_request(
-            &mut context,
-            &test_registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            45,
-        )
+        .withdraw_request(&mut context, &test_pool_market, &user, mining_acc, 45)
         .await
         .unwrap();
 
@@ -533,39 +393,18 @@ async fn fail_with_invalid_destination() {
 
 #[tokio::test]
 async fn fail_with_invalid_token_account() {
-    let (
-        mut context,
-        test_registry,
-        test_pool_market,
-        test_pool,
-        _pool_borrow_authority,
-        user,
-        mining_acc,
-    ) = setup(None).await;
+    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user, mining_acc) =
+        setup(None).await;
 
     test_pool
-        .deposit(
-            &mut context,
-            &test_registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            100,
-        )
+        .deposit(&mut context, &test_pool_market, &user, mining_acc, 100)
         .await
         .unwrap();
 
     context.warp_to_slot(3).unwrap();
 
     test_pool
-        .withdraw_request(
-            &mut context,
-            &test_registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            45,
-        )
+        .withdraw_request(&mut context, &test_pool_market, &user, mining_acc, 45)
         .await
         .unwrap();
 
@@ -608,39 +447,18 @@ async fn fail_with_invalid_token_account() {
 
 #[tokio::test]
 async fn fail_with_invalid_token_mint() {
-    let (
-        mut context,
-        test_registry,
-        test_pool_market,
-        test_pool,
-        _pool_borrow_authority,
-        user,
-        mining_acc,
-    ) = setup(None).await;
+    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user, mining_acc) =
+        setup(None).await;
 
     test_pool
-        .deposit(
-            &mut context,
-            &test_registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            100,
-        )
+        .deposit(&mut context, &test_pool_market, &user, mining_acc, 100)
         .await
         .unwrap();
 
     context.warp_to_slot(3).unwrap();
 
     test_pool
-        .withdraw_request(
-            &mut context,
-            &test_registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            45,
-        )
+        .withdraw_request(&mut context, &test_pool_market, &user, mining_acc, 45)
         .await
         .unwrap();
 
@@ -686,39 +504,18 @@ async fn fail_with_invalid_token_mint() {
 
 #[tokio::test]
 async fn fail_with_invalid_pool_mint() {
-    let (
-        mut context,
-        test_registry,
-        test_pool_market,
-        test_pool,
-        _pool_borrow_authority,
-        user,
-        mining_acc,
-    ) = setup(None).await;
+    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user, mining_acc) =
+        setup(None).await;
 
     test_pool
-        .deposit(
-            &mut context,
-            &test_registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            100,
-        )
+        .deposit(&mut context, &test_pool_market, &user, mining_acc, 100)
         .await
         .unwrap();
 
     context.warp_to_slot(3).unwrap();
 
     test_pool
-        .withdraw_request(
-            &mut context,
-            &test_registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            45,
-        )
+        .withdraw_request(&mut context, &test_pool_market, &user, mining_acc, 45)
         .await
         .unwrap();
 
@@ -761,39 +558,18 @@ async fn fail_with_invalid_pool_mint() {
 
 #[tokio::test]
 async fn success_with_random_tx_signer() {
-    let (
-        mut context,
-        test_registry,
-        test_pool_market,
-        test_pool,
-        _pool_borrow_authority,
-        user,
-        mining_acc,
-    ) = setup(None).await;
+    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user, mining_acc) =
+        setup(None).await;
 
     test_pool
-        .deposit(
-            &mut context,
-            &test_registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            100,
-        )
+        .deposit(&mut context, &test_pool_market, &user, mining_acc, 100)
         .await
         .unwrap();
 
     context.warp_to_slot(3).unwrap();
 
     test_pool
-        .withdraw_request(
-            &mut context,
-            &test_registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            45,
-        )
+        .withdraw_request(&mut context, &test_pool_market, &user, mining_acc, 45)
         .await
         .unwrap();
 
@@ -801,7 +577,7 @@ async fn success_with_random_tx_signer() {
 
     let random_tx_signer = TestGeneralPoolMarket::new();
     random_tx_signer
-        .init(&mut context, &test_registry.keypair.pubkey())
+        .init(&mut context, &Keypair::new().pubkey())
         .await
         .unwrap();
 

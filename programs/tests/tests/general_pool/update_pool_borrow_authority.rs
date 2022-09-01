@@ -10,11 +10,19 @@ use everlend_utils::EverlendError;
 
 use crate::utils::*;
 
-async fn setup() -> (ProgramTestContext, TestRegistry, TestGeneralPoolMarket, TestGeneralPool) {
+async fn setup() -> (
+    ProgramTestContext,
+    TestRegistry,
+    TestGeneralPoolMarket,
+    TestGeneralPool,
+) {
     let mut env = presetup().await;
 
     let test_pool_market = TestGeneralPoolMarket::new();
-    test_pool_market.init(&mut env.context, &env.registry.keypair.pubkey()).await.unwrap();
+    test_pool_market
+        .init(&mut env.context, &env.registry.keypair.pubkey())
+        .await
+        .unwrap();
 
     let test_pool = TestGeneralPool::new(&test_pool_market, None);
     test_pool
@@ -80,7 +88,10 @@ async fn fail_update_with_fake_pool_market() {
         .unwrap();
 
     let fake_pool_market = TestGeneralPoolMarket::new();
-    fake_pool_market.init(&mut context, &registry.keypair.pubkey()).await.unwrap();
+    fake_pool_market
+        .init(&mut context, &registry.keypair.pubkey())
+        .await
+        .unwrap();
 
     context.warp_to_slot(3).unwrap();
 

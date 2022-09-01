@@ -45,6 +45,7 @@ mod general_pool {
     mod transfer_deposit;
     mod update_manager;
     mod update_pool_borrow_authority;
+    mod update_pool_config;
     mod withdraw;
     mod withdraw_request;
 }
@@ -65,6 +66,5 @@ mod income_pools {
 
 mod registry {
     mod init;
-    mod set_pool_config;
     mod set_registry_config;
 }

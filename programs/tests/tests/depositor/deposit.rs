@@ -6,7 +6,6 @@ use solana_sdk::signer::Signer;
 use solana_sdk::transaction::{Transaction, TransactionError};
 
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::SetRegistryPoolConfigParams;
 use everlend_registry::state::{DistributionPubkeys, RegistryRootAccounts};
 use everlend_utils::{
     find_program_address,
@@ -70,17 +69,6 @@ async fn setup() -> (
         .create(&mut env.context, &general_pool_market)
         .await
         .unwrap();
-    env.registry
-        .set_registry_pool_config(
-            &mut env.context,
-            &general_pool.pool_pubkey,
-            SetRegistryPoolConfigParams {
-                deposit_minimum: 0,
-                withdraw_minimum: 0,
-            },
-        )
-        .await
-        .unwrap();
 
     // 2.2 Add liquidity to general pool
 
@@ -99,7 +87,6 @@ async fn setup() -> (
     general_pool
         .deposit(
             &mut env.context,
-            &env.registry,
             &general_pool_market,
             &liquidity_provider,
             mining_acc,
@@ -372,7 +359,6 @@ async fn success_increased_liquidity() {
     general_pool
         .deposit(
             &mut context,
-            &registry,
             &general_pool_market,
             &liquidity_provider,
             mining_acc,

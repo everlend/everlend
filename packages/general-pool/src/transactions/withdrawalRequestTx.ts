@@ -22,8 +22,7 @@ export class WithdrawalRequestTxData extends Borsh.Data<{ collateralAmount: BN }
 }
 
 type WithdrawalRequestTxParams = {
-  registry: PublicKey
-  registryPoolConfig: PublicKey
+  poolConfig: PublicKey
   poolMarket: PublicKey
   pool: PublicKey
   poolMint: PublicKey
@@ -45,8 +44,7 @@ export class WithdrawalRequestTx extends Transaction {
     super(options)
     const { feePayer } = options
     const {
-      registry,
-      registryPoolConfig,
+      poolConfig,
       poolMarket,
       pool,
       withdrawRequests,
@@ -68,8 +66,7 @@ export class WithdrawalRequestTx extends Transaction {
     this.add(
       new TransactionInstruction({
         keys: [
-          { pubkey: registry, isSigner: false, isWritable: false },
-          { pubkey: registryPoolConfig, isSigner: false, isWritable: false },
+          { pubkey: poolConfig, isSigner: false, isWritable: false },
           { pubkey: poolMarket, isSigner: false, isWritable: false },
           { pubkey: pool, isSigner: false, isWritable: false },
           { pubkey: poolMint, isSigner: false, isWritable: true },

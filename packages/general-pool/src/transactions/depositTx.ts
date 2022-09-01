@@ -19,8 +19,7 @@ export class DepositTxData extends Borsh.Data<{ amount: BN }> {
 }
 
 type DepositTxParams = {
-  registry: PublicKey
-  registryPoolConfig: PublicKey
+  poolConfig: PublicKey
   poolMarket: PublicKey
   pool: PublicKey
   source: PublicKey
@@ -40,8 +39,7 @@ export class DepositTx extends Transaction {
     super(options)
     const { feePayer } = options
     const {
-      registry,
-      registryPoolConfig,
+      poolConfig,
       poolMarket,
       pool,
       source,
@@ -61,8 +59,7 @@ export class DepositTx extends Transaction {
     this.add(
       new TransactionInstruction({
         keys: [
-          { pubkey: registry, isSigner: false, isWritable: false },
-          { pubkey: registryPoolConfig, isSigner: false, isWritable: false },
+          { pubkey: poolConfig, isSigner: false, isWritable: false },
           { pubkey: poolMarket, isSigner: false, isWritable: false },
           { pubkey: pool, isSigner: false, isWritable: false },
           { pubkey: source, isSigner: false, isWritable: true },
