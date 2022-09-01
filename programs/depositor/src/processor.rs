@@ -11,8 +11,8 @@ use everlend_liquidity_oracle::{
 };
 use everlend_registry::state::{Registry, RegistryMarkets};
 use everlend_utils::{
-    assert_account_key, assert_initialized, assert_owned_by, assert_rent_exempt, assert_signer,
-    assert_uninitialized, cpi, find_program_address, EverlendError,
+    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
+    cpi, find_program_address, EverlendError,
 };
 use num_traits::Zero;
 use solana_program::program_error::ProgramError;
@@ -35,8 +35,7 @@ use crate::{
     find_transit_program_address,
     instruction::DepositorInstruction,
     state::{
-        Depositor, DeprecatedRebalancing, InitDepositorParams, InitRebalancingParams, Rebalancing,
-        RebalancingOperation,
+        Depositor, InitDepositorParams, InitRebalancingParams, Rebalancing, RebalancingOperation,
     },
 };
 
@@ -716,49 +715,27 @@ impl Processor {
 
         let depositor_info = next_account_info(account_info_iter)?;
         let registry_info = next_account_info(account_info_iter)?;
-        let rebalance_info = next_account_info(account_info_iter)?;
+        let new_registry_info = next_account_info(account_info_iter)?;
         let manager_info = next_account_info(account_info_iter)?;
-        let rent_info = next_account_info(account_info_iter)?;
-        let rent = &Rent::from_account_info(rent_info)?;
 
         assert_signer(manager_info)?;
 
         assert_owned_by(depositor_info, program_id)?;
         assert_owned_by(registry_info, &everlend_registry::id())?;
+        assert_owned_by(new_registry_info, &everlend_registry::id())?;
 
         // Get registry state
         let registry = Registry::unpack_unchecked(&registry_info.data.borrow())?;
         assert_account_key(manager_info, &registry.manager)?;
 
         // Get depositor state
-        let depositor = Depositor::unpack_unchecked(&depositor_info.data.borrow())?;
+        let mut depositor = Depositor::unpack_unchecked(&depositor_info.data.borrow())?;
         assert_account_key(registry_info, &depositor.registry)?;
 
-        let deprecated_rebalancing =
-            DeprecatedRebalancing::unpack_unchecked(&rebalance_info.data.borrow())?;
-        assert_initialized(&deprecated_rebalancing)?;
+        // Set new registry
+        depositor.registry = *new_registry_info.key;
 
-        assert_account_key(depositor_info, &deprecated_rebalancing.depositor)?;
-
-        // Realloc depositor size
-        rebalance_info.realloc(Rebalancing::LEN, false)?;
-
-        // Check rent exemption
-        assert_rent_exempt(rent, rebalance_info)?;
-
-        let rebalancing: Rebalancing = Rebalancing {
-            account_type: deprecated_rebalancing.account_type,
-            depositor: deprecated_rebalancing.depositor,
-            mint: deprecated_rebalancing.mint,
-            received_collateral: deprecated_rebalancing.received_collateral,
-            token_distribution: deprecated_rebalancing.token_distribution,
-            steps: deprecated_rebalancing.steps,
-            income_refreshed_at: deprecated_rebalancing.income_refreshed_at,
-            amount_to_distribute: 0,
-            distributed_liquidity: 0,
-        };
-
-        Rebalancing::pack(rebalancing, *rebalance_info.data.borrow_mut())?;
+        Depositor::pack(depositor, *depositor_info.data.borrow_mut())?;
 
         Ok(())
     }

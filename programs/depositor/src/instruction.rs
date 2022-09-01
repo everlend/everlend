@@ -196,10 +196,10 @@ pub enum DepositorInstruction {
     /// Migrate Depositor
     ///
     /// Accounts:
-    /// [R] Depositor
+    /// [W] Depositor
     /// [R] Registry
-    /// [W] Rebalance account
-    /// [R] Manager
+    /// [R] New registry
+    /// [S] Manager
     /// [R] Rent
     MigrateDepositor,
 
@@ -513,15 +513,13 @@ pub fn migrate_depositor(
     program_id: &Pubkey,
     depositor: &Pubkey,
     registry: &Pubkey,
+    new_registry: &Pubkey,
     manager: &Pubkey,
-    liquidity_mint: &Pubkey,
 ) -> Instruction {
-    let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
-
     let accounts = vec![
-        AccountMeta::new_readonly(*depositor, false),
+        AccountMeta::new(*depositor, false),
         AccountMeta::new_readonly(*registry, false),
-        AccountMeta::new(rebalancing, false),
+        AccountMeta::new_readonly(*new_registry, false),
         AccountMeta::new(*manager, true),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];

@@ -9,6 +9,7 @@ use commands_test::{command_test_larix_mining_raw, command_test_quarry_mining_ra
 use everlend_depositor::find_rebalancing_program_address;
 use everlend_depositor::state::Rebalancing;
 use everlend_general_pool::state::SetPoolConfigParams;
+use everlend_registry::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
 use everlend_utils::find_program_address;
 use regex::Regex;
 use solana_clap_utils::{
@@ -27,7 +28,7 @@ use spl_associated_token_account::get_associated_token_address;
 use accounts_config::*;
 use commands::*;
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::TOTAL_DISTRIBUTIONS;
+use everlend_registry::state::{DistributionPubkeys, TOTAL_DISTRIBUTIONS};
 use everlend_utils::integrations::{MoneyMarket, StakingMoneyMarket};
 use general_pool::get_withdrawal_requests;
 use utils::*;
@@ -77,46 +78,9 @@ async fn command_create(
     println!("Registry");
     let registry_pubkey = registry::init(config, None)?;
 
-    let mut money_market_program_ids = DistributionPubkeys::default();
-    money_market_program_ids[0] = default_accounts.port_finance.program_id;
-    money_market_program_ids[1] = default_accounts.larix.program_id;
-    money_market_program_ids[2] = default_accounts.solend.program_id;
-    money_market_program_ids[3] = default_accounts.tulip.program_id;
-
-    env.registry
-        .update_registry(
-            &mut env.context,
-            UpdateRegistryData {
-                general_pool_market: Some(general_pool_market.keypair.pubkey()),
-                income_pool_market: Some(income_pool_market.keypair.pubkey()),
-                liquidity_oracle: Some(test_liquidity_oracle.keypair.pubkey()),
-                liquidity_oracle_manager: None,
-                refresh_income_interval: None,
-            },
-        )
-        .await
-        .unwrap();
-
-    registry::set_registry_config(
-        config,
-        &registry_pubkey,
-        programs,
-        RegistryRootAccounts::default(),
-        RegistrySettings {
-            refresh_income_interval: REFRESH_INCOME_INTERVAL,
-        },
-    )?;
-    println!("programs = {:#?}", programs);
-
     let general_pool_market_pubkey = general_pool::create_market(config, None, &registry_pubkey)?;
     let income_pool_market_pubkey =
         income_pools::create_market(config, None, &general_pool_market_pubkey)?;
-
-    let mm_collateral_pool_markets = vec![
-        collateral_pool::create_market(config, None)?,
-        collateral_pool::create_market(config, None)?,
-        collateral_pool::create_market(config, None)?,
-    ];
 
     println!("Liquidity oracle");
     let liquidity_oracle_pubkey = liquidity_oracle::init(config, None)?;
@@ -126,42 +90,40 @@ async fn command_create(
     distribution[2] = 0;
 
     println!("Registry");
-    let registry_pubkey = registry::init(config, None)?;
-    let mut programs = RegistryPrograms {
-        general_pool_program_id: everlend_general_pool::id(),
-        collateral_pool_program_id: everlend_collateral_pool::id(),
-        liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
-        depositor_program_id: everlend_depositor::id(),
-        income_pools_program_id: everlend_income_pools::id(),
-        money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
-    };
-    programs.money_market_program_ids[0] = default_accounts.port_finance.program_id;
-    programs.money_market_program_ids[1] = default_accounts.larix.program_id;
-    programs.money_market_program_ids[2] = default_accounts.solend.program_id;
-    programs.money_market_program_ids[3] = default_accounts.tulip.program_id;
+    let mut money_market_program_ids = DistributionPubkeys::default();
+    money_market_program_ids[0] = default_accounts.port_finance.program_id;
+    money_market_program_ids[1] = default_accounts.larix.program_id;
+    money_market_program_ids[2] = default_accounts.solend.program_id;
+    money_market_program_ids[3] = default_accounts.tulip.program_id;
 
-    println!("programs = {:#?}", programs);
+    let mm_collateral_pool_markets = vec![
+        collateral_pool::create_market(config, None)?,
+        collateral_pool::create_market(config, None)?,
+        collateral_pool::create_market(config, None)?,
+    ];
 
-    let mut collateral_pool_markets: [Pubkey; TOTAL_DISTRIBUTIONS] = Default::default();
+    let mut collateral_pool_markets = DistributionPubkeys::default();
     collateral_pool_markets[..mm_collateral_pool_markets.len()]
         .copy_from_slice(&mm_collateral_pool_markets);
 
-    let roots = RegistryRootAccounts {
-        general_pool_market: general_pool_market_pubkey,
-        income_pool_market: income_pool_market_pubkey,
-        collateral_pool_markets,
-        liquidity_oracle: liquidity_oracle_pubkey,
-    };
-
-    println!("roots = {:#?}", &roots);
-
-    registry::set_registry_config(
+    registry::update_registry(
         config,
         &registry_pubkey,
-        programs,
-        roots,
-        RegistrySettings {
-            refresh_income_interval: 0,
+        UpdateRegistryData {
+            general_pool_market: Some(general_pool_market_pubkey),
+            income_pool_market: Some(income_pool_market_pubkey),
+            liquidity_oracle: Some(liquidity_oracle_pubkey),
+            liquidity_oracle_manager: None,
+            refresh_income_interval: Some(REFRESH_INCOME_INTERVAL),
+        },
+    )?;
+
+    registry::update_registry_markets(
+        config,
+        &registry_pubkey,
+        UpdateRegistryMarketsData {
+            money_markets: Some(money_market_program_ids),
+            collateral_pool_markets: Some(collateral_pool_markets),
         },
     )?;
 
@@ -1218,9 +1180,28 @@ async fn main() -> anyhow::Result<()> {
                                 .help("Keypair [default: new keypair]"),
                         ),
                 )
-                .subcommand(SubCommand::with_name("migrate-depositor").about(
-                    "Migrate Depositor account. Must be invoke after migrate-registry-config.",
-                ))
+                .subcommand(
+                    SubCommand::with_name("migrate-depositor")
+                    .about(
+                        "Migrate Depositor account. Must be invoke after migrate-registry-config.",
+                    ).arg(
+                        Arg::with_name("source")
+                            .validator(is_pubkey)
+                            .long("source-registry")
+                            .value_name("SOURCE")
+                            .takes_value(true)
+                            .required(true)
+                            .help("Old registry"),
+                    )
+                    .arg(
+                        Arg::with_name("target")
+                            .validator(is_pubkey)
+                            .long("target-registry")
+                            .value_name("TARGET")
+                            .takes_value(true)
+                            .required(true)
+                            .help("New registry"),
+                    ))
                 .subcommand(
                     SubCommand::with_name("migrate-registry-config").about(
                         "Migrate RegistryConfig account. Must be invoke by registry manager.",
@@ -1572,13 +1553,10 @@ async fn main() -> anyhow::Result<()> {
                     command_run_migrate(&config, accounts_path, case).await
                 }
                 ("migrate-depositor", Some(_)) => {
-                    println!("WARN! This migration must be invoke after migrate-registry-config.");
                     println!("Started Depositor migration");
-                    command_migrate_depositor(&config).await
-                }
-                ("migrate-registry-config", Some(_)) => {
-                    println!("Started RegistryConfig migration");
-                    command_migrate_registry_config(&config).await
+                    let source = pubkey_of(arg_matches, "source").unwrap();
+                    let target = pubkey_of(arg_matches, "target").unwrap();
+                    command_migrate_depositor(&config, &source, &target).await
                 }
                 ("migrate-pool-market", Some(arg_matches)) => {
                     let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
