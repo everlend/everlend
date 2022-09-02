@@ -1,6 +1,5 @@
 use crate::utils::*;
 use everlend_general_pool::{find_transit_program_address};
-use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::*;
@@ -138,7 +137,7 @@ async fn success() {
 }
 
 #[tokio::test]
-async fn failed_with_spl_transfer() {
+async fn failed_after_spl_transfer() {
     let (
         mut context,
         test_pool_market,
@@ -195,23 +194,6 @@ async fn failed_with_spl_transfer() {
     assert_eq!(
         get_token_balance(&mut context, &destination_user.pool_account).await,
         150
-    );
-
-    assert_eq!(
-        test_pool
-            .transfer_deposit(
-                &mut context,
-                &user,
-                &destination_user,
-                mining_acc,
-                destination_mining_acc,
-            )
-            .await.unwrap_err()
-            .unwrap(),
-        TransactionError::InstructionError(
-            0,
-            InstructionError::Custom(EverlendError::TransferAmountMismatch as u32)
-        )
     );
 
     assert_eq!(
