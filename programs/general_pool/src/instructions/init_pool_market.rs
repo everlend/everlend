@@ -14,18 +14,18 @@ use solana_program::{
 use crate::state::{InitPoolMarketParams, PoolMarket};
 
 /// Instruction context
-pub struct InitPoolMarketContext<'a> {
-    manager: &'a AccountInfo<'a>,
-    registry: &'a AccountInfo<'a>,
-    pool_market: &'a AccountInfo<'a>,
+pub struct InitPoolMarketContext<'a, 'b> {
+    manager: &'a AccountInfo<'b>,
+    registry: &'a AccountInfo<'b>,
+    pool_market: &'a AccountInfo<'b>,
 }
 
-impl<'a> InitPoolMarketContext<'a> {
+impl<'a, 'b> InitPoolMarketContext<'a, 'b> {
     /// New instruction context
     pub fn new(
         program_id: &Pubkey,
-        accounts: &'a [AccountInfo<'a>],
-    ) -> Result<InitPoolMarketContext<'a>, ProgramError> {
+        accounts: &'a [AccountInfo<'b>],
+    ) -> Result<InitPoolMarketContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter();
 
         let pool_market_info = next_program_account(account_info_iter, program_id)?;
