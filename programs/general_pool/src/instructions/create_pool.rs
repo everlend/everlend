@@ -46,40 +46,42 @@ impl<'a, 'b> CreatePoolContext<'a, 'b> {
     ) -> Result<CreatePoolContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter();
 
-        let pool_market_info = next_program_account(account_info_iter, program_id)?;
-        let pool_info = next_uninitialized_account(account_info_iter)?;
-        let pool_config_info = next_uninitialized_account(account_info_iter)?;
-        let withdrawal_requests_info = next_uninitialized_account(account_info_iter)?;
-        let liquidity_mint_info = next_program_account(account_info_iter, &spl_token::id())?;
-        let liquidity_account_info = next_program_account(account_info_iter, &spl_token::id())?;
-        let transit_info = next_uninitialized_account(account_info_iter)?;
-        let collateral_mint_info = next_program_account(account_info_iter, &spl_token::id())?;
-        let manager_info = next_signer_account(account_info_iter)?;
-        let pool_market_authority_info = next_program_account(account_info_iter, program_id)?;
-        let rent_info = next_program_account(account_info_iter, &Rent::id())?;
-        let _system_program_info = next_program_account(account_info_iter, &system_program::id())?;
-        let _token_program_info = next_program_account(account_info_iter, &spl_token::id())?;
+        let pool_market = next_program_account(account_info_iter, program_id)?;
+        let pool = next_uninitialized_account(account_info_iter)?;
+        let pool_config = next_uninitialized_account(account_info_iter)?;
+        let withdrawal_requests = next_uninitialized_account(account_info_iter)?;
+        let liquidity_mint = next_program_account(account_info_iter, &spl_token::id())?;
+        let liquidity_account = next_program_account(account_info_iter, &spl_token::id())?;
+        let transit = next_uninitialized_account(account_info_iter)?;
+        let collateral_mint = next_program_account(account_info_iter, &spl_token::id())?;
+        let manager = next_signer_account(account_info_iter)?;
+        let pool_market_authority = next_program_account(account_info_iter, program_id)?;
+        let rent = next_program_account(account_info_iter, &Rent::id())?;
+        let _system_program = next_program_account(account_info_iter, &system_program::id())?;
+        let _token_program = next_program_account(account_info_iter, &spl_token::id())?;
 
         Ok(CreatePoolContext {
-            manager: manager_info,
-            pool_market: pool_market_info,
-            liquidity_mint: liquidity_mint_info,
-            liquidity_account: liquidity_account_info,
-            collateral_mint: collateral_mint_info,
-            pool_market_authority: pool_market_authority_info,
-            pool: pool_info,
-            transit: transit_info,
-            rent: rent_info,
-            pool_config: pool_config_info,
-            withdrawal_requests: withdrawal_requests_info,
+            manager,
+            pool_market,
+            liquidity_mint,
+            liquidity_account,
+            collateral_mint,
+            pool_market_authority,
+            pool,
+            transit,
+            rent,
+            pool_config,
+            withdrawal_requests,
         })
     }
 
     /// Process instruction
     pub fn process(&self, program_id: &Pubkey) -> ProgramResult {
         // Check manager
-        let pool_market = PoolMarket::unpack(&self.pool_market.data.borrow())?;
-        assert_account_key(&self.manager, &pool_market.manager)?;
+        {
+            let pool_market = PoolMarket::unpack(&self.pool_market.data.borrow())?;
+            assert_account_key(&self.manager, &pool_market.manager)?;
+        }
 
         let token_mint = Mint::unpack(&self.liquidity_mint.data.borrow())?;
 
