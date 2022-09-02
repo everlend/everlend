@@ -17,24 +17,24 @@ pub struct UpdateRegistryMarketsData {
     pub collateral_pool_markets: Option<DistributionPubkeys>,
 }
 /// Instruction context
-pub struct UpdateRegistryMarketsContext<'a> {
-    manager: AccountInfo<'a>,
-    registry: AccountInfo<'a>,
+pub struct UpdateRegistryMarketsContext<'a, 'b> {
+    manager: &'a AccountInfo<'b>,
+    registry: &'a AccountInfo<'b>,
 }
 
-impl<'a> UpdateRegistryMarketsContext<'a> {
+impl<'a, 'b> UpdateRegistryMarketsContext<'a, 'b> {
     /// New instruction context
     pub fn new(
         program_id: &Pubkey,
-        accounts: &[AccountInfo<'a>],
-    ) -> Result<UpdateRegistryMarketsContext<'a>, ProgramError> {
+        accounts: &'a [AccountInfo<'b>],
+    ) -> Result<UpdateRegistryMarketsContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter();
         let registry_info = next_account(account_info_iter, program_id)?;
         let manager_info = next_signer_account(account_info_iter)?;
 
         Ok(UpdateRegistryMarketsContext {
-            manager: manager_info.clone(),
-            registry: registry_info.clone(),
+            manager: manager_info,
+            registry: registry_info,
         })
     }
 

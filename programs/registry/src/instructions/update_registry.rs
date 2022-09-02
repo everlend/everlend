@@ -23,24 +23,24 @@ pub struct UpdateRegistryData {
 }
 
 /// Instruction context
-pub struct UpdateRegistryContext<'a> {
-    manager: AccountInfo<'a>,
-    registry: AccountInfo<'a>,
+pub struct UpdateRegistryContext<'a, 'b> {
+    manager: &'a AccountInfo<'b>,
+    registry: &'a AccountInfo<'b>,
 }
 
-impl<'a> UpdateRegistryContext<'a> {
+impl<'a, 'b> UpdateRegistryContext<'a, 'b> {
     /// New instruction context
     pub fn new(
         program_id: &Pubkey,
-        accounts: &[AccountInfo<'a>],
-    ) -> Result<UpdateRegistryContext<'a>, ProgramError> {
+        accounts: &'a [AccountInfo<'b>],
+    ) -> Result<UpdateRegistryContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter();
         let registry_info = next_account(account_info_iter, program_id)?;
         let manager_info = next_signer_account(account_info_iter)?;
 
         Ok(UpdateRegistryContext {
-            manager: manager_info.clone(),
-            registry: registry_info.clone(),
+            manager: manager_info,
+            registry: registry_info,
         })
     }
 
