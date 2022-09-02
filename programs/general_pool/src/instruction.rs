@@ -23,7 +23,7 @@ pub enum LiquidityPoolsInstruction {
     ///
     /// Accounts:
     /// [W] Pool market - uninitialized
-    /// [R] Market manager
+    /// [S] Market manager
     /// [R] Registry
     /// [R] Rent sysvar
     InitPoolMarket,
@@ -35,10 +35,10 @@ pub enum LiquidityPoolsInstruction {
     /// [W] Pool
     /// [W] Pool Config
     /// [W] Withdrawals requests account
-    /// [R] Token mint
-    /// [W] Token account
+    /// [R] Liquidity mint
+    /// [W] Liquidity account
     /// [W] Transit collateral account
-    /// [W] Pool mint
+    /// [W] Collateral mint
     /// [WS] Market manager
     /// [R] Pool market authority
     /// [R] Rent sysvar
@@ -257,7 +257,7 @@ pub fn init_pool_market(
 ) -> Instruction {
     let accounts = vec![
         AccountMeta::new(*pool_market, false),
-        AccountMeta::new_readonly(*manager, false),
+        AccountMeta::new_readonly(*manager, true),
         AccountMeta::new_readonly(*registry, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
@@ -274,27 +274,28 @@ pub fn init_pool_market(
 pub fn create_pool(
     program_id: &Pubkey,
     pool_market: &Pubkey,
-    token_mint: &Pubkey,
-    token_account: &Pubkey,
-    pool_mint: &Pubkey,
+    liquidity_mint: &Pubkey,
+    liquidity_account: &Pubkey,
+    collateral_mint: &Pubkey,
     manager: &Pubkey,
 ) -> Instruction {
     let (pool_market_authority, _) = find_program_address(program_id, pool_market);
-    let (pool, _) = find_pool_program_address(program_id, pool_market, token_mint);
+    let (pool, _) = find_pool_program_address(program_id, pool_market, liquidity_mint);
     let (pool_config, _) = find_pool_config_program_address(program_id, &pool);
-    let (transit_collateral, _) = find_transit_program_address(program_id, pool_market, pool_mint);
+    let (transit_collateral, _) =
+        find_transit_program_address(program_id, pool_market, collateral_mint);
     let (withdrawal_requests, _) =
-        find_withdrawal_requests_program_address(program_id, pool_market, token_mint);
+        find_withdrawal_requests_program_address(program_id, pool_market, liquidity_mint);
 
     let accounts = vec![
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new(pool, false),
         AccountMeta::new(pool_config, false),
         AccountMeta::new(withdrawal_requests, false),
-        AccountMeta::new_readonly(*token_mint, false),
-        AccountMeta::new(*token_account, false),
+        AccountMeta::new_readonly(*liquidity_mint, false),
+        AccountMeta::new(*liquidity_account, false),
         AccountMeta::new(transit_collateral, false),
-        AccountMeta::new(*pool_mint, false),
+        AccountMeta::new(*collateral_mint, false),
         AccountMeta::new(*manager, true),
         AccountMeta::new_readonly(pool_market_authority, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),

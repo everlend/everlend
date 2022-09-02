@@ -46,11 +46,14 @@ pub struct InitWithdrawalRequestsParams {
 
 impl WithdrawalRequests {
     /// Initialize a withdrawal requests
-    pub fn init(&mut self, params: InitWithdrawalRequestsParams) {
-        self.account_type = AccountType::WithdrawRequests;
-        self.account_version = ACTUAL_VERSION;
-        self.pool = params.pool;
-        self.mint = params.mint;
+    pub fn init(params: InitWithdrawalRequestsParams) -> WithdrawalRequests {
+        let mut wr = WithdrawalRequests::default();
+        wr.account_type = AccountType::WithdrawRequests;
+        wr.account_version = ACTUAL_VERSION;
+        wr.pool = params.pool;
+        wr.mint = params.mint;
+
+        wr
     }
 
     /// Add new withdrawal request
