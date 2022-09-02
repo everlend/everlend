@@ -22,8 +22,6 @@ type TransferDepositTxParams = {
   pool: PublicKey
   source: PublicKey
   destination: PublicKey
-  poolMarket: PublicKey
-  poolMint: PublicKey
   destinationUserAuthority: PublicKey,
   rewardPool: PublicKey
   rewardAccount: PublicKey
@@ -41,8 +39,6 @@ export class TransferDepositTx extends Transaction {
       pool,
       source,
       destination,
-      poolMarket,
-      poolMint,
       destinationUserAuthority,
       rewardPool,
       rewardAccount,
@@ -60,8 +56,6 @@ export class TransferDepositTx extends Transaction {
           { pubkey: pool, isSigner: false, isWritable: false },
           { pubkey: source, isSigner: false, isWritable: true },
           { pubkey: destination, isSigner: false, isWritable: true },
-          { pubkey: poolMarket, isSigner: false, isWritable: false },
-          { pubkey: poolMint, isSigner: false, isWritable: true },
           { pubkey: feePayer, isSigner: true, isWritable: false },
           { pubkey: destinationUserAuthority, isSigner: false, isWritable: false },
           { pubkey: rewardPool, isSigner: false, isWritable: true },

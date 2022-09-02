@@ -122,12 +122,10 @@ async fn success() {
     test_pool
         .transfer_deposit(
             &mut context,
-            &test_pool_market,
             &user,
             &destination_user,
             mining_acc,
             destination_mining_acc,
-            100
         )
         .await
         .unwrap();
@@ -203,12 +201,10 @@ async fn failed_with_spl_transfer() {
         test_pool
             .transfer_deposit(
                 &mut context,
-                &test_pool_market,
                 &user,
                 &destination_user,
                 mining_acc,
                 destination_mining_acc,
-                100
             )
             .await.unwrap_err()
             .unwrap(),
@@ -222,12 +218,10 @@ async fn failed_with_spl_transfer() {
         test_pool
             .transfer_deposit(
                 &mut context,
-                &test_pool_market,
                 &destination_user,
                 &user,
                 destination_mining_acc,
                 mining_acc,
-                150
             )
             .await.unwrap_err()
             .unwrap(),
@@ -268,12 +262,10 @@ async fn successful_withdraw_request_after_transfer() {
     test_pool
         .transfer_deposit(
             &mut context,
-            &test_pool_market,
             &user,
             &destination_user,
             mining_acc,
             destination_mining_acc,
-            100
         )
         .await
         .unwrap();

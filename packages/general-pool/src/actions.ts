@@ -568,9 +568,6 @@ export const prepareTransferDepositTx = async (
   amount: BN,
 ): Promise<ActionResult> => {
   const tx = new Transaction()
-  const {
-    data: { poolMarket, poolMint},
-  } = await Pool.load(connection, pool)
 
   tx.add(
     new TransferDepositTx(
@@ -579,8 +576,6 @@ export const prepareTransferDepositTx = async (
         pool,
         source,
         destination,
-        poolMarket,
-        poolMint,
         destinationUserAuthority,
         rewardPool,
         rewardAccount,

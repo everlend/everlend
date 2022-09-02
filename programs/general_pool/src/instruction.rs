@@ -252,8 +252,6 @@ pub enum LiquidityPoolsInstruction {
     /// [R] Pool
     /// [W] Source account
     /// [W] Destination account
-    /// [R] Pool market
-    /// [W] Pool mint account
     /// [RS] User transfer authority
     /// [R] Destination user transfer authority
     /// [W] Mining reward pool
@@ -262,10 +260,7 @@ pub enum LiquidityPoolsInstruction {
     /// [R] Everlend config account
     /// [R] Everlend rewards program account
     /// [R] Token program id
-    TransferDeposit {
-        /// Amount to transfer
-        amount: u64
-    },
+    TransferDeposit,
 }
 
 /// Creates 'InitPoolMarket' instruction.
@@ -462,25 +457,20 @@ pub fn deposit(
 #[allow(clippy::too_many_arguments)]
 pub fn transfer_deposit(
     program_id: &Pubkey,
-    pool_market: &Pubkey,
     pool: &Pubkey,
     source: &Pubkey,
     destination: &Pubkey,
-    pool_mint: &Pubkey,
     user_transfer_authority: &Pubkey,
     destination_user_transfer_authority: &Pubkey,
     mining_reward_pool: &Pubkey,
     mining_reward_acc: &Pubkey,
     destination_mining_reward_acc: &Pubkey,
     config: &Pubkey,
-    amount: u64,
 ) -> Instruction {
     let accounts = vec![
         AccountMeta::new_readonly(*pool, false),
         AccountMeta::new(*source, false),
         AccountMeta::new(*destination, false),
-        AccountMeta::new_readonly(*pool_market, false),
-        AccountMeta::new(*pool_mint, false),
         AccountMeta::new_readonly(*user_transfer_authority, true),
         AccountMeta::new_readonly(*destination_user_transfer_authority, false),
         AccountMeta::new(*mining_reward_pool, false),
@@ -493,7 +483,7 @@ pub fn transfer_deposit(
 
     Instruction::new_with_borsh(
         *program_id,
-        &LiquidityPoolsInstruction::TransferDeposit { amount },
+        &LiquidityPoolsInstruction::TransferDeposit,
         accounts,
     )
 }

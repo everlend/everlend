@@ -516,13 +516,11 @@ impl Processor {
     }
 
     /// Process TransferDeposit instruction
-    pub fn transfer_deposit(program_id: &Pubkey, amount: u64, accounts: &[AccountInfo]) -> ProgramResult {
+    pub fn transfer_deposit(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
         let pool_info = next_account_info(account_info_iter)?;
         let source_info = next_account_info(account_info_iter)?;
         let destination_info = next_account_info(account_info_iter)?;
-        let pool_market_info = next_account_info(account_info_iter)?;
-        let pool_mint_info = next_account_info(account_info_iter)?;
         let user_transfer_authority_info = next_account_info(account_info_iter)?;
         let destination_user_transfer_authority_info = next_account_info(account_info_iter)?;
         // mining accounts
@@ -543,10 +541,6 @@ impl Processor {
         // Get pool state
         let pool = Pool::unpack(&pool_info.data.borrow())?;
 
-        // Check pool accounts
-        assert_account_key(pool_market_info, &pool.pool_market)?;
-        assert_account_key(pool_mint_info, &pool.pool_mint)?;
-
         let source_account = Account::unpack(&source_info.data.borrow())?;
         let destination_account = Account::unpack(&destination_info.data.borrow())?;
 
@@ -555,16 +549,13 @@ impl Processor {
         }
 
         let collateral_amount = Account::unpack(*source_info.data.borrow())?.amount;
-        if collateral_amount != amount {
-            return Err(EverlendError::TransferAmountMismatch.into());
-        }
 
         // Transfer token from source to destination token account
         cpi::spl_token::transfer(
             source_info.clone(),
             destination_info.clone(),
             user_transfer_authority_info.clone(),
-            amount,
+            collateral_amount,
             &[],
         )?;
 
@@ -589,7 +580,7 @@ impl Processor {
             mining_reward_acc.clone(),
             user_transfer_authority_info.clone(),
             pool_info.to_owned(),
-            amount,
+            collateral_amount,
             &[pool_seeds],
         )?;
 
@@ -600,7 +591,7 @@ impl Processor {
             destination_reward_acc.clone(),
             destination_user_transfer_authority_info.clone(),
             pool_info.to_owned(),
-            amount,
+            collateral_amount,
             &[pool_seeds],
         )?;
 
@@ -1445,9 +1436,9 @@ impl Processor {
                 Self::deposit(program_id, amount, accounts)
             }
 
-            LiquidityPoolsInstruction::TransferDeposit { amount } => {
+            LiquidityPoolsInstruction::TransferDeposit => {
                 msg!("LiquidityPoolsInstruction: TransferDeposit");
-                Self::transfer_deposit(program_id, amount, accounts)
+                Self::transfer_deposit(program_id, accounts)
             }
 
             LiquidityPoolsInstruction::Withdraw => {
