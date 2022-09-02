@@ -52,7 +52,7 @@ pub async fn command_create_registry(
     let default_accounts = config.get_default_accounts();
     let mut initialized_accounts = config.get_initialized_accounts();
 
-    let mm_pool_markets = &initialized_accounts.mm_pool_markets;
+    let initialized_collateral_pool_markets = &initialized_accounts.collateral_pool_markets;
 
     let registry_pubkey = registry::init(config, keypair)?;
     let mut programs = RegistryPrograms {
@@ -71,7 +71,7 @@ pub async fn command_create_registry(
     println!("programs = {:#?}", programs);
 
     let mut collateral_pool_markets: [Pubkey; TOTAL_DISTRIBUTIONS] = Default::default();
-    collateral_pool_markets[..mm_pool_markets.len()].copy_from_slice(mm_pool_markets);
+    collateral_pool_markets[..initialized_collateral_pool_markets.len()].copy_from_slice(initialized_collateral_pool_markets);
 
     let roots = RegistryRootAccounts {
         general_pool_market: initialized_accounts.general_pool_market,
@@ -334,7 +334,7 @@ pub async fn command_create_collateral_pool_market(
 
     let mm_pool_market_pubkey = collateral_pool::create_market(config, keypair)?;
 
-    initialiazed_accounts.mm_pool_markets[money_market as usize] = mm_pool_market_pubkey;
+    initialiazed_accounts.collateral_pool_markets[money_market as usize] = mm_pool_market_pubkey;
 
     initialiazed_accounts
         .save(&format!("accounts.{}.yaml", config.network))
@@ -466,13 +466,22 @@ pub async fn command_create_collateral_pool(
 
     let (_, collateral_mint_map) = get_asset_maps(default_accounts);
     let money_market_index = money_market as usize;
-    let mm_pool_market_pubkey = initialiazed_accounts.mm_pool_markets[money_market_index];
+    let collateral_pool_market_pubkey = initialiazed_accounts.collateral_pool_markets[money_market_index];
+    if collateral_pool_market_pubkey.eq(&Pubkey::default()){
+        println!("collateral_pool_market_pubkey is empty. Create it first");
+        return Ok(())
+    }
 
     for key in required_mints {
         let collateral_mint = collateral_mint_map.get(key).unwrap()[money_market_index].unwrap();
 
+        if collateral_mint.eq(&Pubkey::default()){
+            println!("collateral_mint for {} missed", key);
+            continue
+        }
+
         let pool_pubkeys =
-            collateral_pool::create_pool(config, &mm_pool_market_pubkey, &collateral_mint)?;
+            collateral_pool::create_pool(config, &collateral_pool_market_pubkey, &collateral_mint)?;
 
         depositor::create_transit(
             config,
@@ -528,7 +537,7 @@ pub async fn command_create_token_accounts(
             .get(key)
             .unwrap()
             .iter()
-            .zip(initialiazed_accounts.mm_pool_markets.iter())
+            .zip(initialiazed_accounts.collateral_pool_markets.iter())
             .filter_map(|(collateral_mint, mm_pool_market_pubkey)| {
                 collateral_mint.map(|coll_mint| (coll_mint, *mm_pool_market_pubkey))
             })
