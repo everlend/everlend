@@ -14,8 +14,8 @@ use crate::state::Registry;
 
 /// Instruction context
 pub struct InitContext<'a, 'b> {
-    manager: &'a AccountInfo<'b>,
     registry: &'a AccountInfo<'b>,
+    manager: &'a AccountInfo<'b>,
     rent: &'a AccountInfo<'b>,
 }
 
@@ -27,15 +27,15 @@ impl<'a, 'b> InitContext<'a, 'b> {
     ) -> Result<InitContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter();
 
-        let registry_info = next_uninitialized_account(account_info_iter)?;
-        let manager_info = next_signer_account(account_info_iter)?;
-        let _system_info = next_program_account(account_info_iter, &system_program::id())?;
-        let rent_info = next_program_account(account_info_iter, &Rent::id())?;
+        let registry = next_uninitialized_account(account_info_iter)?;
+        let manager = next_signer_account(account_info_iter)?;
+        let _system = next_program_account(account_info_iter, &system_program::id())?;
+        let rent = next_program_account(account_info_iter, &Rent::id())?;
 
         Ok(InitContext {
-            manager: manager_info,
-            registry: registry_info,
-            rent: rent_info,
+            registry,
+            manager,
+            rent,
         })
     }
 

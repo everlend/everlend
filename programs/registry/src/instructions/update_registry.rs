@@ -24,8 +24,8 @@ pub struct UpdateRegistryData {
 
 /// Instruction context
 pub struct UpdateRegistryContext<'a, 'b> {
-    manager: &'a AccountInfo<'b>,
     registry: &'a AccountInfo<'b>,
+    manager: &'a AccountInfo<'b>,
 }
 
 impl<'a, 'b> UpdateRegistryContext<'a, 'b> {
@@ -35,13 +35,10 @@ impl<'a, 'b> UpdateRegistryContext<'a, 'b> {
         accounts: &'a [AccountInfo<'b>],
     ) -> Result<UpdateRegistryContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter();
-        let registry_info = next_account(account_info_iter, program_id)?;
-        let manager_info = next_signer_account(account_info_iter)?;
+        let registry = next_account(account_info_iter, program_id)?;
+        let manager = next_signer_account(account_info_iter)?;
 
-        Ok(UpdateRegistryContext {
-            manager: manager_info,
-            registry: registry_info,
-        })
+        Ok(UpdateRegistryContext { registry, manager })
     }
 
     /// Process instruction
