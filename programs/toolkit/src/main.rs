@@ -18,6 +18,7 @@ use crate::accounts_config::InitializedAccounts;
 
 mod accounts_config;
 mod depositor;
+mod helpers;
 mod migrations;
 mod registry;
 mod root;

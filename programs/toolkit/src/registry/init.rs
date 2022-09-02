@@ -1,5 +1,4 @@
 use crate::{
-    commands::command_create_registry,
     utils::{arg_keypair, Config},
     ToolkitCommand,
 };
@@ -33,7 +32,8 @@ impl<'a> ToolkitCommand<'a> for InitRegistryCommand {
         println!("Started Depositor migration");
 
         let keypair = keypair_of(arg_matches, ARG_REGISTRY).unwrap();
-        command_create_registry(&config, Some(keypair))?;
+        // command_create_registry(&config, Some(keypair))?;
+        // TODO: move this command inside this
 
         Ok(())
     }
