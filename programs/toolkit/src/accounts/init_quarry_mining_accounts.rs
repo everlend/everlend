@@ -1,0 +1,19 @@
+// .subcommand(
+//     SubCommand::with_name("init-quarry-mining-accounts")
+//         .arg(
+//             Arg::with_name("default")
+//                 .long("default")
+//                 .value_name("PATH")
+//                 .takes_value(true)
+//                 .help("Defaults file"),
+//         )
+//         .arg(
+//             Arg::with_name("token")
+//                 .long("token")
+//                 .short("t")
+//                 .value_name("TOKEN")
+//                 .takes_value(true)
+//                 .required(true)
+//                 .help("Token"),
+//         ),
+// )
