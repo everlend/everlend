@@ -8,6 +8,7 @@ mod port_finance;
 mod solend;
 mod spl_lending;
 mod tulip;
+mod francium;
 
 pub use collateral_pool::*;
 pub use larix::*;
@@ -15,6 +16,7 @@ pub use port_finance::*;
 pub use solend::*;
 pub use spl_lending::*;
 pub use tulip::*;
+pub use francium::*;
 
 ///
 pub trait CollateralStorage<'a> {
