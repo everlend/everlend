@@ -28,12 +28,15 @@ pub struct PoolBorrowAuthority {
 
 impl PoolBorrowAuthority {
     /// Initialize a PoolBorrowAuthority
-    pub fn init(&mut self, params: InitPoolBorrowAuthorityParams) {
-        self.account_type = AccountType::PoolBorrowAuthority;
-        self.pool = params.pool;
-        self.borrow_authority = params.borrow_authority;
-        self.amount_borrowed = 0;
-        self.share_allowed = params.share_allowed;
+    pub fn init(params: InitPoolBorrowAuthorityParams) -> PoolBorrowAuthority {
+        let mut borrow_authority = PoolBorrowAuthority::default();
+        borrow_authority.account_type = AccountType::PoolBorrowAuthority;
+        borrow_authority.pool = params.pool;
+        borrow_authority.borrow_authority = params.borrow_authority;
+        borrow_authority.amount_borrowed = 0;
+        borrow_authority.share_allowed = params.share_allowed;
+
+        return borrow_authority;
     }
 
     /// Borrow funds
@@ -56,11 +59,6 @@ impl PoolBorrowAuthority {
             .checked_sub(amount)
             .ok_or(EverlendError::MathOverflow)?;
         Ok(())
-    }
-
-    /// Update share allowed
-    pub fn update_share_allowed(&mut self, share: u16) {
-        self.share_allowed = share
     }
 
     /// Get amount allowed

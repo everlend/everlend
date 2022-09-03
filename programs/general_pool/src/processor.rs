@@ -1,11 +1,15 @@
 //! Program processor
 use borsh::BorshDeserialize;
+use everlend_utils::EverlendError;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::msg;
 use solana_program::{account_info::AccountInfo, pubkey::Pubkey};
 
 use crate::instruction::LiquidityPoolsInstruction;
-use crate::instructions::{CreatePoolContext, InitPoolMarketContext};
+use crate::instructions::{
+    CreatePoolBorrowAuthorityContext, CreatePoolContext, DeletePoolBorrowAuthorityContext,
+    DepositContext, InitPoolMarketContext, SetPoolConfigContext, UpdatePoolBorrowAuthorityContext,
+};
 
 /// Instruction processing router
 pub fn process_instruction(

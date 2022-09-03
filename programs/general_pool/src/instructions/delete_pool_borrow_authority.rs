@@ -1,50 +1,74 @@
- /// Process DeletePoolBorrowAuthority instruction
- pub fn delete_pool_borrow_authority(
-    program_id: &Pubkey,
-    accounts: &[AccountInfo],
-) -> ProgramResult {
-    let account_info_iter = &mut accounts.iter();
-    let pool_market_info = next_account_info(account_info_iter)?;
-    let pool_info = next_account_info(account_info_iter)?;
-    let pool_borrow_authority_info = next_account_info(account_info_iter)?;
-    let receiver_info = next_account_info(account_info_iter)?;
-    let manager_info = next_account_info(account_info_iter)?;
+use crate::state::{Pool, PoolBorrowAuthority, PoolMarket};
+use everlend_utils::{
+    assert_account_key, next_account, next_signer_account, next_unchecked_account, EverlendError,
+};
+use solana_program::{
+    account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
+    program_pack::Pack, pubkey::Pubkey,
+};
 
-    assert_signer(manager_info)?;
-
-    // Check programs
-    assert_owned_by(pool_market_info, program_id)?;
-    assert_owned_by(pool_info, program_id)?;
-    assert_owned_by(pool_borrow_authority_info, program_id)?;
-
-    let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
-
-    // Check manager
-    assert_account_key(manager_info, &pool_market.manager)?;
-
-    let pool = Pool::unpack(&pool_info.data.borrow())?;
-
-    // Check pool accounts
-    assert_account_key(pool_market_info, &pool.pool_market)?;
-
-    // Get pool borrow authority state to check initialized
-    let pool_borrow_authority =
-        PoolBorrowAuthority::unpack(&pool_borrow_authority_info.data.borrow())?;
-    assert_account_key(pool_info, &pool_borrow_authority.pool)?;
-
-    let receiver_starting_lamports = receiver_info.lamports();
-    let pool_borrow_authority_lamports = pool_borrow_authority_info.lamports();
-
-    **pool_borrow_authority_info.lamports.borrow_mut() = 0;
-    **receiver_info.lamports.borrow_mut() = receiver_starting_lamports
-        .checked_add(pool_borrow_authority_lamports)
-        .ok_or(EverlendError::MathOverflow)?;
-
-    PoolBorrowAuthority::pack(
-        Default::default(),
-        *pool_borrow_authority_info.data.borrow_mut(),
-    )?;
-
-    Ok(())
+/// Instruction context
+pub struct DeletePoolBorrowAuthorityContext<'a, 'b> {
+    pool_market: &'a AccountInfo<'b>,
+    pool: &'a AccountInfo<'b>,
+    pool_borrow_authority: &'a AccountInfo<'b>,
+    receiver: &'a AccountInfo<'b>,
+    manager: &'a AccountInfo<'b>,
 }
 
+impl<'a, 'b> DeletePoolBorrowAuthorityContext<'a, 'b> {
+    /// New instruction context
+    pub fn new(
+        program_id: &Pubkey,
+        accounts: &'a [AccountInfo<'b>],
+    ) -> Result<DeletePoolBorrowAuthorityContext<'a, 'b>, ProgramError> {
+        let account_info_iter = &mut accounts.iter();
+
+        let pool_market = next_account(account_info_iter, program_id)?;
+        let pool = next_account(account_info_iter, program_id)?;
+        let pool_borrow_authority = next_account(account_info_iter, program_id)?;
+        let receiver = next_unchecked_account(account_info_iter)?;
+        let manager = next_signer_account(account_info_iter)?;
+
+        Ok(DeletePoolBorrowAuthorityContext {
+            pool_market,
+            pool,
+            pool_borrow_authority,
+            receiver,
+            manager,
+        })
+    }
+
+    /// Process instruction
+    pub fn process(&self, program_id: &Pubkey) -> ProgramResult {
+        // Check manager
+        {
+            let pool_market = PoolMarket::unpack(&self.pool_market.data.borrow())?;
+            assert_account_key(&self.manager, &pool_market.manager)?;
+
+            // Get pool state
+            let pool = Pool::unpack(&self.pool.data.borrow())?;
+            assert_account_key(self.pool_market, &pool.pool_market)?;
+
+            // Get pool borrow authority state to check initialized
+            let pool_borrow_authority =
+                PoolBorrowAuthority::unpack(&self.pool_borrow_authority.data.borrow())?;
+            assert_account_key(self.pool, &pool_borrow_authority.pool)?;
+        }
+
+        let receiver_starting_lamports = self.receiver.lamports();
+        let pool_borrow_authority_lamports = self.pool_borrow_authority.lamports();
+
+        **self.pool_borrow_authority.lamports.borrow_mut() = 0;
+        **self.receiver.lamports.borrow_mut() = receiver_starting_lamports
+            .checked_add(pool_borrow_authority_lamports)
+            .ok_or(EverlendError::MathOverflow)?;
+
+        PoolBorrowAuthority::pack(
+            Default::default(),
+            *self.pool_borrow_authority.data.borrow_mut(),
+        )?;
+
+        Ok(())
+    }
+}

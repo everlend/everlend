@@ -1,5 +1,6 @@
 use everlend_utils::{
-    assert_account_key, cpi, next_program_account, next_signer_account, next_uninitialized_account,
+    assert_account_key, cpi, next_account, next_program_account, next_signer_account,
+    next_uninitialized_account,
 };
 use solana_program::{
     account_info::AccountInfo,
@@ -28,9 +29,9 @@ pub struct CreatePoolContext<'a, 'b> {
     manager: &'a AccountInfo<'b>,
     pool_market: &'a AccountInfo<'b>,
     pool_config: &'a AccountInfo<'b>,
-    liquidity_mint: &'a AccountInfo<'b>,
-    liquidity_account: &'a AccountInfo<'b>,
-    collateral_mint: &'a AccountInfo<'b>,
+    token_mint: &'a AccountInfo<'b>,
+    token_account: &'a AccountInfo<'b>,
+    pool_mint: &'a AccountInfo<'b>,
     pool_market_authority: &'a AccountInfo<'b>,
     withdrawal_requests: &'a AccountInfo<'b>,
     pool: &'a AccountInfo<'b>,
@@ -46,16 +47,16 @@ impl<'a, 'b> CreatePoolContext<'a, 'b> {
     ) -> Result<CreatePoolContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter();
 
-        let pool_market = next_program_account(account_info_iter, program_id)?;
+        let pool_market = next_account(account_info_iter, program_id)?;
         let pool = next_uninitialized_account(account_info_iter)?;
         let pool_config = next_uninitialized_account(account_info_iter)?;
         let withdrawal_requests = next_uninitialized_account(account_info_iter)?;
-        let liquidity_mint = next_program_account(account_info_iter, &spl_token::id())?;
-        let liquidity_account = next_program_account(account_info_iter, &spl_token::id())?;
+        let token_mint = next_account(account_info_iter, &spl_token::id())?;
+        let token_account = next_account(account_info_iter, &spl_token::id())?;
         let transit = next_uninitialized_account(account_info_iter)?;
-        let collateral_mint = next_program_account(account_info_iter, &spl_token::id())?;
+        let pool_mint = next_account(account_info_iter, &spl_token::id())?;
         let manager = next_signer_account(account_info_iter)?;
-        let pool_market_authority = next_program_account(account_info_iter, program_id)?;
+        let pool_market_authority = next_account(account_info_iter, program_id)?;
         let rent = next_program_account(account_info_iter, &Rent::id())?;
         let _system_program = next_program_account(account_info_iter, &system_program::id())?;
         let _token_program = next_program_account(account_info_iter, &spl_token::id())?;
@@ -63,9 +64,9 @@ impl<'a, 'b> CreatePoolContext<'a, 'b> {
         Ok(CreatePoolContext {
             manager,
             pool_market,
-            liquidity_mint,
-            liquidity_account,
-            collateral_mint,
+            token_mint,
+            token_account,
+            pool_mint,
             pool_market_authority,
             pool,
             transit,
@@ -83,19 +84,19 @@ impl<'a, 'b> CreatePoolContext<'a, 'b> {
             assert_account_key(&self.manager, &pool_market.manager)?;
         }
 
-        let token_mint = Mint::unpack(&self.liquidity_mint.data.borrow())?;
+        let token_mint = Mint::unpack(&self.token_mint.data.borrow())?;
 
         // Initialize token account for spl token
         cpi::spl_token::initialize_account(
-            self.liquidity_account.clone(),
-            self.liquidity_mint.clone(),
+            self.token_account.clone(),
+            self.token_mint.clone(),
             self.pool_market_authority.clone(),
             self.rent.clone(),
         )?;
 
         // Initialize mint (token) for pool
         cpi::spl_token::initialize_mint(
-            self.collateral_mint.clone(),
+            self.pool_mint.clone(),
             self.pool_market_authority.clone(),
             self.rent.clone(),
             token_mint.decimals,
@@ -114,13 +115,13 @@ impl<'a, 'b> CreatePoolContext<'a, 'b> {
     fn create_pool(&self, program_id: &Pubkey, rent: &Rent) -> ProgramResult {
         // Create pool account
         let (pool_pubkey, pool_bump_seed) =
-            find_pool_program_address(program_id, self.pool_market.key, self.liquidity_mint.key);
+            find_pool_program_address(program_id, self.pool_market.key, self.token_mint.key);
 
         assert_account_key(&self.pool, &pool_pubkey)?;
 
         let pool_signers_seeds = &[
             &self.pool_market.key.to_bytes()[..32],
-            &self.liquidity_mint.key.to_bytes()[..32],
+            &self.token_mint.key.to_bytes()[..32],
             &[pool_bump_seed],
         ];
 
@@ -134,9 +135,9 @@ impl<'a, 'b> CreatePoolContext<'a, 'b> {
 
         let pool = Pool::init(InitPoolParams {
             pool_market: *self.pool_market.key,
-            token_mint: *self.liquidity_mint.key,
-            token_account: *self.liquidity_account.key,
-            pool_mint: *self.collateral_mint.key,
+            token_mint: *self.token_mint.key,
+            token_account: *self.token_account.key,
+            pool_mint: *self.pool_mint.key,
         });
 
         Pool::pack(pool, *self.pool.data.borrow_mut())
@@ -144,17 +145,14 @@ impl<'a, 'b> CreatePoolContext<'a, 'b> {
 
     fn create_transit(&self, program_id: &Pubkey, rent: &Rent) -> ProgramResult {
         // Create transit account for SPL program
-        let (transit_pubkey, transit_bump_seed) = find_transit_program_address(
-            program_id,
-            self.pool_market.key,
-            self.collateral_mint.key,
-        );
+        let (transit_pubkey, transit_bump_seed) =
+            find_transit_program_address(program_id, self.pool_market.key, self.pool_mint.key);
         assert_account_key(self.transit, &transit_pubkey)?;
 
         let transit_signers_seeds = &[
             br"transit",
             &self.pool_market.key.to_bytes()[..32],
-            &self.collateral_mint.key.to_bytes()[..32],
+            &self.pool_mint.key.to_bytes()[..32],
             &[transit_bump_seed],
         ];
 
@@ -169,7 +167,7 @@ impl<'a, 'b> CreatePoolContext<'a, 'b> {
         // Initialize transit token account for spl token
         cpi::spl_token::initialize_account(
             self.transit.clone(),
-            self.collateral_mint.clone(),
+            self.pool_mint.clone(),
             self.pool_market_authority.clone(),
             self.rent.clone(),
         )
@@ -180,7 +178,7 @@ impl<'a, 'b> CreatePoolContext<'a, 'b> {
         let (withdrawal_requests_pubkey, bump_seed) = find_withdrawal_requests_program_address(
             program_id,
             self.pool_market.key,
-            self.liquidity_mint.key,
+            self.token_mint.key,
         );
         assert_account_key(self.withdrawal_requests, &withdrawal_requests_pubkey)?;
 
@@ -188,7 +186,7 @@ impl<'a, 'b> CreatePoolContext<'a, 'b> {
         let signers_seeds = &[
             withdrawal_requests_seed.as_bytes(),
             &self.pool_market.key.to_bytes()[..32],
-            &self.liquidity_mint.key.to_bytes()[..32],
+            &self.token_mint.key.to_bytes()[..32],
             &[bump_seed],
         ];
 
@@ -202,7 +200,7 @@ impl<'a, 'b> CreatePoolContext<'a, 'b> {
 
         let withdrawal_requests = WithdrawalRequests::init(InitWithdrawalRequestsParams {
             pool: *self.pool.key,
-            mint: *self.liquidity_mint.key,
+            mint: *self.token_mint.key,
         });
 
         WithdrawalRequests::pack(

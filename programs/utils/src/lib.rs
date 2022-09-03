@@ -45,6 +45,13 @@ pub fn next_uninitialized_account<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>
     }
 }
 
+pub fn next_unchecked_account<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
+    iter: &mut I,
+) -> Result<I::Item, ProgramError> {
+    let acc = iter.next().ok_or(ProgramError::NotEnoughAccountKeys)?;
+    Ok(acc)
+}
+
 pub fn next_account<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
     iter: &mut I,
     owner: &Pubkey,

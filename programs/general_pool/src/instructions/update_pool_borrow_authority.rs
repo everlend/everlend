@@ -1,42 +1,63 @@
-  /// Process UpdatePoolBorrowAuthority instruction
-  pub fn update_pool_borrow_authority(
-    program_id: &Pubkey,
-    share_allowed: u16,
-    accounts: &[AccountInfo],
-) -> ProgramResult {
-    let account_info_iter = &mut accounts.iter();
-    let pool_market_info = next_account_info(account_info_iter)?;
-    let pool_info = next_account_info(account_info_iter)?;
-    let pool_borrow_authority_info = next_account_info(account_info_iter)?;
-    let manager_info = next_account_info(account_info_iter)?;
+use crate::state::{Pool, PoolBorrowAuthority, PoolMarket};
+use everlend_utils::{assert_account_key, next_account, next_signer_account};
+use solana_program::{
+    account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
+    program_pack::Pack, pubkey::Pubkey,
+};
 
-    assert_signer(manager_info)?;
-
-    // Check programs
-    assert_owned_by(pool_market_info, program_id)?;
-    assert_owned_by(pool_info, program_id)?;
-    assert_owned_by(pool_borrow_authority_info, program_id)?;
-
-    // Get pool market state
-    let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
-    assert_account_key(manager_info, &pool_market.manager)?;
-
-    // Get pool state
-    let pool = Pool::unpack(&pool_info.data.borrow())?;
-    assert_account_key(pool_market_info, &pool.pool_market)?;
-
-    // Get pool borrow authority state
-    let mut pool_borrow_authority =
-        PoolBorrowAuthority::unpack(&pool_borrow_authority_info.data.borrow())?;
-    assert_account_key(pool_info, &pool_borrow_authority.pool)?;
-
-    pool_borrow_authority.update_share_allowed(share_allowed);
-
-    PoolBorrowAuthority::pack(
-        pool_borrow_authority,
-        *pool_borrow_authority_info.data.borrow_mut(),
-    )?;
-
-    Ok(())
+/// Instruction context
+pub struct UpdatePoolBorrowAuthorityContext<'a, 'b> {
+    pool_market: &'a AccountInfo<'b>,
+    pool: &'a AccountInfo<'b>,
+    pool_borrow_authority: &'a AccountInfo<'b>,
+    manager: &'a AccountInfo<'b>,
 }
 
+impl<'a, 'b> UpdatePoolBorrowAuthorityContext<'a, 'b> {
+    /// New instruction context
+    pub fn new(
+        program_id: &Pubkey,
+        accounts: &'a [AccountInfo<'b>],
+    ) -> Result<UpdatePoolBorrowAuthorityContext<'a, 'b>, ProgramError> {
+        let account_info_iter = &mut accounts.iter();
+
+        let pool_market = next_account(account_info_iter, program_id)?;
+        let pool = next_account(account_info_iter, program_id)?;
+        let pool_borrow_authority = next_account(account_info_iter, program_id)?;
+        let manager = next_signer_account(account_info_iter)?;
+
+        Ok(UpdatePoolBorrowAuthorityContext {
+            pool_market,
+            pool,
+            pool_borrow_authority,
+            manager,
+        })
+    }
+
+    /// Process instruction
+    pub fn process(&self, program_id: &Pubkey, share_allowed: u16) -> ProgramResult {
+        // Check manager
+        {
+            let pool_market = PoolMarket::unpack(&self.pool_market.data.borrow())?;
+            assert_account_key(&self.manager, &pool_market.manager)?;
+
+            // Get pool state
+            let pool = Pool::unpack(&self.pool.data.borrow())?;
+            assert_account_key(self.pool_market, &pool.pool_market)?;
+        }
+
+        // Get pool borrow authority state
+        let mut pool_borrow_authority =
+            PoolBorrowAuthority::unpack(&self.pool_borrow_authority.data.borrow())?;
+        assert_account_key(self.pool, &pool_borrow_authority.pool)?;
+
+        pool_borrow_authority.share_allowed = share_allowed;
+
+        PoolBorrowAuthority::pack(
+            pool_borrow_authority,
+            *self.pool_borrow_authority.data.borrow_mut(),
+        )?;
+
+        Ok(())
+    }
+}
