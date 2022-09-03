@@ -3,8 +3,8 @@ use crate::{
     state::{Pool, PoolConfig, PoolMarket, SetPoolConfigParams},
 };
 use everlend_utils::{
-    assert_account_key, assert_owned_by, cpi, next_account, next_program_account,
-    next_signer_account, next_unchecked_account,
+    assert_account_key, assert_owned_by, cpi, next_account, next_optional_account,
+    next_program_account, next_signer_account,
 };
 use solana_program::{
     account_info::AccountInfo,
@@ -36,7 +36,7 @@ impl<'a, 'b> SetPoolConfigContext<'a, 'b> {
 
         let pool_market = next_account(account_info_iter, program_id)?;
         let pool = next_account(account_info_iter, program_id)?;
-        let pool_config = next_unchecked_account(account_info_iter)?; // Should be optionally checked if exists
+        let pool_config = next_optional_account(account_info_iter, program_id)?;
         let manager = next_signer_account(account_info_iter)?;
         let rent = next_program_account(account_info_iter, &Rent::id())?;
         let _system_program = next_program_account(account_info_iter, &system_program::id())?;
@@ -82,10 +82,7 @@ impl<'a, 'b> SetPoolConfigContext<'a, 'b> {
 
                 PoolConfig::default()
             }
-            _ => {
-                assert_owned_by(self.pool_config, program_id)?;
-                PoolConfig::unpack(&self.pool_config.data.borrow())?
-            }
+            _ => PoolConfig::unpack(&self.pool_config.data.borrow())?,
         };
 
         pool_config.set(params);

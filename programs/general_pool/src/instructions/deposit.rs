@@ -1,8 +1,8 @@
 use everlend_utils::{
-    assert_account_key, assert_owned_by,
+    assert_account_key,
     cpi::{self, rewards::deposit_mining},
-    find_program_address, next_account, next_program_account, next_signer_account,
-    next_unchecked_account, EverlendError,
+    find_program_address, next_account, next_optional_account, next_program_account,
+    next_signer_account, EverlendError,
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
@@ -41,7 +41,7 @@ impl<'a, 'b> DepositContext<'a, 'b> {
     ) -> Result<DepositContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter();
 
-        let pool_config = next_unchecked_account(account_info_iter)?; // Optionally checked within the function
+        let pool_config = next_optional_account(account_info_iter, program_id)?;
         let pool_market = next_account(account_info_iter, program_id)?;
         let pool = next_account(account_info_iter, program_id)?;
 
@@ -93,8 +93,6 @@ impl<'a, 'b> DepositContext<'a, 'b> {
 
             // Check only if account exists
             if !self.pool_config.owner.eq(&Pubkey::default()) {
-                assert_owned_by(self.pool_config, program_id)?;
-
                 let pool_config = PoolConfig::unpack(&self.pool_config.data.borrow())?;
                 if amount < pool_config.deposit_minimum {
                     return Err(EverlendError::DepositAmountTooSmall.into());

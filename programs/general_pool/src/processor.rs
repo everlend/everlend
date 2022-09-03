@@ -8,7 +8,8 @@ use solana_program::{account_info::AccountInfo, pubkey::Pubkey};
 use crate::instruction::LiquidityPoolsInstruction;
 use crate::instructions::{
     CreatePoolBorrowAuthorityContext, CreatePoolContext, DeletePoolBorrowAuthorityContext,
-    DepositContext, InitPoolMarketContext, SetPoolConfigContext, UpdatePoolBorrowAuthorityContext,
+    DepositContext, InitPoolMarketContext, SetPoolConfigContext, SetTokenMetadataContext,
+    UpdateManagerContext, UpdatePoolBorrowAuthorityContext,
 };
 
 /// Instruction processing router

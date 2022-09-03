@@ -1176,7 +1176,6 @@ dependencies = [
  "borsh 0.9.3",
  "eld-config",
  "eld-rewards",
- "everlend-registry",
  "everlend-utils",
  "num-derive",
  "num-traits",

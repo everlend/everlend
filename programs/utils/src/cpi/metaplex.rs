@@ -6,6 +6,10 @@ use solana_program::{
 
 use crate::assert_account_key;
 
+pub fn program_id() -> Pubkey {
+    return mpl_token_metadata::id();
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn create_metadata<'a>(
     program_id: AccountInfo<'a>,
@@ -20,8 +24,6 @@ pub fn create_metadata<'a>(
     uri: String,
     signers_seeds: &[&[&[u8]]],
 ) -> ProgramResult {
-    assert_account_key(&program_id, &mpl_token_metadata::id())?;
-
     // Metadata account
     let (metadata_key, _) = Pubkey::find_program_address(
         &[
@@ -70,8 +72,6 @@ pub fn update_metadata<'a>(
     uri: String,
     signers_seeds: &[&[&[u8]]],
 ) -> ProgramResult {
-    assert_account_key(&program_id, &mpl_token_metadata::id())?;
-
     // Metadata account
     let (metadata_key, _) = Pubkey::find_program_address(
         &[
