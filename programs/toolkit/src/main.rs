@@ -6,8 +6,8 @@ use clap::{
     crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
 };
 use commands_test::{command_test_larix_mining_raw, command_test_quarry_mining_raw};
-use everlend_depositor::find_rebalancing_program_address;
-use everlend_depositor::state::Rebalancing;
+use everlend_depositor::{find_rebalancing_program_address, state::Rebalancing};
+use everlend_collateral_pool::find_pool_program_address;
 use everlend_general_pool::state::SetPoolConfigParams;
 use everlend_utils::find_program_address;
 use regex::Regex;
@@ -395,9 +395,50 @@ async fn command_create_collateral_pools(
 
 async fn create_pool_withdraw_authority(
     config: &Config,
-    accounts_path: &str,
+    money_market: MoneyMarket,
+    required_mints: Vec<&str>,
 ) -> anyhow::Result<()> {
-    let mut initialized_accounts = InitializedAccounts::load(accounts_path).unwrap_or_default();
+    let default_accounts = config.get_default_accounts();
+    let initialiazed_accounts = config.get_initialized_accounts();
+
+    let (_, collateral_mint_map) = get_asset_maps(default_accounts);
+    let money_market_index = money_market as usize;
+    let collateral_pool_market_pubkey = initialiazed_accounts.collateral_pool_markets[money_market_index];
+    if collateral_pool_market_pubkey.eq(&Pubkey::default()){
+        println!("collateral_pool_market_pubkey is empty. Create it first");
+        return Ok(())
+    }
+
+    for key in required_mints {
+
+        let collateral_mint = collateral_mint_map.get(key).unwrap()[money_market_index].unwrap();
+        let (pool_pubkey, _) = find_pool_program_address(
+            &everlend_collateral_pool::id(),
+            &collateral_pool_market_pubkey,
+            &collateral_mint,
+        );
+
+        let (depositor_authority, _) =
+            find_program_address(&everlend_depositor::id(), &initialiazed_accounts.depositor);
+        collateral_pool::create_pool_withdraw_authority(
+            config,
+            &collateral_pool_market_pubkey,
+            &pool_pubkey,
+            &depositor_authority,
+            &config.fee_payer.pubkey(),
+        )?;
+    }
+
+    Ok(())
+}
+
+
+#[allow(dead_code)]
+// Generate for all pools
+async fn create_pool_withdraw_authoritys(
+    config: &Config,
+) -> anyhow::Result<()> {
+    let mut initialized_accounts = config.get_initialized_accounts();
     let pool_markets = initialized_accounts.collateral_pool_markets;
     let depositor = initialized_accounts.depositor;
     let token_accounts = initialized_accounts.token_accounts.iter_mut();
@@ -784,7 +825,7 @@ async fn main() -> anyhow::Result<()> {
                 ),
         )
         .subcommand(
-            SubCommand::with_name("create-mm-pool-market")
+            SubCommand::with_name("create-collateral-pool-market")
                 .about("Create a new MM pool market")
                 .arg(
                     Arg::with_name("money-market")
@@ -858,7 +899,7 @@ async fn main() -> anyhow::Result<()> {
                 ),
         )
         .subcommand(
-            SubCommand::with_name("create-mm-pool")
+            SubCommand::with_name("create-collateral-pool")
                 .about("Create a new MM pool")
                 .arg(
                     Arg::with_name("money-market")
@@ -894,12 +935,21 @@ async fn main() -> anyhow::Result<()> {
             SubCommand::with_name("create-pool-withdraw-authority")
                 .about("Create pool withdraw authority")
                 .arg(
-                    Arg::with_name("accounts")
-                        .short("A")
-                        .long("accounts")
-                        .value_name("PATH")
+                    Arg::with_name("money-market")
+                        .long("money-market")
+                        .value_name("NUMBER")
                         .takes_value(true)
-                        .help("Accounts file"),
+                        .required(true)
+                        .help("Money market index"),
+                )
+                .arg(
+                    Arg::with_name("mints")
+                        .multiple(true)
+                        .long("mints")
+                        .short("m")
+                        .required(true)
+                        .min_values(1)
+                        .takes_value(true),
                 ),
         )
         .subcommand(
@@ -1416,7 +1466,7 @@ async fn main() -> anyhow::Result<()> {
             let keypair = keypair_of(arg_matches, "keypair");
             command_create_income_pool_market(&config, keypair).await
         }
-        ("create-mm-pool-market", Some(arg_matches)) => {
+        ("create-collateral-pool-market", Some(arg_matches)) => {
             let keypair = keypair_of(arg_matches, "keypair");
             let money_market = value_of::<usize>(arg_matches, "money-market").unwrap();
             command_create_collateral_pool_market(&config, keypair, MoneyMarket::from(money_market))
@@ -1437,7 +1487,7 @@ async fn main() -> anyhow::Result<()> {
             let executor_pubkey = pubkey_of(arg_matches, "rebalance-executor").unwrap();
             command_create_depositor(&config, keypair, executor_pubkey).await
         }
-        ("create-mm-pool", Some(arg_matches)) => {
+        ("create-collateral-pool", Some(arg_matches)) => {
             let money_market = value_of::<usize>(arg_matches, "money-market").unwrap();
             let mints: Vec<_> = arg_matches.values_of("mints").unwrap().collect();
             command_create_collateral_pool(&config, MoneyMarket::from(money_market), mints).await
@@ -1447,8 +1497,9 @@ async fn main() -> anyhow::Result<()> {
             command_create_collateral_pools(&config, accounts_path).await
         }
         ("create-pool-withdraw-authority", Some(arg_matches)) => {
-            let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
-            create_pool_withdraw_authority(&config, accounts_path).await
+            let money_market = value_of::<usize>(arg_matches, "money-market").unwrap();
+            let mints: Vec<_> = arg_matches.values_of("mints").unwrap().collect();
+            create_pool_withdraw_authority(&config, MoneyMarket::from(money_market), mints).await
         }
         ("create-token-accounts", Some(arg_matches)) => {
             let mints: Vec<_> = arg_matches.values_of("mints").unwrap().collect();

@@ -73,26 +73,32 @@ msol_collateral:
   - Dt1Cuau5m5CSmun8hZstjEh9RszxAmejnq7ZaHNcuXfA
   - y6rnvwa2fTBynxGPNo6oH94WhmRxKE96cieCtyCwQBi
   - 3JFC4cB56Er45nWVe29Bhnn5GnwQzSmHVf6eUq9ac91h
+  - 8cn7JcYVjDZesLa3RTt3NXne4WcDw9PdUneQWuByehwW
 stsol_collateral:
   - ESzkdUN8jvJxMqBjWADUomRxHn2ECxLFeeEvrcteLMnY
   - 2K7mMW4iFtU1RmZaCVg6MUUGWMBX4Z7rDbAhca42cXwL
   - QQ6WK86aUCBvNPkGeYBKikk15sUg6aMUEi5PTL6eB4i
+  - 27CaAiuFW3EwLcTCaiBnexqm5pxht845AHgSuq36byKX
 sobtc_collateral:
   - QN2HkkBaWHfYSU5bybyups9z1UHu8Eu7QeeyMbjD2JA
   - 8c5Fw4B9zmeesVx2WgGu6Yg1iE9P5SWTUormPPL8e8CV
   - Gqu3TFmJXfnfSX84kqbZ5u9JjSBVoesaHjfTsaPjRSnZ
+  - G5V7t3ZHTUGi6xGfk5nc42P1iRkNN3JhaFwFXkvyDmz5
 ethw_collateral:
   - Fu8gTpPR6DAxzWK2jDW7axuK3MBZcr5hKfjALXDpY3Zw
   - AeBswySyZBjmaQVLAxkLNmUKrB66gdhL6vezqdruVbsR
   - FbKvdbx5h6F86h1pZuEqv7FxwmsVhJ88cDuSqHvLm6Xf
+  - 85SyKDLXZPC1sqdFqasywQojutGhDCobbPHM6zczD1Li
 ustw_collateral:
   - 9dCmkTZNDWvtJWXZrJXUJyhM4U6YQX8kdaSzWr7g5Jrx
   - 6CvSMhUFDyiYzYZLsLYMGPQxZ7QkuMEv7RqZSocZnT4A
   - nZtL8HKX3aQtk3VpdvtdwPpXF2uMia522Pnan2meqdf
+  - 11111111111111111111111111111111
 fttw_collateral:
   - 11111111111111111111111111111111
   - 8txpnwk6ruV5fjbGDS1Lx8aNaBP8RcWThXZsZRMGDrE4
   - DiMx1n2dJmxqFtENRPhYWsqi8Mhg2p39MpTzsm6phzMP
+  - 11111111111111111111111111111111
 ray_collateral:
   - 11111111111111111111111111111111
   - C2Dp7WwPnT7ZgY6MNyg7g7hVguk31HPtRe9EgP2m9vpJ
@@ -102,6 +108,7 @@ srm_collateral:
   - 77TBgKmTNtMdGrt1ewNRb56F2Xw6fNLZZj33JZ3oGwXh
   - 9yoGvCPSFqfgHCyyhb7iVQcNTscFbAqRTbn6XuGUi8xa
   - 4CxGuD2NMr6zM8f18gr6kRhgd748pnmkAhkY1YJtkup1
+  - 4QSK13NTKxTBExbMjHFsj3QfHBn4Hfp3DGLSba8GvFvh
 multisig_program_id: 3ktyhEXgbiUyDG7RXCzzXWzjXJpThpqqePhJb85eVqFa
 
 
