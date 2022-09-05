@@ -449,32 +449,6 @@ pub fn get_withdrawal_request_accounts(
     .collect())
 }
 
-// #[allow(clippy::too_many_arguments)]
-// pub fn init_user_mining(
-//     config: &Config,
-//     user_authority: &Pubkey,
-//     payer: &Pubkey,
-//     mining_reward_pool: &Pubkey,
-//     mining_reward_acc: &Pubkey,
-//     anchor_config: &Pubkey,
-// ) -> Result<(), ClientError> {
-//     let tx = Transaction::new_with_payer(
-//         &[initialize_mining(
-//             &eld_rewards::id(),
-//             anchor_config,
-//             mining_reward_pool,
-//             mining_reward_acc,
-//             user_authority,
-//             payer,
-//         )],
-//         Some(&config.fee_payer.pubkey()),
-//     );
-
-//     config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
-
-//     Ok(())
-// }
-
 pub fn update_manager(
     config: &Config,
     pool_market: &Pubkey,
