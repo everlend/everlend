@@ -77,7 +77,7 @@ impl Pack for Registry {
 
 impl IsInitialized for Registry {
     fn is_initialized(&self) -> bool {
-        self.account_type == AccountType::Registry
+        self.account_type == AccountType::Registry && !self.manager.eq(&Pubkey::default())
     }
 }
 

@@ -88,6 +88,7 @@ async fn command_create(
     distribution[0] = 0;
     distribution[1] = 0;
     distribution[2] = 0;
+    distribution[3] = 0;
 
     println!("Registry");
     let mut money_market_program_ids = DistributionPubkeys::default();
@@ -97,6 +98,7 @@ async fn command_create(
     money_market_program_ids[3] = default_accounts.tulip.program_id;
 
     let mm_collateral_pool_markets = vec![
+        collateral_pool::create_market(config, None)?,
         collateral_pool::create_market(config, None)?,
         collateral_pool::create_market(config, None)?,
         collateral_pool::create_market(config, None)?,

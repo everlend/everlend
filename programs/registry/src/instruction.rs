@@ -21,7 +21,7 @@ pub enum RegistryInstruction {
     /// [R] Rent sysvar
     Init,
 
-    /// Update pool market manager
+    /// Update manager
     ///
     /// Accounts:
     /// [WS] Registry
