@@ -69,7 +69,7 @@ impl TestRegistry {
                 data,
             )],
             Some(&self.manager.pubkey()),
-            &[&self.keypair, &self.manager],
+            &[&self.manager],
             context.last_blockhash,
         );
 
@@ -89,7 +89,7 @@ impl TestRegistry {
                 data,
             )],
             Some(&self.manager.pubkey()),
-            &[&self.keypair, &self.manager],
+            &[&self.manager],
             context.last_blockhash,
         );
 

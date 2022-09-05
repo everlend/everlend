@@ -11,8 +11,8 @@ use everlend_liquidity_oracle::{
 };
 use everlend_registry::state::{Registry, RegistryMarkets};
 use everlend_utils::{
-    assert_account_key, assert_initialized, assert_owned_by, assert_rent_exempt, assert_signer,
-    assert_uninitialized, cpi, find_program_address, EverlendError,
+    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
+    cpi, find_program_address, EverlendError,
 };
 use num_traits::Zero;
 use solana_program::program_error::ProgramError;
