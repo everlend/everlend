@@ -57,10 +57,10 @@ pub fn next_account<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
 
 pub fn next_program_account<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
     iter: &mut I,
-    owner: &Pubkey,
+    key: &Pubkey,
 ) -> Result<I::Item, ProgramError> {
     let acc = iter.next().ok_or(ProgramError::NotEnoughAccountKeys)?;
-    assert_account_key(acc, owner)?;
+    assert_account_key(acc, key)?;
 
     Ok(acc)
 }
