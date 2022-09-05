@@ -1,64 +1,100 @@
-/// Process Borrow instruction
-pub fn borrow(program_id: &Pubkey, amount: u64, accounts: &[AccountInfo]) -> ProgramResult {
-    let account_info_iter = &mut accounts.iter();
-    let pool_market_info = next_account_info(account_info_iter)?;
-    let pool_info = next_account_info(account_info_iter)?;
-    let pool_borrow_authority_info = next_account_info(account_info_iter)?;
-    let destination_info = next_account_info(account_info_iter)?;
-    let token_account_info = next_account_info(account_info_iter)?;
-    let pool_market_authority_info = next_account_info(account_info_iter)?;
-    let borrow_authority_info = next_account_info(account_info_iter)?;
-    let _token_program_info = next_account_info(account_info_iter)?;
+use crate::{
+    state::{Pool, PoolBorrowAuthority},
+    utils::total_pool_amount,
+};
+use everlend_utils::{
+    assert_account_key, cpi, find_program_address, next_account, next_program_account,
+    next_signer_account,
+};
+use solana_program::{
+    account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
+    program_pack::Pack, pubkey::Pubkey,
+};
 
-    assert_signer(borrow_authority_info)?;
+/// Instruction context
+pub struct BorrowContext<'a, 'b> {
+    pool_market: &'a AccountInfo<'b>,
+    pool: &'a AccountInfo<'b>,
+    pool_borrow_authority: &'a AccountInfo<'b>,
+    destination: &'a AccountInfo<'b>,
+    token_account: &'a AccountInfo<'b>,
+    pool_market_authority: &'a AccountInfo<'b>,
+    borrow_authority: &'a AccountInfo<'b>,
+}
 
-    // Check programs
-    assert_owned_by(pool_market_info, program_id)?;
-    assert_owned_by(pool_info, program_id)?;
-    assert_owned_by(pool_borrow_authority_info, program_id)?;
+impl<'a, 'b> BorrowContext<'a, 'b> {
+    /// New instruction context
+    pub fn new(
+        program_id: &Pubkey,
+        accounts: &'a [AccountInfo<'b>],
+    ) -> Result<BorrowContext<'a, 'b>, ProgramError> {
+        let account_info_iter = &mut accounts.iter();
+        let pool_market = next_account(account_info_iter, program_id)?;
+        let pool = next_account(account_info_iter, program_id)?;
+        let pool_borrow_authority = next_account(account_info_iter, program_id)?;
+        let destination = next_account(account_info_iter, &spl_token::id())?;
+        let token_account = next_account(account_info_iter, &spl_token::id())?;
+        let pool_market_authority = next_account(account_info_iter, program_id)?;
+        let borrow_authority = next_signer_account(account_info_iter)?;
+        let _token_program = next_program_account(account_info_iter, &spl_token::id())?;
 
-    let mut pool = Pool::unpack(&pool_info.data.borrow())?;
+        Ok(BorrowContext {
+            pool_market,
+            pool,
+            pool_borrow_authority,
+            destination,
+            token_account,
+            pool_market_authority,
+            borrow_authority,
+        })
+    }
 
-    // Check pool accounts
-    assert_account_key(pool_market_info, &pool.pool_market)?;
-    assert_account_key(token_account_info, &pool.token_account)?;
+    /// Process instruction
+    pub fn process(&self, program_id: &Pubkey, amount: u64) -> ProgramResult {
+        let mut pool = Pool::unpack(&self.pool.data.borrow())?;
 
-    let mut pool_borrow_authority =
-        PoolBorrowAuthority::unpack(&pool_borrow_authority_info.data.borrow())?;
+        // Check pool accounts
+        assert_account_key(self.pool_market, &pool.pool_market)?;
+        assert_account_key(self.token_account, &pool.token_account)?;
 
-    // Check pool borrow authority accounts
-    assert_account_key(pool_info, &pool_borrow_authority.pool)?;
-    assert_account_key(
-        borrow_authority_info,
-        &pool_borrow_authority.borrow_authority,
-    )?;
+        let mut pool_borrow_authority =
+            PoolBorrowAuthority::unpack(&self.pool_borrow_authority.data.borrow())?;
 
-    pool_borrow_authority.borrow(amount)?;
-    pool_borrow_authority.check_amount_allowed(total_pool_amount(
-        token_account_info.clone(),
-        pool.total_amount_borrowed,
-    )?)?;
-    pool.borrow(amount)?;
+        // Check pool borrow authority accounts
+        assert_account_key(self.pool, &pool_borrow_authority.pool)?;
+        assert_account_key(
+            self.borrow_authority,
+            &pool_borrow_authority.borrow_authority,
+        )?;
 
-    // Check interest ?
+        pool_borrow_authority.borrow(amount)?;
+        pool_borrow_authority.check_amount_allowed(total_pool_amount(
+            self.token_account.clone(),
+            pool.total_amount_borrowed,
+        )?)?;
+        pool.borrow(amount)?;
 
-    PoolBorrowAuthority::pack(
-        pool_borrow_authority,
-        *pool_borrow_authority_info.data.borrow_mut(),
-    )?;
-    Pool::pack(pool, *pool_info.data.borrow_mut())?;
+        // Check interest ?
 
-    let (_, bump_seed) = find_program_address(program_id, pool_market_info.key);
-    let signers_seeds = &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]];
+        PoolBorrowAuthority::pack(
+            pool_borrow_authority,
+            *self.pool_borrow_authority.data.borrow_mut(),
+        )?;
 
-    // Transfer from token account to destination borrower
-    cpi::spl_token::transfer(
-        token_account_info.clone(),
-        destination_info.clone(),
-        pool_market_authority_info.clone(),
-        amount,
-        &[signers_seeds],
-    )?;
+        Pool::pack(pool, *self.pool.data.borrow_mut())?;
 
-    Ok(())
+        let (_, bump_seed) = find_program_address(program_id, self.pool_market.key);
+        let signers_seeds = &[&self.pool_market.key.to_bytes()[..32], &[bump_seed]];
+
+        // Transfer from token account to destination borrower
+        cpi::spl_token::transfer(
+            self.token_account.clone(),
+            self.destination.clone(),
+            self.pool_market_authority.clone(),
+            amount,
+            &[signers_seeds],
+        )?;
+
+        Ok(())
+    }
 }

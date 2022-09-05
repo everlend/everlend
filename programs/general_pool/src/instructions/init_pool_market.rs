@@ -1,5 +1,5 @@
 use everlend_utils::{
-    assert_rent_exempt, assert_uninitialized, cpi, next_account, next_program_account,
+    assert_rent_exempt, assert_uninitialized, next_account, next_program_account,
     next_signer_account,
 };
 use solana_program::{

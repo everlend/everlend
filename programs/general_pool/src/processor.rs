@@ -7,9 +7,11 @@ use solana_program::{account_info::AccountInfo, pubkey::Pubkey};
 
 use crate::instruction::LiquidityPoolsInstruction;
 use crate::instructions::{
-    CreatePoolBorrowAuthorityContext, CreatePoolContext, DeletePoolBorrowAuthorityContext,
-    DepositContext, InitPoolMarketContext, SetPoolConfigContext, SetTokenMetadataContext,
-    UpdateManagerContext, UpdatePoolBorrowAuthorityContext,
+    BorrowContext, CancelWithdrawRequestContext, CreatePoolBorrowAuthorityContext,
+    CreatePoolContext, DeletePoolBorrowAuthorityContext, DepositContext, InitPoolMarketContext,
+    InitUserMiningContext, RepayContext, SetPoolConfigContext, SetTokenMetadataContext,
+    UpdateManagerContext, UpdatePoolBorrowAuthorityContext, WithdrawContext,
+    WithdrawRequestContext,
 };
 
 /// Instruction processing router
@@ -79,11 +81,7 @@ pub fn process_instruction(
             interest_amount,
         } => {
             msg!("LiquidityPoolsInstruction: Repay");
-            CreatePoolContext::new(program_id, accounts)?.process(
-                program_id,
-                amount,
-                interest_amount,
-            )
+            RepayContext::new(program_id, accounts)?.process(program_id, amount, interest_amount)
         }
 
         LiquidityPoolsInstruction::ClosePoolMarket => {

@@ -50,6 +50,7 @@ impl<'a, 'b> CreatePoolBorrowAuthorityContext<'a, 'b> {
             pool,
             pool_borrow_authority,
             rent,
+            pool_market,
         })
     }
 

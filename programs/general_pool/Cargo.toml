@@ -13,6 +13,7 @@ num-traits = "0.2"
 thiserror = "1.0"
 solana-program = "1.9.13"
 spl-token = { version = "3.1", features = [ "no-entrypoint" ] }
+everlend-registry = { path = "../registry", features = [ "no-entrypoint" ] }
 everlend-utils = { path = "../utils" }
 eld-rewards = { git = "ssh://git@github.com/everlend/everlend-next.git", branch = "main",  features = [ "no-entrypoint" ] }
 eld-config = { git = "ssh://git@github.com/everlend/everlend-next.git", branch = "main",  features = [ "no-entrypoint" ] }

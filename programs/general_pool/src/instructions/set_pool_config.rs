@@ -3,8 +3,8 @@ use crate::{
     state::{Pool, PoolConfig, PoolMarket, SetPoolConfigParams},
 };
 use everlend_utils::{
-    assert_account_key, assert_owned_by, cpi, next_account, next_optional_account,
-    next_program_account, next_signer_account,
+    assert_account_key, cpi, next_account, next_optional_account, next_program_account,
+    next_signer_account,
 };
 use solana_program::{
     account_info::AccountInfo,
