@@ -13,29 +13,29 @@ use solana_program::{
 use crate::state::Registry;
 
 /// Instruction context
-pub struct InitContext<'a> {
-    manager: AccountInfo<'a>,
-    registry: AccountInfo<'a>,
-    rent: AccountInfo<'a>,
+pub struct InitContext<'a, 'b> {
+    registry: &'a AccountInfo<'b>,
+    manager: &'a AccountInfo<'b>,
+    rent: &'a AccountInfo<'b>,
 }
 
-impl<'a> InitContext<'a> {
+impl<'a, 'b> InitContext<'a, 'b> {
     /// New instruction context
     pub fn new(
         _program_id: &Pubkey,
-        accounts: &[AccountInfo<'a>],
-    ) -> Result<InitContext<'a>, ProgramError> {
+        accounts: &'a [AccountInfo<'b>],
+    ) -> Result<InitContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter();
 
-        let registry_info = next_uninitialized_account(account_info_iter)?;
-        let manager_info = next_signer_account(account_info_iter)?;
-        let _system_info = next_program_account(account_info_iter, &system_program::id())?;
-        let rent_info = next_program_account(account_info_iter, &Rent::id())?;
+        let registry = next_uninitialized_account(account_info_iter)?;
+        let manager = next_signer_account(account_info_iter)?;
+        let _system = next_program_account(account_info_iter, &system_program::id())?;
+        let rent = next_program_account(account_info_iter, &Rent::id())?;
 
         Ok(InitContext {
-            manager: manager_info.clone(),
-            registry: registry_info.clone(),
-            rent: rent_info.clone(),
+            registry,
+            manager,
+            rent,
         })
     }
 
