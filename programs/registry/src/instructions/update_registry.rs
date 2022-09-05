@@ -17,8 +17,6 @@ pub struct UpdateRegistryData {
     ///
     pub liquidity_oracle: Option<Pubkey>,
     ///
-    pub liquidity_oracle_manager: Option<Pubkey>,
-    ///
     pub refresh_income_interval: Option<Slot>,
 }
 
@@ -56,10 +54,6 @@ impl<'a, 'b> UpdateRegistryContext<'a, 'b> {
 
         if let Some(liquidity_oracle) = data.liquidity_oracle {
             r.liquidity_oracle = liquidity_oracle;
-        }
-
-        if let Some(liquidity_oracle_manager) = data.liquidity_oracle_manager {
-            r.liquidity_oracle_manager = liquidity_oracle_manager;
         }
 
         if let Some(refresh_income_interval) = data.refresh_income_interval {

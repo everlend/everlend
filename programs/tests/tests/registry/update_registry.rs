@@ -26,7 +26,6 @@ async fn success() {
         general_pool_market: Some(Keypair::new().pubkey()),
         income_pool_market: Some(Keypair::new().pubkey()),
         liquidity_oracle: Some(Keypair::new().pubkey()),
-        liquidity_oracle_manager: Some(Keypair::new().pubkey()),
         refresh_income_interval: Some(REFRESH_INCOME_INTERVAL),
     };
 
@@ -55,10 +54,6 @@ async fn success() {
     assert_eq!(r.general_pool_market, data.general_pool_market.unwrap());
     assert_eq!(r.income_pool_market, data.income_pool_market.unwrap());
     assert_eq!(r.liquidity_oracle, data.liquidity_oracle.unwrap());
-    assert_eq!(
-        r.liquidity_oracle_manager,
-        data.liquidity_oracle_manager.unwrap()
-    );
     assert_eq!(
         r.refresh_income_interval,
         data.refresh_income_interval.unwrap()

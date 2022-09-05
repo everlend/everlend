@@ -17,7 +17,7 @@ pub const TOTAL_DISTRIBUTIONS: usize = 10;
 /// Distribution pubkeys
 pub type DistributionPubkeys = [Pubkey; TOTAL_DISTRIBUTIONS];
 
-const REGISTRY_LEN: usize = 1 + (32 + 32 + 32 + 32 + 32 + 8);
+const REGISTRY_LEN: usize = 1 + (32 + 32 + 32 + 32 + 8);
 const REGISTRY_MARKETS_LEN: usize = (32 * TOTAL_DISTRIBUTIONS) + (32 * TOTAL_DISTRIBUTIONS);
 
 /// Registry
@@ -34,8 +34,6 @@ pub struct Registry {
     pub income_pool_market: Pubkey,
     /// Liquidity oracle
     pub liquidity_oracle: Pubkey,
-    /// Manager that can upgrade Liquidity Oracle
-    pub liquidity_oracle_manager: Pubkey,
     /// Refresh income interval
     pub refresh_income_interval: Slot,
     // Program ids for money markets

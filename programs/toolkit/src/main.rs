@@ -6,8 +6,8 @@ use clap::{
     crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, SubCommand,
 };
 use commands_test::{command_test_larix_mining_raw, command_test_quarry_mining_raw};
-use everlend_depositor::{find_rebalancing_program_address, state::Rebalancing};
 use everlend_collateral_pool::find_pool_program_address;
+use everlend_depositor::{find_rebalancing_program_address, state::Rebalancing};
 use everlend_general_pool::state::SetPoolConfigParams;
 use everlend_registry::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
 use everlend_utils::find_program_address;
@@ -115,7 +115,6 @@ async fn command_create(
             general_pool_market: Some(general_pool_market_pubkey),
             income_pool_market: Some(income_pool_market_pubkey),
             liquidity_oracle: Some(liquidity_oracle_pubkey),
-            liquidity_oracle_manager: None,
             refresh_income_interval: Some(REFRESH_INCOME_INTERVAL),
         },
     )?;
@@ -373,14 +372,14 @@ async fn create_pool_withdraw_authority(
 
     let (_, collateral_mint_map) = get_asset_maps(default_accounts);
     let money_market_index = money_market as usize;
-    let collateral_pool_market_pubkey = initialiazed_accounts.collateral_pool_markets[money_market_index];
-    if collateral_pool_market_pubkey.eq(&Pubkey::default()){
+    let collateral_pool_market_pubkey =
+        initialiazed_accounts.collateral_pool_markets[money_market_index];
+    if collateral_pool_market_pubkey.eq(&Pubkey::default()) {
         println!("collateral_pool_market_pubkey is empty. Create it first");
-        return Ok(())
+        return Ok(());
     }
 
     for key in required_mints {
-
         let collateral_mint = collateral_mint_map.get(key).unwrap()[money_market_index].unwrap();
         let (pool_pubkey, _) = find_pool_program_address(
             &everlend_collateral_pool::id(),
@@ -402,12 +401,9 @@ async fn create_pool_withdraw_authority(
     Ok(())
 }
 
-
 #[allow(dead_code)]
 // Generate for all pools
-async fn create_pool_withdraw_authoritys(
-    config: &Config,
-) -> anyhow::Result<()> {
+async fn create_pool_withdraw_authoritys(config: &Config) -> anyhow::Result<()> {
     let mut initialized_accounts = config.get_initialized_accounts();
     let pool_markets = initialized_accounts.collateral_pool_markets;
     let depositor = initialized_accounts.depositor;

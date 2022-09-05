@@ -228,7 +228,6 @@ async fn setup() -> (
                 general_pool_market: Some(general_pool_market.keypair.pubkey()),
                 income_pool_market: Some(income_pool_market.keypair.pubkey()),
                 liquidity_oracle: Some(test_liquidity_oracle.keypair.pubkey()),
-                liquidity_oracle_manager: None,
                 refresh_income_interval: None,
             },
         )
