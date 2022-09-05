@@ -29,7 +29,7 @@ pub fn refresh_reserve<'a>(
 
     invoke(
         &ix,
-        &[lending_market.clone(), reserve.clone(), clock.clone()],
+        &[lending_market, reserve, clock],
     )
 }
 
@@ -77,15 +77,15 @@ pub fn deposit<'a>(
     invoke_signed(
         &ix,
         &[
-            source_liquidity.clone(),
-            destination_collateral.clone(),
-            reserve.clone(),
-            reserve_liquidity_supply.clone(),
-            reserve_collateral_mint.clone(),
-            lending_market.clone(),
-            lending_market_authority.clone(),
-            user_transfer_authority.clone(),
-            clock.clone(),
+            source_liquidity,
+            destination_collateral,
+            reserve,
+            reserve_liquidity_supply,
+            reserve_collateral_mint,
+            lending_market,
+            lending_market_authority,
+            user_transfer_authority,
+            clock,
         ],
         signers_seeds,
     )
@@ -135,15 +135,15 @@ pub fn redeem<'a>(
     invoke_signed(
         &ix,
         &[
-            source_collateral.clone(),
-            destination_liquidity.clone(),
-            reserve.clone(),
-            reserve_collateral_mint.clone(),
-            reserve_liquidity_supply.clone(),
-            lending_market.clone(),
-            lending_market_authority.clone(),
-            user_transfer_authority.clone(),
-            clock.clone(),
+            source_collateral,
+            destination_liquidity,
+            reserve,
+            reserve_collateral_mint,
+            reserve_liquidity_supply,
+            lending_market,
+            lending_market_authority,
+            user_transfer_authority,
+            clock,
         ],
         signed_seeds,
     )
