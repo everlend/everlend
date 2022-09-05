@@ -4,7 +4,6 @@ use solana_program::pubkey::Pubkey;
 pub struct AccountPubkeys {
     pub reserve: Pubkey,
     pub reserve_liquidity_supply: Pubkey,
-    pub reserve_liquidity_oracle: Pubkey,
     pub lending_market: Pubkey,
 }
 

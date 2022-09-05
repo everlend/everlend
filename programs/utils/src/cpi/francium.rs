@@ -1,10 +1,10 @@
+use borsh::BorshSerialize;
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::{AccountMeta, Instruction};
 use solana_program::program::{invoke, invoke_signed};
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar;
-use borsh::BorshSerialize;
 
 pub fn refresh_reserve<'a>(
     program_id: &Pubkey,
@@ -27,7 +27,10 @@ pub fn refresh_reserve<'a>(
         data: UpdateLendingPool { instruction: 12 }.try_to_vec()?,
     };
 
-    invoke(&ix, &[lending_market.clone(), reserve.clone(), clock.clone()])
+    invoke(
+        &ix,
+        &[lending_market.clone(), reserve.clone(), clock.clone()],
+    )
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -48,7 +51,7 @@ pub fn deposit<'a>(
     #[derive(Debug, PartialEq, BorshSerialize)]
     pub struct DepositToLendingPool {
         instruction: u8,
-        amount: u64
+        amount: u64,
     }
 
     let ix = Instruction {
@@ -64,7 +67,11 @@ pub fn deposit<'a>(
             AccountMeta::new(*user_transfer_authority.key, true),
             AccountMeta::new_readonly(sysvar::clock::id(), false),
         ],
-        data: DepositToLendingPool { instruction: 4, amount }.try_to_vec()?,
+        data: DepositToLendingPool {
+            instruction: 4,
+            amount,
+        }
+        .try_to_vec()?,
     };
 
     invoke_signed(
@@ -102,7 +109,7 @@ pub fn redeem<'a>(
     #[derive(Debug, PartialEq, BorshSerialize)]
     pub struct WithdrawFromLendingPool {
         instruction: u8,
-        amount: u64
+        amount: u64,
     }
 
     let ix = Instruction {
@@ -118,7 +125,11 @@ pub fn redeem<'a>(
             AccountMeta::new(*user_transfer_authority.key, true),
             AccountMeta::new_readonly(sysvar::clock::id(), false),
         ],
-        data: WithdrawFromLendingPool { instruction: 5, amount }.try_to_vec()?,
+        data: WithdrawFromLendingPool {
+            instruction: 5,
+            amount,
+        }
+        .try_to_vec()?,
     };
 
     invoke_signed(
