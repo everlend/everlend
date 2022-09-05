@@ -1,15 +1,12 @@
 use solana_client::client_error::ClientError;
-use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
+use solana_program::pubkey::Pubkey;
 use solana_sdk::{
     signature::{write_keypair_file, Keypair},
     signer::Signer,
     transaction::Transaction,
 };
 
-use everlend_registry::{
-    instructions::{UpdateRegistryData, UpdateRegistryMarketsData},
-    state::Registry,
-};
+use everlend_registry::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
 
 use crate::utils::*;
 
@@ -18,25 +15,12 @@ pub fn init(config: &Config, registry_keypair: Option<Keypair>) -> Result<Pubkey
 
     println!("Registry: {}", registry_keypair.pubkey());
 
-    let balance = config
-        .rpc_client
-        .get_minimum_balance_for_rent_exemption(Registry::LEN)?;
-
     let tx = Transaction::new_with_payer(
-        &[
-            system_instruction::create_account(
-                &config.fee_payer.pubkey(),
-                &registry_keypair.pubkey(),
-                balance,
-                Registry::LEN as u64,
-                &everlend_registry::id(),
-            ),
-            everlend_registry::instruction::init(
-                &everlend_registry::id(),
-                &registry_keypair.pubkey(),
-                &config.fee_payer.pubkey(),
-            ),
-        ],
+        &[everlend_registry::instruction::init(
+            &everlend_registry::id(),
+            &registry_keypair.pubkey(),
+            &config.fee_payer.pubkey(),
+        )],
         Some(&config.fee_payer.pubkey()),
     );
 

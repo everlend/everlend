@@ -732,7 +732,8 @@ impl Processor {
         let mut depositor = Depositor::unpack_unchecked(&depositor_info.data.borrow())?;
         assert_account_key(registry_info, &depositor.registry)?;
 
-        // Set new registry
+        // Check that acc is initialized and set new registry
+        Registry::unpack(&new_registry_info.data.borrow())?;
         depositor.registry = *new_registry_info.key;
 
         Depositor::pack(depositor, *depositor_info.data.borrow_mut())?;

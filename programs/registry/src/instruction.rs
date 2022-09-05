@@ -16,15 +16,15 @@ pub enum RegistryInstruction {
     ///
     /// Accounts:
     /// [WS] Registry account - uninitialized
-    /// [WS] Manager
+    /// [S] Manager
     /// [R] System program
     /// [R] Rent sysvar
     Init,
 
-    /// Update pool market manager
+    /// Update manager
     ///
     /// Accounts:
-    /// [WS] Registry
+    /// [W] Registry
     /// [S] Old manager
     /// [S] New manager
     ///
@@ -33,7 +33,7 @@ pub enum RegistryInstruction {
     /// Set a registry config
     ///
     /// Accounts:
-    /// [WS] Registry
+    /// [W] Registry
     /// [S] Manager
     UpdateRegistry {
         /// Registry data to update
@@ -43,7 +43,7 @@ pub enum RegistryInstruction {
     /// Update registry markets
     ///
     /// Accounts:
-    /// [WS] Registry
+    /// [W] Registry
     /// [S] Manager
     UpdateRegistryMarkets {
         /// MoneyMarkets data to update
@@ -55,7 +55,7 @@ pub enum RegistryInstruction {
 pub fn init(program_id: &Pubkey, registry: &Pubkey, manager: &Pubkey) -> Instruction {
     let accounts = vec![
         AccountMeta::new(*registry, true),
-        AccountMeta::new(*manager, true),
+        AccountMeta::new_readonly(*manager, true),
         AccountMeta::new_readonly(system_program::id(), false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
@@ -72,7 +72,7 @@ pub fn update_manager(
     new_manager: &Pubkey,
 ) -> Instruction {
     let accounts = vec![
-        AccountMeta::new(*registry, true),
+        AccountMeta::new(*registry, false),
         AccountMeta::new(*manager, true),
         AccountMeta::new_readonly(*new_manager, true),
     ];
@@ -88,7 +88,7 @@ pub fn update_registry(
     data: UpdateRegistryData,
 ) -> Instruction {
     let accounts = vec![
-        AccountMeta::new(*registry, true),
+        AccountMeta::new(*registry, false),
         AccountMeta::new(*manager, true),
     ];
 
@@ -107,7 +107,7 @@ pub fn update_registry_markets(
     data: UpdateRegistryMarketsData,
 ) -> Instruction {
     let accounts = vec![
-        AccountMeta::new(*registry, true),
+        AccountMeta::new(*registry, false),
         AccountMeta::new(*manager, true),
     ];
 
