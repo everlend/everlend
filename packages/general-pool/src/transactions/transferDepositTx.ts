@@ -9,13 +9,10 @@ import BN from 'bn.js'
 import { Borsh } from '@everlend/common'
 import { GeneralPoolsProgram } from '../program'
 
-export class TransferDepositTxData extends Borsh.Data<{ amount: BN }> {
-  static readonly SCHEMA = this.struct([
-    ['instruction', 'u8'],
-    ['amount', 'u64'],
-  ])
+export class TransferDepositTxData extends Borsh.Data {
+  static readonly SCHEMA = this.struct([['instruction', 'u8']])
 
-  instruction = 16
+  instruction = 17
 }
 
 type TransferDepositTxParams = {
@@ -28,7 +25,6 @@ type TransferDepositTxParams = {
   destinationRewardAccount: PublicKey
   config: PublicKey
   rewardProgramId: PublicKey
-  amount: BN
 }
 
 export class TransferDepositTx extends Transaction {
@@ -45,10 +41,9 @@ export class TransferDepositTx extends Transaction {
       destinationRewardAccount,
       config,
       rewardProgramId,
-      amount,
     } = params
 
-    const data = TransferDepositTxData.serialize({ amount })
+    const data = TransferDepositTxData.serialize()
 
     this.add(
       new TransactionInstruction({

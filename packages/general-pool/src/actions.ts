@@ -550,7 +550,6 @@ export const prepareInititalizeMining = async (
  * @param destinationRewardAccount public key of destination user reward account
  * @param config const
  * @param rewardProgramId reward program id
- * @param amount the amount of collateral tokens to transfer.
  *
  * @returns the object with a prepared transfer transaction.
  */
@@ -565,7 +564,6 @@ export const prepareTransferDepositTx = async (
   destinationRewardAccount: PublicKey,
   config: PublicKey,
   rewardProgramId: PublicKey,
-  amount: BN,
 ): Promise<ActionResult> => {
   const tx = new Transaction()
 
@@ -582,7 +580,6 @@ export const prepareTransferDepositTx = async (
         destinationRewardAccount,
         config,
         rewardProgramId,
-        amount,
       },
     ),
   )
