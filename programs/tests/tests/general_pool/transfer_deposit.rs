@@ -5,6 +5,7 @@ use solana_program::pubkey::Pubkey;
 use solana_program_test::*;
 use solana_sdk::signer::Signer;
 use solana_sdk::transaction::TransactionError;
+use everlend_utils::EverlendError;
 
 async fn setup() -> (
     ProgramTestContext,
@@ -209,7 +210,7 @@ async fn failed_after_spl_transfer() {
             .unwrap(),
         TransactionError::InstructionError(
             0,
-            InstructionError::Custom(6003 as u32) // MathOverflow error
+            InstructionError::Custom(EverlendError::RewardAndCollateralMismatch as u32)
         )
     )
 }

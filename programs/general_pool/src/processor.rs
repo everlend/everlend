@@ -1,5 +1,7 @@
 //! Program state processor
+use anchor_lang::AccountDeserialize;
 use borsh::BorshDeserialize;
+use eld_rewards::state::Mining;
 use everlend_registry::state::Registry;
 use everlend_utils::{
     assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
@@ -25,7 +27,7 @@ use spl_token::state::{Account, Mint};
 
 use crate::{
     find_pool_borrow_authority_program_address, find_pool_program_address,
-    find_transit_program_address, find_transit_sol_unwrap_address,
+    find_transit_program_address, find_transit_sol_unwrap_address, find_user_mining_address,
     find_withdrawal_request_program_address, find_withdrawal_requests_program_address,
     instruction::LiquidityPoolsInstruction,
     state::{
@@ -547,8 +549,17 @@ impl Processor {
         if source_account.mint != pool.pool_mint || destination_account.mint != pool.pool_mint {
             return Err(ProgramError::InvalidArgument);
         }
+        let (mining_reward_acc_pubkey, _) =
+            find_user_mining_address(&user_transfer_authority_info.key, &mining_reward_pool.key);
+        assert_account_key(mining_reward_acc, &mining_reward_acc_pubkey)?;
 
         let collateral_amount = Account::unpack(*source_info.data.borrow())?.amount;
+        let reward_share =
+            Mining::try_deserialize(&mut mining_reward_acc.data.borrow().as_ref())?.share;
+
+        if collateral_amount != reward_share {
+            return Err(EverlendError::RewardAndCollateralMismatch.into());
+        }
 
         // Transfer token from source to destination token account
         cpi::spl_token::transfer(
