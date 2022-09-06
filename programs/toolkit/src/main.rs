@@ -1235,7 +1235,7 @@ async fn main() -> anyhow::Result<()> {
                     ).arg(
                         Arg::with_name("source")
                             .validator(is_pubkey)
-                            .long("source-registry")
+                            .long("source")
                             .value_name("SOURCE")
                             .takes_value(true)
                             .required(true)
@@ -1244,7 +1244,7 @@ async fn main() -> anyhow::Result<()> {
                     .arg(
                         Arg::with_name("target")
                             .validator(is_pubkey)
-                            .long("target-registry")
+                            .long("target")
                             .value_name("TARGET")
                             .takes_value(true)
                             .required(true)
@@ -1601,7 +1601,7 @@ async fn main() -> anyhow::Result<()> {
                     let case = value_of::<String>(arg_matches, "case");
                     command_run_migrate(&config, accounts_path, case).await
                 }
-                ("migrate-depositor", Some(_)) => {
+                ("migrate-depositor", Some(arg_matches)) => {
                     println!("Started Depositor migration");
                     let source = pubkey_of(arg_matches, "source").unwrap();
                     let target = pubkey_of(arg_matches, "target").unwrap();

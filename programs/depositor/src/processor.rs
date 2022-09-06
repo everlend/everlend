@@ -1,15 +1,15 @@
 //! Program state processor
 
-use std::cmp::min;
+use std::{cmp::min, str::FromStr};
 
-use borsh::BorshDeserialize;
+use borsh::{BorshDeserialize, BorshSchema};
 use everlend_general_pool::{find_withdrawal_requests_program_address, state::WithdrawalRequests};
 use everlend_income_pools::utils::IncomePoolAccounts;
 use everlend_liquidity_oracle::{
     find_liquidity_oracle_token_distribution_program_address,
     state::{DistributionArray, TokenDistribution},
 };
-use everlend_registry::state::{Registry, RegistryMarkets};
+use everlend_registry::state::{AccountType, Registry, RegistryMarkets};
 use everlend_utils::{
     assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
     cpi, find_program_address, EverlendError,
@@ -719,13 +719,24 @@ impl Processor {
         let manager_info = next_account_info(account_info_iter)?;
 
         assert_signer(manager_info)?;
-
         assert_owned_by(depositor_info, program_id)?;
-        assert_owned_by(registry_info, &everlend_registry::id())?;
+        assert_owned_by(
+            registry_info,
+            &Pubkey::from_str("RegYdXL5fJF247zmeLSXXiUPjhpn4TMYLr94QRqkN8P").unwrap(),
+        )?;
         assert_owned_by(new_registry_info, &everlend_registry::id())?;
+        #[repr(C)]
+        #[derive(Debug, BorshDeserialize, BorshSchema, Default)]
+        pub struct DeprecatedRegistry {
+            /// Account type - Registry
+            pub account_type: AccountType,
+
+            /// Manager
+            pub manager: Pubkey,
+        }
 
         // Get registry state
-        let registry = Registry::unpack_unchecked(&registry_info.data.borrow())?;
+        let registry = DeprecatedRegistry::deserialize(&mut registry_info.data.borrow().as_ref())?;
         assert_account_key(manager_info, &registry.manager)?;
 
         // Get depositor state
@@ -733,7 +744,9 @@ impl Processor {
         assert_account_key(registry_info, &depositor.registry)?;
 
         // Check that acc is initialized and set new registry
-        Registry::unpack(&new_registry_info.data.borrow())?;
+        let new_registry = Registry::unpack(&new_registry_info.data.borrow())?;
+        assert_account_key(manager_info, &new_registry.manager)?;
+
         depositor.registry = *new_registry_info.key;
 
         Depositor::pack(depositor, *depositor_info.data.borrow_mut())?;
