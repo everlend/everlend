@@ -45,11 +45,11 @@ pub struct Registry {
 impl Registry {
     /// Initialize a voting pool
     pub fn init(manager: Pubkey) -> Registry {
-        let mut r = Registry::default();
-        r.account_type = AccountType::Registry;
-        r.manager = manager;
-
-        r
+        Registry {
+            account_type: AccountType::Registry,
+            manager,
+            ..Default::default()
+        }
     }
 }
 

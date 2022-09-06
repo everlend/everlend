@@ -34,42 +34,46 @@ impl Default for AccountVersion {
     }
 }
 
-pub fn next_uninitialized_account<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
-    iter: &mut I,
-) -> Result<I::Item, ProgramError> {
-    let acc = iter.next().ok_or(ProgramError::NotEnoughAccountKeys)?;
-    if acc.owner.eq(&Pubkey::default()) {
-        Ok(acc)
-    } else {
-        Err(ProgramError::AccountAlreadyInitialized)
+pub struct AccountLoader {}
+
+impl AccountLoader {
+    pub fn next_uninitialized<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
+        iter: &mut I,
+    ) -> Result<I::Item, ProgramError> {
+        let acc = iter.next().ok_or(ProgramError::NotEnoughAccountKeys)?;
+        if acc.owner.eq(&Pubkey::default()) {
+            Ok(acc)
+        } else {
+            Err(ProgramError::AccountAlreadyInitialized)
+        }
     }
-}
 
-pub fn next_account<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
-    iter: &mut I,
-    owner: &Pubkey,
-) -> Result<I::Item, ProgramError> {
-    let acc = iter.next().ok_or(ProgramError::NotEnoughAccountKeys)?;
-    assert_owned_by(acc, owner)?;
+    pub fn next_with_owner<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
+        iter: &mut I,
+        owner: &Pubkey,
+    ) -> Result<I::Item, ProgramError> {
+        let acc = iter.next().ok_or(ProgramError::NotEnoughAccountKeys)?;
+        assert_owned_by(acc, owner)?;
 
-    Ok(acc)
-}
+        Ok(acc)
+    }
 
-pub fn next_program_account<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
-    iter: &mut I,
-    key: &Pubkey,
-) -> Result<I::Item, ProgramError> {
-    let acc = iter.next().ok_or(ProgramError::NotEnoughAccountKeys)?;
-    assert_account_key(acc, key)?;
+    pub fn next_with_key<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
+        iter: &mut I,
+        key: &Pubkey,
+    ) -> Result<I::Item, ProgramError> {
+        let acc = iter.next().ok_or(ProgramError::NotEnoughAccountKeys)?;
+        assert_account_key(acc, key)?;
 
-    Ok(acc)
-}
+        Ok(acc)
+    }
 
-pub fn next_signer_account<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
-    iter: &mut I,
-) -> Result<I::Item, ProgramError> {
-    let acc = iter.next().ok_or(ProgramError::NotEnoughAccountKeys)?;
-    assert_signer(acc)?;
+    pub fn next_signer<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
+        iter: &mut I,
+    ) -> Result<I::Item, ProgramError> {
+        let acc = iter.next().ok_or(ProgramError::NotEnoughAccountKeys)?;
+        assert_signer(acc)?;
 
-    Ok(acc)
+        Ok(acc)
+    }
 }
