@@ -35,7 +35,6 @@ pub fn deposit<'a, 'b>(
     collateral_transit: AccountInfo<'a>,
     collateral_mint: AccountInfo<'a>,
     liquidity_transit: AccountInfo<'a>,
-    liquidity_mint: AccountInfo<'a>,
     authority: AccountInfo<'a>,
     clock: AccountInfo<'a>,
     money_market_program: AccountInfo<'a>,
@@ -58,7 +57,7 @@ pub fn deposit<'a, 'b>(
         money_market_program,
         money_market_account_info_iter,
         internal_mining_type,
-        liquidity_mint.key,
+        collateral_mint.key,
         authority.key,
     )?;
 
@@ -126,7 +125,6 @@ pub fn withdraw<'a, 'b>(
     collateral_mint: AccountInfo<'a>,
     liquidity_transit: AccountInfo<'a>,
     liquidity_reserve_transit: AccountInfo<'a>,
-    liquidity_mint: AccountInfo<'a>,
     authority: AccountInfo<'a>,
     clock: AccountInfo<'a>,
     money_market_program: AccountInfo<'a>,
@@ -152,7 +150,7 @@ pub fn withdraw<'a, 'b>(
         money_market_program,
         money_market_account_info_iter,
         internal_mining_type,
-        liquidity_mint.key,
+        collateral_mint.key,
         authority.key,
     )?;
 
@@ -248,7 +246,7 @@ pub fn money_market<'a, 'b>(
     money_market_program: AccountInfo<'a>,
     money_market_account_info_iter: &'b mut Iter<AccountInfo<'a>>,
     internal_mining_type: Option<MiningType>,
-    token_mint: &Pubkey,
+    collateral_token_mint: &Pubkey,
     depositor_authority: &Pubkey,
 ) -> Result<Box<dyn MoneyMarket<'a> + 'a>, ProgramError> {
     let port_finance_program_id = registry_programs.money_market_program_ids[0];
@@ -266,7 +264,7 @@ pub fn money_market<'a, 'b>(
             *money_market_program.key,
             money_market_account_info_iter,
             internal_mining_type,
-            token_mint,
+            collateral_token_mint,
             depositor_authority
         )?;
         return Ok(Box::new(port));

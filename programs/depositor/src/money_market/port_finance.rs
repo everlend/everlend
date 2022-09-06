@@ -39,7 +39,7 @@ impl<'a, 'b> PortFinance<'a> {
         money_market_program_id: Pubkey,
         account_info_iter: &'b mut Iter<AccountInfo<'a>>,
         internal_mining_type: Option<MiningType>,
-        token_mint: &Pubkey,
+        collateral_token_mint: &Pubkey,
         depositor_authority: &Pubkey,
     ) -> Result<PortFinance<'a>, ProgramError> {
         let reserve_info = next_account_info(account_info_iter)?;
@@ -68,7 +68,7 @@ impl<'a, 'b> PortFinance<'a> {
                 let quarry = Quarry::init(
                     account_info_iter,
                     depositor_authority,
-                    token_mint,
+                    collateral_token_mint,
                     &rewarder,
                 )?;
 

@@ -1,35 +1,19 @@
+use crate::spl_create_associated_token_account;
 use anchor_lang::{prelude::AccountMeta, InstructionData};
 use quarry_mine::instruction::{ClaimRewardsV2, CreateMinerV2, StakeTokens, WithdrawTokens};
 use solana_client::client_error::ClientError;
-use solana_program::{
-    instruction::Instruction, program_pack::Pack, pubkey::Pubkey, system_instruction,
-    system_program,
-};
-use solana_sdk::{signature::Keypair, signer::Signer, transaction::Transaction};
+use solana_program::{instruction::Instruction, pubkey::Pubkey, system_program};
+use solana_sdk::transaction::Transaction;
 
 use crate::utils::Config;
 
-pub fn create_miner(config: &Config, miner_vault: &Keypair) -> Result<(), ClientError> {
+pub fn create_miner(config: &Config) -> Result<Pubkey, ClientError> {
     let default_accounts = config.get_default_accounts();
-    let miner = find_miner_address(config);
+    let miner = find_miner_address(config, &config.fee_payer.pubkey());
     println!("miner {}", miner);
-    let token_account_rent = config
-        .rpc_client
-        .get_minimum_balance_for_rent_exemption(spl_token::state::Account::LEN as usize)?;
-    let create_vault_instruction = system_instruction::create_account(
-        &config.fee_payer.pubkey(),
-        &miner_vault.pubkey(),
-        token_account_rent,
-        spl_token::state::Account::LEN as u64,
-        &spl_token::id(),
-    );
-    let init_vault_instruction = spl_token::instruction::initialize_account(
-        &spl_token::id(),
-        &miner_vault.pubkey(),
-        &default_accounts.quarry.token_mint,
-        &miner,
-    )
-    .unwrap();
+
+    let miner_vault =
+        spl_create_associated_token_account(config, &miner, &default_accounts.quarry.token_mint)?;
     let create_miner_instruction = Instruction {
         program_id: default_accounts.quarry.mine_program_id,
         accounts: vec![
@@ -40,31 +24,24 @@ pub fn create_miner(config: &Config, miner_vault: &Keypair) -> Result<(), Client
             AccountMeta::new_readonly(system_program::id(), false),
             AccountMeta::new(config.fee_payer.pubkey(), false),
             AccountMeta::new_readonly(default_accounts.quarry.token_mint, false),
-            AccountMeta::new_readonly(miner_vault.pubkey(), false),
+            AccountMeta::new_readonly(miner_vault, false),
             AccountMeta::new_readonly(spl_token::id(), false),
         ],
         data: CreateMinerV2.data(),
     };
     let transaction = Transaction::new_with_payer(
-        &[
-            create_vault_instruction,
-            init_vault_instruction,
-            create_miner_instruction,
-        ],
+        &[create_miner_instruction],
         Some(&config.fee_payer.pubkey()),
     );
-    config.sign_and_send_and_confirm_transaction(
-        transaction,
-        vec![config.fee_payer.as_ref(), miner_vault],
-    )?;
-    Ok(())
+    config.sign_and_send_and_confirm_transaction(transaction, vec![config.fee_payer.as_ref()])?;
+    Ok(miner_vault)
 }
 
 pub fn stake_tokens(config: &Config, token: &String, amount: u64) -> Result<(), ClientError> {
     let default_accounts = config.get_default_accounts();
     let mut initialized_accounts = config.get_initialized_accounts();
     let quarry_mining = initialized_accounts.quarry_mining.get_mut(token).unwrap();
-    let miner = find_miner_address(config);
+    let miner = find_miner_address(config, &config.fee_payer.pubkey());
     let stake_instruction = Instruction {
         program_id: default_accounts.quarry.mine_program_id,
         accounts: vec![
@@ -103,7 +80,7 @@ pub fn withdraw_tokens(config: &Config, token: &String, amount: u64) -> Result<(
     let default_accounts = config.get_default_accounts();
     let mut initialized_accounts = config.get_initialized_accounts();
     let quarry_mining = initialized_accounts.quarry_mining.get_mut(token).unwrap();
-    let miner = find_miner_address(config);
+    let miner = find_miner_address(config, &config.fee_payer.pubkey());
     let stake_instruction = Instruction {
         program_id: default_accounts.quarry.mine_program_id,
         accounts: vec![
@@ -132,7 +109,7 @@ pub fn claim_mining_rewards(config: &Config, token: &String) -> Result<(), Clien
     let default_accounts = config.get_default_accounts();
     let mut initialized_accounts = config.get_initialized_accounts();
     let quarry_mining = initialized_accounts.quarry_mining.get_mut(token).unwrap();
-    let miner = find_miner_address(config);
+    let miner = find_miner_address(config, &config.fee_payer.pubkey());
     let instruction = Instruction {
         program_id: default_accounts.quarry.mine_program_id,
         accounts: vec![
@@ -160,9 +137,8 @@ pub fn claim_mining_rewards(config: &Config, token: &String) -> Result<(), Clien
     Ok(())
 }
 
-fn find_miner_address(config: &Config) -> Pubkey {
+fn find_miner_address(config: &Config, authority: &Pubkey) -> Pubkey {
     let default_accounts = config.get_default_accounts();
-    let authority = config.fee_payer.pubkey();
     let quarry = default_accounts.quarry.quarry;
     let (miner, _) = Pubkey::find_program_address(
         &[

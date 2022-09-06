@@ -632,10 +632,7 @@ pub fn init_mining_account(
             accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
         }
         MiningType::Quarry {
-            // quarry_mining_program_id,
-            // quarry,
             rewarder,
-            // miner_vault,
         } => {
 
             let (quarry, _) = cpi::quarry::find_quarry_program_address(
@@ -649,17 +646,17 @@ pub fn init_mining_account(
                 &depositor_authority,
             );
 
-            let miner_vault = get_associated_token_address(&miner_pubkey, &pubkeys.liquidity_mint);
+            let miner_vault = get_associated_token_address(&miner_pubkey, &pubkeys.collateral_mint);
 
             accounts.push(AccountMeta::new_readonly(cpi::quarry::id(), false));
-            accounts.push(AccountMeta::new(miner_pubkey, false));
-            accounts.push(AccountMeta::new(quarry, false));
             accounts.push(AccountMeta::new_readonly(rewarder, false));
+            accounts.push(AccountMeta::new(quarry, false));
+            accounts.push(AccountMeta::new(miner_pubkey, false));
             accounts.push(AccountMeta::new_readonly(miner_vault, false));
+
+            accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
         }
-        MiningType::None => {
-            accounts.push(AccountMeta::new_readonly(system_program::id(), false));
-        }
+        MiningType::None => {}
     }
 
     Instruction::new_with_borsh(
