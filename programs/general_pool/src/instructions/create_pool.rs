@@ -1,7 +1,4 @@
-use everlend_utils::{
-    assert_account_key, cpi, next_account, next_program_account, next_signer_account,
-    next_uninitialized_account,
-};
+use everlend_utils::{assert_account_key, cpi, AccountLoader};
 use solana_program::{
     account_info::AccountInfo,
     entrypoint::ProgramResult,
@@ -45,21 +42,22 @@ impl<'a, 'b> CreatePoolContext<'a, 'b> {
         program_id: &Pubkey,
         accounts: &'a [AccountInfo<'b>],
     ) -> Result<CreatePoolContext<'a, 'b>, ProgramError> {
-        let account_info_iter = &mut accounts.iter();
+        let account_info_iter = &mut accounts.iter().enumerate();
 
-        let pool_market = next_account(account_info_iter, program_id)?;
-        let pool = next_uninitialized_account(account_info_iter)?;
-        let pool_config = next_uninitialized_account(account_info_iter)?;
-        let withdrawal_requests = next_uninitialized_account(account_info_iter)?;
-        let token_mint = next_account(account_info_iter, &spl_token::id())?;
-        let token_account = next_account(account_info_iter, &spl_token::id())?;
-        let transit = next_uninitialized_account(account_info_iter)?;
-        let pool_mint = next_account(account_info_iter, &spl_token::id())?;
-        let manager = next_signer_account(account_info_iter)?;
-        let pool_market_authority = next_account(account_info_iter, program_id)?;
-        let rent = next_program_account(account_info_iter, &Rent::id())?;
-        let _system_program = next_program_account(account_info_iter, &system_program::id())?;
-        let _token_program = next_program_account(account_info_iter, &spl_token::id())?;
+        let pool_market = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let pool = AccountLoader::next_uninitialized(account_info_iter)?;
+        let pool_config = AccountLoader::next_uninitialized(account_info_iter)?;
+        let withdrawal_requests = AccountLoader::next_uninitialized(account_info_iter)?;
+        let token_mint = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let token_account = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let transit = AccountLoader::next_uninitialized(account_info_iter)?;
+        let pool_mint = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let manager = AccountLoader::next_signer(account_info_iter)?;
+        let pool_market_authority = AccountLoader::next_unchecked(account_info_iter)?; // Will be initialized in instruction
+        let rent = AccountLoader::next_with_key(account_info_iter, &Rent::id())?;
+        let _system_program =
+            AccountLoader::next_with_key(account_info_iter, &system_program::id())?;
+        let _token_program = AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
 
         Ok(CreatePoolContext {
             manager,
@@ -225,6 +223,6 @@ impl<'a, 'b> CreatePoolContext<'a, 'b> {
             rent,
         )?;
 
-        PoolConfig::pack(PoolConfig::default(), *self.pool.data.borrow_mut())
+        PoolConfig::pack(PoolConfig::default(), *self.pool_config.data.borrow_mut())
     }
 }

@@ -7,11 +7,14 @@ pub mod instructions;
 pub mod integrations;
 pub mod math;
 
+use std::iter::Enumerate;
+
 pub use asserts::*;
 pub use error::*;
 pub use math::*;
 
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+use solana_program::msg;
 use solana_program::pubkey::Pubkey;
 use solana_program::{account_info::AccountInfo, program_error::ProgramError};
 /// Generates seed bump for authorities
@@ -34,61 +37,105 @@ impl Default for AccountVersion {
     }
 }
 
-pub fn next_uninitialized_account<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
-    iter: &mut I,
-) -> Result<I::Item, ProgramError> {
-    let acc = iter.next().ok_or(ProgramError::NotEnoughAccountKeys)?;
-    if acc.owner.eq(&Pubkey::default()) {
-        Ok(acc)
-    } else {
+pub struct AccountLoader {}
+
+impl AccountLoader {
+    /// Checks that account is not initilized (it's pubkey is empty)
+    pub fn next_uninitialized<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
+        iter: &mut Enumerate<I>,
+    ) -> Result<I::Item, ProgramError> {
+        let (idx, acc) = iter.next().ok_or(ProgramError::NotEnoughAccountKeys)?;
+        if acc.owner.eq(&Pubkey::default()) {
+            return Ok(acc);
+        }
+
+        msg!("Account #{}:{} already initialized", idx, acc.key,);
         Err(ProgramError::AccountAlreadyInitialized)
     }
-}
 
-pub fn next_optional_account<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
-    iter: &mut I,
-    owner: &Pubkey,
-) -> Result<I::Item, ProgramError> {
-    let acc = iter.next().ok_or(ProgramError::NotEnoughAccountKeys)?;
-    if !acc.owner.eq(&Pubkey::default()) {
-        assert_owned_by(acc, owner)?;
+    pub fn next_with_owner<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
+        iter: &mut Enumerate<I>,
+        owner: &Pubkey,
+    ) -> Result<I::Item, ProgramError> {
+        let (idx, acc) = iter.next().ok_or(ProgramError::NotEnoughAccountKeys)?;
+        if acc.owner.eq(owner) {
+            return Ok(acc);
+        }
+
+        msg!(
+            "Account #{}:{} owner error. Got {} Expected {}",
+            idx,
+            acc.key,
+            acc.owner,
+            owner
+        );
+        Err(EverlendError::InvalidAccountOwner.into())
     }
 
-    Ok(acc)
-}
+    pub fn next_with_key<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
+        iter: &mut Enumerate<I>,
+        key: &Pubkey,
+    ) -> Result<I::Item, ProgramError> {
+        let (idx, acc) = iter.next().ok_or(ProgramError::NotEnoughAccountKeys)?;
+        if acc.key.eq(key) {
+            return Ok(acc);
+        }
 
-pub fn next_unchecked_account<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
-    iter: &mut I,
-) -> Result<I::Item, ProgramError> {
-    let acc = iter.next().ok_or(ProgramError::NotEnoughAccountKeys)?;
-    Ok(acc)
-}
+        msg!(
+            "Account #{}:{} assert error. Expected {}",
+            idx,
+            acc.key,
+            key
+        );
+        Err(ProgramError::InvalidArgument)
+    }
 
-pub fn next_account<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
-    iter: &mut I,
-    owner: &Pubkey,
-) -> Result<I::Item, ProgramError> {
-    let acc = iter.next().ok_or(ProgramError::NotEnoughAccountKeys)?;
-    assert_owned_by(acc, owner)?;
+    pub fn next_signer<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
+        iter: &mut Enumerate<I>,
+    ) -> Result<I::Item, ProgramError> {
+        let (idx, acc) = iter.next().ok_or(ProgramError::NotEnoughAccountKeys)?;
+        if acc.is_signer {
+            return Ok(acc);
+        }
 
-    Ok(acc)
-}
+        msg!("Account #{}:{} missing signature", idx, acc.key,);
+        Err(ProgramError::MissingRequiredSignature)
+    }
 
-pub fn next_program_account<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
-    iter: &mut I,
-    key: &Pubkey,
-) -> Result<I::Item, ProgramError> {
-    let acc = iter.next().ok_or(ProgramError::NotEnoughAccountKeys)?;
-    assert_account_key(acc, key)?;
+    /// Checks if account is initialized and then checks it's owner
+    pub fn next_optional<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
+        iter: &mut Enumerate<I>,
+        owner: &Pubkey,
+    ) -> Result<I::Item, ProgramError> {
+        let (idx, acc) = iter.next().ok_or(ProgramError::NotEnoughAccountKeys)?;
+        if acc.owner.eq(&Pubkey::default()) {
+            return Ok(acc);
+        }
 
-    Ok(acc)
-}
+        if acc.owner.eq(owner) {
+            return Ok(acc);
+        }
 
-pub fn next_signer_account<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
-    iter: &mut I,
-) -> Result<I::Item, ProgramError> {
-    let acc = iter.next().ok_or(ProgramError::NotEnoughAccountKeys)?;
-    assert_signer(acc)?;
+        msg!(
+            "Account #{}:{} owner error. Got {} Expected unitialized or {}",
+            idx,
+            acc.key,
+            acc.owner,
+            owner
+        );
+        Err(EverlendError::InvalidAccountOwner.into())
+    }
 
-    Ok(acc)
+    /// Load the account without any checks
+    pub fn next_unchecked<'a, 'b, I: Iterator<Item = &'a AccountInfo<'b>>>(
+        iter: &mut Enumerate<I>,
+    ) -> Result<I::Item, ProgramError> {
+        let (_, acc) = iter.next().ok_or(ProgramError::NotEnoughAccountKeys)?;
+        Ok(acc)
+    }
+
+    pub fn has_more<I: Iterator>(iter: &Enumerate<I>) -> bool {
+        let (remaining_len, _) = iter.size_hint();
+        remaining_len > 0
+    }
 }

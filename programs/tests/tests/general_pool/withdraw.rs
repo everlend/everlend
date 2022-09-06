@@ -5,7 +5,6 @@ use everlend_utils::EverlendError;
 use solana_program::instruction::InstructionError;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::*;
-use solana_sdk::signature::Keypair;
 use solana_sdk::signer::Signer;
 use solana_sdk::transaction::{Transaction, TransactionError};
 
@@ -441,7 +440,10 @@ async fn fail_with_invalid_token_account() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32)
+        )
     )
 }
 
@@ -552,7 +554,10 @@ async fn fail_with_invalid_pool_mint() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32)
+        )
     )
 }
 
@@ -575,9 +580,13 @@ async fn success_with_random_tx_signer() {
 
     context.warp_to_slot(3 + WITHDRAW_DELAY).unwrap();
 
+    // Create new registry
+    let registry = TestRegistry::new();
+    registry.init(&mut context).await.unwrap();
+
     let random_tx_signer = TestGeneralPoolMarket::new();
     random_tx_signer
-        .init(&mut context, &Keypair::new().pubkey())
+        .init(&mut context, &registry.keypair.pubkey())
         .await
         .unwrap();
 

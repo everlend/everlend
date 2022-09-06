@@ -2,10 +2,7 @@ use crate::{
     find_transit_program_address, find_transit_sol_unwrap_address,
     state::{Pool, WithdrawalRequest, WithdrawalRequests},
 };
-use everlend_utils::{
-    assert_account_key, cpi, find_program_address, next_account, next_program_account,
-    next_signer_account, next_unchecked_account, EverlendError,
-};
+use everlend_utils::{assert_account_key, cpi, find_program_address, AccountLoader, EverlendError};
 use solana_program::{
     account_info::AccountInfo,
     clock::Clock,
@@ -46,28 +43,30 @@ impl<'a, 'b> WithdrawContext<'a, 'b> {
         program_id: &Pubkey,
         accounts: &'a [AccountInfo<'b>],
     ) -> Result<WithdrawContext<'a, 'b>, ProgramError> {
-        let account_info_iter = &mut accounts.iter().peekable();
+        let account_info_iter = &mut accounts.iter().enumerate();
 
-        let pool_market = next_account(account_info_iter, program_id)?;
-        let pool_market_authority = next_account(account_info_iter, program_id)?;
-        let pool = next_account(account_info_iter, program_id)?;
-        let pool_mint = next_account(account_info_iter, &spl_token::id())?;
-        let withdrawal_requests = next_account(account_info_iter, program_id)?;
-        let withdrawal_request = next_account(account_info_iter, program_id)?;
-        let destination = next_account(account_info_iter, &spl_token::id())?;
-        let token_account = next_account(account_info_iter, &spl_token::id())?;
-        let collateral_transit = next_account(account_info_iter, &spl_token::id())?;
-        let from = next_unchecked_account(account_info_iter)?; // TODO: do we need to check this one?
-        let clock = next_program_account(account_info_iter, &Clock::id())?;
-        let _token_program = next_program_account(account_info_iter, &spl_token::id())?;
+        let pool_market = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let pool_market_authority = AccountLoader::next_unchecked(account_info_iter)?; // Is PDA account of this program
+        let pool = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let pool_mint = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let withdrawal_requests = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let withdrawal_request = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let destination = AccountLoader::next_unchecked(account_info_iter)?; // Can be either spl or system (for native sol)
+        let token_account = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let collateral_transit =
+            AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let from = AccountLoader::next_unchecked(account_info_iter)?; // Request creator, can be any account
+        let clock = AccountLoader::next_with_key(account_info_iter, &Clock::id())?;
+        let _token_program = AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
 
-        let native_sol_context = if account_info_iter.peek().is_some() {
+        let native_sol_context = if AccountLoader::has_more(account_info_iter) {
             let token_mint =
-                next_program_account(account_info_iter, &spl_token::native_mint::id())?;
-            let unwrap_sol = next_unchecked_account(account_info_iter)?; // TODO: do we need to check this one?
-            let signer = next_signer_account(account_info_iter)?;
-            let rent = next_program_account(account_info_iter, &Rent::id())?;
-            let _system_program = next_program_account(account_info_iter, &system_program::id())?;
+                AccountLoader::next_with_key(account_info_iter, &spl_token::native_mint::id())?;
+            let unwrap_sol = AccountLoader::next_uninitialized(account_info_iter)?;
+            let signer = AccountLoader::next_signer(account_info_iter)?;
+            let rent = AccountLoader::next_with_key(account_info_iter, &Rent::id())?;
+            let _system_program =
+                AccountLoader::next_with_key(account_info_iter, &system_program::id())?;
 
             Some(NativeSolContext {
                 token_mint,

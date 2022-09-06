@@ -1,7 +1,5 @@
 use crate::state::{Pool, PoolBorrowAuthority, PoolMarket};
-use everlend_utils::{
-    assert_account_key, next_account, next_signer_account, next_unchecked_account, EverlendError,
-};
+use everlend_utils::{assert_account_key, AccountLoader, EverlendError};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
     program_pack::Pack, pubkey::Pubkey,
@@ -22,13 +20,13 @@ impl<'a, 'b> DeletePoolBorrowAuthorityContext<'a, 'b> {
         program_id: &Pubkey,
         accounts: &'a [AccountInfo<'b>],
     ) -> Result<DeletePoolBorrowAuthorityContext<'a, 'b>, ProgramError> {
-        let account_info_iter = &mut accounts.iter();
+        let account_info_iter = &mut accounts.iter().enumerate();
 
-        let pool_market = next_account(account_info_iter, program_id)?;
-        let pool = next_account(account_info_iter, program_id)?;
-        let pool_borrow_authority = next_account(account_info_iter, program_id)?;
-        let receiver = next_unchecked_account(account_info_iter)?;
-        let manager = next_signer_account(account_info_iter)?;
+        let pool_market = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let pool = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let pool_borrow_authority = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let receiver = AccountLoader::next_unchecked(account_info_iter)?;
+        let manager = AccountLoader::next_signer(account_info_iter)?;
 
         Ok(DeletePoolBorrowAuthorityContext {
             pool_market,

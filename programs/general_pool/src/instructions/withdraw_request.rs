@@ -8,8 +8,7 @@ use crate::{
     utils::total_pool_amount,
 };
 use everlend_utils::{
-    assert_account_key, assert_owned_by, cpi, cpi::rewards::withdraw_mining, next_account,
-    next_optional_account, next_program_account, next_signer_account, next_uninitialized_account,
+    assert_account_key, assert_owned_by, cpi, cpi::rewards::withdraw_mining, AccountLoader,
     EverlendError,
 };
 use solana_program::{
@@ -52,27 +51,32 @@ impl<'a, 'b> WithdrawRequestContext<'a, 'b> {
         program_id: &Pubkey,
         accounts: &'a [AccountInfo<'b>],
     ) -> Result<WithdrawRequestContext<'a, 'b>, ProgramError> {
-        let account_info_iter = &mut accounts.iter();
+        let account_info_iter = &mut accounts.iter().enumerate();
 
-        let pool_config = next_optional_account(account_info_iter, program_id)?;
-        let pool_market = next_account(account_info_iter, program_id)?;
-        let pool = next_account(account_info_iter, program_id)?;
-        let pool_mint = next_account(account_info_iter, &spl_token::id())?;
-        let withdrawal_requests = next_account(account_info_iter, program_id)?;
-        let withdrawal_request = next_uninitialized_account(account_info_iter)?;
-        let source = next_account(account_info_iter, &spl_token::id())?;
-        let destination = next_account(account_info_iter, &spl_token::id())?;
-        let token_account = next_account(account_info_iter, &spl_token::id())?;
-        let collateral_transit = next_account(account_info_iter, &spl_token::id())?;
-        let user_transfer_authority = next_signer_account(account_info_iter)?;
-        let mining_reward_pool = next_account(account_info_iter, &eld_rewards::id())?;
-        let mining_reward_acc = next_account(account_info_iter, &eld_rewards::id())?;
-        let everlend_config = next_account(account_info_iter, &eld_config::id())?;
-        let everlend_rewards_program = next_program_account(account_info_iter, &eld_rewards::id())?;
-        let rent = next_program_account(account_info_iter, &Rent::id())?;
-        let clock = next_program_account(account_info_iter, &Clock::id())?;
-        let _system_program = next_program_account(account_info_iter, &system_program::id())?;
-        let _token_program = next_program_account(account_info_iter, &spl_token::id())?;
+        let pool_config = AccountLoader::next_optional(account_info_iter, program_id)?;
+        let pool_market = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let pool = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let pool_mint = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let withdrawal_requests = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let withdrawal_request = AccountLoader::next_uninitialized(account_info_iter)?;
+        let source = AccountLoader::next_unchecked(account_info_iter)?; // Can be either spl or system (for native sol)
+        let destination = AccountLoader::next_unchecked(account_info_iter)?; // Can be either spl or system (for native sol)
+        let token_account = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let collateral_transit =
+            AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let user_transfer_authority = AccountLoader::next_signer(account_info_iter)?;
+        let mining_reward_pool =
+            AccountLoader::next_with_owner(account_info_iter, &eld_rewards::id())?;
+        let mining_reward_acc =
+            AccountLoader::next_with_owner(account_info_iter, &eld_rewards::id())?;
+        let everlend_config = AccountLoader::next_with_owner(account_info_iter, &eld_config::id())?;
+        let everlend_rewards_program =
+            AccountLoader::next_with_key(account_info_iter, &eld_rewards::id())?;
+        let rent = AccountLoader::next_with_key(account_info_iter, &Rent::id())?;
+        let clock = AccountLoader::next_with_key(account_info_iter, &Clock::id())?;
+        let _system_program =
+            AccountLoader::next_with_key(account_info_iter, &system_program::id())?;
+        let _token_program = AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
 
         Ok(WithdrawRequestContext {
             pool_config,

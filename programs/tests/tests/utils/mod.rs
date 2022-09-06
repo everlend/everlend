@@ -80,7 +80,7 @@ pub fn program_test() -> ProgramTest {
     program.add_program(
         "everlend_general_pool",
         everlend_general_pool::id(),
-        processor!(everlend_general_pool::processor::Processor::process_instruction),
+        processor!(everlend_general_pool::processor::process_instruction),
     );
     program.add_program(
         "everlend_income_pools",
@@ -182,7 +182,6 @@ pub async fn presetup() -> TestEnvironment {
                 general_pool_market: None,
                 income_pool_market: None,
                 liquidity_oracle: None,
-                liquidity_oracle_manager: None,
                 refresh_income_interval: Some(REFRESH_INCOME_INTERVAL),
             },
         )

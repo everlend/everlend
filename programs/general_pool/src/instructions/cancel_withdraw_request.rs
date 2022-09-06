@@ -2,10 +2,7 @@ use crate::{
     find_transit_program_address,
     state::{Pool, PoolMarket, WithdrawalRequest, WithdrawalRequests},
 };
-use everlend_utils::{
-    assert_account_key, cpi, find_program_address, next_account, next_program_account,
-    next_signer_account, next_unchecked_account, EverlendError,
-};
+use everlend_utils::{assert_account_key, cpi, find_program_address, AccountLoader, EverlendError};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
     program_pack::Pack, pubkey::Pubkey,
@@ -31,18 +28,19 @@ impl<'a, 'b> CancelWithdrawRequestContext<'a, 'b> {
         program_id: &Pubkey,
         accounts: &'a [AccountInfo<'b>],
     ) -> Result<CancelWithdrawRequestContext<'a, 'b>, ProgramError> {
-        let account_info_iter = &mut accounts.iter();
-        let pool_market = next_account(account_info_iter, program_id)?;
-        let pool = next_account(account_info_iter, program_id)?;
-        let withdrawal_requests = next_account(account_info_iter, program_id)?;
-        let withdrawal_request = next_account(account_info_iter, program_id)?;
-        let source = next_account(account_info_iter, &spl_token::id())?;
-        let collateral_transit = next_account(account_info_iter, &spl_token::id())?;
-        let pool_mint = next_account(account_info_iter, &spl_token::id())?;
-        let pool_market_authority = next_account(account_info_iter, program_id)?;
-        let from = next_unchecked_account(account_info_iter)?; // we are checking later in code
-        let manager = next_signer_account(account_info_iter)?;
-        let _token_program = next_program_account(account_info_iter, &spl_token::id())?;
+        let account_info_iter = &mut accounts.iter().enumerate();
+        let pool_market = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let pool = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let withdrawal_requests = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let withdrawal_request = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let source = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let collateral_transit =
+            AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let pool_mint = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let pool_market_authority = AccountLoader::next_unchecked(account_info_iter)?; // Is PDA account of this program
+        let from = AccountLoader::next_unchecked(account_info_iter)?; // we are checking later in code
+        let manager = AccountLoader::next_signer(account_info_iter)?;
+        let _token_program = AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
 
         Ok(CancelWithdrawRequestContext {
             pool_market,

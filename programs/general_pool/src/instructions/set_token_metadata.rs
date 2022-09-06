@@ -1,8 +1,5 @@
 use crate::state::{Pool, PoolMarket};
-use everlend_utils::{
-    assert_account_key, cpi::metaplex, find_program_address, next_account, next_optional_account,
-    next_program_account, next_signer_account,
-};
+use everlend_utils::{assert_account_key, cpi::metaplex, find_program_address, AccountLoader};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
     program_pack::Pack, pubkey::Pubkey, rent::Rent, system_program, sysvar::SysvarId,
@@ -29,16 +26,18 @@ impl<'a, 'b> SetTokenMetadataContext<'a, 'b> {
     ) -> Result<SetTokenMetadataContext<'a, 'b>, ProgramError> {
         let metaplex_program_id = metaplex::program_id();
 
-        let account_info_iter = &mut accounts.iter();
-        let pool_market = next_account(account_info_iter, program_id)?;
-        let pool = next_account(account_info_iter, program_id)?;
-        let pool_mint = next_account(account_info_iter, &spl_token::id())?;
-        let pool_market_authority = next_account(account_info_iter, program_id)?;
-        let metadata = next_optional_account(account_info_iter, &metaplex_program_id)?;
-        let manager = next_signer_account(account_info_iter)?;
-        let metaplex_program = next_program_account(account_info_iter, &metaplex_program_id)?;
-        let system_program = next_program_account(account_info_iter, &system_program::id())?;
-        let rent = next_program_account(account_info_iter, &Rent::id())?;
+        let account_info_iter = &mut accounts.iter().enumerate();
+        let pool_market = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let pool = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let pool_mint = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let pool_market_authority = AccountLoader::next_unchecked(account_info_iter)?; // Is PDA account of this program
+        let metadata = AccountLoader::next_optional(account_info_iter, &metaplex_program_id)?;
+        let manager = AccountLoader::next_signer(account_info_iter)?;
+        let metaplex_program =
+            AccountLoader::next_with_key(account_info_iter, &metaplex_program_id)?;
+        let system_program =
+            AccountLoader::next_with_key(account_info_iter, &system_program::id())?;
+        let rent = AccountLoader::next_with_key(account_info_iter, &Rent::id())?;
 
         Ok(SetTokenMetadataContext {
             manager,

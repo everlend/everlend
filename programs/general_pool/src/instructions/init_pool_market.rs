@@ -1,7 +1,4 @@
-use everlend_utils::{
-    assert_rent_exempt, assert_uninitialized, next_account, next_program_account,
-    next_signer_account,
-};
+use everlend_utils::{assert_rent_exempt, assert_uninitialized, AccountLoader};
 use solana_program::{
     account_info::AccountInfo,
     entrypoint::ProgramResult,
@@ -28,12 +25,12 @@ impl<'a, 'b> InitPoolMarketContext<'a, 'b> {
         program_id: &Pubkey,
         accounts: &'a [AccountInfo<'b>],
     ) -> Result<InitPoolMarketContext<'a, 'b>, ProgramError> {
-        let account_info_iter = &mut accounts.iter();
+        let account_info_iter = &mut accounts.iter().enumerate();
 
-        let pool_market = next_account(account_info_iter, program_id)?;
-        let manager = next_signer_account(account_info_iter)?;
-        let registry = next_account(account_info_iter, &everlend_registry::id())?;
-        let rent = next_program_account(account_info_iter, &Rent::id())?;
+        let pool_market = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let manager = AccountLoader::next_unchecked(account_info_iter)?;
+        let registry = AccountLoader::next_with_owner(account_info_iter, &everlend_registry::id())?;
+        let rent = AccountLoader::next_with_key(account_info_iter, &Rent::id())?;
 
         Ok(InitPoolMarketContext {
             manager,

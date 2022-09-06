@@ -1,4 +1,4 @@
-use everlend_utils::{cpi, next_program_account, next_signer_account, next_uninitialized_account};
+use everlend_utils::{cpi, AccountLoader};
 use solana_program::{
     account_info::AccountInfo,
     entrypoint::ProgramResult,
@@ -25,12 +25,12 @@ impl<'a, 'b> InitContext<'a, 'b> {
         _program_id: &Pubkey,
         accounts: &'a [AccountInfo<'b>],
     ) -> Result<InitContext<'a, 'b>, ProgramError> {
-        let account_info_iter = &mut accounts.iter();
+        let account_info_iter = &mut accounts.iter().enumerate();
 
-        let registry = next_uninitialized_account(account_info_iter)?;
-        let manager = next_signer_account(account_info_iter)?;
-        let _system = next_program_account(account_info_iter, &system_program::id())?;
-        let rent = next_program_account(account_info_iter, &Rent::id())?;
+        let registry = AccountLoader::next_uninitialized(account_info_iter)?;
+        let manager = AccountLoader::next_signer(account_info_iter)?;
+        let _system = AccountLoader::next_with_key(account_info_iter, &system_program::id())?;
+        let rent = AccountLoader::next_with_key(account_info_iter, &Rent::id())?;
 
         Ok(InitContext {
             registry,
@@ -41,7 +41,7 @@ impl<'a, 'b> InitContext<'a, 'b> {
 
     /// Process instruction
     pub fn process(&self, program_id: &Pubkey) -> ProgramResult {
-        let rent = &Rent::from_account_info(&self.rent)?;
+        let rent = &Rent::from_account_info(self.rent)?;
 
         cpi::system::create_account::<Registry>(
             program_id,
@@ -51,7 +51,7 @@ impl<'a, 'b> InitContext<'a, 'b> {
             rent,
         )?;
 
-        let r = Registry::init(self.manager.key.clone());
+        let r = Registry::init(*self.manager.key);
         Registry::pack(r, *self.registry.data.borrow_mut())?;
 
         Ok(())

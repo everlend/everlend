@@ -1,7 +1,4 @@
-use everlend_utils::{
-    assert_account_key, cpi, next_account, next_program_account, next_signer_account,
-    next_unchecked_account, next_uninitialized_account,
-};
+use everlend_utils::{assert_account_key, cpi, AccountLoader};
 use solana_program::{
     account_info::AccountInfo,
     entrypoint::ProgramResult,
@@ -34,15 +31,16 @@ impl<'a, 'b> CreatePoolBorrowAuthorityContext<'a, 'b> {
         program_id: &Pubkey,
         accounts: &'a [AccountInfo<'b>],
     ) -> Result<CreatePoolBorrowAuthorityContext<'a, 'b>, ProgramError> {
-        let account_info_iter = &mut accounts.iter();
+        let account_info_iter = &mut accounts.iter().enumerate();
 
-        let pool_market = next_account(account_info_iter, program_id)?;
-        let pool = next_account(account_info_iter, program_id)?;
-        let pool_borrow_authority = next_uninitialized_account(account_info_iter)?;
-        let borrow_authority = next_unchecked_account(account_info_iter)?; // Can be any account
-        let manager = next_signer_account(account_info_iter)?;
-        let rent = next_program_account(account_info_iter, &Rent::id())?;
-        let _system_program = next_program_account(account_info_iter, &system_program::id())?;
+        let pool_market = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let pool = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let pool_borrow_authority = AccountLoader::next_uninitialized(account_info_iter)?;
+        let borrow_authority = AccountLoader::next_unchecked(account_info_iter)?; // Can be any account
+        let manager = AccountLoader::next_signer(account_info_iter)?;
+        let rent = AccountLoader::next_with_key(account_info_iter, &Rent::id())?;
+        let _system_program =
+            AccountLoader::next_with_key(account_info_iter, &system_program::id())?;
 
         Ok(CreatePoolBorrowAuthorityContext {
             borrow_authority,

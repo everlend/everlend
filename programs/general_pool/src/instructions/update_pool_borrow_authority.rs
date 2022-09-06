@@ -1,5 +1,5 @@
 use crate::state::{Pool, PoolBorrowAuthority, PoolMarket};
-use everlend_utils::{assert_account_key, next_account, next_signer_account};
+use everlend_utils::{assert_account_key, AccountLoader};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
     program_pack::Pack, pubkey::Pubkey,
@@ -19,12 +19,12 @@ impl<'a, 'b> UpdatePoolBorrowAuthorityContext<'a, 'b> {
         program_id: &Pubkey,
         accounts: &'a [AccountInfo<'b>],
     ) -> Result<UpdatePoolBorrowAuthorityContext<'a, 'b>, ProgramError> {
-        let account_info_iter = &mut accounts.iter();
+        let account_info_iter = &mut accounts.iter().enumerate();
 
-        let pool_market = next_account(account_info_iter, program_id)?;
-        let pool = next_account(account_info_iter, program_id)?;
-        let pool_borrow_authority = next_account(account_info_iter, program_id)?;
-        let manager = next_signer_account(account_info_iter)?;
+        let pool_market = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let pool = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let pool_borrow_authority = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let manager = AccountLoader::next_signer(account_info_iter)?;
 
         Ok(UpdatePoolBorrowAuthorityContext {
             pool_market,

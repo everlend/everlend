@@ -81,7 +81,6 @@ pub async fn command_set_registry_config(
             general_pool_market: Some(initialized_accounts.general_pool_market),
             income_pool_market: Some(initialized_accounts.income_pool_market),
             liquidity_oracle: Some(initialized_accounts.liquidity_oracle),
-            liquidity_oracle_manager: None,
             refresh_income_interval: Some(REFRESH_INCOME_INTERVAL),
         },
     )?;

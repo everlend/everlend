@@ -1,8 +1,7 @@
 use everlend_utils::{
     assert_account_key,
     cpi::{self, rewards::deposit_mining},
-    find_program_address, next_account, next_optional_account, next_program_account,
-    next_signer_account, EverlendError,
+    find_program_address, AccountLoader, EverlendError,
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
@@ -39,25 +38,27 @@ impl<'a, 'b> DepositContext<'a, 'b> {
         program_id: &Pubkey,
         accounts: &'a [AccountInfo<'b>],
     ) -> Result<DepositContext<'a, 'b>, ProgramError> {
-        let account_info_iter = &mut accounts.iter();
+        let account_info_iter = &mut accounts.iter().enumerate();
 
-        let pool_config = next_optional_account(account_info_iter, program_id)?;
-        let pool_market = next_account(account_info_iter, program_id)?;
-        let pool = next_account(account_info_iter, program_id)?;
+        let pool_config = AccountLoader::next_optional(account_info_iter, program_id)?;
+        let pool_market = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let pool = AccountLoader::next_with_owner(account_info_iter, program_id)?;
 
-        let source = next_account(account_info_iter, &spl_token::id())?;
-        let destination = next_account(account_info_iter, &spl_token::id())?;
-        let token_account = next_account(account_info_iter, &spl_token::id())?;
-        let pool_mint = next_account(account_info_iter, &spl_token::id())?;
-        let pool_market_authority = next_account(account_info_iter, program_id)?;
-        let user_transfer_authority = next_signer_account(account_info_iter)?;
+        let source = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let destination = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let token_account = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let pool_mint = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let pool_market_authority = AccountLoader::next_unchecked(account_info_iter)?; // Is PDA account of this program
+        let user_transfer_authority = AccountLoader::next_signer(account_info_iter)?;
 
         // mining accounts
-        let mining_reward_pool = next_account(account_info_iter, &eld_rewards::id())?;
-        let mining_reward_acc = next_account(account_info_iter, &eld_rewards::id())?;
-        let everlend_config = next_account(account_info_iter, &eld_config::id())?;
-        let everlend_rewards = next_program_account(account_info_iter, &eld_rewards::id())?;
-        let _token_program = next_program_account(account_info_iter, &spl_token::id())?;
+        let mining_reward_pool =
+            AccountLoader::next_with_owner(account_info_iter, &eld_rewards::id())?;
+        let mining_reward_acc =
+            AccountLoader::next_with_owner(account_info_iter, &eld_rewards::id())?;
+        let everlend_config = AccountLoader::next_with_owner(account_info_iter, &eld_config::id())?;
+        let everlend_rewards = AccountLoader::next_with_key(account_info_iter, &eld_rewards::id())?;
+        let _token_program = AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
 
         Ok(DepositContext {
             destination,

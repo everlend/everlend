@@ -1,7 +1,5 @@
 use crate::state::{Pool, PoolBorrowAuthority};
-use everlend_utils::{
-    assert_account_key, cpi, next_account, next_program_account, next_signer_account,
-};
+use everlend_utils::{assert_account_key, cpi, AccountLoader};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
     program_pack::Pack, pubkey::Pubkey,
@@ -23,15 +21,15 @@ impl<'a, 'b> RepayContext<'a, 'b> {
         program_id: &Pubkey,
         accounts: &'a [AccountInfo<'b>],
     ) -> Result<RepayContext<'a, 'b>, ProgramError> {
-        let account_info_iter = &mut accounts.iter();
+        let account_info_iter = &mut accounts.iter().enumerate();
 
-        let pool_market = next_account(account_info_iter, program_id)?;
-        let pool = next_account(account_info_iter, program_id)?;
-        let pool_borrow_authority = next_account(account_info_iter, program_id)?;
-        let source = next_account(account_info_iter, &spl_token::id())?;
-        let token_account = next_account(account_info_iter, &spl_token::id())?;
-        let user_transfer_authority = next_signer_account(account_info_iter)?;
-        let _token_program = next_program_account(account_info_iter, &spl_token::id())?;
+        let pool_market = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let pool = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let pool_borrow_authority = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let source = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let token_account = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let user_transfer_authority = AccountLoader::next_signer(account_info_iter)?;
+        let _token_program = AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
 
         Ok(RepayContext {
             pool_market,
