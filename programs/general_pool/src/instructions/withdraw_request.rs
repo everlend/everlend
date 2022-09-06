@@ -162,46 +162,46 @@ impl<'a, 'b> WithdrawRequestContext<'a, 'b> {
             &[],
         )?;
 
-        let signers_seeds = &[
-            br"withdrawal",
-            &self.withdrawal_requests.key.to_bytes()[..32],
-            &self.user_transfer_authority.key.to_bytes()[..32],
-            &[bump_seed],
-        ];
+        {
+            let rent = &Rent::from_account_info(self.rent)?;
+            let clock = Clock::from_account_info(self.clock)?;
 
-        let rent = &Rent::from_account_info(self.rent)?;
-        let clock = Clock::from_account_info(self.clock)?;
+            let signers_seeds = &[
+                br"withdrawal",
+                &self.withdrawal_requests.key.to_bytes()[..32],
+                &self.user_transfer_authority.key.to_bytes()[..32],
+                &[bump_seed],
+            ];
 
-        cpi::system::create_account::<WithdrawalRequest>(
-            program_id,
-            self.user_transfer_authority.clone(),
-            self.withdrawal_request.clone(),
-            &[signers_seeds],
-            rent,
-        )?;
+            cpi::system::create_account::<WithdrawalRequest>(
+                program_id,
+                self.user_transfer_authority.clone(),
+                self.withdrawal_request.clone(),
+                &[signers_seeds],
+                rent,
+            )?;
 
-        let mut withdrawal_request =
-            WithdrawalRequest::unpack_unchecked(&self.withdrawal_request.data.borrow())?;
+            let withdrawal_request = WithdrawalRequest::init(InitWithdrawalRequestParams {
+                pool: *self.pool.key,
+                from: *self.user_transfer_authority.key,
+                source: *self.source.key,
+                destination: *self.destination.key,
+                liquidity_amount,
+                collateral_amount,
+                ticket: clock.slot + WITHDRAW_DELAY,
+            });
 
-        withdrawal_request.init(InitWithdrawalRequestParams {
-            pool: *self.pool.key,
-            from: *self.user_transfer_authority.key,
-            source: *self.source.key,
-            destination: *self.destination.key,
-            liquidity_amount,
-            collateral_amount,
-            ticket: clock.slot + WITHDRAW_DELAY,
-        });
+            WithdrawalRequest::pack(
+                withdrawal_request,
+                *self.withdrawal_request.data.borrow_mut(),
+            )?;
+        }
 
         withdrawal_requests.add(liquidity_amount)?;
 
         WithdrawalRequests::pack(
             withdrawal_requests,
             *self.withdrawal_requests.data.borrow_mut(),
-        )?;
-        WithdrawalRequest::pack(
-            withdrawal_request,
-            *self.withdrawal_request.data.borrow_mut(),
         )?;
 
         // Mining reward

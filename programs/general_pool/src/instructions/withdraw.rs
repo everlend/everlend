@@ -140,7 +140,7 @@ impl<'a, 'b> WithdrawContext<'a, 'b> {
         // In the case of a SOL token, we do unwrap SPL token,
         // the destination can be any account
 
-        if let Some(native_sol_context) = self.native_sol_context {
+        if let Some(native_sol_context) = &self.native_sol_context {
             // Check transit: unwrapped sol
             let (unwrap_sol_pubkey, bump_seed) =
                 find_transit_sol_unwrap_address(program_id, self.withdrawal_request.key);

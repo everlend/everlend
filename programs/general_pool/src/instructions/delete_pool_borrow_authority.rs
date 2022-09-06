@@ -40,11 +40,11 @@ impl<'a, 'b> DeletePoolBorrowAuthorityContext<'a, 'b> {
     }
 
     /// Process instruction
-    pub fn process(&self, program_id: &Pubkey) -> ProgramResult {
+    pub fn process(&self, _program_id: &Pubkey) -> ProgramResult {
         // Check manager
         {
             let pool_market = PoolMarket::unpack(&self.pool_market.data.borrow())?;
-            assert_account_key(&self.manager, &pool_market.manager)?;
+            assert_account_key(self.manager, &pool_market.manager)?;
 
             // Get pool state
             let pool = Pool::unpack(&self.pool.data.borrow())?;

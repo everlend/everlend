@@ -44,7 +44,12 @@ impl<'a, 'b> RepayContext<'a, 'b> {
     }
 
     /// Process instruction
-    pub fn process(&self, program_id: &Pubkey, amount: u64, interest_amount: u64) -> ProgramResult {
+    pub fn process(
+        &self,
+        _program_id: &Pubkey,
+        amount: u64,
+        interest_amount: u64,
+    ) -> ProgramResult {
         // Get pool state
         let mut pool = Pool::unpack(&self.pool.data.borrow())?;
 

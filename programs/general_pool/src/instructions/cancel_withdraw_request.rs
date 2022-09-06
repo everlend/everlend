@@ -63,20 +63,20 @@ impl<'a, 'b> CancelWithdrawRequestContext<'a, 'b> {
         {
             let pool_market = PoolMarket::unpack(&self.pool_market.data.borrow())?;
             assert_account_key(self.manager, &pool_market.manager)?;
-        }
 
-        // Check collateral token transit account
-        let (collateral_transit_pubkey, _) =
-            find_transit_program_address(program_id, self.pool_market.key, self.pool_mint.key);
-        assert_account_key(self.collateral_transit, &collateral_transit_pubkey)?;
+            // Get pool state
+            let pool = Pool::unpack(&self.pool.data.borrow())?;
+            assert_account_key(self.pool_market, &pool.pool_market)?;
+            assert_account_key(self.pool_mint, &pool.pool_mint)?;
+
+            // Check collateral token transit account
+            let (collateral_transit_pubkey, _) =
+                find_transit_program_address(program_id, self.pool_market.key, self.pool_mint.key);
+            assert_account_key(self.collateral_transit, &collateral_transit_pubkey)?;
+        }
 
         // We don't check the pool pda, because it's created from the program
         // and is linked to the pool market
-
-        // Get pool state
-        let pool = Pool::unpack(&self.pool.data.borrow())?;
-        assert_account_key(self.pool_market, &pool.pool_market)?;
-        assert_account_key(self.pool_mint, &pool.pool_mint)?;
 
         // We don't check the withdrawal requests pda, because it's created from the program
         // and is linked to the pool
@@ -120,6 +120,7 @@ impl<'a, 'b> CancelWithdrawRequestContext<'a, 'b> {
             withdrawal_requests,
             *self.withdrawal_requests.data.borrow_mut(),
         )?;
+
         WithdrawalRequest::pack(
             withdrawal_request,
             *self.withdrawal_request.data.borrow_mut(),

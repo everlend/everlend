@@ -81,7 +81,7 @@ impl<'a, 'b> CreatePoolContext<'a, 'b> {
         // Check manager
         {
             let pool_market = PoolMarket::unpack(&self.pool_market.data.borrow())?;
-            assert_account_key(&self.manager, &pool_market.manager)?;
+            assert_account_key(self.manager, &pool_market.manager)?;
         }
 
         let token_mint = Mint::unpack(&self.token_mint.data.borrow())?;
@@ -102,7 +102,7 @@ impl<'a, 'b> CreatePoolContext<'a, 'b> {
             token_mint.decimals,
         )?;
 
-        let rent = &Rent::from_account_info(&self.rent)?;
+        let rent = &Rent::from_account_info(self.rent)?;
 
         self.create_pool(program_id, rent)?;
         self.create_transit(program_id, rent)?;
@@ -117,7 +117,7 @@ impl<'a, 'b> CreatePoolContext<'a, 'b> {
         let (pool_pubkey, pool_bump_seed) =
             find_pool_program_address(program_id, self.pool_market.key, self.token_mint.key);
 
-        assert_account_key(&self.pool, &pool_pubkey)?;
+        assert_account_key(self.pool, &pool_pubkey)?;
 
         let pool_signers_seeds = &[
             &self.pool_market.key.to_bytes()[..32],

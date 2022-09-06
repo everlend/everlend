@@ -44,19 +44,21 @@ impl<'a, 'b> InitPoolMarketContext<'a, 'b> {
     }
 
     /// Process instruction
-    pub fn process(&self, program_id: &Pubkey) -> ProgramResult {
-        // Get pool market state
-        let mut pool_market = PoolMarket::unpack_unchecked(&self.pool_market.data.borrow())?;
-        assert_uninitialized(&pool_market)?;
+    pub fn process(&self, _program_id: &Pubkey) -> ProgramResult {
+        {
+            // Get pool market state
+            let pool_market = PoolMarket::unpack_unchecked(&self.pool_market.data.borrow())?;
+            assert_uninitialized(&pool_market)?;
+        }
 
         {
             let rent = &Rent::from_account_info(self.rent)?;
-            assert_rent_exempt(rent, &self.pool_market)?;
+            assert_rent_exempt(rent, self.pool_market)?;
         }
 
-        pool_market.init(InitPoolMarketParams {
-            manager: self.manager.key.clone(),
-            registry: self.registry.key.clone(),
+        let pool_market = PoolMarket::init(InitPoolMarketParams {
+            manager: *self.manager.key,
+            registry: *self.registry.key,
         });
 
         PoolMarket::pack(pool_market, *self.pool_market.data.borrow_mut())?;

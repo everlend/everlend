@@ -1,6 +1,6 @@
 use everlend_utils::{
     assert_account_key, cpi, next_account, next_program_account, next_signer_account,
-    next_uninitialized_account,
+    next_unchecked_account, next_uninitialized_account,
 };
 use solana_program::{
     account_info::AccountInfo,
@@ -39,7 +39,7 @@ impl<'a, 'b> CreatePoolBorrowAuthorityContext<'a, 'b> {
         let pool_market = next_account(account_info_iter, program_id)?;
         let pool = next_account(account_info_iter, program_id)?;
         let pool_borrow_authority = next_uninitialized_account(account_info_iter)?;
-        let borrow_authority = next_account(account_info_iter)?; // TODO: SHOULD IT BE DEPOSITOR PROGRAM?
+        let borrow_authority = next_unchecked_account(account_info_iter)?; // Can be any account
         let manager = next_signer_account(account_info_iter)?;
         let rent = next_program_account(account_info_iter, &Rent::id())?;
         let _system_program = next_program_account(account_info_iter, &system_program::id())?;
@@ -59,14 +59,14 @@ impl<'a, 'b> CreatePoolBorrowAuthorityContext<'a, 'b> {
         // Check manager
         {
             let pool_market = PoolMarket::unpack(&self.pool_market.data.borrow())?;
-            assert_account_key(&self.manager, &pool_market.manager)?;
+            assert_account_key(self.manager, &pool_market.manager)?;
 
             // Get pool state
             let pool = Pool::unpack(&self.pool.data.borrow())?;
             assert_account_key(self.pool_market, &pool.pool_market)?;
         }
 
-        let rent = &Rent::from_account_info(&self.rent)?;
+        let rent = &Rent::from_account_info(self.rent)?;
 
         {
             // Create pool borrow authority account

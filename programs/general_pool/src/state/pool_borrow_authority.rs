@@ -29,14 +29,13 @@ pub struct PoolBorrowAuthority {
 impl PoolBorrowAuthority {
     /// Initialize a PoolBorrowAuthority
     pub fn init(params: InitPoolBorrowAuthorityParams) -> PoolBorrowAuthority {
-        let mut borrow_authority = PoolBorrowAuthority::default();
-        borrow_authority.account_type = AccountType::PoolBorrowAuthority;
-        borrow_authority.pool = params.pool;
-        borrow_authority.borrow_authority = params.borrow_authority;
-        borrow_authority.amount_borrowed = 0;
-        borrow_authority.share_allowed = params.share_allowed;
-
-        return borrow_authority;
+        PoolBorrowAuthority {
+            account_type: AccountType::PoolBorrowAuthority,
+            pool: params.pool,
+            borrow_authority: params.borrow_authority,
+            amount_borrowed: 0,
+            share_allowed: params.share_allowed,
+        }
     }
 
     /// Borrow funds

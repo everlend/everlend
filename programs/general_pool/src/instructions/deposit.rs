@@ -118,7 +118,7 @@ impl<'a, 'b> DepositContext<'a, 'b> {
             return Err(EverlendError::DepositAmountTooSmall.into());
         }
 
-        self.transfer_and_mint(program_id, &pool, amount, mint_amount)?;
+        self.transfer_and_mint(program_id, amount, mint_amount)?;
         self.deposit_mining(program_id, &pool, mint_amount)?;
 
         Ok(())
@@ -127,7 +127,6 @@ impl<'a, 'b> DepositContext<'a, 'b> {
     fn transfer_and_mint(
         &self,
         program_id: &Pubkey,
-        pool: &Pool,
         amount: u64,
         mint_amount: u64,
     ) -> ProgramResult {

@@ -66,23 +66,22 @@ impl<'a, 'b> SetPoolConfigContext<'a, 'b> {
             find_pool_config_program_address(program_id, self.pool.key);
         assert_account_key(self.pool_config, &pool_config_pubkey)?;
 
-        let rent = &Rent::from_account_info(&self.rent)?;
+        let rent = &Rent::from_account_info(self.rent)?;
 
-        let mut pool_config = match self.pool_config.lamports() {
-            0 => {
-                let signers_seeds = &["config".as_bytes(), &self.pool.key.to_bytes(), &[bump_seed]];
+        let mut pool_config = if self.pool_config.owner.eq(&Pubkey::default()) {
+            let signers_seeds = &["config".as_bytes(), &self.pool.key.to_bytes(), &[bump_seed]];
 
-                cpi::system::create_account::<PoolConfig>(
-                    program_id,
-                    self.manager.clone(),
-                    self.pool_config.clone(),
-                    &[signers_seeds],
-                    rent,
-                )?;
+            cpi::system::create_account::<PoolConfig>(
+                program_id,
+                self.manager.clone(),
+                self.pool_config.clone(),
+                &[signers_seeds],
+                rent,
+            )?;
 
-                PoolConfig::default()
-            }
-            _ => PoolConfig::unpack(&self.pool_config.data.borrow())?,
+            PoolConfig::default()
+        } else {
+            PoolConfig::unpack(&self.pool_config.data.borrow())?
         };
 
         pool_config.set(params);
