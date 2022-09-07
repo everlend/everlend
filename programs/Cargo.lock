@@ -1214,6 +1214,7 @@ dependencies = [
  "num-traits",
  "solana-program",
  "solana-sdk",
+ "spl-token 3.2.0",
  "thiserror",
 ]
 
