@@ -1,14 +1,12 @@
 //! Instruction types
 
-use crate::find_config_program_address;
+use crate::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
     system_program, sysvar,
 };
-
-use crate::state::{RegistryPrograms, RegistryRootAccounts, RegistrySettings};
 
 /// Instructions supported by the program
 #[allow(clippy::large_enum_variant)]
@@ -17,141 +15,52 @@ pub enum RegistryInstruction {
     /// Initializes a new registry
     ///
     /// Accounts:
-    /// [W] Registry account - uninitialized
-    /// [R] Manager
+    /// [WS] Registry account - uninitialized
+    /// [S] Manager
+    /// [R] System program
     /// [R] Rent sysvar
     Init,
+
+    /// Update manager
+    ///
+    /// Accounts:
+    /// [W] Registry
+    /// [S] Old manager
+    /// [S] New manager
+    ///
+    UpdateManager,
 
     /// Set a registry config
     ///
     /// Accounts:
-    /// [R] Registry
-    /// [W] Registry config
-    /// [WS] Manager
-    /// [R] Rent sysvar
-    /// [R] System program
-    SetRegistryConfig {
-        /// Programs
-        programs: RegistryPrograms,
-        /// Root accounts
-        roots: RegistryRootAccounts,
-        /// Settings
-        settings: RegistrySettings,
+    /// [W] Registry
+    /// [S] Manager
+    UpdateRegistry {
+        /// Registry data to update
+        data: UpdateRegistryData,
     },
 
-    /// Set a registry root accounts
-    ///
-    /// Accounts:
-    /// [R] Registry
-    /// [W] Registry config
-    /// [WS] Manager
-    /// [R] System program
-    SetRegistryRootAccounts {
-        /// Root accounts
-        roots: RegistryRootAccounts,
-    },
-
-    /// Set a registry root accounts
-    ///
-    /// Accounts:
-    /// [R] Registry
-    /// [W] Registry config
-    /// [WS] Manager
-    CloseRegistryConfig,
-
-    /// Update pool market manager
+    /// Update registry markets
     ///
     /// Accounts:
     /// [W] Registry
-    /// [WS] Old manager
-    /// [RS] New manager
-    ///
-    UpdateManager,
+    /// [S] Manager
+    UpdateRegistryMarkets {
+        /// MoneyMarkets data to update
+        data: UpdateRegistryMarketsData,
+    },
 }
 
 /// Creates 'Init' instruction.
 pub fn init(program_id: &Pubkey, registry: &Pubkey, manager: &Pubkey) -> Instruction {
     let accounts = vec![
-        AccountMeta::new(*registry, false),
-        AccountMeta::new_readonly(*manager, false),
+        AccountMeta::new(*registry, true),
+        AccountMeta::new_readonly(*manager, true),
+        AccountMeta::new_readonly(system_program::id(), false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
 
     Instruction::new_with_borsh(*program_id, &RegistryInstruction::Init, accounts)
-}
-
-/// Creates 'SetRegistryConfig' instruction.
-pub fn set_registry_config(
-    program_id: &Pubkey,
-    registry: &Pubkey,
-    manager: &Pubkey,
-    programs: RegistryPrograms,
-    roots: RegistryRootAccounts,
-    settings: RegistrySettings,
-) -> Instruction {
-    let (registry_config, _) = find_config_program_address(program_id, registry);
-
-    let accounts = vec![
-        AccountMeta::new_readonly(*registry, false),
-        AccountMeta::new(registry_config, false),
-        AccountMeta::new(*manager, true),
-        AccountMeta::new_readonly(sysvar::rent::id(), false),
-        AccountMeta::new_readonly(system_program::id(), false),
-    ];
-
-    Instruction::new_with_borsh(
-        *program_id,
-        &RegistryInstruction::SetRegistryConfig {
-            programs,
-            roots,
-            settings,
-        },
-        accounts,
-    )
-}
-
-/// Creates 'SetRegistryRootAccounts' instruction.
-pub fn set_registry_root_accounts(
-    program_id: &Pubkey,
-    registry: &Pubkey,
-    manager: &Pubkey,
-    roots: RegistryRootAccounts,
-) -> Instruction {
-    let (registry_config, _) = find_config_program_address(program_id, registry);
-
-    let accounts = vec![
-        AccountMeta::new_readonly(*registry, false),
-        AccountMeta::new(registry_config, false),
-        AccountMeta::new(*manager, true),
-        AccountMeta::new_readonly(system_program::id(), false),
-    ];
-
-    Instruction::new_with_borsh(
-        *program_id,
-        &RegistryInstruction::SetRegistryRootAccounts { roots },
-        accounts,
-    )
-}
-
-/// Creates 'CloseRegistryConfig' instruction.
-pub fn close_registry_config(
-    program_id: &Pubkey,
-    registry: &Pubkey,
-    manager: &Pubkey,
-) -> Instruction {
-    let (registry_config, _) = find_config_program_address(program_id, registry);
-
-    let accounts = vec![
-        AccountMeta::new_readonly(*registry, false),
-        AccountMeta::new(registry_config, false),
-        AccountMeta::new(*manager, true),
-    ];
-
-    Instruction::new_with_borsh(
-        *program_id,
-        &RegistryInstruction::CloseRegistryConfig,
-        accounts,
-    )
 }
 
 /// Creates 'UpdateManager' instruction.
@@ -169,4 +78,42 @@ pub fn update_manager(
     ];
 
     Instruction::new_with_borsh(*program_id, &RegistryInstruction::UpdateManager, accounts)
+}
+
+/// Creates 'UpdateRegistry' instruction.
+pub fn update_registry(
+    program_id: &Pubkey,
+    registry: &Pubkey,
+    manager: &Pubkey,
+    data: UpdateRegistryData,
+) -> Instruction {
+    let accounts = vec![
+        AccountMeta::new(*registry, false),
+        AccountMeta::new(*manager, true),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &RegistryInstruction::UpdateRegistry { data },
+        accounts,
+    )
+}
+
+/// Creates 'UpdateRegistryMarkets' instruction.
+pub fn update_registry_markets(
+    program_id: &Pubkey,
+    registry: &Pubkey,
+    manager: &Pubkey,
+    data: UpdateRegistryMarketsData,
+) -> Instruction {
+    let accounts = vec![
+        AccountMeta::new(*registry, false),
+        AccountMeta::new(*manager, true),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &RegistryInstruction::UpdateRegistryMarkets { data },
+        accounts,
+    )
 }

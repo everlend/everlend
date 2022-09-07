@@ -65,5 +65,5 @@ mod income_pools {
 
 mod registry {
     mod init;
-    mod set_registry_config;
+    mod update_registry;
 }

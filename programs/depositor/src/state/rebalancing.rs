@@ -5,7 +5,7 @@ use crate::state::RebalancingOperation;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 pub use deprecated::DeprecatedRebalancing;
 use everlend_liquidity_oracle::state::{DistributionArray, TokenDistribution};
-use everlend_registry::state::{DistributionPubkeys, RegistrySettings, TOTAL_DISTRIBUTIONS};
+use everlend_registry::state::{DistributionPubkeys, TOTAL_DISTRIBUTIONS};
 use everlend_utils::{math, EverlendError};
 use solana_program::{
     clock::Slot,
@@ -133,11 +133,11 @@ impl Rebalancing {
     pub fn compute_with_refresh_income(
         &mut self,
         money_market_program_ids: &DistributionPubkeys,
-        settings: &RegistrySettings,
+        refresh_income_interval: u64,
         income_refreshed_at: Slot,
         amount_to_distribute: u64,
     ) -> Result<(), ProgramError> {
-        if self.income_refreshed_at + settings.refresh_income_interval > income_refreshed_at {
+        if self.income_refreshed_at + refresh_income_interval > income_refreshed_at {
             return Err(EverlendError::IncomeRefreshed.into());
         }
 
