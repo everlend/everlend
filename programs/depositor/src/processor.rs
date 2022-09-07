@@ -1,8 +1,6 @@
 //! Program state processor
 
-use std::{cmp::min, str::FromStr};
-
-use borsh::{BorshDeserialize, BorshSchema};
+use borsh::BorshDeserialize;
 use everlend_general_pool::{find_withdrawal_requests_program_address, state::WithdrawalRequests};
 use everlend_income_pools::utils::IncomePoolAccounts;
 use everlend_liquidity_oracle::{
@@ -27,6 +25,7 @@ use solana_program::{
     sysvar::Sysvar,
 };
 use spl_token::state::Account;
+use std::cmp::min;
 
 use crate::state::{InternalMining, MiningType};
 use crate::utils::{deposit, parse_fill_reward_accounts, withdraw, FillRewardAccounts};
