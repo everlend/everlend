@@ -7,7 +7,7 @@ use solana_program::{
 use crate::assert_account_key;
 
 pub fn program_id() -> Pubkey {
-    return mpl_token_metadata::id();
+    mpl_token_metadata::id()
 }
 
 #[allow(clippy::too_many_arguments)]
