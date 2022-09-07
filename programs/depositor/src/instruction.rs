@@ -197,10 +197,7 @@ pub enum DepositorInstruction {
     ///
     /// Accounts:
     /// [W] Depositor
-    /// [R] Registry
-    /// [R] New registry
     /// [S] Manager
-    /// [R] Rent
     MigrateDepositor,
 
     /// Set current rebalancing
@@ -509,19 +506,10 @@ pub fn withdraw(
 
 /// Creates 'MigrateDepositor' instruction.
 #[allow(clippy::too_many_arguments)]
-pub fn migrate_depositor(
-    program_id: &Pubkey,
-    depositor: &Pubkey,
-    registry: &Pubkey,
-    new_registry: &Pubkey,
-    manager: &Pubkey,
-) -> Instruction {
+pub fn migrate_depositor(program_id: &Pubkey, depositor: &Pubkey, manager: &Pubkey) -> Instruction {
     let accounts = vec![
         AccountMeta::new(*depositor, false),
-        AccountMeta::new_readonly(*registry, false),
-        AccountMeta::new_readonly(*new_registry, false),
         AccountMeta::new(*manager, true),
-        AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
 
     Instruction::new_with_borsh(
