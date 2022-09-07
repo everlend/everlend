@@ -1,15 +1,15 @@
 //! Program state processor
 
-use std::{cmp::min, str::FromStr};
+use std::cmp::min;
 
-use borsh::{BorshDeserialize, BorshSchema};
+use borsh::BorshDeserialize;
 use everlend_general_pool::{find_withdrawal_requests_program_address, state::WithdrawalRequests};
 use everlend_income_pools::utils::IncomePoolAccounts;
 use everlend_liquidity_oracle::{
     find_liquidity_oracle_token_distribution_program_address,
     state::{DistributionArray, TokenDistribution},
 };
-use everlend_registry::state::{AccountType, Registry, RegistryMarkets};
+use everlend_registry::state::{Registry, RegistryMarkets};
 use everlend_utils::{
     assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
     cpi, find_program_address, EverlendError,
@@ -710,48 +710,8 @@ impl Processor {
     }
 
     /// Process MigrateDepositor instruction
-    pub fn migrate_depositor(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
-        let account_info_iter = &mut accounts.iter();
-
-        let depositor_info = next_account_info(account_info_iter)?;
-        let registry_info = next_account_info(account_info_iter)?;
-        let new_registry_info = next_account_info(account_info_iter)?;
-        let manager_info = next_account_info(account_info_iter)?;
-
-        assert_signer(manager_info)?;
-        assert_owned_by(depositor_info, program_id)?;
-        assert_owned_by(
-            registry_info,
-            &Pubkey::from_str("RegYdXL5fJF247zmeLSXXiUPjhpn4TMYLr94QRqkN8P").unwrap(),
-        )?;
-        assert_owned_by(new_registry_info, &everlend_registry::id())?;
-        #[repr(C)]
-        #[derive(Debug, BorshDeserialize, BorshSchema, Default)]
-        pub struct DeprecatedRegistry {
-            /// Account type - Registry
-            pub account_type: AccountType,
-
-            /// Manager
-            pub manager: Pubkey,
-        }
-
-        // Get registry state
-        let registry = DeprecatedRegistry::deserialize(&mut registry_info.data.borrow().as_ref())?;
-        assert_account_key(manager_info, &registry.manager)?;
-
-        // Get depositor state
-        let mut depositor = Depositor::unpack_unchecked(&depositor_info.data.borrow())?;
-        assert_account_key(registry_info, &depositor.registry)?;
-
-        // Check that acc is initialized and set new registry
-        let new_registry = Registry::unpack(&new_registry_info.data.borrow())?;
-        assert_account_key(manager_info, &new_registry.manager)?;
-
-        depositor.registry = *new_registry_info.key;
-
-        Depositor::pack(depositor, *depositor_info.data.borrow_mut())?;
-
-        Ok(())
+    pub fn migrate_depositor(_program_id: &Pubkey, _accounts: &[AccountInfo]) -> ProgramResult {
+        Err(EverlendError::TemporaryUnavailable.into())
     }
 
     /// Process InitMiningAccount instruction
