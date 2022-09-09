@@ -53,7 +53,7 @@ impl<'a, 'b> CreatePoolContext<'a, 'b> {
         let transit = AccountLoader::next_uninitialized(account_info_iter)?;
         let pool_mint = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let manager = AccountLoader::next_signer(account_info_iter)?;
-        let pool_market_authority = AccountLoader::next_unchecked(account_info_iter)?; // Will be initialized in instruction
+        let pool_market_authority = AccountLoader::next_unchecked(account_info_iter)?; // Is PDA account of this program
         let rent = AccountLoader::next_with_key(account_info_iter, &Rent::id())?;
         let _system_program =
             AccountLoader::next_with_key(account_info_iter, &system_program::id())?;
@@ -104,7 +104,7 @@ impl<'a, 'b> CreatePoolContext<'a, 'b> {
 
         self.create_pool(program_id, rent)?;
         self.create_transit(program_id, rent)?;
-        self.create_withdrawal_request(program_id, rent)?;
+        self.create_withdrawal_requests(program_id, rent)?;
         self.create_pool_config(program_id, rent)?;
 
         Ok(())
@@ -171,7 +171,7 @@ impl<'a, 'b> CreatePoolContext<'a, 'b> {
         )
     }
 
-    fn create_withdrawal_request(&self, program_id: &Pubkey, rent: &Rent) -> ProgramResult {
+    fn create_withdrawal_requests(&self, program_id: &Pubkey, rent: &Rent) -> ProgramResult {
         // Check withdraw requests account
         let (withdrawal_requests_pubkey, bump_seed) = find_withdrawal_requests_program_address(
             program_id,

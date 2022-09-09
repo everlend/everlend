@@ -7,11 +7,10 @@ use solana_program::{account_info::AccountInfo, pubkey::Pubkey};
 
 use crate::instruction::LiquidityPoolsInstruction;
 use crate::instructions::{
-    BorrowContext, CancelWithdrawRequestContext, CreatePoolBorrowAuthorityContext,
-    CreatePoolContext, DeletePoolBorrowAuthorityContext, DepositContext, InitPoolMarketContext,
-    InitUserMiningContext, RepayContext, SetPoolConfigContext, SetTokenMetadataContext,
-    UpdateManagerContext, UpdatePoolBorrowAuthorityContext, WithdrawContext,
-    WithdrawRequestContext,
+    BorrowContext, CreatePoolBorrowAuthorityContext, CreatePoolContext,
+    DeletePoolBorrowAuthorityContext, DepositContext, InitPoolMarketContext, InitUserMiningContext,
+    RepayContext, SetPoolConfigContext, SetTokenMetadataContext, UpdateManagerContext,
+    UpdatePoolBorrowAuthorityContext, WithdrawContext, WithdrawRequestContext,
 };
 
 /// Instruction processing router
@@ -68,7 +67,7 @@ pub fn process_instruction(
 
         LiquidityPoolsInstruction::CancelWithdrawRequest => {
             msg!("LiquidityPoolsInstruction: CancelWithdrawRequest");
-            CancelWithdrawRequestContext::new(program_id, accounts)?.process(program_id)
+            Err(EverlendError::TemporaryUnavailable.into())
         }
 
         LiquidityPoolsInstruction::Borrow { amount } => {

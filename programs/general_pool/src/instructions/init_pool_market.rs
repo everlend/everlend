@@ -28,7 +28,7 @@ impl<'a, 'b> InitPoolMarketContext<'a, 'b> {
         let account_info_iter = &mut accounts.iter().enumerate();
 
         let pool_market = AccountLoader::next_with_owner(account_info_iter, program_id)?;
-        let manager = AccountLoader::next_unchecked(account_info_iter)?;
+        let manager = AccountLoader::next_signer(account_info_iter)?;
         let registry = AccountLoader::next_with_owner(account_info_iter, &everlend_registry::id())?;
         let rent = AccountLoader::next_with_key(account_info_iter, &Rent::id())?;
 
