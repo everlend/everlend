@@ -80,7 +80,7 @@ pub fn program_test() -> ProgramTest {
     program.add_program(
         "everlend_general_pool",
         everlend_general_pool::id(),
-        processor!(everlend_general_pool::processor::Processor::process_instruction),
+        processor!(everlend_general_pool::processor::process_instruction),
     );
     program.add_program(
         "everlend_income_pools",

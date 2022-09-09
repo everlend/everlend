@@ -1,14 +1,13 @@
+use crate::state::PoolMarket;
 use everlend_utils::{assert_account_key, AccountLoader};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
     program_pack::Pack, pubkey::Pubkey,
 };
 
-use crate::state::Registry;
-
 /// Instruction context
 pub struct UpdateManagerContext<'a, 'b> {
-    registry: &'a AccountInfo<'b>,
+    pool_market: &'a AccountInfo<'b>,
     manager: &'a AccountInfo<'b>,
     new_manager: &'a AccountInfo<'b>,
 }
@@ -20,12 +19,13 @@ impl<'a, 'b> UpdateManagerContext<'a, 'b> {
         accounts: &'a [AccountInfo<'b>],
     ) -> Result<UpdateManagerContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter().enumerate();
-        let registry = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+
+        let pool_market = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let manager = AccountLoader::next_signer(account_info_iter)?;
         let new_manager = AccountLoader::next_signer(account_info_iter)?;
 
         Ok(UpdateManagerContext {
-            registry,
+            pool_market,
             manager,
             new_manager,
         })
@@ -33,11 +33,12 @@ impl<'a, 'b> UpdateManagerContext<'a, 'b> {
 
     /// Process instruction
     pub fn process(&self, _program_id: &Pubkey) -> ProgramResult {
-        let mut r = Registry::unpack(&self.registry.data.borrow())?;
-        assert_account_key(self.manager, &r.manager)?;
+        let mut pool_market = PoolMarket::unpack(&self.pool_market.data.borrow())?;
+        assert_account_key(self.manager, &pool_market.manager)?;
 
-        r.manager = *self.new_manager.key;
-        Registry::pack(r, *self.registry.data.borrow_mut())?;
+        pool_market.manager = *self.new_manager.key;
+
+        PoolMarket::pack(pool_market, *self.pool_market.data.borrow_mut())?;
 
         Ok(())
     }

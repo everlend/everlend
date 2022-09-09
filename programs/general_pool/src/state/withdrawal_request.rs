@@ -46,11 +46,14 @@ pub struct InitWithdrawalRequestsParams {
 
 impl WithdrawalRequests {
     /// Initialize a withdrawal requests
-    pub fn init(&mut self, params: InitWithdrawalRequestsParams) {
-        self.account_type = AccountType::WithdrawRequests;
-        self.account_version = ACTUAL_VERSION;
-        self.pool = params.pool;
-        self.mint = params.mint;
+    pub fn init(params: InitWithdrawalRequestsParams) -> WithdrawalRequests {
+        WithdrawalRequests {
+            account_type: AccountType::WithdrawRequests,
+            account_version: ACTUAL_VERSION,
+            pool: params.pool,
+            mint: params.mint,
+            liquidity_supply: 0,
+        }
     }
 
     /// Add new withdrawal request
@@ -137,15 +140,17 @@ pub struct WithdrawalRequest {
 
 impl WithdrawalRequest {
     /// Initialize a withdrawal request
-    pub fn init(&mut self, params: InitWithdrawalRequestParams) {
-        self.account_type = AccountType::WithdrawRequest;
-        self.pool = params.pool;
-        self.from = params.from;
-        self.source = params.source;
-        self.destination = params.destination;
-        self.liquidity_amount = params.liquidity_amount;
-        self.collateral_amount = params.collateral_amount;
-        self.ticket = params.ticket;
+    pub fn init(params: InitWithdrawalRequestParams) -> WithdrawalRequest {
+        WithdrawalRequest {
+            account_type: AccountType::WithdrawRequest,
+            pool: params.pool,
+            from: params.from,
+            source: params.source,
+            destination: params.destination,
+            liquidity_amount: params.liquidity_amount,
+            collateral_amount: params.collateral_amount,
+            ticket: params.ticket,
+        }
     }
 }
 

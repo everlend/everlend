@@ -247,8 +247,6 @@ pub fn migrate_depositor(
         &[everlend_depositor::instruction::migrate_depositor(
             &everlend_depositor::id(),
             depositor,
-            registry,
-            new_registry,
             &config.fee_payer.pubkey(),
         )],
         Some(&config.fee_payer.pubkey()),

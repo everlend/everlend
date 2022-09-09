@@ -32,7 +32,7 @@ impl<'a, 'b> UpdateRegistryContext<'a, 'b> {
         program_id: &Pubkey,
         accounts: &'a [AccountInfo<'b>],
     ) -> Result<UpdateRegistryContext<'a, 'b>, ProgramError> {
-        let account_info_iter = &mut accounts.iter();
+        let account_info_iter = &mut accounts.iter().enumerate();
         let registry = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let manager = AccountLoader::next_signer(account_info_iter)?;
 

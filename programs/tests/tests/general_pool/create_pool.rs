@@ -2,7 +2,6 @@ use crate::utils::*;
 use everlend_general_pool::instruction;
 use everlend_general_pool::state::AccountType;
 use solana_program::instruction::InstructionError;
-use solana_program::system_instruction::SystemError;
 use solana_program_test::*;
 use solana_sdk::signer::Signer;
 use solana_sdk::transaction::{Transaction, TransactionError};
@@ -11,7 +10,10 @@ async fn setup() -> (ProgramTestContext, TestGeneralPoolMarket) {
     let mut env = presetup().await;
 
     let test_pool_market = TestGeneralPoolMarket::new();
-    test_pool_market.init(&mut env.context, &env.registry.keypair.pubkey()).await.unwrap();
+    test_pool_market
+        .init(&mut env.context, &env.registry.keypair.pubkey())
+        .await
+        .unwrap();
 
     (env.context, test_pool_market)
 }
@@ -79,9 +81,6 @@ async fn fail_second_time_init() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(
-            0,
-            InstructionError::Custom(SystemError::AccountAlreadyInUse as u32)
-        )
+        TransactionError::InstructionError(0, InstructionError::AccountAlreadyInitialized)
     );
 }

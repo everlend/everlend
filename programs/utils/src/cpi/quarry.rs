@@ -29,6 +29,7 @@ pub fn find_miner_program_address(
 }
 
 /// Create miner
+#[allow(clippy::too_many_arguments)]
 pub fn create_miner<'a>(
     program_id: &Pubkey,
     authority: AccountInfo<'a>,
@@ -72,6 +73,7 @@ pub fn create_miner<'a>(
 }
 
 /// Stake tokens
+#[allow(clippy::too_many_arguments)]
 pub fn stake_tokens<'a>(
     program_id: &Pubkey,
     authority: AccountInfo<'a>,
@@ -113,6 +115,7 @@ pub fn stake_tokens<'a>(
 
 // TODO add signer seeds
 /// Withdraw tokens
+#[allow(clippy::too_many_arguments)]
 pub fn withdraw_tokens<'a>(
     program_id: &Pubkey,
     authority: AccountInfo<'a>,
@@ -154,6 +157,7 @@ pub fn withdraw_tokens<'a>(
 
 // TODO Check Instruction looks like uncomplited
 /// Claim rewards
+#[allow(clippy::too_many_arguments)]
 pub fn claim_rewards<'a>(
     program_id: &Pubkey,
     mint_wrapper: AccountInfo<'a>,
