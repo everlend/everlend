@@ -1061,7 +1061,7 @@ dependencies = [
 [[package]]
 name = "eld-rewards"
 version = "0.1.0"
-source = "git+ssh://git@github.com/everlend/everlend-next.git?branch=main#7cc02b634e3bb7c630bae1d12480c1840f4891de"
+source = "git+ssh://git@github.com/everlend/everlend-next.git?branch=main#7123caff3b6982979a2fd5aeabe173e38ffd5dd5"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
