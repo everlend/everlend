@@ -68,6 +68,7 @@ pub async fn command_set_registry_config(
     money_market_program_ids[1] = default_accounts.larix.program_id;
     money_market_program_ids[2] = default_accounts.solend.program_id;
     money_market_program_ids[3] = default_accounts.tulip.program_id;
+    money_market_program_ids[4] = default_accounts.francium.program_id;
 
     let mut collateral_pool_markets = DistributionPubkeys::default();
     let initialized_collateral_pool_markets = &initialized_accounts.collateral_pool_markets;
