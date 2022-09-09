@@ -6,12 +6,7 @@ use solana_program::msg;
 use solana_program::{account_info::AccountInfo, pubkey::Pubkey};
 
 use crate::instruction::LiquidityPoolsInstruction;
-use crate::instructions::{
-    BorrowContext, CreatePoolBorrowAuthorityContext, CreatePoolContext,
-    DeletePoolBorrowAuthorityContext, DepositContext, InitPoolMarketContext, InitUserMiningContext,
-    RepayContext, SetPoolConfigContext, SetTokenMetadataContext, UpdateManagerContext,
-    UpdatePoolBorrowAuthorityContext, WithdrawContext, WithdrawRequestContext,
-};
+use crate::instructions::{BorrowContext, CreatePoolBorrowAuthorityContext, CreatePoolContext, DeletePoolBorrowAuthorityContext, DepositContext, InitPoolMarketContext, InitUserMiningContext, RepayContext, SetPoolConfigContext, SetTokenMetadataContext, TransferDepositContext, UpdateManagerContext, UpdatePoolBorrowAuthorityContext, WithdrawContext, WithdrawRequestContext};
 
 /// Instruction processing router
 pub fn process_instruction(
@@ -112,6 +107,11 @@ pub fn process_instruction(
         LiquidityPoolsInstruction::SetPoolConfig { params } => {
             msg!("LiquidityPoolsInstruction: SetPoolConfig");
             SetPoolConfigContext::new(program_id, accounts)?.process(program_id, params)
+        }
+
+        LiquidityPoolsInstruction::TransferDeposit => {
+            msg!("LiquidityPoolsInstruction: TransferDeposit");
+            TransferDepositContext::new(program_id, accounts)?.process(program_id)
         }
     }
 }

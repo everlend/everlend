@@ -14,6 +14,7 @@ mod update_manager;
 mod update_pool_borrow_authority;
 mod withdraw;
 mod withdraw_request;
+mod transfer_deposit;
 
 pub use borrow::*;
 pub use cancel_withdraw_request::*;
@@ -30,3 +31,4 @@ pub use update_manager::*;
 pub use update_pool_borrow_authority::*;
 pub use withdraw::*;
 pub use withdraw_request::*;
+pub use transfer_deposit::*;
