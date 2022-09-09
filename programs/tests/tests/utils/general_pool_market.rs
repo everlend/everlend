@@ -55,7 +55,7 @@ impl TestGeneralPoolMarket {
                 ),
             ],
             Some(&context.payer.pubkey()),
-            &[&context.payer, &self.keypair],
+            &[&context.payer, &self.keypair, &self.manager],
             context.last_blockhash,
         );
 
