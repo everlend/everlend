@@ -243,7 +243,7 @@ pub fn money_market<'a, 'b>(
     let larix_program_id = registry_markets.money_markets[1];
     let solend_program_id = registry_markets.money_markets[2];
     let tulip_program_id = registry_markets.money_markets[3];
-    let francium_program_id = registry_markets.money_markets[3];
+    let francium_program_id = registry_markets.money_markets[4];
 
     // Only for tests
     if money_market_program.key.to_string() == integrations::SPL_TOKEN_LENDING_PROGRAM_ID {
