@@ -19,6 +19,7 @@ pub enum MoneyMarket {
     PortFinance,
     Larix,
     Solend,
+    Tulip,
 }
 
 #[derive(Debug, IntoPrimitive, FromPrimitive, Clone, Copy, PartialEq)]
