@@ -1,8 +1,8 @@
 use crate::utils::*;
 use everlend_liquidity_oracle::state::DistributionArray;
-use solana_program::{clock::Slot, pubkey::Pubkey};
+use solana_program::clock::Slot;
 use solana_program_test::*;
-use solana_sdk::signer::Signer;
+use solana_sdk::{signature::Keypair, signer::Signer};
 
 // const TOKEN_MINT: Pubkey = Pubkey::new_unique();
 const WARP_SLOT: Slot = 3;
@@ -10,7 +10,13 @@ const WARP_SLOT: Slot = 3;
 #[tokio::test]
 async fn success() {
     let mut context = program_test().start_with_context().await;
-    let token_mint: Pubkey = Pubkey::new_unique();
+    let token_mint = Keypair::new();
+    let payer_pubkey = context.payer.pubkey();
+
+    create_mint(&mut context, &token_mint, &payer_pubkey)
+        .await
+        .unwrap();
+
     let test_liquidity_oracle = TestLiquidityOracle::new();
     test_liquidity_oracle.init(&mut context).await.unwrap();
 
@@ -19,7 +25,7 @@ async fn success() {
     let mut distribution = DistributionArray::default();
     distribution[0] = 100u64;
 
-    let test_token_distribution = TestTokenDistribution::new(token_mint, distribution);
+    let test_token_distribution = TestTokenDistribution::new(token_mint.pubkey(), distribution);
     let authority = context.payer.pubkey();
 
     test_token_distribution
