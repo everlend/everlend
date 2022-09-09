@@ -1,8 +1,7 @@
 #![allow(dead_code)]
 
-use everlend_registry::state::{
-    DistributionPubkeys, RegistryPrograms, RegistryRootAccounts, RegistrySettings,
-};
+use everlend_registry::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
+use everlend_registry::state::DistributionPubkeys;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::*;
 use solana_program_test::{ProgramTest, ProgramTestContext};
@@ -14,26 +13,30 @@ use solana_sdk::{
     transaction::Transaction,
 };
 
+pub mod collateral_pool;
+pub mod collateral_pool_borrow_authority;
+pub mod collateral_pool_liquidity_provider;
+pub mod collateral_pool_market;
+pub mod collateral_pool_withdraw_authority;
 pub mod depositor;
 pub mod general_pool;
 pub mod general_pool_borrow_authority;
 pub mod general_pool_market;
 pub mod income_pool;
 pub mod income_pool_market;
+pub mod larix;
 pub mod liquidity_oracle;
 pub mod money_market;
-pub mod larix;
 pub mod registry;
-pub mod collateral_pool;
-pub mod collateral_pool_borrow_authority;
-pub mod collateral_pool_withdraw_authority;
-pub mod collateral_pool_market;
-pub mod collateral_pool_liquidity_provider;
 pub mod ulp_pool;
 pub mod ulp_pool_borrow_authority;
 pub mod ulp_pool_market;
 pub mod users;
 
+pub use collateral_pool::*;
+pub use collateral_pool_borrow_authority::*;
+pub use collateral_pool_market::*;
+pub use collateral_pool_withdraw_authority::*;
 pub use depositor::*;
 pub use general_pool::*;
 pub use general_pool_borrow_authority::*;
@@ -43,10 +46,6 @@ pub use income_pool_market::*;
 pub use liquidity_oracle::*;
 pub use money_market::*;
 pub use registry::*;
-pub use collateral_pool::*;
-pub use collateral_pool_borrow_authority::*;
-pub use collateral_pool_withdraw_authority::*;
-pub use collateral_pool_market::*;
 pub use ulp_pool::*;
 pub use ulp_pool_borrow_authority::*;
 pub use ulp_pool_market::*;
@@ -81,7 +80,7 @@ pub fn program_test() -> ProgramTest {
     program.add_program(
         "everlend_general_pool",
         everlend_general_pool::id(),
-        processor!(everlend_general_pool::processor::Processor::process_instruction),
+        processor!(everlend_general_pool::processor::process_instruction),
     );
     program.add_program(
         "everlend_income_pools",
@@ -101,7 +100,7 @@ pub fn program_test() -> ProgramTest {
     program.add_program(
         "everlend_registry",
         everlend_registry::id(),
-        processor!(everlend_registry::processor::Processor::process_instruction),
+        processor!(everlend_registry::processor::process_instruction),
     );
     program.add_program(
         "spl_token_lending",
@@ -112,16 +111,8 @@ pub fn program_test() -> ProgramTest {
     // Eld-next (remember to rebuild and upgrade the .so files)
     program.prefer_bpf(true);
 
-    program.add_program(
-        "eld_config",
-        eld_config::id(),
-        None
-    );
-    program.add_program(
-        "eld_rewards",
-        eld_rewards::id(),
-        None
-    );
+    program.add_program("eld_config", eld_config::id(), None);
+    program.add_program("eld_rewards", eld_rewards::id(), None);
 
     program.prefer_bpf(false);
     program
@@ -180,24 +171,29 @@ pub async fn presetup() -> TestEnvironment {
     let registry = TestRegistry::new();
     registry.init(&mut context).await.unwrap();
 
-    let mut programs = RegistryPrograms {
-        general_pool_program_id: everlend_general_pool::id(),
-        collateral_pool_program_id: everlend_collateral_pool::id(),
-        liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
-        depositor_program_id: everlend_depositor::id(),
-        income_pools_program_id: everlend_income_pools::id(),
-        money_market_program_ids: DistributionPubkeys::default(),
-    };
-    programs.money_market_program_ids[0] = spl_token_lending::id();
-    programs.money_market_program_ids[1] = larix_lending::id();
+    let mut mm_program_ids = DistributionPubkeys::default();
+    mm_program_ids[0] = spl_token_lending::id();
+    mm_program_ids[1] = larix_lending::id();
 
     registry
-        .set_registry_config(
+        .update_registry(
             &mut context,
-            programs,
-            RegistryRootAccounts::default(),
-            RegistrySettings {
-                refresh_income_interval: REFRESH_INCOME_INTERVAL,
+            UpdateRegistryData {
+                general_pool_market: None,
+                income_pool_market: None,
+                liquidity_oracle: None,
+                refresh_income_interval: Some(REFRESH_INCOME_INTERVAL),
+            },
+        )
+        .await
+        .unwrap();
+
+    registry
+        .update_registry_markets(
+            &mut context,
+            UpdateRegistryMarketsData {
+                money_markets: Some(mm_program_ids),
+                collateral_pool_markets: None,
             },
         )
         .await

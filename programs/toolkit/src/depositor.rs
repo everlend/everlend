@@ -240,33 +240,15 @@ pub fn migrate_depositor(
     config: &Config,
     depositor: &Pubkey,
     registry: &Pubkey,
-    liquidity_mint: &Pubkey,
+    new_registry: &Pubkey,
 ) -> Result<(), ClientError> {
     println!("Depositor: {}", depositor);
-
-    let (rebalancing, _) =
-        find_rebalancing_program_address(&everlend_depositor::id(), depositor, liquidity_mint);
-
-    let balance = config
-        .rpc_client
-        .get_minimum_balance_for_rent_exemption(Rebalancing::LEN)?;
-
-    let rebalancing_account = config.rpc_client.get_account(&rebalancing)?;
-    let difference = balance - rebalancing_account.lamports;
-    println!("Balance difference {}", difference);
-
-    println!("Sending MigrateDepositor itx ...");
     let tx = Transaction::new_with_payer(
-        &[
-            system_instruction::transfer(&config.fee_payer.pubkey(), &rebalancing, difference),
-            everlend_depositor::instruction::migrate_depositor(
-                &everlend_depositor::id(),
-                depositor,
-                registry,
-                &config.fee_payer.pubkey(),
-                liquidity_mint,
-            ),
-        ],
+        &[everlend_depositor::instruction::migrate_depositor(
+            &everlend_depositor::id(),
+            depositor,
+            &config.fee_payer.pubkey(),
+        )],
         Some(&config.fee_payer.pubkey()),
     );
 

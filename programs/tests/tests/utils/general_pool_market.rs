@@ -1,6 +1,6 @@
 use super::{get_account, BanksClientResult};
 use everlend_general_pool::{instruction, state::PoolMarket};
-use solana_program::{program_pack::Pack, system_instruction, pubkey::Pubkey};
+use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{
     signature::{Keypair, Signer},
@@ -26,7 +26,11 @@ impl TestGeneralPoolMarket {
         PoolMarket::unpack_unchecked(&account.data).unwrap()
     }
 
-    pub async fn init(&self, context: &mut ProgramTestContext, registry: &Pubkey) -> BanksClientResult<()> {
+    pub async fn init(
+        &self,
+        context: &mut ProgramTestContext,
+        registry: &Pubkey,
+    ) -> BanksClientResult<()> {
         let rent = context.banks_client.get_rent().await.unwrap();
         let tx = Transaction::new_signed_with_payer(
             &[
@@ -51,7 +55,7 @@ impl TestGeneralPoolMarket {
                 ),
             ],
             Some(&context.payer.pubkey()),
-            &[&context.payer, &self.keypair],
+            &[&context.payer, &self.keypair, &self.manager],
             context.last_blockhash,
         );
 

@@ -27,11 +27,13 @@ impl PoolMarket {
     /// Account actual version
     const ACTUAL_VERSION: AccountVersion = AccountVersion::V0;
     /// Initialize a Pool market
-    pub fn init(&mut self, params: InitPoolMarketParams) {
-        self.account_type = AccountType::PoolMarket;
-        self.account_version = Self::ACTUAL_VERSION;
-        self.manager = params.manager;
-        self.registry = params.registry;
+    pub fn init(params: InitPoolMarketParams) -> PoolMarket {
+        PoolMarket {
+            account_type: AccountType::PoolMarket,
+            account_version: Self::ACTUAL_VERSION,
+            manager: params.manager,
+            registry: params.registry,
+        }
     }
 }
 

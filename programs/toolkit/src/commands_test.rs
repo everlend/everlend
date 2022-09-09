@@ -6,10 +6,7 @@ use everlend_depositor::{
 };
 use everlend_general_pool::state::WITHDRAW_DELAY;
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::{
-    find_config_program_address,
-    state::{RegistryConfig, RegistryPrograms},
-};
+use everlend_registry::state::{Registry, RegistryMarkets};
 use everlend_utils::integrations::{self, MoneyMarketPubkeys};
 use solana_account_decoder::parse_token::UiTokenAmount;
 use solana_program::program_pack::Pack;
@@ -52,15 +49,12 @@ pub async fn command_run_test(
         rebalance_executor: _,
     } = initialized_accounts;
 
-    let (registry_config_pubkey, _) =
-        find_config_program_address(&everlend_registry::id(), &registry);
-    let registry_config_account = config.rpc_client.get_account(&registry_config_pubkey)?;
-    let registry_config = RegistryConfig::unpack(&registry_config_account.data).unwrap();
-    println!("registry_config = {:?}", registry_config);
-    let programs = RegistryPrograms::unpack_from_slice(&registry_config_account.data).unwrap();
+    let registry_account = config.rpc_client.get_account(&registry)?;
+    let registry_config = Registry::unpack(&registry_account.data).unwrap();
+    let registry_markets = RegistryMarkets::unpack_from_slice(&registry_account.data).unwrap();
 
     println!("registry_config = {:#?}", registry_config);
-    println!("programs = {:#?}", programs);
+    println!("registry_markets = {:#?}", registry_markets);
 
     let sol = token_accounts.get("SOL").unwrap();
 
@@ -167,8 +161,8 @@ pub async fn command_run_test(
             &depositor,
             &sol.mint,
             &sol.collateral_pools[i].token_mint,
-            &programs.money_market_program_ids[i],
-            integrations::deposit_accounts(&programs.money_market_program_ids[i], &pubkeys),
+            &registry_markets.money_markets[i],
+            integrations::deposit_accounts(&registry_markets.money_markets[i], &pubkeys),
             everlend_depositor::utils::collateral_pool_deposit_accounts(
                 &collateral_pool_markets[i],
                 &sol.collateral_pools[i].token_mint,
@@ -195,13 +189,13 @@ pub async fn command_run_test(
             &sol.income_pool_token_account,
             &sol.collateral_pools[i].token_mint,
             &sol.mint,
-            &programs.money_market_program_ids[i],
-            integrations::withdraw_accounts(&programs.money_market_program_ids[i], &pubkeys),
+            &registry_markets.money_markets[i],
+            integrations::withdraw_accounts(&registry_markets.money_markets[i], &pubkeys),
             everlend_depositor::utils::collateral_pool_withdraw_accounts(
                 &collateral_pool_markets[i],
                 &sol.collateral_pools[i].token_mint,
                 &sol.collateral_pools[i].pool_token_account,
-                &programs.depositor_program_id,
+                &everlend_depositor::id(),
                 &depositor,
             ),
         )

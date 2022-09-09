@@ -7,6 +7,7 @@ use solana_program::{
 
 use crate::instructions::rewards;
 
+#[allow(clippy::too_many_arguments)]
 pub fn initialize_mining<'a>(
     program_id: &Pubkey,
     config: AccountInfo<'a>,
@@ -40,6 +41,7 @@ pub fn initialize_mining<'a>(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn deposit_mining<'a>(
     program_id: &Pubkey,
     config: AccountInfo<'a>,
@@ -67,6 +69,7 @@ pub fn deposit_mining<'a>(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn withdraw_mining<'a>(
     program_id: &Pubkey,
     config: AccountInfo<'a>,

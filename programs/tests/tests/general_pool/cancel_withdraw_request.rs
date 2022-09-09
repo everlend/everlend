@@ -1,7 +1,8 @@
 use everlend_general_pool::find_transit_program_address;
-use solana_program::pubkey::Pubkey;
+use everlend_utils::EverlendError;
+use solana_program::{instruction::InstructionError, pubkey::Pubkey};
 use solana_program_test::*;
-use solana_sdk::signer::Signer;
+use solana_sdk::{signer::Signer, transaction::TransactionError};
 
 use crate::utils::*;
 
@@ -98,20 +99,34 @@ async fn success() {
         45
     );
 
-    test_pool
+    let err = test_pool
         .cancel_withdraw_request(&mut context, &test_pool_market, &user)
         .await
+        .unwrap_err()
         .unwrap();
 
     assert_eq!(
-        get_token_balance(&mut context, &user.pool_account).await,
-        100
-    );
-    assert_eq!(
-        get_token_balance(&mut context, &collateral_transit_account).await,
-        0
+        err,
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::TemporaryUnavailable as u32)
+        )
     );
 
-    let user_account = get_account(&mut context, &user.owner.pubkey()).await;
-    assert_eq!(user_account.lamports, INITIAL_USER_BALANCE);
+    // TEMP unavailable
+    // test_pool
+    // .cancel_withdraw_request(&mut context, &test_pool_market, &user)
+    // .await
+    // .unwrap();
+    // assert_eq!(
+    //     get_token_balance(&mut context, &user.pool_account).await,
+    //     100
+    // );
+    // assert_eq!(
+    //     get_token_balance(&mut context, &collateral_transit_account).await,
+    //     0
+    // );
+
+    // let user_account = get_account(&mut context, &user.owner.pubkey()).await;
+    // assert_eq!(user_account.lamports, INITIAL_USER_BALANCE);
 }
