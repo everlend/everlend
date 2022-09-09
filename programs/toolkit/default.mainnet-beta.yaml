@@ -54,6 +54,11 @@ tulip:
   reserve_liquidity_oracle: DQAcms41gjYzidRooXRE9GQM1jAauPXDcEpMbVh4FEc7
   reserve_liquidity_supply: CPs1jJ5XAjhcAJsmTToWksAiPEqoLwKMbb1Z83rzaaaU
   reserve_sol: FzbfXR7sopQL29Ubu312tkqWMxSre4dYSrFyYAjUYiC4
+francium:
+  program_id: FC81tbGt6JWRXidaWYFXxGnTk4VgobhJHATvTRVMqgWj
+  lending_market: 4XNif294wbrxj6tJ8K5Rg7SuaEACnu9s2L27i28MQB6E
+  reserve_liquidity_supply: GiJwrxQW5NQWWAva4rnDMXwHxfrhyUzwMX5to1pmCCgF
+  reserve_sol: EnZC8MB6QLTxwN1LNqCXYC7XMpvXqitnYQPf5y5AcQRn
 sol_collateral:
   - 8ezDtNNhX91t1NbSLe8xV2PcCEfoQjEm2qDVGjt3rjhg
   - ArWoXQYvvERzuoeGTpyyvf7pNNVEPB3x7kQg5W6zQdaB
