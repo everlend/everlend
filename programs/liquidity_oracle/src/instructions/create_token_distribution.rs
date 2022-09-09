@@ -1,8 +1,4 @@
-use everlend_utils::{
-    assert_account_key,
-    cpi::{self},
-    AccountLoader,
-};
+use everlend_utils::{assert_account_key, cpi, AccountLoader};
 use solana_program::{
     account_info::AccountInfo,
     clock::Clock,

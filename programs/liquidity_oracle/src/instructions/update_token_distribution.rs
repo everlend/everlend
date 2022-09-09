@@ -48,11 +48,11 @@ impl<'a, 'b> UpdateTokenDistributionContext<'a, 'b> {
 
     /// Process instruction
     pub fn process(&self, program_id: &Pubkey, data: DistributionArray) -> ProgramResult {
-        // Get state
-        let liquidity_oracle = LiquidityOracle::unpack(&self.liquidity_oracle.data.borrow())?;
-
-        // Check authotiry
-        assert_account_key(self.authority, &liquidity_oracle.authority)?;
+        {
+            // Check authotiry
+            let liquidity_oracle = LiquidityOracle::unpack(&self.liquidity_oracle.data.borrow())?;
+            assert_account_key(self.authority, &liquidity_oracle.authority)?;
+        }
 
         // Check token distribution
         let (token_distribution_pubkey, _) = find_token_distribution_program_address(
