@@ -17,11 +17,12 @@ pub fn refresh_reserve<'a>(
         instruction: u8,
     }
 
+    // TODO think about instruction 17
     let ix = Instruction {
         program_id: *program_id,
         accounts: vec![
             AccountMeta::new(*lending_market.key, false),
-            AccountMeta::new_readonly(*reserve.key, false),
+            AccountMeta::new(*reserve.key, false),
             AccountMeta::new_readonly(sysvar::clock::id(), false),
         ],
         data: UpdateLendingPool { instruction: 12 }.try_to_vec()?,
@@ -62,10 +63,11 @@ pub fn deposit<'a>(
             AccountMeta::new(*reserve.key, false),
             AccountMeta::new(*reserve_liquidity_supply.key, false),
             AccountMeta::new(*reserve_collateral_mint.key, false),
-            AccountMeta::new_readonly(*lending_market.key, false),
-            AccountMeta::new_readonly(*lending_market_authority.key, false),
+            AccountMeta::new(*lending_market.key, false),
+            AccountMeta::new(*lending_market_authority.key, false),
             AccountMeta::new(*user_transfer_authority.key, true),
             AccountMeta::new_readonly(sysvar::clock::id(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
         ],
         data: DepositToLendingPool {
             instruction: 4,
@@ -120,10 +122,11 @@ pub fn redeem<'a>(
             AccountMeta::new(*reserve.key, false),
             AccountMeta::new(*reserve_collateral_mint.key, false),
             AccountMeta::new(*reserve_liquidity_supply.key, false),
-            AccountMeta::new_readonly(*lending_market.key, false),
-            AccountMeta::new_readonly(*lending_market_authority.key, false),
+            AccountMeta::new(*lending_market.key, false),
+            AccountMeta::new(*lending_market_authority.key, false),
             AccountMeta::new(*user_transfer_authority.key, true),
             AccountMeta::new_readonly(sysvar::clock::id(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
         ],
         data: WithdrawFromLendingPool {
             instruction: 5,
