@@ -13,7 +13,7 @@ use everlend_registry::{
 
 use crate::utils::*;
 
-pub fn init(config: &Config, registry_keypair: Option<Keypair>) -> Result<Pubkey, ClientError> {
+pub fn init_registry(config: &Config, registry_keypair: Option<Keypair>) -> Result<Pubkey, ClientError> {
     let registry_keypair = registry_keypair.unwrap_or_else(Keypair::new);
 
     println!("Registry: {}", registry_keypair.pubkey());
@@ -110,7 +110,7 @@ pub fn close_registry_config(config: &Config, registry_pubkey: &Pubkey) -> Resul
     Ok(())
 }
 
-pub fn update_manager(
+pub fn registry_update_manager(
     config: &Config,
     registry: &Pubkey,
     manager: &Keypair,

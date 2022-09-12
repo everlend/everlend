@@ -1275,6 +1275,7 @@ dependencies = [
  "everlend-registry",
  "everlend-utils",
  "larix-lending",
+ "num-derive",
  "port-finance-staking",
  "port-variable-rate-lending-instructions",
  "quarry-mine",

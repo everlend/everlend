@@ -1,41 +1,67 @@
-// .subcommand(
-//     SubCommand::with_name("reset-rebalancing")
-//         .about("Reset rebalancing")
-//         .arg(
-//             Arg::with_name("rebalancing")
-//                 .long("rebalancing")
-//                 .validator(is_pubkey)
-//                 .value_name("ADDRESS")
-//                 .takes_value(true)
-//                 .required(true)
-//                 .help("Rebalancing pubkey"),
-//         )
-//         .arg(
-//             Arg::with_name("amount-to-distribute")
-//                 .long("amount-to-distribute")
-//                 .validator(is_amount)
-//                 .value_name("NUMBER")
-//                 .takes_value(true)
-//                 .required(true)
-//                 .help("Amount to distribute"),
-//         )
-//         .arg(
-//             Arg::with_name("distributed-liquidity")
-//                 .long("distributed-liquidity")
-//                 .validator(is_amount)
-//                 .value_name("NUMBER")
-//                 .takes_value(true)
-//                 .required(true)
-//                 .help("Distributed liduidity"),
-//         )
-//         .arg(
-//             Arg::with_name("distribution")
-//                 .long("distribution")
-//                 .multiple(true)
-//                 .value_name("DISTRIBUTION")
-//                 .short("d")
-//                 .number_of_values(10)
-//                 .required(true)
-//                 .takes_value(true),
-//         ),
-// )
+use clap::{Arg, ArgMatches};
+use solana_clap_utils::input_parsers::{pubkey_of, value_of, values_of};
+use everlend_depositor::state::Rebalancing;
+use everlend_liquidity_oracle::state::DistributionArray;
+use crate::{Config, ToolkitCommand};
+use crate::helpers::reset_rebalancing;
+use crate::utils::{arg_amount, arg_multiple, arg_pubkey};
+
+const ARG_REBALANCING: &str = "rebalancing";
+const ARG_AMOUNT: &str = "amount-to-distribute";
+const ARG_DISTRIBUTED_LIQUIDITY: &str = "distributed-liquidity";
+const ARG_DISTRIBUTION: &str = "distribution";
+
+#[derive(Clone, Copy)]
+pub struct ResetRebalancingCommand;
+
+impl<'a> ToolkitCommand<'a> for ResetRebalancingCommand {
+    fn get_name(&self) -> &'a str {
+        return "reset-rebalancing";
+    }
+
+    fn get_description(&self) -> &'a str {
+        return "Reset rebalancing";
+    }
+
+    fn get_args(&self) -> Vec<Arg<'a, 'a>> {
+        return vec![
+            arg_pubkey(ARG_REBALANCING, true).help("Rebalancing pubkey"),
+            arg_amount(ARG_AMOUNT, true).help("Amount to distribute"),
+            arg_amount(ARG_DISTRIBUTED_LIQUIDITY, true).help("Distributed liduidity"),
+            arg_multiple(ARG_DISTRIBUTION, true).value_name("DISTRIBUTION").short("d").number_of_values(10)
+        ]
+    }
+
+    fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
+        return vec![]
+    }
+
+    fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
+        let arg_matches = arg_matches.unwrap();
+        let rebalancing_pubkey = pubkey_of(arg_matches, ARG_REBALANCING).unwrap();
+        let amount_to_distribute =
+            value_of::<u64>(arg_matches, ARG_AMOUNT).unwrap();
+        let distributed_liquidity =
+            value_of::<u64>(arg_matches, ARG_DISTRIBUTED_LIQUIDITY).unwrap();
+        let distribution: Vec<u64> = values_of::<u64>(arg_matches, ARG_DISTRIBUTION).unwrap();
+        let initialiazed_accounts = config.get_initialized_accounts();
+
+        let rebalancing = config.get_account_unpack::<Rebalancing>(&rebalancing_pubkey)?;
+        let mut distribution_array = DistributionArray::default();
+        distribution_array.copy_from_slice(distribution.as_slice());
+
+        println!("distribution_array {:?}", distribution_array);
+
+        reset_rebalancing(
+            config,
+            &initialiazed_accounts.registry,
+            &rebalancing.depositor,
+            &rebalancing.mint,
+            amount_to_distribute,
+            distributed_liquidity,
+            distribution_array,
+        )?;
+
+        Ok(())
+    }
+}

@@ -1,5 +1,7 @@
-use crate::{general_pool, utils::Config, ToolkitCommand};
+use crate::{utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
+use solana_sdk::transaction::Transaction;
+use everlend_general_pool::instruction;
 
 pub struct MigrateGeneralPoolCommand;
 
@@ -21,7 +23,15 @@ impl<'a> ToolkitCommand<'a> for MigrateGeneralPoolCommand {
     }
 
     fn handle(&self, config: &Config, _arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
-        // general_pool::migrate_general_pool_account(config)?;
+        let tx = Transaction::new_with_payer(
+            &[instruction::migrate_instruction(
+                &everlend_general_pool::id(),
+            )],
+            Some(&config.fee_payer.pubkey()),
+        );
+
+        config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+
         println!("Finished!");
 
         Ok(())

@@ -1,20 +1,74 @@
-// .subcommand(
-//     SubCommand::with_name("add-reserve-liquidity")
-//         .about("Transfer liquidity to reserve account")
-//         .arg(
-//             Arg::with_name("mint")
-//                 .long("mint")
-//                 .short("m")
-//                 .required(true)
-//                 .takes_value(true),
-//         )
-//         .arg(
-//             Arg::with_name("amount")
-//                 .long("amount")
-//                 .validator(is_amount)
-//                 .value_name("NUMBER")
-//                 .takes_value(true)
-//                 .required(true)
-//                 .help("Liquidity amount"),
-//         ),
-// )
+use clap::{Arg, ArgMatches};
+use solana_clap_utils::input_parsers::{value_of};
+use spl_associated_token_account::get_associated_token_address;
+use crate::{Config, ToolkitCommand};
+use crate::utils::{arg, arg_amount, get_asset_maps, spl_token_transfer};
+
+const ARG_MINT: &str = "mint";
+const ARG_AMOUNT: &str = "amount";
+
+#[derive(Clone, Copy)]
+pub struct AddReserveLiquidityCommand;
+
+impl<'a> ToolkitCommand<'a> for AddReserveLiquidityCommand {
+    fn get_name(&self) -> &'a str {
+        return "add-reserve-liquidity";
+    }
+
+    fn get_description(&self) -> &'a str {
+        return "Transfer liquidity to reserve account";
+    }
+
+    fn get_args(&self) -> Vec<Arg<'a, 'a>> {
+        return vec![
+            arg(ARG_MINT, true).short("m"),
+            arg_amount(ARG_AMOUNT, true).help("Liquidity amount")
+        ];
+    }
+
+    fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
+        return vec![];
+    }
+
+    fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
+        let arg_matches = arg_matches.unwrap();
+
+        let mint_key = arg_matches.value_of(ARG_MINT).unwrap();
+        let amount = value_of::<u64>(arg_matches, ARG_AMOUNT).unwrap();
+
+        let payer_pubkey = config.fee_payer.pubkey();
+        let default_accounts = config.get_default_accounts();
+        let initialiazed_accounts = config.get_initialized_accounts();
+
+        let (mint_map, _) = get_asset_maps(default_accounts);
+        let mint = mint_map.get(mint_key).unwrap();
+
+        let (liquidity_reserve_transit_pubkey, _) = everlend_depositor::find_transit_program_address(
+            &everlend_depositor::id(),
+            &initialiazed_accounts.depositor,
+            mint,
+            "reserve",
+        );
+
+        println!(
+            "liquidity_reserve_transit_pubkey = {:?}",
+            liquidity_reserve_transit_pubkey
+        );
+
+        let token_account = get_associated_token_address(&payer_pubkey, mint);
+
+        println!(
+            "Transfer {} lamports of {} to reserve liquidity account",
+            amount, mint_key
+        );
+
+        spl_token_transfer(
+            config,
+            &token_account,
+            &liquidity_reserve_transit_pubkey,
+            amount,
+        )?;
+
+        Ok(())
+    }
+}

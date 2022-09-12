@@ -1,5 +1,6 @@
 use crate::{utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
+use super::{InitMiningCommand, CancelWithdrawRequestCommand, SetPoolConfigCommand, InitPoolMarketCommand};
 
 #[derive(Clone, Copy)]
 pub struct GeneralPoolCommand;
@@ -10,7 +11,7 @@ impl<'a> ToolkitCommand<'a> for GeneralPoolCommand {
     }
 
     fn get_description(&self) -> &'a str {
-        return "general pool tools";
+        return "General pool tools";
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
@@ -18,7 +19,12 @@ impl<'a> ToolkitCommand<'a> for GeneralPoolCommand {
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![Box::new(InitGeneralPoolCommand)];
+        return vec![
+            Box::new(InitMiningCommand),
+            Box::new(CancelWithdrawRequestCommand),
+            Box::new(SetPoolConfigCommand),
+            Box::new(InitPoolMarketCommand)
+        ];
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

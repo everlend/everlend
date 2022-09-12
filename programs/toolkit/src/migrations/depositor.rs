@@ -1,8 +1,9 @@
-use crate::{depositor, utils::Config, ToolkitCommand};
+use crate::{utils::Config, ToolkitCommand};
 use anyhow::bail;
 use clap::{Arg, ArgMatches};
 use everlend_registry::{find_config_program_address, state::DeprecatedRegistryConfig};
 use solana_program::program_pack::Pack;
+use crate::helpers::migrate_depositor;
 
 pub struct MigrateDepositorCommand;
 
@@ -23,9 +24,7 @@ impl<'a> ToolkitCommand<'a> for MigrateDepositorCommand {
         return vec![];
     }
 
-    fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
-        let arg_matches = arg_matches.unwrap();
-
+    fn handle(&self, config: &Config, _arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
         println!("Started Depositor migration");
         // Check that RegistryConfig migrated
         {
@@ -39,9 +38,9 @@ impl<'a> ToolkitCommand<'a> for MigrateDepositorCommand {
             }
         }
 
-        for (_, token_accounts) in config.initialized_accounts.token_accounts {
+        for (_, token_accounts) in config.initialized_accounts.token_accounts.iter() {
             println!("Mint {}", &token_accounts.mint);
-            depositor::migrate_depositor(
+            migrate_depositor(
                 config,
                 &config.initialized_accounts.depositor,
                 &config.initialized_accounts.registry,

@@ -4,6 +4,7 @@ use crate::{
 };
 use clap::{Arg, ArgMatches};
 use solana_clap_utils::input_parsers::keypair_of;
+use crate::helpers::{collateral_pool_update_manager, general_pool_update_manager, income_pools_update_manager, registry_update_manager};
 
 const ARG_SOURCE: &str = "source";
 const ARG_TARGET: &str = "target";
@@ -43,9 +44,9 @@ impl<'a> ToolkitCommand<'a> for UpdateManagerCommand {
 
         match program {
             "collateral-pool" => {
-                for p in config.initialized_accounts.collateral_pool_markets {
+                for p in config.initialized_accounts.collateral_pool_markets.iter() {
                     println!("Updating collateral pool manager: Pool market: {}", p);
-                    // crate::collateral_pool::update_manager(config, &p, &source, &target)?;
+                    collateral_pool_update_manager(config, p, &source, &target)?;
                 }
             }
             "general-pool" => {
@@ -53,36 +54,36 @@ impl<'a> ToolkitCommand<'a> for UpdateManagerCommand {
                     "Updating general pool manager: Market {}",
                     config.initialized_accounts.general_pool_market
                 );
-                // crate::general_pool::update_manager(
-                // config,
-                // &config.initialized_accounts.general_pool_market,
-                // &source,
-                // &target,
-                // )?;
+                general_pool_update_manager(
+                    config,
+                    &config.initialized_accounts.general_pool_market,
+                    &source,
+                    &target,
+                )?;
             }
             "income-pools" => {
                 println!(
                     "Updating income pool manager: Market {}",
                     config.initialized_accounts.income_pool_market
                 );
-                // crate::income_pools::update_manager(
-                // config,
-                // &config.initialized_accounts.income_pool_market,
-                // &source,
-                // &target,
-                // )?;
+                income_pools_update_manager(
+                    config,
+                    &config.initialized_accounts.income_pool_market,
+                    &source,
+                    &target,
+                )?;
             }
             "registry" => {
                 println!(
                     "Updating registry manager: Registry {}",
                     config.initialized_accounts.registry
                 );
-                // crate::registry::update_manager(
-                // config,
-                // &config.initialized_accounts.registry,
-                // &source,
-                // &target,
-                // )?;
+                registry_update_manager(
+                    config,
+                    &config.initialized_accounts.registry,
+                    &source,
+                    &target,
+                )?;
             }
             _ => {
                 return Err(anyhow::anyhow!("wrong program"));

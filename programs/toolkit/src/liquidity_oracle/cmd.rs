@@ -1,17 +1,17 @@
+use crate::{utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
-use crate::{Config, ToolkitCommand};
-use super::{CreateMultisigCommand, ProposeUpgradeCommand, ExecuteCommand, InfoCommand, ApproveCommand};
+use super::{CreateLiquidityOracleCommand, UpdateAuthorityCommand};
 
 #[derive(Clone, Copy)]
-pub struct MultisigCommand;
+pub struct LiquidityOracleCommand;
 
-impl<'a> ToolkitCommand<'a> for MultisigCommand {
+impl<'a> ToolkitCommand<'a> for LiquidityOracleCommand {
     fn get_name(&self) -> &'a str {
-        return "multisig";
+        return "liquidity-oracle";
     }
 
     fn get_description(&self) -> &'a str {
-        return "Multisig tools"
+        return "Liquidity Oracle tools";
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
@@ -20,12 +20,9 @@ impl<'a> ToolkitCommand<'a> for MultisigCommand {
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
         return vec![
-            Box::new(CreateMultisigCommand),
-            Box::new(ProposeUpgradeCommand),
-            Box::new(ApproveCommand),
-            Box::new(ExecuteCommand),
-            Box::new(InfoCommand),
-        ]
+            Box::new(CreateLiquidityOracleCommand),
+            Box::new(UpdateAuthorityCommand),
+        ];
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

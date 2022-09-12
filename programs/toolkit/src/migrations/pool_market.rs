@@ -1,10 +1,10 @@
 use crate::{
-    command_run_migrate_pool_market,
     utils::{arg_keypair, Config},
     ToolkitCommand,
 };
 use clap::{Arg, ArgMatches};
-use solana_clap_utils::{input_parsers::keypair_of, input_validators::is_keypair};
+use solana_clap_utils::{input_parsers::keypair_of};
+use crate::helpers::{close_pool_market_account, create_general_pool_market};
 
 const ARG_POOL_MARKET: &str = "pool-market";
 
@@ -33,6 +33,21 @@ impl<'a> ToolkitCommand<'a> for MigratePoolMarketCommand {
         let pool_market_keypair = keypair_of(arg_matches, ARG_POOL_MARKET).unwrap();
 
         println!("Started pool market migration");
-        command_run_migrate_pool_market(&config, pool_market_keypair)
+        println!("Close general pool market");
+        println!(
+            "pool market id: {}",
+            &config.initialized_accounts.general_pool_market
+        );
+        close_pool_market_account(
+            config,
+            &config.initialized_accounts.general_pool_market,
+        )?;
+        println!("Closed general pool market");
+
+        println!("Create general pool market");
+        create_general_pool_market(config, Some(pool_market_keypair), &config.initialized_accounts.registry)?;
+        println!("Finished!");
+
+        Ok(())
     }
 }

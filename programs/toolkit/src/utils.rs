@@ -3,7 +3,7 @@ use clap::Arg;
 use reqwest::header::{HeaderMap, CONTENT_TYPE};
 use serde_json::Value;
 use solana_account_decoder::UiAccountEncoding;
-use solana_clap_utils::input_validators::{is_keypair, is_pubkey};
+use solana_clap_utils::input_validators::{is_amount, is_keypair, is_pubkey};
 use solana_client::{
     client_error::ClientError,
     rpc_client::RpcClient,
@@ -276,6 +276,24 @@ pub fn arg_pubkey(name: &str, required: bool) -> Arg {
         .help("Pubkey")
 }
 
+pub fn arg_amount(name: &str, required: bool) -> Arg {
+    Arg::with_name(name)
+        .long(name)
+        .validator(is_amount)
+        .value_name("NUMBER")
+        .takes_value(true)
+        .required(required)
+}
+
+pub fn arg_multiple(name: &str, required: bool) -> Arg {
+    Arg::with_name(name)
+        .multiple(true)
+        .long(name)
+        .required(required)
+        .min_values(1)
+        .takes_value(true)
+}
+
 pub fn arg_path(name: &str, required: bool) -> Arg {
     Arg::with_name(name)
         .long(name)
@@ -291,8 +309,8 @@ pub fn arg(name: &str, required: bool) -> Arg {
         .required(required)
 }
 
-pub async fn download_account(pubkey: &Pubkey, mm_name: &str, account_name: &str) {
-    let client = reqwest::Client::new();
+pub fn download_account(pubkey: &Pubkey, mm_name: &str, account_name: &str) {
+    let client = reqwest::blocking::Client::new();
     let mut headers = HeaderMap::new();
     headers.insert(CONTENT_TYPE, "application/json".parse().unwrap());
     let res = client
@@ -315,10 +333,8 @@ pub async fn download_account(pubkey: &Pubkey, mm_name: &str, account_name: &str
             pubkey.to_string()
         ))
         .send()
-        .await
         .expect("failed to get response")
         .text()
-        .await
         .expect("failed to get payload");
     let json: Value = serde_json::from_str(&res).unwrap();
     let data = &json["result"]["value"]["data"][0];

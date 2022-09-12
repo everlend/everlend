@@ -13,18 +13,36 @@ use solana_clap_utils::{fee_payer::fee_payer_arg, keypair::signer_from_path};
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::commitment_config::CommitmentConfig;
 use utils::{arg_keypair, arg_path, Config};
+use crate::accounts::{AddReserveLiquidityCommand, CreateAccountsCommand, CreateTokenAccountsCommand, InfoCommand, InfoReserveLiquidityCommand, InitQuarryMiningAccountsCommand, SaveLarixAccountsCommand, SaveQuarryAccountsCommand};
 
 use crate::accounts_config::InitializedAccounts;
+use crate::collateral_pool::CollateralPoolCommand;
+use crate::depositor::DepositorCommand;
+use crate::general_pool::{CancelWithdrawRequestCommand, GeneralPoolCommand};
+use crate::income_pools::IncomePoolCommand;
+use crate::liquidity_oracle::LiquidityOracleCommand;
+use crate::multisig::MultisigCommand;
+use crate::root::TestCommand;
 
 mod accounts_config;
 mod depositor;
+mod general_pool;
 mod helpers;
 mod migrations;
 mod registry;
 mod root;
 mod utils;
+mod accounts;
+mod collateral_pool;
+mod income_pools;
+mod multisig;
+mod liquidity_oracle;
+mod liquidity_mining;
 
 pub trait ToolkitCommand<'a> {
+    // const COMMAND_NAME: &'a str;
+    // const COMMAND_DESCRIPTION: &'a str;
+
     fn get_name(&self) -> &'a str;
     fn get_description(&self) -> &'a str;
     fn get_args(&self) -> Vec<Arg<'a, 'a>>;
@@ -60,11 +78,34 @@ fn init<'a>() -> anyhow::Result<()> {
     solana_logger::setup_with_default("solana=info");
 
     let commands: Vec<Box<dyn ToolkitCommand<'a>>> = vec![
-        Box::new(MigrationsCommand),
         Box::new(RegistryCommand),
+        Box::new(GeneralPoolCommand),
+        Box::new(CollateralPoolCommand),
+        Box::new(IncomePoolCommand),
+        Box::new(LiquidityOracleCommand),
+        Box::new(DepositorCommand),
+
+        Box::new(SaveLarixAccountsCommand),
+        Box::new(TestLarixMiningRawCommand),
+        Box::new(SaveQuarryAccountsCommand),
+        Box::new(InitQuarryMiningAccountsCommand),
+        Box::new(TestQuarryMiningRawCommand),
+        Box::new(CreateTokenAccountsCommand),
+        Box::new(AddReserveLiquidityCommand),
+        Box::new(CancelWithdrawRequestCommand),
+        Box::new(InfoReserveLiquidityCommand),
+        Box::new(CreateAccountsCommand),
+        Box::new(InfoCommand),
+
+        Box::new(TestCommand),
         Box::new(TestLarixMiningRawCommand),
         Box::new(TestQuarryMiningRawCommand),
+
+
+        Box::new(MigrationsCommand),
+        Box::new(RegistryCommand),
         Box::new(UpdateManagerCommand),
+        Box::new(MultisigCommand),
     ];
 
     let subcommands: Vec<App> = commands
@@ -92,7 +133,8 @@ fn init<'a>() -> anyhow::Result<()> {
             arg_path(ARG_ACCOUNTS, false)
                 .global(true)
                 .default_value("accounts.yaml")
-                .help("Accounts file"),
+                .help("Accounts file")
+                .short("A"),
         )
         .arg(arg_keypair(ARG_OWNER, false).global(true).help(
             "Specify the token owner account. \
@@ -140,7 +182,7 @@ fn get_config(matches: &ArgMatches) -> Config {
     println!("network = {:?}", network);
 
     let owner = signer_from_path(
-        &matches,
+        matches,
         matches
             .value_of(ARG_OWNER)
             .unwrap_or(&cli_config.keypair_path),
@@ -153,7 +195,7 @@ fn get_config(matches: &ArgMatches) -> Config {
     });
 
     let fee_payer = signer_from_path(
-        &matches,
+        matches,
         matches
             .value_of("fee_payer")
             .unwrap_or(&cli_config.keypair_path),

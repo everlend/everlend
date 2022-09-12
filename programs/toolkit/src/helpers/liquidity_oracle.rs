@@ -11,7 +11,7 @@ use solana_sdk::{
     transaction::Transaction,
 };
 
-pub fn init(config: &Config, oracle_keypair: Option<Keypair>) -> Result<Pubkey, ClientError> {
+pub fn init_liquidity_oracle(config: &Config, oracle_keypair: Option<Keypair>) -> Result<Pubkey, ClientError> {
     let oracle_keypair = oracle_keypair.unwrap_or_else(Keypair::new);
 
     println!("Liquidity oracle: {}", oracle_keypair.pubkey());

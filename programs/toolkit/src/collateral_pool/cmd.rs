@@ -1,17 +1,16 @@
 use clap::{Arg, ArgMatches};
 use crate::{Config, ToolkitCommand};
-use super::{CreateMultisigCommand, ProposeUpgradeCommand, ExecuteCommand, InfoCommand, ApproveCommand};
+use super::{CreatePoolCommand, CreatePoolWithdrawAuthorityCommand, CreateCollateralPoolsCommand, InitPoolMarketCommand};
 
-#[derive(Clone, Copy)]
-pub struct MultisigCommand;
+pub struct CollateralPoolCommand;
 
-impl<'a> ToolkitCommand<'a> for MultisigCommand {
+impl<'a> ToolkitCommand<'a> for CollateralPoolCommand {
     fn get_name(&self) -> &'a str {
-        return "multisig";
+        return "collateral-pool";
     }
 
     fn get_description(&self) -> &'a str {
-        return "Multisig tools"
+        return "Collateral pool tools"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
@@ -20,11 +19,10 @@ impl<'a> ToolkitCommand<'a> for MultisigCommand {
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
         return vec![
-            Box::new(CreateMultisigCommand),
-            Box::new(ProposeUpgradeCommand),
-            Box::new(ApproveCommand),
-            Box::new(ExecuteCommand),
-            Box::new(InfoCommand),
+            Box::new(CreatePoolCommand),
+            Box::new(CreatePoolWithdrawAuthorityCommand),
+            Box::new(CreateCollateralPoolsCommand),
+            Box::new(InitPoolMarketCommand),
         ]
     }
 

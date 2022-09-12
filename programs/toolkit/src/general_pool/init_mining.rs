@@ -1,67 +1,91 @@
-// SubCommand::with_name("init-mining")
-//                 .arg(
-//                     Arg::with_name("staking-money-market")
-//                         .long("staking-money-market")
-//                         .value_name("NUMBER")
-//                         .takes_value(true)
-//                         .required(true)
-//                         .help("Money market index"),
-//                 )
-//                 .arg(
-//                     Arg::with_name("token")
-//                         .long("token")
-//                         .short("t")
-//                         .value_name("TOKEN")
-//                         .takes_value(true)
-//                         .required(true)
-//                         .help("Token"),
-//                 )
-//                 .arg(
-//                     Arg::with_name("sub-reward-mint")
-//                         .long("sub-reward-mint")
-//                         .short("m")
-//                         .value_name("REWARD_MINT")
-//                         .takes_value(true)
-//                         .help("Sub reward token mint"),
-//                 ),
+use clap::{Arg, ArgMatches};
+use solana_clap_utils::input_parsers::{pubkey_of, value_of};
+use solana_program::pubkey::Pubkey;
+use solana_sdk::signature::Keypair;
+use solana_sdk::signer::Signer;
+use everlend_utils::integrations::{MoneyMarket, StakingMoneyMarket};
+use crate::{Config, ToolkitCommand};
+use crate::liquidity_mining::larix_liquidity_miner::LarixLiquidityMiner;
+use crate::liquidity_mining::{execute_init_mining_accounts, LiquidityMiner, save_mining_accounts};
+use crate::liquidity_mining::port_liquidity_miner::PortLiquidityMiner;
+use crate::liquidity_mining::quarry_liquidity_miner::QuarryLiquidityMiner;
+use crate::utils::arg;
 
-// pub fn command_init_mining(
-//     config: &Config,
-//     staking_money_market: StakingMoneyMarket,
-//     token: &String,
-//     sub_reward_token_mint: Option<Pubkey>,
-// ) -> anyhow::Result<()> {
-//     let liquidity_miner_option: Option<Box<dyn LiquidityMiner>> = match staking_money_market {
-//         StakingMoneyMarket::PortFinance => Some(Box::new(PortLiquidityMiner {})),
-//         StakingMoneyMarket::Larix => Some(Box::new(LarixLiquidityMiner {})),
-//         StakingMoneyMarket::Quarry => Some(Box::new(QuarryLiquidityMiner {})),
-//         _ => None,
-//     };
+const ARG_STAKING_MM: &str = "staking-money-market";
+const ARG_TOKEN: &str = "token";
+const ARG_SUB_REWARD_MINT: &str = "sub-reward-mint";
 
-//     if liquidity_miner_option.is_none() {
-//         return Err(anyhow::anyhow!("Wrong staking money market"));
-//     }
-//     let liquidity_miner = liquidity_miner_option.unwrap();
-//     let mut mining_pubkey = liquidity_miner.get_mining_pubkey(config, token);
-//     if mining_pubkey.eq(&Pubkey::default()) {
-//         let new_mining_account = Keypair::new();
-//         mining_pubkey = new_mining_account.pubkey();
-//         liquidity_miner.create_mining_account(
-//             config,
-//             token,
-//             &new_mining_account,
-//             sub_reward_token_mint,
-//         )?;
-//     };
-//     let pubkeys = liquidity_miner.get_pubkeys(config, token);
-//     let mining_type =
-//         liquidity_miner.get_mining_type(config, token, mining_pubkey, sub_reward_token_mint);
-//     execute_init_mining_accounts(config, &pubkeys.unwrap(), mining_type)?;
-//     let money_market = match staking_money_market {
-//         StakingMoneyMarket::Larix => MoneyMarket::Larix,
-//         StakingMoneyMarket::Solend => MoneyMarket::Solend,
-//         _ => MoneyMarket::PortFinance,
-//     };
-//     save_mining_accounts(config, token, money_market, &config.network)?;
-//     Ok(())
-// }
+#[derive(Clone, Copy)]
+pub struct InitMiningCommand;
+
+impl<'a> ToolkitCommand<'a> for InitMiningCommand {
+    fn get_name(&self) -> &'a str {
+        return "init-mining";
+    }
+
+    fn get_description(&self) -> &'a str {
+        return "Init mining";
+    }
+
+    fn get_args(&self) -> Vec<Arg<'a, 'a>> {
+        return vec![
+            arg(ARG_STAKING_MM, true).value_name("NUMBER").help("Money market index"),
+            arg(ARG_TOKEN, true).short("t").value_name("TOKEN").help("Token"),
+            arg(ARG_SUB_REWARD_MINT, true).short("m").value_name("REWARD_MINT").help("Sub reward token mint"),
+        ]
+    }
+
+    fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
+        return vec![];
+    }
+
+    fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
+        let arg_matches = arg_matches.unwrap();
+
+        let staking_money_market =
+            value_of::<usize>(arg_matches, ARG_STAKING_MM).unwrap();
+        let staking_money_market =  StakingMoneyMarket::from(staking_money_market);
+        let token = value_of::<String>(arg_matches, ARG_TOKEN).unwrap();
+        let sub_reward_mint = pubkey_of(arg_matches, ARG_SUB_REWARD_MINT);
+
+        let liquidity_miner_option: Option<Box<dyn LiquidityMiner>> = match staking_money_market {
+            StakingMoneyMarket::PortFinance => Some(Box::new(PortLiquidityMiner {})),
+            StakingMoneyMarket::Larix => Some(Box::new(LarixLiquidityMiner {})),
+            StakingMoneyMarket::Quarry => Some(Box::new(QuarryLiquidityMiner {})),
+            _ => None,
+        };
+
+        if liquidity_miner_option.is_none() {
+            return Err(anyhow::anyhow!("Wrong staking money market"));
+        }
+        let liquidity_miner = liquidity_miner_option.unwrap();
+        let mut mining_pubkey = liquidity_miner.get_mining_pubkey(config, &token);
+
+        if mining_pubkey.eq(&Pubkey::default()) {
+            let new_mining_account = Keypair::new();
+            mining_pubkey = new_mining_account.pubkey();
+            liquidity_miner.create_mining_account(
+                config,
+                &token,
+                &new_mining_account,
+                sub_reward_mint,
+            )?;
+        };
+
+        let pubkeys = liquidity_miner.get_pubkeys(config, &token);
+        let mining_type =
+            liquidity_miner.get_mining_type(config, &token, mining_pubkey, sub_reward_mint);
+
+        execute_init_mining_accounts(config, &pubkeys.unwrap(), mining_type)?;
+
+        let money_market = match staking_money_market {
+            StakingMoneyMarket::Larix => MoneyMarket::Larix,
+            StakingMoneyMarket::Solend => MoneyMarket::Solend,
+            _ => MoneyMarket::PortFinance,
+        };
+
+        save_mining_accounts(config, &token, money_market, &config.network)?;
+
+        Ok(())
+    }
+}

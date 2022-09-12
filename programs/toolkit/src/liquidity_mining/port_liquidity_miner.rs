@@ -1,5 +1,4 @@
 use super::LiquidityMiner;
-use crate::depositor;
 use crate::liquidity_mining::execute_account_creation;
 use crate::utils::*;
 use anyhow::Result;
@@ -9,6 +8,7 @@ use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::signature::write_keypair_file;
 use solana_sdk::{signature::Keypair, signer::Signer};
+use crate::helpers::create_transit;
 
 pub struct PortLiquidityMiner {}
 
@@ -110,7 +110,7 @@ impl LiquidityMiner for PortLiquidityMiner {
         }
 
         if sub_reward_token_mint.is_some() {
-            depositor::create_transit(
+            create_transit(
                 config,
                 &initialized_accounts.depositor,
                 &sub_reward_token_mint.unwrap(),

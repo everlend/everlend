@@ -1,44 +1,53 @@
-// .subcommand(SubCommand::with_name("save-larix-accounts"))
-// pub async fn command_save_larix_accounts(reserve_filepath: &str) -> anyhow::Result<()> {
-//     let mut reserve_data = read_file(find_file(reserve_filepath).unwrap());
-//     let reserve = Reserve::unpack_from_slice(reserve_data.as_mut_slice()).unwrap();
-//     download_account(
-//         &reserve.liquidity.supply_pubkey,
-//         "larix",
-//         "liquidity_supply",
-//     )
-//     .await;
-//     download_account(
-//         &reserve.liquidity.fee_receiver,
-//         "larix",
-//         "liquidity_fee_receiver",
-//     )
-//     .await;
-//     download_account(&reserve.collateral.mint_pubkey, "larix", "collateral_mint").await;
-//     download_account(
-//         &reserve.collateral.supply_pubkey,
-//         "larix",
-//         "collateral_supply",
-//     )
-//     .await;
-//     Ok(())
-// }
+use clap::{Arg, ArgMatches};
+use larix_lending::state::reserve::Reserve;
+use solana_program::program_pack::Pack;
+use solana_program_test::{find_file, read_file};
+use crate::{Config, ToolkitCommand};
+use crate::utils::download_account;
 
-// pub async fn command_save_quarry_accounts(config: &Config) -> anyhow::Result<()> {
-//     let mut default_accounts = config.get_default_accounts();
-//     // let default_accounts = config.get_default_accounts();
-//     let file_path = "../tests/tests/fixtures/quarry/quarry.bin";
-//     fs::remove_file(file_path)?;
-//     println!("quarry {}", default_accounts.quarry.quarry);
-//     download_account(&default_accounts.quarry.quarry, "quarry", "quarry").await;
-//     let data: Vec<u8> = read_file(find_file(file_path).unwrap());
-//     // first 8 bytes are meta information
-//     let adjusted = &data[8..];
-//     let deserialized = quarry_mine::Quarry::try_from_slice(adjusted)?;
-//     println!("rewarder {}", deserialized.rewarder);
-//     println!("token mint {}", deserialized.token_mint_key);
-//     default_accounts.quarry.rewarder = deserialized.rewarder;
-//     default_accounts.quarry.token_mint = deserialized.token_mint_key;
-//     save_config_file::<DefaultAccounts, &str>(&default_accounts, "default.devnet.yaml")?;
-//     Ok(())
-// }
+const LARIX_RESERVE_PATH: &str = "../tests/tests/fixtures/larix/reserve_sol.bin";
+
+#[derive(Clone, Copy)]
+pub struct SaveLarixAccountsCommand;
+
+impl<'a> ToolkitCommand<'a> for SaveLarixAccountsCommand {
+    fn get_name(&self) -> &'a str {
+        return "save-larix-accounts";
+    }
+
+    fn get_description(&self) -> &'a str {
+        return "Save Larix accounts";
+    }
+
+    fn get_args(&self) -> Vec<Arg<'a, 'a>> {
+        return vec![];
+    }
+
+    fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
+        return vec![];
+    }
+
+    fn handle(&self, _config: &Config, _arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
+        let mut reserve_data = read_file(find_file(LARIX_RESERVE_PATH).unwrap());
+        let reserve = Reserve::unpack_from_slice(reserve_data.as_mut_slice()).unwrap();
+
+        download_account(
+            &reserve.liquidity.supply_pubkey,
+            "larix",
+            "liquidity_supply",
+        );
+        download_account(
+            &reserve.liquidity.fee_receiver,
+            "larix",
+            "liquidity_fee_receiver",
+        );
+        download_account(&reserve.collateral.mint_pubkey, "larix", "collateral_mint");
+        download_account(
+            &reserve.collateral.supply_pubkey,
+            "larix",
+            "collateral_supply",
+        );
+
+        Ok(())
+    }
+}

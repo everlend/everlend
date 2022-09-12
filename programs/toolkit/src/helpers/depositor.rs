@@ -15,7 +15,7 @@ use solana_sdk::{
 
 use crate::utils::*;
 
-pub fn init(
+pub fn init_depositor(
     config: &Config,
     registry_pubkey: &Pubkey,
     depositor_keypair: Option<Keypair>,
@@ -171,7 +171,7 @@ pub fn reset_rebalancing(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn deposit(
+pub fn depositor_deposit(
     config: &Config,
     registry_pubkey: &Pubkey,
     depositor_pubkey: &Pubkey,
@@ -202,7 +202,7 @@ pub fn deposit(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn withdraw(
+pub fn depositor_withdraw(
     config: &Config,
     registry_pubkey: &Pubkey,
     depositor_pubkey: &Pubkey,
