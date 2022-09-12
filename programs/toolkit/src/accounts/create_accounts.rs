@@ -4,8 +4,8 @@ use crate::helpers::{
     create_collateral_market, create_collateral_pool, create_general_pool,
     create_general_pool_market, create_income_pool, create_income_pool_market,
     create_pool_borrow_authority, create_pool_withdraw_authority, create_token_distribution,
-    create_transit, init_depositor, init_liquidity_oracle, init_registry, set_registry_config,
-    PoolPubkeys,
+    create_transit, init_depositor, init_liquidity_oracle, init_registry, update_registry,
+    update_registry_markets, PoolPubkeys,
 };
 use crate::utils::{
     arg_multiple, arg_pubkey, get_asset_maps, spl_create_associated_token_account,
@@ -14,9 +14,8 @@ use crate::utils::{
 use crate::{Config, InitializedAccounts, ToolkitCommand, ARG_ACCOUNTS};
 use clap::{Arg, ArgMatches};
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::{
-    RegistryPrograms, RegistryRootAccounts, RegistrySettings, TOTAL_DISTRIBUTIONS,
-};
+use everlend_registry::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
+use everlend_registry::state::DistributionPubkeys;
 use solana_clap_utils::input_parsers::pubkey_of;
 use solana_client::client_error::ClientError;
 use solana_program::pubkey::Pubkey;
@@ -65,40 +64,11 @@ impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
 
         println!("Registry");
         let registry_pubkey = init_registry(config, None)?;
-        let mut programs = RegistryPrograms {
-            general_pool_program_id: everlend_general_pool::id(),
-            collateral_pool_program_id: everlend_collateral_pool::id(),
-            liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
-            depositor_program_id: everlend_depositor::id(),
-            income_pools_program_id: everlend_income_pools::id(),
-            money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
-        };
-        programs.money_market_program_ids[0] = default_accounts.port_finance.program_id;
-        programs.money_market_program_ids[1] = default_accounts.larix.program_id;
-        programs.money_market_program_ids[2] = default_accounts.solend.program_id;
-        programs.money_market_program_ids[3] = default_accounts.tulip.program_id;
-
-        set_registry_config(
-            config,
-            &registry_pubkey,
-            programs,
-            RegistryRootAccounts::default(),
-            RegistrySettings {
-                refresh_income_interval: REFRESH_INCOME_INTERVAL,
-            },
-        )?;
-        println!("programs = {:#?}", programs);
 
         let general_pool_market_pubkey =
             create_general_pool_market(config, None, &registry_pubkey)?;
         let income_pool_market_pubkey =
             create_income_pool_market(config, None, &general_pool_market_pubkey)?;
-
-        let mm_collateral_pool_markets = vec![
-            create_collateral_market(config, None)?,
-            create_collateral_market(config, None)?,
-            create_collateral_market(config, None)?,
-        ];
 
         println!("Liquidity oracle");
         let liquidity_oracle_pubkey = init_liquidity_oracle(config, None)?;
@@ -106,44 +76,45 @@ impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
         distribution[0] = 0;
         distribution[1] = 0;
         distribution[2] = 0;
+        distribution[3] = 0;
+        distribution[4] = 0;
 
         println!("Registry");
-        let registry_pubkey = init_registry(config, None)?;
-        let mut programs = RegistryPrograms {
-            general_pool_program_id: everlend_general_pool::id(),
-            collateral_pool_program_id: everlend_collateral_pool::id(),
-            liquidity_oracle_program_id: everlend_liquidity_oracle::id(),
-            depositor_program_id: everlend_depositor::id(),
-            income_pools_program_id: everlend_income_pools::id(),
-            money_market_program_ids: [Pubkey::default(); TOTAL_DISTRIBUTIONS],
-        };
-        programs.money_market_program_ids[0] = default_accounts.port_finance.program_id;
-        programs.money_market_program_ids[1] = default_accounts.larix.program_id;
-        programs.money_market_program_ids[2] = default_accounts.solend.program_id;
-        programs.money_market_program_ids[3] = default_accounts.tulip.program_id;
+        let mut money_market_program_ids = DistributionPubkeys::default();
+        money_market_program_ids[0] = default_accounts.port_finance.program_id;
+        money_market_program_ids[1] = default_accounts.larix.program_id;
+        money_market_program_ids[2] = default_accounts.solend.program_id;
+        money_market_program_ids[3] = default_accounts.tulip.program_id;
+        money_market_program_ids[4] = default_accounts.francium.program_id;
 
-        println!("programs = {:#?}", programs);
+        let mm_collateral_pool_markets = vec![
+            create_collateral_market(config, None)?,
+            create_collateral_market(config, None)?,
+            create_collateral_market(config, None)?,
+            create_collateral_market(config, None)?,
+        ];
 
-        let mut collateral_pool_markets: [Pubkey; TOTAL_DISTRIBUTIONS] = Default::default();
+        let mut collateral_pool_markets = DistributionPubkeys::default();
         collateral_pool_markets[..mm_collateral_pool_markets.len()]
             .copy_from_slice(&mm_collateral_pool_markets);
 
-        let roots = RegistryRootAccounts {
-            general_pool_market: general_pool_market_pubkey,
-            income_pool_market: income_pool_market_pubkey,
-            collateral_pool_markets,
-            liquidity_oracle: liquidity_oracle_pubkey,
-        };
-
-        println!("roots = {:#?}", &roots);
-
-        set_registry_config(
+        update_registry(
             config,
             &registry_pubkey,
-            programs,
-            roots,
-            RegistrySettings {
-                refresh_income_interval: 0,
+            UpdateRegistryData {
+                general_pool_market: Some(general_pool_market_pubkey),
+                income_pool_market: Some(income_pool_market_pubkey),
+                liquidity_oracle: Some(liquidity_oracle_pubkey),
+                refresh_income_interval: Some(REFRESH_INCOME_INTERVAL),
+            },
+        )?;
+
+        update_registry_markets(
+            config,
+            &registry_pubkey,
+            UpdateRegistryMarketsData {
+                money_markets: Some(money_market_program_ids),
+                collateral_pool_markets: Some(collateral_pool_markets),
             },
         )?;
 

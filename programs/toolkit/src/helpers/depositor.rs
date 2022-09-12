@@ -239,8 +239,8 @@ pub fn depositor_withdraw(
 pub fn migrate_depositor(
     config: &Config,
     depositor: &Pubkey,
-    registry: &Pubkey,
-    new_registry: &Pubkey,
+    _registry: &Pubkey,
+    _new_registry: &Pubkey,
 ) -> Result<(), ClientError> {
     println!("Depositor: {}", depositor);
     let tx = Transaction::new_with_payer(

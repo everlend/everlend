@@ -1,9 +1,11 @@
 use crate::helpers::migrate_depositor;
+use crate::utils::arg_pubkey;
 use crate::{utils::Config, ToolkitCommand};
-use anyhow::bail;
 use clap::{Arg, ArgMatches};
-use everlend_registry::{find_config_program_address, state::DeprecatedRegistryConfig};
-use solana_program::program_pack::Pack;
+use solana_clap_utils::input_parsers::pubkey_of;
+
+const ARG_SOURCE: &str = "source";
+const ARG_TARGET: &str = "target";
 
 pub struct MigrateDepositorCommand;
 
@@ -13,40 +15,32 @@ impl<'a> ToolkitCommand<'a> for MigrateDepositorCommand {
     }
 
     fn get_description(&self) -> &'a str {
-        return "migrate depositor";
+        return "Migrate Depositor account. Must be invoke after migrate-registry-config.";
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![];
+        return vec![
+            arg_pubkey(ARG_SOURCE, true)
+                .help("Old registry")
+                .value_name("SOURCE"),
+            arg_pubkey(ARG_TARGET, true)
+                .help("New registry")
+                .value_name("TARGET"),
+        ];
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
         return vec![];
     }
 
-    fn handle(&self, config: &Config, _arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
+    fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
         println!("Started Depositor migration");
-        // Check that RegistryConfig migrated
-        {
-            let (registry_config_pubkey, _) = find_config_program_address(
-                &everlend_registry::id(),
-                &config.initialized_accounts.registry,
-            );
-            let account = config.rpc_client.get_account(&registry_config_pubkey)?;
-            if DeprecatedRegistryConfig::unpack_unchecked(&account.data).is_ok() {
-                bail!("RegistryConfig is not migrated yet.")
-            }
-        }
+        let arg_matches = arg_matches.unwrap();
+        let source = pubkey_of(arg_matches, ARG_SOURCE).unwrap();
+        let target = pubkey_of(arg_matches, ARG_TARGET).unwrap();
+        let initialized_accounts = config.get_initialized_accounts();
 
-        for (_, token_accounts) in config.initialized_accounts.token_accounts.iter() {
-            println!("Mint {}", &token_accounts.mint);
-            migrate_depositor(
-                config,
-                &config.initialized_accounts.depositor,
-                &config.initialized_accounts.registry,
-                &token_accounts.mint,
-            )?;
-        }
+        migrate_depositor(config, &initialized_accounts.depositor, &source, &target)?;
 
         Ok(())
     }

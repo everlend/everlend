@@ -1,8 +1,9 @@
 use crate::helpers::{
-    depositor_deposit, depositor_withdraw, get_withdrawal_request_accounts, start_rebalancing,
-    update_token_distribution,
+    deposit as helper_deposit, depositor_deposit, depositor_withdraw,
+    get_withdrawal_request_accounts, start_rebalancing as helper_start_rebalancing,
+    start_rebalancing, update_token_distribution, withdraw as helper_withdraw, withdraw_request,
 };
-use crate::utils::arg;
+use crate::utils::{arg, delay};
 use crate::{distribution, Config, InitializedAccounts, ToolkitCommand, ARG_ACCOUNTS};
 use anyhow::Context;
 use clap::{Arg, ArgMatches};
@@ -10,15 +11,13 @@ use everlend_depositor::find_rebalancing_program_address;
 use everlend_depositor::state::{Rebalancing, RebalancingOperation};
 use everlend_general_pool::state::WITHDRAW_DELAY;
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::find_config_program_address;
-use everlend_registry::state::{RegistryConfig, RegistryPrograms};
+use everlend_registry::state::{Registry, RegistryMarkets};
 use everlend_utils::integrations;
 use everlend_utils::integrations::MoneyMarketPubkeys;
 use solana_account_decoder::parse_token::UiTokenAmount;
 use solana_clap_utils::input_parsers::value_of;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
-use std::{thread, time};
 
 const ARG_CASE: &str = "case";
 
@@ -68,15 +67,12 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
             rebalance_executor: _,
         } = initialized_accounts;
 
-        let (registry_config_pubkey, _) =
-            find_config_program_address(&everlend_registry::id(), &registry);
-        let registry_config_account = config.rpc_client.get_account(&registry_config_pubkey)?;
-        let registry_config = RegistryConfig::unpack(&registry_config_account.data).unwrap();
-        println!("registry_config = {:?}", registry_config);
-        let programs = RegistryPrograms::unpack_from_slice(&registry_config_account.data).unwrap();
+        let registry_account = config.rpc_client.get_account(&registry)?;
+        let registry_config = Registry::unpack(&registry_account.data).unwrap();
+        let registry_markets = RegistryMarkets::unpack_from_slice(&registry_account.data).unwrap();
 
         println!("registry_config = {:#?}", registry_config);
-        println!("programs = {:#?}", programs);
+        println!("registry_markets = {:#?}", registry_markets);
 
         let sol = token_accounts.get("SOL").unwrap();
 
@@ -139,34 +135,31 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
         let withdraw_requests =
             || get_withdrawal_request_accounts(config, &general_pool_market, &sol.mint);
 
-        let (start_rebalancing, refresh_income) = {
-            (
-                || {
-                    println!("Rebalancing");
-                    start_rebalancing(
-                        config,
-                        &registry,
-                        &depositor,
-                        &sol.mint,
-                        &general_pool_market,
-                        &sol.general_pool_token_account,
-                        &liquidity_oracle,
-                        false,
-                    )
-                },
-                || {
-                    println!("Rebalancing (Refresh income)");
-                    start_rebalancing(
-                        config,
-                        &registry,
-                        &depositor,
-                        &sol.mint,
-                        &general_pool_market,
-                        &sol.general_pool_token_account,
-                        &liquidity_oracle,
-                        true,
-                    )
-                },
+        let start_rebalancing = || {
+            println!("Rebalancing");
+            start_rebalancing(
+                config,
+                &registry,
+                &depositor,
+                &sol.mint,
+                &general_pool_market,
+                &sol.general_pool_token_account,
+                &liquidity_oracle,
+                false,
+            )
+        };
+
+        let refresh_income = || {
+            println!("Rebalancing (Refresh income)");
+            helper_start_rebalancing(
+                config,
+                &registry,
+                &depositor,
+                &sol.mint,
+                &general_pool_market,
+                &sol.general_pool_token_account,
+                &liquidity_oracle,
+                true,
             )
         };
 
@@ -186,8 +179,8 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
                 &depositor,
                 &sol.mint,
                 &sol.collateral_pools[i].token_mint,
-                &programs.money_market_program_ids[i],
-                integrations::deposit_accounts(&programs.money_market_program_ids[i], &pubkeys),
+                &registry_markets.money_markets[i],
+                integrations::deposit_accounts(&registry_markets.money_markets[i], &pubkeys),
                 everlend_depositor::utils::collateral_pool_deposit_accounts(
                     &collateral_pool_markets[i],
                     &sol.collateral_pools[i].token_mint,
@@ -214,13 +207,13 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
                 &sol.income_pool_token_account,
                 &sol.collateral_pools[i].token_mint,
                 &sol.mint,
-                &programs.money_market_program_ids[i],
-                integrations::withdraw_accounts(&programs.money_market_program_ids[i], &pubkeys),
+                &registry_markets.money_markets[i],
+                integrations::withdraw_accounts(&registry_markets.money_markets[i], &pubkeys),
                 everlend_depositor::utils::collateral_pool_withdraw_accounts(
                     &collateral_pool_markets[i],
                     &sol.collateral_pools[i].token_mint,
                     &sol.collateral_pools[i].pool_token_account,
-                    &programs.depositor_program_id,
+                    &everlend_depositor::id(),
                     &depositor,
                 ),
             )
@@ -272,7 +265,7 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
 
         let general_pool_deposit = |a: u64| {
             println!("Deposit liquidity");
-            crate::helpers::deposit(
+            helper_deposit(
                 config,
                 &general_pool_market,
                 &sol.general_pool,
@@ -290,7 +283,7 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
 
         let general_pool_withdraw_request = |a: u64| {
             println!("Withdraw request");
-            crate::helpers::withdraw_request(
+            withdraw_request(
                 config,
                 &general_pool_market,
                 &sol.general_pool,
@@ -307,14 +300,9 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
             )
         };
 
-        let delay = |secs| {
-            println!("Waiting {} secs for ticket...", secs);
-            thread::sleep(time::Duration::from_secs(secs))
-        };
-
         let general_pool_withdraw = || {
             println!("Withdraw");
-            crate::helpers::withdraw(
+            helper_withdraw(
                 config,
                 &general_pool_market,
                 &sol.general_pool,
