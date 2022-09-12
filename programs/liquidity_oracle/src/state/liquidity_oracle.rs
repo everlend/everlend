@@ -10,12 +10,6 @@ use solana_program::{
     pubkey::Pubkey,
 };
 
-/// Liquidity oracle initialization params.
-pub struct InitLiquidityOracleParams {
-    /// Authority.
-    pub authority: Pubkey,
-}
-
 /// Liquidity oracle.
 #[repr(C)]
 #[derive(Debug, Clone, BorshDeserialize, BorshSerialize, BorshSchema, PartialEq, Default)]
@@ -28,9 +22,11 @@ pub struct LiquidityOracle {
 
 impl LiquidityOracle {
     /// Initialize a liquidity oracle.
-    pub fn init(&mut self, params: InitLiquidityOracleParams) {
-        self.account_type = AccountType::LiquidityOracle;
-        self.authority = params.authority;
+    pub fn init(authority: Pubkey) -> LiquidityOracle {
+        LiquidityOracle {
+            account_type: AccountType::LiquidityOracle,
+            authority,
+        }
     }
 
     /// Update liquidity oracle.

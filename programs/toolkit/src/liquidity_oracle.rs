@@ -1,6 +1,6 @@
 use crate::utils::*;
 use everlend_liquidity_oracle::{
-    find_liquidity_oracle_token_distribution_program_address, instruction,
+    find_token_distribution_program_address, instruction,
     state::{DistributionArray, LiquidityOracle},
 };
 use solana_client::client_error::ClientError;
@@ -80,7 +80,7 @@ pub fn create_token_distribution(
     token_mint: &Pubkey,
     distribution: &DistributionArray,
 ) -> Result<Pubkey, ClientError> {
-    let (token_distribution_pubkey, _) = find_liquidity_oracle_token_distribution_program_address(
+    let (token_distribution_pubkey, _) = find_token_distribution_program_address(
         &everlend_liquidity_oracle::id(),
         oracle_pubkey,
         token_mint,
@@ -129,7 +129,7 @@ pub fn update_token_distribution(
 
     config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
-    let (token_distribution_pubkey, _) = find_liquidity_oracle_token_distribution_program_address(
+    let (token_distribution_pubkey, _) = find_token_distribution_program_address(
         &everlend_liquidity_oracle::id(),
         oracle_pubkey,
         token_mint,

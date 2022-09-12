@@ -4,7 +4,7 @@ use borsh::BorshDeserialize;
 use everlend_general_pool::{find_withdrawal_requests_program_address, state::WithdrawalRequests};
 use everlend_income_pools::utils::IncomePoolAccounts;
 use everlend_liquidity_oracle::{
-    find_liquidity_oracle_token_distribution_program_address,
+    find_token_distribution_program_address,
     state::{DistributionArray, TokenDistribution},
 };
 use everlend_registry::state::{Registry, RegistryMarkets};
@@ -245,12 +245,11 @@ impl Processor {
         }
 
         // Check token distribution
-        let (token_distribution_pubkey, _) =
-            find_liquidity_oracle_token_distribution_program_address(
-                &everlend_liquidity_oracle::id(),
-                liquidity_oracle_info.key,
-                mint_info.key,
-            );
+        let (token_distribution_pubkey, _) = find_token_distribution_program_address(
+            &everlend_liquidity_oracle::id(),
+            liquidity_oracle_info.key,
+            mint_info.key,
+        );
         assert_account_key(token_distribution_info, &token_distribution_pubkey)?;
         let new_token_distribution =
             TokenDistribution::unpack(&token_distribution_info.data.borrow())?;

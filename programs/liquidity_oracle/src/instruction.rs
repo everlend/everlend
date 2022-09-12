@@ -1,6 +1,5 @@
 //! Instruction states definitions.
-
-use crate::{find_liquidity_oracle_token_distribution_program_address, state::DistributionArray};
+use crate::{find_token_distribution_program_address, state::DistributionArray};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
     instruction::{AccountMeta, Instruction},
@@ -95,11 +94,8 @@ pub fn create_token_distribution(
     token_mint: &Pubkey,
     distribution_array: DistributionArray,
 ) -> Instruction {
-    let (token_distribution, _) = find_liquidity_oracle_token_distribution_program_address(
-        program_id,
-        liquidity_oracle,
-        token_mint,
-    );
+    let (token_distribution, _) =
+        find_token_distribution_program_address(program_id, liquidity_oracle, token_mint);
 
     let accounts = vec![
         AccountMeta::new_readonly(*liquidity_oracle, false),
@@ -127,11 +123,8 @@ pub fn update_token_distribution(
     token_mint: &Pubkey,
     distribution_array: DistributionArray,
 ) -> Instruction {
-    let (token_distribution, _) = find_liquidity_oracle_token_distribution_program_address(
-        program_id,
-        liquidity_oracle,
-        token_mint,
-    );
+    let (token_distribution, _) =
+        find_token_distribution_program_address(program_id, liquidity_oracle, token_mint);
 
     let accounts = vec![
         AccountMeta::new_readonly(*liquidity_oracle, false),

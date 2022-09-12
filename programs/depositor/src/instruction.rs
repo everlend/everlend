@@ -9,7 +9,7 @@ use solana_program::{
 
 use everlend_general_pool::find_withdrawal_requests_program_address;
 use everlend_liquidity_oracle::{
-    find_liquidity_oracle_token_distribution_program_address, state::DistributionArray,
+    find_token_distribution_program_address, state::DistributionArray,
 };
 use everlend_utils::cpi;
 use everlend_utils::find_program_address;
@@ -288,7 +288,7 @@ pub fn start_rebalancing(
 ) -> Instruction {
     let (depositor_authority, _) = find_program_address(program_id, depositor);
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, mint);
-    let (token_distribution, _) = find_liquidity_oracle_token_distribution_program_address(
+    let (token_distribution, _) = find_token_distribution_program_address(
         &everlend_liquidity_oracle::id(),
         liquidity_oracle,
         mint,
