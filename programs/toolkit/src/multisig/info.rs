@@ -1,10 +1,10 @@
+use crate::helpers::get_transaction_program_accounts;
+use crate::utils::arg_pubkey;
+use crate::{Config, ToolkitCommand};
+use anchor_lang::AccountDeserialize;
 use clap::{Arg, ArgMatches};
 use solana_clap_utils::input_parsers::pubkey_of;
 use solana_program::pubkey::Pubkey;
-use crate::{Config, ToolkitCommand};
-use crate::helpers::get_transaction_program_accounts;
-use crate::utils::arg_pubkey;
-use anchor_lang::AccountDeserialize;
 
 const ARG_MULTISIG: &str = "multisig";
 
@@ -21,9 +21,7 @@ impl<'a> ToolkitCommand<'a> for InfoCommand {
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![
-            arg_pubkey(ARG_MULTISIG, true).help("Multisig pubkey"),
-        ]
+        return vec![arg_pubkey(ARG_MULTISIG, true).help("Multisig pubkey")];
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
@@ -34,7 +32,8 @@ impl<'a> ToolkitCommand<'a> for InfoCommand {
         let arg_matches = arg_matches.unwrap();
         let multisig_pubkey = pubkey_of(arg_matches, ARG_MULTISIG).unwrap();
 
-        let multisig = config.get_account_deserialize::<serum_multisig::Multisig>(&multisig_pubkey)?;
+        let multisig =
+            config.get_account_deserialize::<serum_multisig::Multisig>(&multisig_pubkey)?;
 
         println!("Owners: {:?}", multisig.owners);
         println!("Threshold: {:?}", multisig.threshold);

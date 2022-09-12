@@ -1,8 +1,8 @@
+use crate::helpers::update;
+use crate::{arg_keypair, Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 use solana_clap_utils::input_parsers::keypair_of;
 use solana_sdk::signer::Signer;
-use crate::{arg_keypair, Config, ToolkitCommand};
-use crate::helpers::update;
 
 const ARG_AUTHORITY: &str = "authority";
 const ARG_NEW_AUTHORITY: &str = "new-authority";
@@ -21,8 +21,12 @@ impl<'a> ToolkitCommand<'a> for UpdateAuthorityCommand {
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
         return vec![
-            arg_keypair(ARG_AUTHORITY, true).value_name("AUTHORITY").help("Old manager keypair"),
-            arg_keypair(ARG_NEW_AUTHORITY, true).value_name("NEW-AUTHORITY").help("New manager keypair"),
+            arg_keypair(ARG_AUTHORITY, true)
+                .value_name("AUTHORITY")
+                .help("Old manager keypair"),
+            arg_keypair(ARG_NEW_AUTHORITY, true)
+                .value_name("NEW-AUTHORITY")
+                .help("New manager keypair"),
         ];
     }
 

@@ -1,6 +1,8 @@
+use super::{
+    CancelWithdrawRequestCommand, InitMiningCommand, InitPoolMarketCommand, SetPoolConfigCommand,
+};
 use crate::{utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
-use super::{InitMiningCommand, CancelWithdrawRequestCommand, SetPoolConfigCommand, InitPoolMarketCommand};
 
 #[derive(Clone, Copy)]
 pub struct GeneralPoolCommand;
@@ -23,7 +25,7 @@ impl<'a> ToolkitCommand<'a> for GeneralPoolCommand {
             Box::new(InitMiningCommand),
             Box::new(CancelWithdrawRequestCommand),
             Box::new(SetPoolConfigCommand),
-            Box::new(InitPoolMarketCommand)
+            Box::new(InitPoolMarketCommand),
         ];
     }
 

@@ -1,10 +1,10 @@
-use clap::{Arg, ArgMatches};
-use solana_clap_utils::input_parsers::{pubkey_of, value_of, values_of};
-use everlend_depositor::state::Rebalancing;
-use everlend_liquidity_oracle::state::DistributionArray;
-use crate::{Config, ToolkitCommand};
 use crate::helpers::reset_rebalancing;
 use crate::utils::{arg_amount, arg_multiple, arg_pubkey};
+use crate::{Config, ToolkitCommand};
+use clap::{Arg, ArgMatches};
+use everlend_depositor::state::Rebalancing;
+use everlend_liquidity_oracle::state::DistributionArray;
+use solana_clap_utils::input_parsers::{pubkey_of, value_of, values_of};
 
 const ARG_REBALANCING: &str = "rebalancing";
 const ARG_AMOUNT: &str = "amount-to-distribute";
@@ -28,19 +28,21 @@ impl<'a> ToolkitCommand<'a> for ResetRebalancingCommand {
             arg_pubkey(ARG_REBALANCING, true).help("Rebalancing pubkey"),
             arg_amount(ARG_AMOUNT, true).help("Amount to distribute"),
             arg_amount(ARG_DISTRIBUTED_LIQUIDITY, true).help("Distributed liduidity"),
-            arg_multiple(ARG_DISTRIBUTION, true).value_name("DISTRIBUTION").short("d").number_of_values(10)
-        ]
+            arg_multiple(ARG_DISTRIBUTION, true)
+                .value_name("DISTRIBUTION")
+                .short("d")
+                .number_of_values(10),
+        ];
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![]
+        return vec![];
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
         let arg_matches = arg_matches.unwrap();
         let rebalancing_pubkey = pubkey_of(arg_matches, ARG_REBALANCING).unwrap();
-        let amount_to_distribute =
-            value_of::<u64>(arg_matches, ARG_AMOUNT).unwrap();
+        let amount_to_distribute = value_of::<u64>(arg_matches, ARG_AMOUNT).unwrap();
         let distributed_liquidity =
             value_of::<u64>(arg_matches, ARG_DISTRIBUTED_LIQUIDITY).unwrap();
         let distribution: Vec<u64> = values_of::<u64>(arg_matches, ARG_DISTRIBUTION).unwrap();

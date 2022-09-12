@@ -1,8 +1,8 @@
-use clap::{Arg, ArgMatches};
-use solana_clap_utils::input_parsers::{value_of};
-use spl_associated_token_account::get_associated_token_address;
-use crate::{Config, ToolkitCommand};
 use crate::utils::{arg, arg_amount, get_asset_maps, spl_token_transfer};
+use crate::{Config, ToolkitCommand};
+use clap::{Arg, ArgMatches};
+use solana_clap_utils::input_parsers::value_of;
+use spl_associated_token_account::get_associated_token_address;
 
 const ARG_MINT: &str = "mint";
 const ARG_AMOUNT: &str = "amount";
@@ -22,7 +22,7 @@ impl<'a> ToolkitCommand<'a> for AddReserveLiquidityCommand {
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
         return vec![
             arg(ARG_MINT, true).short("m"),
-            arg_amount(ARG_AMOUNT, true).help("Liquidity amount")
+            arg_amount(ARG_AMOUNT, true).help("Liquidity amount"),
         ];
     }
 
@@ -43,12 +43,13 @@ impl<'a> ToolkitCommand<'a> for AddReserveLiquidityCommand {
         let (mint_map, _) = get_asset_maps(default_accounts);
         let mint = mint_map.get(mint_key).unwrap();
 
-        let (liquidity_reserve_transit_pubkey, _) = everlend_depositor::find_transit_program_address(
-            &everlend_depositor::id(),
-            &initialiazed_accounts.depositor,
-            mint,
-            "reserve",
-        );
+        let (liquidity_reserve_transit_pubkey, _) =
+            everlend_depositor::find_transit_program_address(
+                &everlend_depositor::id(),
+                &initialiazed_accounts.depositor,
+                mint,
+                "reserve",
+            );
 
         println!(
             "liquidity_reserve_transit_pubkey = {:?}",

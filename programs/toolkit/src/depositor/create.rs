@@ -1,8 +1,8 @@
-use clap::{Arg, ArgMatches};
-use solana_clap_utils::input_parsers::{keypair_of, pubkey_of};
-use crate::{arg_keypair, Config, ToolkitCommand};
 use crate::helpers::init_depositor;
 use crate::utils::arg_pubkey;
+use crate::{arg_keypair, Config, ToolkitCommand};
+use clap::{Arg, ArgMatches};
+use solana_clap_utils::input_parsers::{keypair_of, pubkey_of};
 
 const ARG_KEYPAIR: &str = "keypair";
 const ARG_REBALANCE_EXECUTOR: &str = "rebalance-executor";
@@ -23,7 +23,7 @@ impl<'a> ToolkitCommand<'a> for CreateDepositorCommand {
         return vec![
             arg_keypair(ARG_KEYPAIR, false),
             arg_pubkey(ARG_REBALANCE_EXECUTOR, true).help("Rebalance executor pubkey"),
-        ]
+        ];
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {

@@ -1,6 +1,6 @@
+use super::{CreateSafetyFundTokenAccountCommand, InitPoolMarketCommand};
 use crate::{utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
-use super::{CreateSafetyFundTokenAccountCommand, InitPoolMarketCommand};
 
 #[derive(Clone, Copy)]
 pub struct IncomePoolCommand;

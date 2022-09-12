@@ -1,8 +1,8 @@
+use crate::helpers::create_transit;
+use crate::utils::{arg, arg_pubkey};
+use crate::{Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 use solana_clap_utils::input_parsers::{pubkey_of, value_of};
-use crate::{Config, ToolkitCommand};
-use crate::utils::{arg, arg_pubkey};
-use crate::helpers::create_transit;
 
 const ARG_SEED: &str = "seed";
 const ARG_TOKEN_MINT: &str = "token-mint";
@@ -12,7 +12,7 @@ pub struct CreateDepositorTransitAccountCommand;
 
 impl<'a> ToolkitCommand<'a> for CreateDepositorTransitAccountCommand {
     fn get_name(&self) -> &'a str {
-        return "create-transit-token-account"
+        return "create-transit-token-account";
     }
 
     fn get_description(&self) -> &'a str {
@@ -23,11 +23,11 @@ impl<'a> ToolkitCommand<'a> for CreateDepositorTransitAccountCommand {
         return vec![
             arg(ARG_SEED, true).value_name("SEED").help("Transit seed"),
             arg_pubkey(ARG_TOKEN_MINT, true).help("Rewards token mint"),
-        ]
+        ];
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![]
+        return vec![];
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

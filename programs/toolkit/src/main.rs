@@ -1,6 +1,11 @@
 use std::path::PathBuf;
 use std::process::exit;
 
+use crate::accounts::{
+    AddReserveLiquidityCommand, CreateAccountsCommand, CreateTokenAccountsCommand, InfoCommand,
+    InfoReserveLiquidityCommand, InitQuarryMiningAccountsCommand, SaveLarixAccountsCommand,
+    SaveQuarryAccountsCommand,
+};
 use clap::{
     crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, ArgMatches,
     SubCommand,
@@ -13,7 +18,6 @@ use solana_clap_utils::{fee_payer::fee_payer_arg, keypair::signer_from_path};
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::commitment_config::CommitmentConfig;
 use utils::{arg_keypair, arg_path, Config};
-use crate::accounts::{AddReserveLiquidityCommand, CreateAccountsCommand, CreateTokenAccountsCommand, InfoCommand, InfoReserveLiquidityCommand, InitQuarryMiningAccountsCommand, SaveLarixAccountsCommand, SaveQuarryAccountsCommand};
 
 use crate::accounts_config::InitializedAccounts;
 use crate::collateral_pool::CollateralPoolCommand;
@@ -24,20 +28,20 @@ use crate::liquidity_oracle::LiquidityOracleCommand;
 use crate::multisig::MultisigCommand;
 use crate::root::TestCommand;
 
+mod accounts;
 mod accounts_config;
+mod collateral_pool;
 mod depositor;
 mod general_pool;
 mod helpers;
+mod income_pools;
+mod liquidity_mining;
+mod liquidity_oracle;
 mod migrations;
+mod multisig;
 mod registry;
 mod root;
 mod utils;
-mod accounts;
-mod collateral_pool;
-mod income_pools;
-mod multisig;
-mod liquidity_oracle;
-mod liquidity_mining;
 
 pub trait ToolkitCommand<'a> {
     // const COMMAND_NAME: &'a str;
@@ -84,7 +88,6 @@ fn init<'a>() -> anyhow::Result<()> {
         Box::new(IncomePoolCommand),
         Box::new(LiquidityOracleCommand),
         Box::new(DepositorCommand),
-
         Box::new(SaveLarixAccountsCommand),
         Box::new(TestLarixMiningRawCommand),
         Box::new(SaveQuarryAccountsCommand),
@@ -96,14 +99,8 @@ fn init<'a>() -> anyhow::Result<()> {
         Box::new(InfoReserveLiquidityCommand),
         Box::new(CreateAccountsCommand),
         Box::new(InfoCommand),
-
         Box::new(TestCommand),
-        Box::new(TestLarixMiningRawCommand),
-        Box::new(TestQuarryMiningRawCommand),
-
-
         Box::new(MigrationsCommand),
-        Box::new(RegistryCommand),
         Box::new(UpdateManagerCommand),
         Box::new(MultisigCommand),
     ];

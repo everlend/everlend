@@ -1,11 +1,11 @@
-use std::{thread, time};
+use crate::liquidity_mining::quarry_raw_test;
 use crate::{
     utils::{arg, Config},
     ToolkitCommand,
 };
 use clap::{Arg, ArgMatches};
 use solana_clap_utils::input_parsers::value_of;
-use crate::liquidity_mining::quarry_raw_test;
+use std::{thread, time};
 
 const ARG_TOKEN: &str = "token";
 

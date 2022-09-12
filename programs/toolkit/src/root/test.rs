@@ -1,10 +1,11 @@
-use std::{thread, time};
+use crate::helpers::{
+    depositor_deposit, depositor_withdraw, get_withdrawal_request_accounts, start_rebalancing,
+    update_token_distribution,
+};
+use crate::utils::arg;
+use crate::{distribution, Config, InitializedAccounts, ToolkitCommand, ARG_ACCOUNTS};
 use anyhow::Context;
 use clap::{Arg, ArgMatches};
-use solana_account_decoder::parse_token::UiTokenAmount;
-use solana_clap_utils::input_parsers::value_of;
-use solana_program::program_pack::Pack;
-use solana_program::pubkey::Pubkey;
 use everlend_depositor::find_rebalancing_program_address;
 use everlend_depositor::state::{Rebalancing, RebalancingOperation};
 use everlend_general_pool::state::WITHDRAW_DELAY;
@@ -13,9 +14,11 @@ use everlend_registry::find_config_program_address;
 use everlend_registry::state::{RegistryConfig, RegistryPrograms};
 use everlend_utils::integrations;
 use everlend_utils::integrations::MoneyMarketPubkeys;
-use crate::{ARG_ACCOUNTS, Config, distribution, InitializedAccounts, ToolkitCommand};
-use crate::helpers::{depositor_deposit, depositor_withdraw, get_withdrawal_request_accounts, start_rebalancing, update_token_distribution};
-use crate::utils::arg;
+use solana_account_decoder::parse_token::UiTokenAmount;
+use solana_clap_utils::input_parsers::value_of;
+use solana_program::program_pack::Pack;
+use solana_program::pubkey::Pubkey;
+use std::{thread, time};
 
 const ARG_CASE: &str = "case";
 
@@ -31,9 +34,7 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![
-            arg(ARG_CASE, true).value_name("NAME").index(1).help("Case")
-        ];
+        return vec![arg(ARG_CASE, true).value_name("NAME").index(1).help("Case")];
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
@@ -42,7 +43,9 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
         let arg_matches = arg_matches.unwrap();
-        let accounts_path = arg_matches.value_of(ARG_ACCOUNTS).unwrap_or("accounts.yaml");
+        let accounts_path = arg_matches
+            .value_of(ARG_ACCOUNTS)
+            .unwrap_or("accounts.yaml");
         let case = value_of::<String>(arg_matches, ARG_CASE);
 
         println!("Run {:?}", case);
@@ -163,7 +166,7 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
                         &liquidity_oracle,
                         true,
                     )
-                }
+                },
             )
         };
 
@@ -225,8 +228,11 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
 
         let complete_rebalancing = |rebalancing: Option<Rebalancing>| -> anyhow::Result<()> {
             let rebalancing = rebalancing.or_else(|| {
-                let (rebalancing_pubkey, _) =
-                    find_rebalancing_program_address(&everlend_depositor::id(), &depositor, &sol.mint);
+                let (rebalancing_pubkey, _) = find_rebalancing_program_address(
+                    &everlend_depositor::id(),
+                    &depositor,
+                    &sol.mint,
+                );
                 config
                     .rpc_client
                     .get_account(&rebalancing_pubkey)

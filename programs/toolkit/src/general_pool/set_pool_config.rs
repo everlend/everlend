@@ -1,9 +1,9 @@
-use clap::{Arg, ArgMatches};
-use solana_clap_utils::input_parsers::{pubkey_of, value_of};
-use everlend_general_pool::state::SetPoolConfigParams;
-use crate::{Config, ToolkitCommand};
 use crate::helpers::set_pool_config;
 use crate::utils::{arg, arg_pubkey};
+use crate::{Config, ToolkitCommand};
+use clap::{Arg, ArgMatches};
+use everlend_general_pool::state::SetPoolConfigParams;
+use solana_clap_utils::input_parsers::{pubkey_of, value_of};
 
 const ARG_POOL: &str = "pool";
 const ARG_MIN_DEPOSIT: &str = "min-deposit";
@@ -23,9 +23,15 @@ impl<'a> ToolkitCommand<'a> for SetPoolConfigCommand {
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
         return vec![
-            arg_pubkey(ARG_POOL, true).short("P").help("General pool pubkey"),
-            arg(ARG_MIN_DEPOSIT, false).value_name("NUMBER").help("Minimum amount for deposit"),
-            arg(ARG_MIN_WITHDRAW, false).value_name("NUMBER").help("Minimum amount for withdraw"),
+            arg_pubkey(ARG_POOL, true)
+                .short("P")
+                .help("General pool pubkey"),
+            arg(ARG_MIN_DEPOSIT, false)
+                .value_name("NUMBER")
+                .help("Minimum amount for deposit"),
+            arg(ARG_MIN_WITHDRAW, false)
+                .value_name("NUMBER")
+                .help("Minimum amount for withdraw"),
         ];
     }
 
@@ -34,7 +40,6 @@ impl<'a> ToolkitCommand<'a> for SetPoolConfigCommand {
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
-
         let arg_matches = arg_matches.unwrap();
         let pool_pubkey = pubkey_of(arg_matches, ARG_POOL).unwrap();
         let deposit_minimum = value_of::<u64>(arg_matches, ARG_MIN_DEPOSIT);

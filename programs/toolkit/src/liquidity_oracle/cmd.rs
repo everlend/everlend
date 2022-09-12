@@ -1,6 +1,6 @@
+use super::{CreateLiquidityOracleCommand, UpdateAuthorityCommand};
 use crate::{utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
-use super::{CreateLiquidityOracleCommand, UpdateAuthorityCommand};
 
 #[derive(Clone, Copy)]
 pub struct LiquidityOracleCommand;

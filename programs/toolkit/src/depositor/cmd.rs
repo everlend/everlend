@@ -1,6 +1,8 @@
+use super::{
+    CreateDepositorCommand, CreateDepositorTransitAccountCommand, ResetRebalancingCommand,
+};
 use crate::{utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
-use super::{CreateDepositorCommand, CreateDepositorTransitAccountCommand, ResetRebalancingCommand};
 
 #[derive(Clone, Copy)]
 pub struct DepositorCommand;

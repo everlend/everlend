@@ -1,6 +1,6 @@
-use clap::{Arg, ArgMatches};
-use crate::{Config, ToolkitCommand};
 use crate::utils::get_asset_maps;
+use crate::{Config, ToolkitCommand};
+use clap::{Arg, ArgMatches};
 
 pub struct InfoReserveLiquidityCommand;
 
@@ -37,7 +37,9 @@ impl<'a> ToolkitCommand<'a> for InfoReserveLiquidityCommand {
                 );
 
             let liquidity_reserve_transit = config
-                .get_account_unpack::<spl_token::state::Account>(&liquidity_reserve_transit_pubkey)?;
+                .get_account_unpack::<spl_token::state::Account>(
+                    &liquidity_reserve_transit_pubkey,
+                )?;
 
             println!(
                 "{:?}: {:?}",

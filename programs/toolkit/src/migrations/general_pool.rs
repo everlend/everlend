@@ -1,7 +1,7 @@
 use crate::{utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
-use solana_sdk::transaction::Transaction;
 use everlend_general_pool::instruction;
+use solana_sdk::transaction::Transaction;
 
 pub struct MigrateGeneralPoolCommand;
 

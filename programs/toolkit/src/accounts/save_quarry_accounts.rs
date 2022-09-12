@@ -1,10 +1,10 @@
-use std::fs;
+use crate::accounts_config::{save_config_file, DefaultAccounts};
+use crate::utils::download_account;
+use crate::{Config, ToolkitCommand};
+use anchor_lang::AnchorDeserialize;
 use clap::{Arg, ArgMatches};
 use solana_program_test::{find_file, read_file};
-use crate::{Config, ToolkitCommand};
-use crate::accounts_config::{DefaultAccounts, save_config_file};
-use crate::utils::download_account;
-use anchor_lang::AnchorDeserialize;
+use std::fs;
 
 #[derive(Clone, Copy)]
 pub struct SaveQuarryAccountsCommand;

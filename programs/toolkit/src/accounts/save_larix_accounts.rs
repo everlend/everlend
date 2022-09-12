@@ -1,9 +1,9 @@
+use crate::utils::download_account;
+use crate::{Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 use larix_lending::state::reserve::Reserve;
 use solana_program::program_pack::Pack;
 use solana_program_test::{find_file, read_file};
-use crate::{Config, ToolkitCommand};
-use crate::utils::download_account;
 
 const LARIX_RESERVE_PATH: &str = "../tests/tests/fixtures/larix/reserve_sol.bin";
 

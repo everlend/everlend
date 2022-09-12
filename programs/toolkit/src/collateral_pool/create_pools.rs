@@ -1,17 +1,19 @@
-use std::str::FromStr;
+use crate::accounts_config::CollateralPoolAccounts;
+use crate::helpers::{
+    create_collateral_market, create_collateral_pool, create_transit, PoolPubkeys,
+};
+use crate::utils::get_asset_maps;
+use crate::{Config, InitializedAccounts, ToolkitCommand, ARG_ACCOUNTS};
 use clap::{Arg, ArgMatches};
+use everlend_registry::state::TOTAL_DISTRIBUTIONS;
 use solana_client::client_error::ClientError;
 use solana_program::pubkey::Pubkey;
-use everlend_registry::state::TOTAL_DISTRIBUTIONS;
-use crate::{ARG_ACCOUNTS, Config, InitializedAccounts, ToolkitCommand};
-use crate::accounts_config::CollateralPoolAccounts;
-use crate::helpers::{create_collateral_market, create_collateral_pool, create_transit, PoolPubkeys};
-use crate::utils::get_asset_maps;
+use std::str::FromStr;
 
 #[derive(Clone, Copy)]
-pub struct CreateCollateralPoolsCommand;
+pub struct CreatePoolsCommand;
 
-impl<'a> ToolkitCommand<'a> for CreateCollateralPoolsCommand {
+impl<'a> ToolkitCommand<'a> for CreatePoolsCommand {
     fn get_name(&self) -> &'a str {
         return "create-pools";
     }

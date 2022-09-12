@@ -1,9 +1,9 @@
+use crate::helpers::migrate_depositor;
 use crate::{utils::Config, ToolkitCommand};
 use anyhow::bail;
 use clap::{Arg, ArgMatches};
 use everlend_registry::{find_config_program_address, state::DeprecatedRegistryConfig};
 use solana_program::program_pack::Pack;
-use crate::helpers::migrate_depositor;
 
 pub struct MigrateDepositorCommand;
 

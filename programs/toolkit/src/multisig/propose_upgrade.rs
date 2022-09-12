@@ -1,9 +1,9 @@
+use crate::helpers::{create_transaction, get_multisig_program_address};
+use crate::utils::arg_pubkey;
+use crate::{Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 use solana_clap_utils::input_parsers::pubkey_of;
 use solana_program::bpf_loader_upgradeable;
-use crate::{Config, ToolkitCommand};
-use crate::helpers::{create_transaction, get_multisig_program_address};
-use crate::utils::arg_pubkey;
 
 const ARG_PROGRAM: &str = "program";
 const ARG_BUFFER: &str = "buffer";
@@ -49,8 +49,7 @@ impl<'a> ToolkitCommand<'a> for ProposeUpgradeCommand {
         let upgrade_instruction =
             bpf_loader_upgradeable::upgrade(&program_pubkey, &buffer_pubkey, &pda, &spill_pubkey);
 
-        let transaction_pubkey =
-            create_transaction(config, &multisig_pubkey, upgrade_instruction)?;
+        let transaction_pubkey = create_transaction(config, &multisig_pubkey, upgrade_instruction)?;
 
         println!("transaction_pubkey = {:?}", transaction_pubkey);
 

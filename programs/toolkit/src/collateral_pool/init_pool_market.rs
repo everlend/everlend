@@ -1,8 +1,8 @@
+use crate::helpers::create_collateral_market;
+use crate::utils::arg;
+use crate::{arg_keypair, Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 use solana_clap_utils::input_parsers::{keypair_of, value_of};
-use crate::{arg_keypair, Config, ToolkitCommand};
-use crate::helpers::{create_collateral_market};
-use crate::utils::{arg};
 
 const ARG_MONEY_MARKET: &str = "money-market";
 const ARG_KEYPAIR: &str = "keypair";
@@ -21,7 +21,9 @@ impl<'a> ToolkitCommand<'a> for InitPoolMarketCommand {
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
         return vec![
-            arg(ARG_MONEY_MARKET, true).value_name("NUMBER").help("Money market index"),
+            arg(ARG_MONEY_MARKET, true)
+                .value_name("NUMBER")
+                .help("Money market index"),
             arg_keypair(ARG_KEYPAIR, false),
         ];
     }

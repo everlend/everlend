@@ -1,11 +1,11 @@
-use std::{thread, time};
-use std::str::FromStr;
+use crate::liquidity_mining::larix_raw_test;
 use crate::{utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 use solana_program::pubkey::Pubkey;
 use solana_sdk::{signature::Keypair, signer::Signer};
 use spl_token::native_mint;
-use crate::liquidity_mining::larix_raw_test;
+use std::str::FromStr;
+use std::{thread, time};
 
 #[derive(Clone, Copy)]
 pub struct TestLarixMiningRawCommand;

@@ -1,8 +1,8 @@
-use clap::{Arg, ArgMatches};
-use solana_clap_utils::input_parsers::pubkey_of;
-use crate::{Config, ToolkitCommand};
 use crate::helpers::cancel_withdraw_request;
 use crate::utils::arg_pubkey;
+use crate::{Config, ToolkitCommand};
+use clap::{Arg, ArgMatches};
+use solana_clap_utils::input_parsers::pubkey_of;
 
 const ARG_REQUEST: &str = "request";
 
@@ -19,9 +19,7 @@ impl<'a> ToolkitCommand<'a> for CancelWithdrawRequestCommand {
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![
-            arg_pubkey(ARG_REQUEST, true).help("Withdrawal request pubkey"),
-        ];
+        return vec![arg_pubkey(ARG_REQUEST, true).help("Withdrawal request pubkey")];
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {

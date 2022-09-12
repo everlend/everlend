@@ -1,6 +1,9 @@
-use clap::{Arg, ArgMatches};
+use super::{
+    CreatePoolCommand, CreatePoolWithdrawAuthorityCommand, CreatePoolsCommand,
+    InitPoolMarketCommand,
+};
 use crate::{Config, ToolkitCommand};
-use super::{CreatePoolCommand, CreatePoolWithdrawAuthorityCommand, CreateCollateralPoolsCommand, InitPoolMarketCommand};
+use clap::{Arg, ArgMatches};
 
 pub struct CollateralPoolCommand;
 
@@ -10,7 +13,7 @@ impl<'a> ToolkitCommand<'a> for CollateralPoolCommand {
     }
 
     fn get_description(&self) -> &'a str {
-        return "Collateral pool tools"
+        return "Collateral pool tools";
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
@@ -21,9 +24,9 @@ impl<'a> ToolkitCommand<'a> for CollateralPoolCommand {
         return vec![
             Box::new(CreatePoolCommand),
             Box::new(CreatePoolWithdrawAuthorityCommand),
-            Box::new(CreateCollateralPoolsCommand),
+            Box::new(CreatePoolsCommand),
             Box::new(InitPoolMarketCommand),
-        ]
+        ];
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

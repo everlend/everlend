@@ -1,8 +1,8 @@
+use crate::helpers::create_general_pool_market;
+use crate::utils::arg_pubkey;
+use crate::{arg_keypair, Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 use solana_clap_utils::input_parsers::{keypair_of, pubkey_of};
-use crate::{arg_keypair, Config, ToolkitCommand};
-use crate::helpers::create_general_pool_market;
-use crate::utils::{arg_pubkey};
 
 const ARG_KEYPAIR: &str = "keypair";
 const ARG_REGISTRY: &str = "registry";
@@ -23,11 +23,11 @@ impl<'a> ToolkitCommand<'a> for InitPoolMarketCommand {
         return vec![
             arg_keypair(ARG_KEYPAIR, false),
             arg_pubkey(ARG_REGISTRY, true).help("Registry pubkey"),
-        ]
+        ];
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![]
+        return vec![];
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
@@ -38,7 +38,8 @@ impl<'a> ToolkitCommand<'a> for InitPoolMarketCommand {
 
         let mut initialiazed_accounts = config.get_initialized_accounts();
 
-        let general_pool_market_pubkey = create_general_pool_market(config, keypair, &registry_pubkey)?;
+        let general_pool_market_pubkey =
+            create_general_pool_market(config, keypair, &registry_pubkey)?;
 
         initialiazed_accounts.general_pool_market = general_pool_market_pubkey;
 

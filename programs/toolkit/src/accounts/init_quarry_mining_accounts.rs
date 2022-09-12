@@ -1,10 +1,10 @@
+use crate::liquidity_mining::quarry_raw_test::create_miner;
+use crate::utils::{arg, init_token_account};
+use crate::{Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 use solana_clap_utils::input_parsers::value_of;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signer::Signer;
-use crate::{Config, ToolkitCommand};
-use crate::liquidity_mining::quarry_raw_test::create_miner;
-use crate::utils::{arg, init_token_account};
 
 const ARG_TOKEN: &str = "token";
 
@@ -21,9 +21,10 @@ impl<'a> ToolkitCommand<'a> for InitQuarryMiningAccountsCommand {
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![
-            arg(ARG_TOKEN, true).short("t").help("Token").value_name("TOKEN"),
-        ];
+        return vec![arg(ARG_TOKEN, true)
+            .short("t")
+            .help("Token")
+            .value_name("TOKEN")];
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {

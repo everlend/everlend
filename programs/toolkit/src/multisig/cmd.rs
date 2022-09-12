@@ -1,6 +1,8 @@
-use clap::{Arg, ArgMatches};
+use super::{
+    ApproveCommand, CreateMultisigCommand, ExecuteCommand, InfoCommand, ProposeUpgradeCommand,
+};
 use crate::{Config, ToolkitCommand};
-use super::{CreateMultisigCommand, ProposeUpgradeCommand, ExecuteCommand, InfoCommand, ApproveCommand};
+use clap::{Arg, ArgMatches};
 
 #[derive(Clone, Copy)]
 pub struct MultisigCommand;
@@ -11,7 +13,7 @@ impl<'a> ToolkitCommand<'a> for MultisigCommand {
     }
 
     fn get_description(&self) -> &'a str {
-        return "Multisig tools"
+        return "Multisig tools";
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
@@ -25,7 +27,7 @@ impl<'a> ToolkitCommand<'a> for MultisigCommand {
             Box::new(ApproveCommand),
             Box::new(ExecuteCommand),
             Box::new(InfoCommand),
-        ]
+        ];
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

@@ -1,13 +1,15 @@
+use crate::helpers::{init_registry, set_registry_config};
+use crate::utils::REFRESH_INCOME_INTERVAL;
 use crate::{
     utils::{arg_keypair, Config},
     ToolkitCommand,
 };
 use clap::{Arg, ArgMatches};
+use everlend_registry::state::{
+    RegistryPrograms, RegistryRootAccounts, RegistrySettings, TOTAL_DISTRIBUTIONS,
+};
 use solana_clap_utils::input_parsers::keypair_of;
 use solana_program::pubkey::Pubkey;
-use everlend_registry::state::{RegistryPrograms, RegistryRootAccounts, RegistrySettings, TOTAL_DISTRIBUTIONS};
-use crate::helpers::{init_registry, set_registry_config};
-use crate::utils::REFRESH_INCOME_INTERVAL;
 
 const ARG_REGISTRY: &str = "registry";
 

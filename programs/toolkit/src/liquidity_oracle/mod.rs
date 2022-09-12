@@ -1,7 +1,7 @@
-mod update_authority;
-mod create;
 mod cmd;
+mod create;
+mod update_authority;
 
-pub use update_authority::*;
-pub use create::*;
 pub use cmd::*;
+pub use create::*;
+pub use update_authority::*;

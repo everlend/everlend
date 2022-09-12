@@ -1,12 +1,15 @@
+use crate::accounts_config::{CollateralPoolAccounts, TokenAccounts};
+use crate::helpers::{
+    create_collateral_pool, create_general_pool, create_income_pool, create_pool_borrow_authority,
+    create_token_distribution, create_transit, PoolPubkeys,
+};
+use crate::utils::{arg_multiple, get_asset_maps, spl_create_associated_token_account};
+use crate::{Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
+use everlend_liquidity_oracle::state::DistributionArray;
+use solana_client::client_error::ClientError;
 use solana_program::pubkey::Pubkey;
 use spl_associated_token_account::get_associated_token_address;
-use everlend_liquidity_oracle::state::DistributionArray;
-use crate::{Config, ToolkitCommand};
-use crate::helpers::{create_collateral_pool, create_general_pool, create_income_pool, create_pool_borrow_authority, create_token_distribution, create_transit, PoolPubkeys};
-use crate::utils::{arg_multiple, get_asset_maps, spl_create_associated_token_account};
-use solana_client::client_error::ClientError;
-use crate::accounts_config::{CollateralPoolAccounts, TokenAccounts};
 
 pub struct CreateTokenAccountsCommand;
 
@@ -22,9 +25,7 @@ impl<'a> ToolkitCommand<'a> for CreateTokenAccountsCommand {
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![
-            arg_multiple(ARG_MINTS, true).short("m"),
-        ];
+        return vec![arg_multiple(ARG_MINTS, true).short("m")];
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
@@ -136,13 +137,13 @@ impl<'a> ToolkitCommand<'a> for CreateTokenAccountsCommand {
             let collateral_pools = collateral_mints
                 .iter()
                 .zip(mm_pool_pubkeys)
-                .map(
-                    |((collateral_mint, _mm_pool_market_pubkey), pubkeys)| CollateralPoolAccounts {
+                .map(|((collateral_mint, _mm_pool_market_pubkey), pubkeys)| {
+                    CollateralPoolAccounts {
                         pool: pubkeys.pool,
                         pool_token_account: pubkeys.token_account,
                         token_mint: *collateral_mint,
-                    },
-                )
+                    }
+                })
                 .collect();
 
             // Borrow authorities

@@ -1,10 +1,10 @@
-use std::str::FromStr;
+use crate::helpers::create_multisig;
+use crate::utils::{arg, arg_multiple};
+use crate::{Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 use solana_clap_utils::input_parsers::value_of;
 use solana_program::pubkey::Pubkey;
-use crate::{Config, ToolkitCommand};
-use crate::helpers::create_multisig;
-use crate::utils::{arg, arg_multiple};
+use std::str::FromStr;
 
 const ARG_OWNERS: &str = "owners";
 const ARG_THRESHOLD: &str = "threshold";
@@ -24,7 +24,10 @@ impl<'a> ToolkitCommand<'a> for CreateMultisigCommand {
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
         return vec![
             arg_multiple(ARG_OWNERS, true),
-            arg(ARG_THRESHOLD, true).short("th").value_name("NUMBER").help("Threshold"),
+            arg(ARG_THRESHOLD, true)
+                .short("th")
+                .value_name("NUMBER")
+                .help("Threshold"),
         ];
     }
 
@@ -46,8 +49,7 @@ impl<'a> ToolkitCommand<'a> for CreateMultisigCommand {
         println!("owners = {:#?}", owners);
         println!("threshold = {:?}", threshold);
 
-       let (multisig_pubkey, multisig_pda) =
-            create_multisig(config, None, owners, threshold)?;
+        let (multisig_pubkey, multisig_pda) = create_multisig(config, None, owners, threshold)?;
 
         println!("multisig_pubkey = {:?}", multisig_pubkey);
         println!("multisig_pda = {:?}", multisig_pda);

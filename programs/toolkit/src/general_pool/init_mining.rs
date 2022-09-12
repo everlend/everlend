@@ -1,15 +1,15 @@
+use crate::liquidity_mining::larix_liquidity_miner::LarixLiquidityMiner;
+use crate::liquidity_mining::port_liquidity_miner::PortLiquidityMiner;
+use crate::liquidity_mining::quarry_liquidity_miner::QuarryLiquidityMiner;
+use crate::liquidity_mining::{execute_init_mining_accounts, save_mining_accounts, LiquidityMiner};
+use crate::utils::arg;
+use crate::{Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
+use everlend_utils::integrations::{MoneyMarket, StakingMoneyMarket};
 use solana_clap_utils::input_parsers::{pubkey_of, value_of};
 use solana_program::pubkey::Pubkey;
 use solana_sdk::signature::Keypair;
 use solana_sdk::signer::Signer;
-use everlend_utils::integrations::{MoneyMarket, StakingMoneyMarket};
-use crate::{Config, ToolkitCommand};
-use crate::liquidity_mining::larix_liquidity_miner::LarixLiquidityMiner;
-use crate::liquidity_mining::{execute_init_mining_accounts, LiquidityMiner, save_mining_accounts};
-use crate::liquidity_mining::port_liquidity_miner::PortLiquidityMiner;
-use crate::liquidity_mining::quarry_liquidity_miner::QuarryLiquidityMiner;
-use crate::utils::arg;
 
 const ARG_STAKING_MM: &str = "staking-money-market";
 const ARG_TOKEN: &str = "token";
@@ -29,10 +29,18 @@ impl<'a> ToolkitCommand<'a> for InitMiningCommand {
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
         return vec![
-            arg(ARG_STAKING_MM, true).value_name("NUMBER").help("Money market index"),
-            arg(ARG_TOKEN, true).short("t").value_name("TOKEN").help("Token"),
-            arg(ARG_SUB_REWARD_MINT, true).short("m").value_name("REWARD_MINT").help("Sub reward token mint"),
-        ]
+            arg(ARG_STAKING_MM, true)
+                .value_name("NUMBER")
+                .help("Money market index"),
+            arg(ARG_TOKEN, true)
+                .short("t")
+                .value_name("TOKEN")
+                .help("Token"),
+            arg(ARG_SUB_REWARD_MINT, true)
+                .short("m")
+                .value_name("REWARD_MINT")
+                .help("Sub reward token mint"),
+        ];
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
@@ -42,9 +50,8 @@ impl<'a> ToolkitCommand<'a> for InitMiningCommand {
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
         let arg_matches = arg_matches.unwrap();
 
-        let staking_money_market =
-            value_of::<usize>(arg_matches, ARG_STAKING_MM).unwrap();
-        let staking_money_market =  StakingMoneyMarket::from(staking_money_market);
+        let staking_money_market = value_of::<usize>(arg_matches, ARG_STAKING_MM).unwrap();
+        let staking_money_market = StakingMoneyMarket::from(staking_money_market);
         let token = value_of::<String>(arg_matches, ARG_TOKEN).unwrap();
         let sub_reward_mint = pubkey_of(arg_matches, ARG_SUB_REWARD_MINT);
 

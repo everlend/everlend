@@ -1,9 +1,9 @@
-use clap::{Arg, ArgMatches};
-use solana_clap_utils::input_parsers::value_of;
-use crate::{Config, ToolkitCommand};
 use crate::accounts_config::CollateralPoolAccounts;
 use crate::helpers::{create_collateral_pool, create_transit};
 use crate::utils::{arg, arg_multiple, get_asset_maps};
+use crate::{Config, ToolkitCommand};
+use clap::{Arg, ArgMatches};
+use solana_clap_utils::input_parsers::value_of;
 
 const ARG_MONEY_MARKET: &str = "money-market";
 const ARG_MINTS: &str = "mints";
@@ -21,8 +21,10 @@ impl<'a> ToolkitCommand<'a> for CreatePoolCommand {
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
         return vec![
-            arg(ARG_MONEY_MARKET, true).value_name("NUMBER").help("Money market index"),
-            arg_multiple(ARG_MINTS, true).short("m")
+            arg(ARG_MONEY_MARKET, true)
+                .value_name("NUMBER")
+                .help("Money market index"),
+            arg_multiple(ARG_MINTS, true).short("m"),
         ];
     }
 
@@ -43,7 +45,8 @@ impl<'a> ToolkitCommand<'a> for CreatePoolCommand {
         let mm_pool_market_pubkey = initialiazed_accounts.mm_pool_markets[money_market_index];
 
         for key in required_mints {
-            let collateral_mint = collateral_mint_map.get(key).unwrap()[money_market_index].unwrap();
+            let collateral_mint =
+                collateral_mint_map.get(key).unwrap()[money_market_index].unwrap();
 
             let pool_pubkeys =
                 create_collateral_pool(config, &mm_pool_market_pubkey, &collateral_mint)?;

@@ -1,8 +1,8 @@
-use clap::{Arg, ArgMatches};
-use solana_clap_utils::input_parsers::pubkey_of;
-use crate::{Config, ToolkitCommand};
 use crate::helpers::approve;
 use crate::utils::arg_pubkey;
+use crate::{Config, ToolkitCommand};
+use clap::{Arg, ArgMatches};
+use solana_clap_utils::input_parsers::pubkey_of;
 
 const ARG_TRANSACTION: &str = "transaction";
 const ARG_MULTISIG: &str = "multisig";
@@ -21,13 +21,15 @@ impl<'a> ToolkitCommand<'a> for ApproveCommand {
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
         return vec![
-            arg_pubkey(ARG_TRANSACTION, true).help("Transaction account pubkey").short("tx"),
+            arg_pubkey(ARG_TRANSACTION, true)
+                .help("Transaction account pubkey")
+                .short("tx"),
             arg_pubkey(ARG_MULTISIG, true).help("Multisig pubkey"),
-        ]
+        ];
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![]
+        return vec![];
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

@@ -1,16 +1,27 @@
-use std::collections::BTreeMap;
+use crate::accounts_config::CollateralPoolAccounts;
+use crate::accounts_config::TokenAccounts;
+use crate::helpers::{
+    create_collateral_market, create_collateral_pool, create_general_pool,
+    create_general_pool_market, create_income_pool, create_income_pool_market,
+    create_pool_borrow_authority, create_pool_withdraw_authority, create_token_distribution,
+    create_transit, init_depositor, init_liquidity_oracle, init_registry, set_registry_config,
+    PoolPubkeys,
+};
+use crate::utils::{
+    arg_multiple, arg_pubkey, get_asset_maps, spl_create_associated_token_account,
+    spl_token_transfer, REFRESH_INCOME_INTERVAL,
+};
+use crate::{Config, InitializedAccounts, ToolkitCommand, ARG_ACCOUNTS};
 use clap::{Arg, ArgMatches};
-use solana_clap_utils::input_parsers::{pubkey_of};
+use everlend_liquidity_oracle::state::DistributionArray;
+use everlend_registry::state::{
+    RegistryPrograms, RegistryRootAccounts, RegistrySettings, TOTAL_DISTRIBUTIONS,
+};
+use solana_clap_utils::input_parsers::pubkey_of;
+use solana_client::client_error::ClientError;
 use solana_program::pubkey::Pubkey;
 use spl_associated_token_account::get_associated_token_address;
-use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::{RegistryPrograms, RegistryRootAccounts, RegistrySettings, TOTAL_DISTRIBUTIONS};
-use crate::{ARG_ACCOUNTS, Config, InitializedAccounts, ToolkitCommand};
-use crate::accounts_config::TokenAccounts;
-use crate::utils::{arg_multiple, arg_pubkey, get_asset_maps, REFRESH_INCOME_INTERVAL, spl_create_associated_token_account, spl_token_transfer};
-use crate::accounts_config::{CollateralPoolAccounts};
-use crate::helpers::{create_collateral_market, create_collateral_pool, create_general_pool, create_general_pool_market, create_income_pool, create_income_pool_market, create_pool_borrow_authority, create_pool_withdraw_authority, create_token_distribution, create_transit, init_depositor, init_liquidity_oracle, init_registry, PoolPubkeys, set_registry_config};
-use solana_client::client_error::ClientError;
+use std::collections::BTreeMap;
 
 const ARG_MINTS: &str = "mints";
 const ARG_REBALANCE_EXECUTOR: &str = "rebalance-executor";
@@ -18,7 +29,7 @@ const ARG_REBALANCE_EXECUTOR: &str = "rebalance-executor";
 #[derive(Clone, Copy)]
 pub struct CreateAccountsCommand;
 
-impl <'a> ToolkitCommand<'a> for CreateAccountsCommand {
+impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
     fn get_name(&self) -> &'a str {
         return "create";
     }
@@ -30,7 +41,7 @@ impl <'a> ToolkitCommand<'a> for CreateAccountsCommand {
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
         return vec![
             arg_multiple(ARG_MINTS, true).short("m"),
-            arg_pubkey(ARG_REBALANCE_EXECUTOR, true).help("Rebalance executor pubkey")
+            arg_pubkey(ARG_REBALANCE_EXECUTOR, true).help("Rebalance executor pubkey"),
         ];
     }
 
@@ -78,7 +89,8 @@ impl <'a> ToolkitCommand<'a> for CreateAccountsCommand {
         )?;
         println!("programs = {:#?}", programs);
 
-        let general_pool_market_pubkey = create_general_pool_market(config, None, &registry_pubkey)?;
+        let general_pool_market_pubkey =
+            create_general_pool_market(config, None, &registry_pubkey)?;
         let income_pool_market_pubkey =
             create_income_pool_market(config, None, &general_pool_market_pubkey)?;
 
@@ -172,11 +184,8 @@ impl <'a> ToolkitCommand<'a> for CreateAccountsCommand {
                 .map(
                     |(collateral_mint, mm_pool_market_pubkey)| -> Result<PoolPubkeys, ClientError> {
                         println!("MM Pool: {}", collateral_mint);
-                        let pool_pubkeys = create_collateral_pool(
-                            config,
-                            mm_pool_market_pubkey,
-                            collateral_mint,
-                        )?;
+                        let pool_pubkeys =
+                            create_collateral_pool(config, mm_pool_market_pubkey, collateral_mint)?;
                         create_pool_withdraw_authority(
                             config,
                             mm_pool_market_pubkey,
@@ -190,25 +199,15 @@ impl <'a> ToolkitCommand<'a> for CreateAccountsCommand {
                 )
                 .collect::<Result<Vec<PoolPubkeys>, ClientError>>()?;
 
-            create_token_distribution(
-                config,
-                &liquidity_oracle_pubkey,
-                mint,
-                &distribution,
-            )?;
+            create_token_distribution(config, &liquidity_oracle_pubkey, mint, &distribution)?;
 
             // Transit accounts
-            let liquidity_transit_pubkey =
-                create_transit(config, &depositor_pubkey, mint, None)?;
+            let liquidity_transit_pubkey = create_transit(config, &depositor_pubkey, mint, None)?;
 
             // Reserve
             println!("Reserve transit");
-            let liquidity_reserve_transit_pubkey = create_transit(
-                config,
-                &depositor_pubkey,
-                mint,
-                Some("reserve".to_string()),
-            )?;
+            let liquidity_reserve_transit_pubkey =
+                create_transit(config, &depositor_pubkey, mint, Some("reserve".to_string()))?;
             spl_token_transfer(
                 config,
                 &token_account,

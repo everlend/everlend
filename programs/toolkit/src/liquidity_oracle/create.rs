@@ -1,7 +1,7 @@
+use crate::helpers::init_liquidity_oracle;
+use crate::{arg_keypair, Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 use solana_clap_utils::input_parsers::keypair_of;
-use crate::{arg_keypair, Config, ToolkitCommand};
-use crate::helpers::init_liquidity_oracle;
 
 const ARG_KEYPAIR: &str = "keypair";
 
@@ -18,9 +18,7 @@ impl<'a> ToolkitCommand<'a> for CreateLiquidityOracleCommand {
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![
-            arg_keypair(ARG_KEYPAIR, false),
-        ]
+        return vec![arg_keypair(ARG_KEYPAIR, false)];
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
