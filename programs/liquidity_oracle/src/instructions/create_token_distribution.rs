@@ -1,4 +1,4 @@
-use everlend_utils::{assert_account_key, cpi, AccountLoader};
+use everlend_utils::{assert_account_key, cpi::system::create_account, AccountLoader};
 use solana_program::{
     account_info::AccountInfo,
     clock::Clock,
@@ -84,7 +84,7 @@ impl<'a, 'b> CreateTokenDistributionContext<'a, 'b> {
         ];
 
         // Create distribution storage account
-        cpi::system::create_account::<TokenDistribution>(
+        create_account::<TokenDistribution>(
             program_id,
             self.authority.clone(),
             self.token_distribution.clone(),
