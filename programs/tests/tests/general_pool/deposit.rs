@@ -136,7 +136,10 @@ async fn fail_with_invalid_pool_mint_pubkey_argument() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32)
+        )
     );
 }
 
@@ -172,7 +175,10 @@ async fn fail_with_invalid_token_account_pubkey_argument() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32)
+        )
     );
 }
 

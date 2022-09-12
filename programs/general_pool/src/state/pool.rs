@@ -31,13 +31,15 @@ pub struct Pool {
 
 impl Pool {
     /// Initialize a Pool
-    pub fn init(&mut self, params: InitPoolParams) {
-        self.account_type = AccountType::Pool;
-        self.pool_market = params.pool_market;
-        self.token_mint = params.token_mint;
-        self.token_account = params.token_account;
-        self.pool_mint = params.pool_mint;
-        self.total_amount_borrowed = 0;
+    pub fn init(params: InitPoolParams) -> Pool {
+        Pool {
+            account_type: AccountType::Pool,
+            pool_market: params.pool_market,
+            token_mint: params.token_mint,
+            token_account: params.token_account,
+            pool_mint: params.pool_mint,
+            total_amount_borrowed: 0,
+        }
     }
 
     /// Borrow funds

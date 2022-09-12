@@ -1,4 +1,5 @@
 pub mod instruction;
+pub mod instructions;
 pub mod processor;
 pub mod state;
 
@@ -12,7 +13,7 @@ use solana_program::pubkey::Pubkey;
 solana_program::declare_id!("LiqNiHY9SnsjQMsfikadZQAsfskBZzzoHZTo3XUeoBV");
 
 /// Generates liquidity oracle token distribution authority address
-pub fn find_liquidity_oracle_token_distribution_program_address(
+pub fn find_token_distribution_program_address(
     program_id: &Pubkey,
     liquidity_oracle: &Pubkey,
     token_mint: &Pubkey,

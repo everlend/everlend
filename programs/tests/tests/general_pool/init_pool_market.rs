@@ -12,7 +12,10 @@ async fn success() {
     let mut env = presetup().await;
 
     let test_pool_market = TestGeneralPoolMarket::new();
-    test_pool_market.init(&mut env.context, &env.registry.keypair.pubkey()).await.unwrap();
+    test_pool_market
+        .init(&mut env.context, &env.registry.keypair.pubkey())
+        .await
+        .unwrap();
 
     let pool_market = test_pool_market.get_data(&mut env.context).await;
 
@@ -24,7 +27,10 @@ async fn fail_second_time_init() {
     let mut env = presetup().await;
 
     let test_pool_market = TestGeneralPoolMarket::new();
-    test_pool_market.init(&mut env.context, &env.registry.keypair.pubkey()).await.unwrap();
+    test_pool_market
+        .init(&mut env.context, &env.registry.keypair.pubkey())
+        .await
+        .unwrap();
 
     let pool_market = test_pool_market.get_data(&mut env.context).await;
 
@@ -40,7 +46,7 @@ async fn fail_second_time_init() {
             &env.registry.keypair.pubkey(),
         )],
         Some(&env.context.payer.pubkey()),
-        &[&env.context.payer],
+        &[&env.context.payer, &test_pool_market.manager],
         env.context.last_blockhash,
     );
 
