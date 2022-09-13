@@ -52,9 +52,7 @@ impl<'a> MoneyMarket<'a> for Francium<'a> {
     ) -> Result<u64, ProgramError> {
         francium::refresh_reserve(
             &self.money_market_program_id,
-            self.lending_market.clone(),
             self.reserve.clone(),
-            clock.clone(),
         )?;
 
         francium::deposit(
@@ -91,9 +89,7 @@ impl<'a> MoneyMarket<'a> for Francium<'a> {
     ) -> Result<(), ProgramError> {
         francium::refresh_reserve(
             &self.money_market_program_id,
-            self.lending_market.clone(),
             self.reserve.clone(),
-            clock.clone(),
         )?;
 
         francium::redeem(
