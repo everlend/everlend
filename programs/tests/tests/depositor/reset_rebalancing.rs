@@ -222,6 +222,7 @@ async fn setup() -> (TestEnvironment, TestGeneralPool, TestDepositor) {
             &general_pool,
             &test_liquidity_oracle,
             false,
+            DistributionArray::default(),
         )
         .await
         .unwrap();

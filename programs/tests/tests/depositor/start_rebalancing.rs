@@ -294,6 +294,7 @@ async fn success() {
             &general_pool,
             &test_liquidity_oracle,
             false,
+            DistributionArray::default(),
         )
         .await
         .unwrap();
@@ -324,24 +325,12 @@ async fn success_with_reserve_rates() {
         _,
         test_depositor,
         test_liquidity_oracle,
-        test_token_distribution,
+        _,
         _,
     ) = setup(deposit_amount).await;
 
-    let payer_pubkey = context.payer.pubkey();
-
     let mut reserve_rates = DistributionArray::default();
     reserve_rates[0] = 10_000_000; // 1% ratio - really low rate just for test
-
-    test_token_distribution
-        .update_reserve_rates(
-            &mut context,
-            &test_liquidity_oracle,
-            payer_pubkey,
-            reserve_rates,
-        )
-        .await
-        .unwrap();
 
     test_depositor
         .start_rebalancing(
@@ -351,6 +340,7 @@ async fn success_with_reserve_rates() {
             &general_pool,
             &test_liquidity_oracle,
             false,
+            reserve_rates,
         )
         .await
         .unwrap();
@@ -402,6 +392,7 @@ async fn success_with_refresh_income() {
             &general_pool,
             &test_liquidity_oracle,
             false,
+            DistributionArray::default(),
         )
         .await
         .unwrap();
@@ -443,6 +434,7 @@ async fn success_with_refresh_income() {
             &general_pool,
             &test_liquidity_oracle,
             true,
+            DistributionArray::default(),
         )
         .await
         .unwrap();
@@ -542,6 +534,7 @@ async fn fail_with_already_refreshed_income() {
             &general_pool,
             &test_liquidity_oracle,
             false,
+            DistributionArray::default(),
         )
         .await
         .unwrap();
@@ -584,12 +577,13 @@ async fn fail_with_already_refreshed_income() {
                 &general_pool,
                 &test_liquidity_oracle,
                 true,
+                DistributionArray::default(),
             )
             .await
             .unwrap_err()
             .unwrap(),
         TransactionError::InstructionError(
-            0,
+            1,
             InstructionError::Custom(EverlendError::IncomeRefreshed as u32),
         )
     );
@@ -942,8 +936,11 @@ async fn rebalancing_math_round() {
         d[1] = elem.1;
         d[2] = elem.2;
 
+        let current_slot = 1;
+        distribution.reserve_rates_updated_at = current_slot;
         distribution.update_distribution(i as u64 + 1, d).unwrap();
-        r.compute(&p, distribution.clone(), distr_amount).unwrap();
+        r.compute(&p, distribution.clone(), distr_amount, current_slot)
+            .unwrap();
         println!("{}", r.distributed_liquidity);
         assert_eq!(distr_amount >= r.distributed_liquidity, true);
 
@@ -1000,8 +997,11 @@ async fn rebalancing_check_steps() {
         d[0] = elem.distribution.0;
         d[1] = elem.distribution.1;
 
+        let current_slot = 1;
+        distribution.reserve_rates_updated_at = current_slot;
         distribution.update_distribution(i as u64 + 1, d).unwrap();
-        r.compute(&p, distribution.clone(), distr_amount).unwrap();
+        r.compute(&p, distribution.clone(), distr_amount, current_slot)
+            .unwrap();
 
         println!("{:?}", r.steps);
 
@@ -1053,7 +1053,9 @@ async fn rebalancing_check_steps_math() {
     distribution.update_distribution(10, d).unwrap();
 
     let amount_to_distribute = 25365814993;
-    r.compute(&p, distribution.clone(), amount_to_distribute)
+    let current_slot = 1;
+    distribution.reserve_rates_updated_at = current_slot;
+    r.compute(&p, distribution.clone(), amount_to_distribute, current_slot)
         .unwrap();
 
     println!("{:?}", r.steps);

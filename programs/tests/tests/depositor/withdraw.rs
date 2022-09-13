@@ -266,6 +266,7 @@ async fn setup() -> (
             &general_pool,
             &test_liquidity_oracle,
             false,
+            DistributionArray::default(),
         )
         .await
         .unwrap();
@@ -318,6 +319,7 @@ async fn setup() -> (
             &general_pool,
             &test_liquidity_oracle,
             false,
+            DistributionArray::default(),
         )
         .await
         .unwrap();
