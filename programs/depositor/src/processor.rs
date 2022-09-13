@@ -352,9 +352,6 @@ impl Processor {
             }
         }
 
-        // Compute rebalancing steps
-        let token_distribution = TokenDistribution::unpack(&token_distribution_info.data.borrow())?;
-
         msg!("Computing");
         if refresh_income {
             rebalancing.compute_with_refresh_income(
@@ -364,10 +361,15 @@ impl Processor {
                 amount_to_distribute,
             )?;
         } else {
+            // Compute rebalancing steps
+            let token_distribution =
+                TokenDistribution::unpack(&token_distribution_info.data.borrow())?;
+
             rebalancing.compute(
                 &registry_markets.money_markets,
                 token_distribution,
                 amount_to_distribute,
+                clock.slot,
             )?;
         }
 

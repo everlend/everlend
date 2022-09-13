@@ -97,6 +97,9 @@ pub enum EverlendError {
     /// Reserve threshold exceeded
     #[error("Reserve threshold exceeded")]
     ReserveThreshold,
+
+    #[error("Reserve rates have not been updated within this slot")]
+    ReserveRatesStale,
 }
 
 impl PrintProgramError for EverlendError {

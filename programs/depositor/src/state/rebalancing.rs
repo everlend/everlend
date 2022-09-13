@@ -62,9 +62,14 @@ impl Rebalancing {
         money_market_program_ids: &DistributionPubkeys,
         token_distribution: TokenDistribution,
         amount_to_distribute: u64,
+        current_slot: Slot,
     ) -> Result<(), ProgramError> {
         if token_distribution.updated_at <= self.token_distribution.updated_at {
             return Err(EverlendError::TokenDistributionIsStale.into());
+        }
+
+        if token_distribution.reserve_rates_updated_at != current_slot {
+            return Err(EverlendError::ReserveRatesStale.into());
         }
 
         // Reset steps
@@ -356,6 +361,7 @@ pub mod tests {
 
     #[test]
     fn computing() {
+        let current_slot = 1;
         let pk = Pubkey::new_unique();
         let mut rebalancing: Rebalancing = Default::default();
         rebalancing.init(InitRebalancingParams {
@@ -372,6 +378,7 @@ pub mod tests {
         distribution[0] = 900_000_000u64;
         distribution[1] = 100_000_000u64;
 
+        token_distribution.reserve_rates_updated_at = current_slot;
         token_distribution
             .update_distribution(2, distribution)
             .unwrap();
@@ -381,6 +388,7 @@ pub mod tests {
                 &money_market_program_ids,
                 token_distribution.clone(),
                 100_000_000,
+                current_slot,
             )
             .unwrap();
 
@@ -393,6 +401,7 @@ pub mod tests {
 
     #[test]
     fn computing_with_one_zero() {
+        let current_slot = 1;
         let pk = Pubkey::new_unique();
         let mut rebalancing: Rebalancing = Default::default();
         rebalancing.init(InitRebalancingParams {
@@ -409,12 +418,18 @@ pub mod tests {
         distribution[0] = 1_000_000_000u64;
         distribution[1] = 0;
 
+        token_distribution.reserve_rates_updated_at = current_slot;
         token_distribution
             .update_distribution(2, distribution)
             .unwrap();
 
         rebalancing
-            .compute(&money_market_program_ids, token_distribution.clone(), 1)
+            .compute(
+                &money_market_program_ids,
+                token_distribution.clone(),
+                1,
+                current_slot,
+            )
             .unwrap();
 
         rebalancing
@@ -426,7 +441,12 @@ pub mod tests {
             .update_distribution(4, distribution)
             .unwrap();
         rebalancing
-            .compute(&money_market_program_ids, token_distribution.clone(), 1)
+            .compute(
+                &money_market_program_ids,
+                token_distribution.clone(),
+                1,
+                current_slot,
+            )
             .unwrap();
 
         println!("rebalancing = {:#?}", rebalancing);
