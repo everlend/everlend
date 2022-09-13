@@ -1,6 +1,11 @@
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program::invoke_signed,
-    program_pack::Pack, pubkey::Pubkey, rent::Rent, system_instruction,
+    account_info::AccountInfo,
+    entrypoint::ProgramResult,
+    program::{invoke, invoke_signed},
+    program_pack::Pack,
+    pubkey::Pubkey,
+    rent::Rent,
+    system_instruction,
 };
 
 /// Create account
@@ -34,4 +39,31 @@ pub fn transfer<'a>(
     let ix = system_instruction::transfer(from.key, to.key, lamports);
 
     invoke_signed(&ix, &[from, to], signers_seeds)
+}
+
+pub fn realloc_with_rent<'a, 'b>(
+    acc: &'a AccountInfo<'b>,
+    payer: &'a AccountInfo<'b>,
+    rent: &Rent,
+    new_len: usize,
+) -> ProgramResult {
+    let balance = acc.lamports();
+    if rent.is_exempt(balance, new_len) {
+        return Ok(());
+    }
+
+    // Transfer some lamports
+    let min_balance = rent.minimum_balance(new_len);
+    if balance.ge(&min_balance) {
+        return Ok(());
+    }
+
+    // Send some lamports
+    invoke(
+        &system_instruction::transfer(payer.key, acc.key, min_balance - balance),
+        &[payer.clone(), acc.clone()],
+    )?;
+
+    // Realloc
+    acc.realloc(new_len, false)
 }

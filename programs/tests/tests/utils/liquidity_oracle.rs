@@ -133,6 +133,29 @@ impl TestTokenDistribution {
         context.banks_client.process_transaction(tx).await
     }
 
+    pub async fn update_reserve_rates(
+        &self,
+        context: &mut ProgramTestContext,
+        liquidity_oracle: &TestLiquidityOracle,
+        authority: Pubkey,
+        reserve_rates: DistributionArray,
+    ) -> BanksClientResult<()> {
+        let tx = Transaction::new_signed_with_payer(
+            &[instruction::update_reserve_rates(
+                &everlend_liquidity_oracle::id(),
+                &liquidity_oracle.keypair.pubkey(),
+                &authority,
+                &self.token_mint,
+                reserve_rates,
+            )],
+            Some(&context.payer.pubkey()),
+            &[&context.payer],
+            context.last_blockhash,
+        );
+
+        context.banks_client.process_transaction(tx).await
+    }
+
     pub async fn get_data(
         &self,
         context: &mut ProgramTestContext,

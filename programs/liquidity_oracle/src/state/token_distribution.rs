@@ -16,14 +16,20 @@ pub type DistributionArray = [u64; TOTAL_DISTRIBUTIONS];
 #[repr(C)]
 #[derive(Debug, Clone, BorshDeserialize, BorshSerialize, BorshSchema, PartialEq, Default)]
 pub struct TokenDistribution {
-    // Account type.
+    /// Account type.
     pub account_type: AccountType,
 
-    // Current distribution array
+    /// Current distribution array
     pub distribution: DistributionArray,
 
-    // Last update slot
+    /// Collateral reserve rates
+    pub reserve_rates: DistributionArray,
+
+    /// Last update slot for distrubution
     pub updated_at: Slot,
+
+    /// Last update slot for reserve rates
+    pub reserve_rates_updated_at: Slot,
 }
 
 impl TokenDistribution {
@@ -36,17 +42,18 @@ impl TokenDistribution {
     }
 
     /// Update a liquidity oracle token distribution
-    pub fn update(
+    pub fn update_distribution(
         &mut self,
         slot: Slot,
         distribution: DistributionArray,
     ) -> Result<(), ProgramError> {
-        self.updated_at = slot;
         // Total distribution always should be < 1 * PRECISION_SCALER
         if distribution.iter().sum::<u64>() > (PRECISION_SCALER) as u64 {
             return Err(ProgramError::InvalidArgument);
         }
+
         self.distribution = distribution;
+        self.updated_at = slot;
 
         Ok(())
     }
@@ -54,8 +61,7 @@ impl TokenDistribution {
 
 impl Sealed for TokenDistribution {}
 impl Pack for TokenDistribution {
-    // 1 + (8 * 10) + 8 = 89
-    const LEN: usize = 1 + (8 * TOTAL_DISTRIBUTIONS) + 8;
+    const LEN: usize = 1 + (8 * TOTAL_DISTRIBUTIONS) + (8 * TOTAL_DISTRIBUTIONS) + 8 + 8;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;

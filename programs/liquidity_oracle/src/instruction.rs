@@ -46,6 +46,27 @@ pub enum LiquidityOracleInstruction {
     /// [RS] Authority - liquidity oracle authority.
     /// [R] Clock sysvar.
     UpdateTokenDistribution { value: DistributionArray },
+
+    /// Updates money market reserve rates
+    ///
+    /// Accounts:
+    /// [R] Liquidity oracle - off-chain created account.
+    /// [R]  Token mint account
+    /// [RW] TokenDistribution - token distribution to update state
+    /// [RS] Authority - liquidity oracle authority.
+    /// [R] Clock sysvar.
+    UpdateReserveRates { value: DistributionArray },
+
+    /// Migrate token distribution account.
+    ///
+    /// Accounts:
+    /// [R] Liquidity oracle - off-chain created account.
+    /// [R]  Token mint account
+    /// [RW] TokenDistribution - token distribution to update state
+    /// [RS] Authority - liquidity oracle authority.
+    /// [R]  Rent sysvar
+    /// [R]  System program id
+    Migrate,
 }
 
 /// Creates 'InitLiquidityOracle' instruction.
@@ -138,6 +159,33 @@ pub fn update_token_distribution(
         *program_id,
         &LiquidityOracleInstruction::UpdateTokenDistribution {
             value: distribution_array,
+        },
+        accounts,
+    )
+}
+
+pub fn update_reserve_rates(
+    program_id: &Pubkey,
+    liquidity_oracle: &Pubkey,
+    authority: &Pubkey,
+    token_mint: &Pubkey,
+    reserve_rates: DistributionArray,
+) -> Instruction {
+    let (token_distribution, _) =
+        find_token_distribution_program_address(program_id, liquidity_oracle, token_mint);
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*liquidity_oracle, false),
+        AccountMeta::new_readonly(*token_mint, false),
+        AccountMeta::new(token_distribution, false),
+        AccountMeta::new_readonly(*authority, true),
+        AccountMeta::new_readonly(sysvar::clock::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &LiquidityOracleInstruction::UpdateReserveRates {
+            value: reserve_rates,
         },
         accounts,
     )

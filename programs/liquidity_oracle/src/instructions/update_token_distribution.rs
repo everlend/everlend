@@ -52,21 +52,21 @@ impl<'a, 'b> UpdateTokenDistributionContext<'a, 'b> {
             // Check authotiry
             let liquidity_oracle = LiquidityOracle::unpack(&self.liquidity_oracle.data.borrow())?;
             assert_account_key(self.authority, &liquidity_oracle.authority)?;
+
+            // Check token distribution
+            let (token_distribution_pubkey, _) = find_token_distribution_program_address(
+                program_id,
+                self.liquidity_oracle.key,
+                self.token_mint.key,
+            );
+
+            assert_account_key(self.token_distribution, &token_distribution_pubkey)?;
         }
-
-        // Check token distribution
-        let (token_distribution_pubkey, _) = find_token_distribution_program_address(
-            program_id,
-            self.liquidity_oracle.key,
-            self.token_mint.key,
-        );
-
-        assert_account_key(self.token_distribution, &token_distribution_pubkey)?;
 
         let clock = Clock::from_account_info(self.clock)?;
 
         let mut distribution = TokenDistribution::unpack(&self.token_distribution.data.borrow())?;
-        distribution.update(clock.slot, data)?;
+        distribution.update_distribution(clock.slot, data)?;
 
         TokenDistribution::pack(distribution, *self.token_distribution.data.borrow_mut())?;
 

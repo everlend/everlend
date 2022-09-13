@@ -5,8 +5,8 @@ use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubke
 
 use crate::instruction::LiquidityOracleInstruction;
 use crate::instructions::{
-    CreateTokenDistributionContext, InitContext, UpdateAuthorityContext,
-    UpdateTokenDistributionContext,
+    CreateTokenDistributionContext, InitContext, MigrateContext, UpdateAuthorityContext,
+    UpdateReserveRatesContext, UpdateTokenDistributionContext,
 };
 
 /// Instruction processing router.
@@ -22,17 +22,30 @@ pub fn process_instruction(
             msg!("LiquidityOracleInstruction: InitLiquidityOracle");
             InitContext::new(program_id, accounts)?.process(program_id)
         }
+
         LiquidityOracleInstruction::UpdateLiquidityOracleAuthority => {
             msg!("LiquidityOracleInstruction: UpdateLiquidityOracleAuthority");
             UpdateAuthorityContext::new(program_id, accounts)?.process(program_id)
         }
+
         LiquidityOracleInstruction::CreateTokenDistribution { value } => {
             msg!("LiquidityOracleInstruction: CreateTokenDistribution");
             CreateTokenDistributionContext::new(program_id, accounts)?.process(program_id, value)
         }
+
         LiquidityOracleInstruction::UpdateTokenDistribution { value } => {
             msg!("LiquidityOracleInstruction: UpdateTokenDistribution");
             UpdateTokenDistributionContext::new(program_id, accounts)?.process(program_id, value)
+        }
+
+        LiquidityOracleInstruction::UpdateReserveRates { value } => {
+            msg!("LiquidityOracleInstruction: UpdateReserveRates");
+            UpdateReserveRatesContext::new(program_id, accounts)?.process(program_id, value)
+        }
+
+        LiquidityOracleInstruction::Migrate => {
+            msg!("LiquidityOracleInstruction: Migrate");
+            MigrateContext::new(program_id, accounts)?.process(program_id)
         }
     }
 }

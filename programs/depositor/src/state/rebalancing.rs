@@ -84,37 +84,47 @@ impl Rebalancing {
 
             let prev_amount = math::share_floor(self.amount_to_distribute, prev_percent)?;
             let new_amount = math::share_floor(amount_to_distribute, new_percent)?;
-
             let amount = math::abs_diff(new_amount, prev_amount)?;
 
-            // Update distributed_liquidity
-            distributed_liquidity = distributed_liquidity
-                .checked_add(new_amount)
-                .ok_or(EverlendError::MathOverflow)?;
-
-            match new_amount.cmp(&prev_amount) {
+            let step = match new_amount.cmp(&prev_amount) {
                 // Deposit
                 Ordering::Greater => {
-                    self.add_step(RebalancingStep::new(
-                        index as u8,
-                        RebalancingOperation::Deposit,
-                        amount,
-                        None, // Will be calculated at the deposit stage
-                    ));
+                    // Сheck collateral leak (only if it's set for market)
+                    let collateral_percent = token_distribution.reserve_rates[index];
+                    let expected_collateral = math::share_floor(amount, collateral_percent)?;
+                    if collateral_percent > 0 && expected_collateral == 0 {
+                        None
+                    } else {
+                        Some(RebalancingStep::new(
+                            index as u8,
+                            RebalancingOperation::Deposit,
+                            amount,
+                            None, // Will be calculated at the deposit stage
+                        ))
+                    }
                 }
                 // Withdraw
                 Ordering::Less => {
                     let collateral_amount =
                         math::percent_ratio(amount, prev_amount, self.received_collateral[index])?;
 
-                    self.add_step(RebalancingStep::new(
+                    Some(RebalancingStep::new(
                         index as u8,
                         RebalancingOperation::Withdraw,
                         amount,
                         Some(collateral_amount),
-                    ));
+                    ))
                 }
-                Ordering::Equal => {}
+                Ordering::Equal => None,
+            };
+
+            if let Some(s) = step {
+                self.add_step(s);
+
+                // Update distributed_liquidity
+                distributed_liquidity = distributed_liquidity
+                    .checked_add(new_amount)
+                    .ok_or(EverlendError::MathOverflow)?;
             }
         }
 
@@ -362,7 +372,9 @@ pub mod tests {
         distribution[0] = 900_000_000u64;
         distribution[1] = 100_000_000u64;
 
-        token_distribution.update(2, distribution).unwrap();
+        token_distribution
+            .update_distribution(2, distribution)
+            .unwrap();
 
         rebalancing
             .compute(
@@ -397,7 +409,9 @@ pub mod tests {
         distribution[0] = 1_000_000_000u64;
         distribution[1] = 0;
 
-        token_distribution.update(2, distribution).unwrap();
+        token_distribution
+            .update_distribution(2, distribution)
+            .unwrap();
 
         rebalancing
             .compute(&money_market_program_ids, token_distribution.clone(), 1)
@@ -408,7 +422,9 @@ pub mod tests {
             .unwrap();
 
         distribution[0] = 0;
-        token_distribution.update(4, distribution).unwrap();
+        token_distribution
+            .update_distribution(4, distribution)
+            .unwrap();
         rebalancing
             .compute(&money_market_program_ids, token_distribution.clone(), 1)
             .unwrap();

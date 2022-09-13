@@ -18,7 +18,9 @@ use solana_sdk::transaction::Transaction;
 use solana_sdk::{signer::Signer, transaction::TransactionError};
 use std::vec;
 
-async fn setup() -> (
+async fn setup(
+    deposit_amount: u64,
+) -> (
     ProgramTestContext,
     TestSPLTokenLending,
     TestPythOracle,
@@ -85,7 +87,7 @@ async fn setup() -> (
             &general_pool_market,
             &liquidity_provider,
             mining_acc,
-            100 * EXP,
+            deposit_amount,
         )
         .await
         .unwrap();
@@ -264,6 +266,7 @@ async fn setup() -> (
 
 #[tokio::test]
 async fn success() {
+    let deposit_amount = 100 * EXP;
     let (
         mut context,
         _,
@@ -281,7 +284,7 @@ async fn success() {
         test_liquidity_oracle,
         _,
         _,
-    ) = setup().await;
+    ) = setup(deposit_amount).await;
 
     test_depositor
         .start_rebalancing(
@@ -294,6 +297,70 @@ async fn success() {
         )
         .await
         .unwrap();
+
+    let data = test_depositor
+        .get_rebalancing_data(&mut context, &general_pool.token_mint_pubkey)
+        .await;
+
+    assert_eq!(data.distributed_liquidity, deposit_amount / 2); // 50% distrubution
+    assert_eq!(data.amount_to_distribute, deposit_amount);
+}
+
+#[tokio::test]
+async fn success_with_reserve_rates() {
+    let deposit_amount = 10;
+    let (
+        mut context,
+        _,
+        _,
+        registry,
+        general_pool_market,
+        general_pool,
+        _,
+        _,
+        _,
+        _,
+        _,
+        _,
+        test_depositor,
+        test_liquidity_oracle,
+        test_token_distribution,
+        _,
+    ) = setup(deposit_amount).await;
+
+    let payer_pubkey = context.payer.pubkey();
+
+    let mut reserve_rates = DistributionArray::default();
+    reserve_rates[0] = 10_000_000; // 1% ratio - really low rate just for test
+
+    test_token_distribution
+        .update_reserve_rates(
+            &mut context,
+            &test_liquidity_oracle,
+            payer_pubkey,
+            reserve_rates,
+        )
+        .await
+        .unwrap();
+
+    test_depositor
+        .start_rebalancing(
+            &mut context,
+            &registry,
+            &general_pool_market,
+            &general_pool,
+            &test_liquidity_oracle,
+            false,
+        )
+        .await
+        .unwrap();
+
+    let data = test_depositor
+        .get_rebalancing_data(&mut context, &general_pool.token_mint_pubkey)
+        .await;
+
+    assert_eq!(data.distributed_liquidity, 0); // because of collateral ratio
+    assert_eq!(data.amount_to_distribute, deposit_amount);
 }
 
 #[tokio::test]
@@ -315,7 +382,7 @@ async fn success_with_refresh_income() {
         test_liquidity_oracle,
         test_token_distribution,
         mut distribution,
-    ) = setup().await;
+    ) = setup(100 * EXP).await;
     let payer_pubkey = context.payer.pubkey();
     let reserve = money_market.get_reserve_data(&mut context).await;
     let money_market_pubkeys =
@@ -455,7 +522,7 @@ async fn fail_with_already_refreshed_income() {
         test_liquidity_oracle,
         test_token_distribution,
         mut distribution,
-    ) = setup().await;
+    ) = setup(100 * EXP).await;
     let payer_pubkey = context.payer.pubkey();
     let reserve = money_market.get_reserve_data(&mut context).await;
     let money_market_pubkeys =
@@ -547,7 +614,7 @@ async fn fail_with_invalid_registry() {
         test_liquidity_oracle,
         _,
         _,
-    ) = setup().await;
+    ) = setup(100 * EXP).await;
 
     let refresh_income = false;
 
@@ -601,7 +668,7 @@ async fn fail_with_invalid_depositor() {
         test_liquidity_oracle,
         _,
         _,
-    ) = setup().await;
+    ) = setup(100 * EXP).await;
 
     let refresh_income = false;
 
@@ -655,7 +722,7 @@ async fn fail_with_invalid_mint() {
         test_liquidity_oracle,
         _,
         _,
-    ) = setup().await;
+    ) = setup(100 * EXP).await;
 
     let refresh_income = false;
 
@@ -709,7 +776,7 @@ async fn fail_with_invalid_general_pool_market() {
         test_liquidity_oracle,
         _,
         _,
-    ) = setup().await;
+    ) = setup(100 * EXP).await;
 
     let refresh_income = false;
 
@@ -763,7 +830,7 @@ async fn fail_with_invalid_general_pool_token_account() {
         test_liquidity_oracle,
         _,
         _,
-    ) = setup().await;
+    ) = setup(100 * EXP).await;
 
     let refresh_income = false;
 
@@ -814,7 +881,7 @@ async fn fail_with_invalid_liquidity_oracle() {
         _,
         _,
         _,
-    ) = setup().await;
+    ) = setup(100 * EXP).await;
 
     let refresh_income = false;
 
@@ -875,7 +942,7 @@ async fn rebalancing_math_round() {
         d[1] = elem.1;
         d[2] = elem.2;
 
-        distribution.update(i as u64 + 1, d).unwrap();
+        distribution.update_distribution(i as u64 + 1, d).unwrap();
         r.compute(&p, distribution.clone(), distr_amount).unwrap();
         println!("{}", r.distributed_liquidity);
         assert_eq!(distr_amount >= r.distributed_liquidity, true);
@@ -933,7 +1000,7 @@ async fn rebalancing_check_steps() {
         d[0] = elem.distribution.0;
         d[1] = elem.distribution.1;
 
-        distribution.update(i as u64 + 1, d).unwrap();
+        distribution.update_distribution(i as u64 + 1, d).unwrap();
         r.compute(&p, distribution.clone(), distr_amount).unwrap();
 
         println!("{:?}", r.steps);
@@ -983,7 +1050,7 @@ async fn rebalancing_check_steps_math() {
     d[1] = 333_333_333;
     d[2] = 333_333_333;
 
-    distribution.update(10, d).unwrap();
+    distribution.update_distribution(10, d).unwrap();
 
     let amount_to_distribute = 25365814993;
     r.compute(&p, distribution.clone(), amount_to_distribute)
