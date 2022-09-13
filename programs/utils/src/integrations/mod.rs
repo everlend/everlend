@@ -20,6 +20,7 @@ pub enum MoneyMarket {
     Larix,
     Solend,
     Tulip,
+    Francium,
 }
 
 #[derive(Debug, IntoPrimitive, FromPrimitive, Clone, Copy, PartialEq)]
