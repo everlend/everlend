@@ -14,15 +14,15 @@ pub struct SetPoolConfigCommand;
 
 impl<'a> ToolkitCommand<'a> for SetPoolConfigCommand {
     fn get_name(&self) -> &'a str {
-        return "set-pool-config";
+        "set-pool-config"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Create or update pool config";
+        "Create or update pool config"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![
+        vec![
             arg_pubkey(ARG_POOL, true)
                 .short("P")
                 .help("General pool pubkey"),
@@ -32,11 +32,11 @@ impl<'a> ToolkitCommand<'a> for SetPoolConfigCommand {
             arg(ARG_MIN_WITHDRAW, false)
                 .value_name("NUMBER")
                 .help("Minimum amount for withdraw"),
-        ];
+        ]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

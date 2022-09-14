@@ -8,23 +8,23 @@ pub struct MigrationsCommand;
 
 impl<'a> ToolkitCommand<'a> for MigrationsCommand {
     fn get_name(&self) -> &'a str {
-        return "migrations";
+        "migrations"
     }
 
     fn get_description(&self) -> &'a str {
-        return "run migration tools";
+        "run migration tools"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![];
+        vec![]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![
+        vec![
             Box::new(MigrateGeneralPoolCommand),
             Box::new(MigrateDepositorCommand),
             Box::new(MigratePoolMarketCommand),
-        ];
+        ]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

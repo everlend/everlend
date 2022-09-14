@@ -15,24 +15,24 @@ pub struct ProposeUpgradeCommand;
 
 impl<'a> ToolkitCommand<'a> for ProposeUpgradeCommand {
     fn get_name(&self) -> &'a str {
-        return "propose-upgrade";
+        "propose-upgrade"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Propose program upgrade";
+        "Propose program upgrade"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![
+        vec![
             arg_pubkey(ARG_PROGRAM, true).help("Program pubkey"),
             arg_pubkey(ARG_BUFFER, true).help("Buffer pubkey"),
             arg_pubkey(ARG_SPILL, true).help("Spill pubkey"),
             arg_pubkey(ARG_MULTISIG, true).help("Multisig pubkey"),
-        ];
+        ]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

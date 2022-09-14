@@ -12,19 +12,19 @@ pub struct SaveLarixAccountsCommand;
 
 impl<'a> ToolkitCommand<'a> for SaveLarixAccountsCommand {
     fn get_name(&self) -> &'a str {
-        return "save-larix-accounts";
+        "save-larix-accounts"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Save Larix accounts";
+        "Save Larix accounts"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![];
+        vec![]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, _config: &Config, _arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

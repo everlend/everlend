@@ -18,25 +18,25 @@ pub struct UpdateManagerCommand;
 
 impl<'a> ToolkitCommand<'a> for UpdateManagerCommand {
     fn get_name(&self) -> &'a str {
-        return "update-manager";
+        "update-manager"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Update pool manager account";
+        "Update pool manager account"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![
+        vec![
             arg_keypair(ARG_SOURCE, true).help("Old manager keypair"),
             arg_keypair(ARG_TARGET, true).help("New manager keypair"),
             arg(ARG_PROGRAM, true).help(
                 "Program to update manager: collateral-pool|general-pool|income-pools|registry|ulp",
             ),
-        ];
+        ]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

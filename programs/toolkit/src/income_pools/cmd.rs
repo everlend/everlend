@@ -7,22 +7,22 @@ pub struct IncomePoolCommand;
 
 impl<'a> ToolkitCommand<'a> for IncomePoolCommand {
     fn get_name(&self) -> &'a str {
-        return "income-pool";
+        "income-pool"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Income pool tools";
+        "Income pool tools"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![];
+        vec![]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![
+        vec![
             Box::new(CreateSafetyFundTokenAccountCommand),
             Box::new(InitPoolMarketCommand),
-        ];
+        ]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

@@ -20,15 +20,15 @@ pub struct InitMiningCommand;
 
 impl<'a> ToolkitCommand<'a> for InitMiningCommand {
     fn get_name(&self) -> &'a str {
-        return "init-mining";
+        "init-mining"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Init mining";
+        "Init mining"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![
+        vec![
             arg(ARG_STAKING_MM, true)
                 .value_name("NUMBER")
                 .help("Money market index"),
@@ -40,11 +40,11 @@ impl<'a> ToolkitCommand<'a> for InitMiningCommand {
                 .short("m")
                 .value_name("REWARD_MINT")
                 .help("Sub reward token mint"),
-        ];
+        ]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

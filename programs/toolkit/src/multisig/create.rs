@@ -14,25 +14,25 @@ pub struct CreateMultisigCommand;
 
 impl<'a> ToolkitCommand<'a> for CreateMultisigCommand {
     fn get_name(&self) -> &'a str {
-        return "create";
+        "create"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Create a new multisig";
+        "Create a new multisig"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![
+        vec![
             arg_multiple(ARG_OWNERS, true),
             arg(ARG_THRESHOLD, true)
                 .short("th")
                 .value_name("NUMBER")
                 .help("Threshold"),
-        ];
+        ]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

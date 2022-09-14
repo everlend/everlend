@@ -11,19 +11,19 @@ pub struct CancelWithdrawRequestCommand;
 
 impl<'a> ToolkitCommand<'a> for CancelWithdrawRequestCommand {
     fn get_name(&self) -> &'a str {
-        return "cancel-withdraw-request";
+        "cancel-withdraw-request"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Cancel withdraw request";
+        "Cancel withdraw request"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![arg_pubkey(ARG_REQUEST, true).help("Withdrawal request pubkey")];
+        vec![arg_pubkey(ARG_REQUEST, true).help("Withdrawal request pubkey")]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

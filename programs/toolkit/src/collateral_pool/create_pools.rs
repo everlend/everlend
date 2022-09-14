@@ -15,19 +15,19 @@ pub struct CreatePoolsCommand;
 
 impl<'a> ToolkitCommand<'a> for CreatePoolsCommand {
     fn get_name(&self) -> &'a str {
-        return "create-pools";
+        "create-pools"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Create collateral pools";
+        "Create collateral pools"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![];
+        vec![]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
@@ -44,7 +44,7 @@ impl<'a> ToolkitCommand<'a> for CreatePoolsCommand {
 
         let default_accounts = config.get_default_accounts();
 
-        let (_, collateral_mint_map) = get_asset_maps(default_accounts.clone());
+        let (_, collateral_mint_map) = get_asset_maps(default_accounts);
 
         let mut collateral_pool_markets: [Pubkey; TOTAL_DISTRIBUTIONS] = Default::default();
         collateral_pool_markets[..initialized_accounts.collateral_pool_markets.len()]

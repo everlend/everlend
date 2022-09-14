@@ -10,19 +10,19 @@ pub struct MigrateGeneralPoolCommand;
 
 impl<'a> ToolkitCommand<'a> for MigrateGeneralPoolCommand {
     fn get_name(&self) -> &'a str {
-        return "general-pool";
+        "general-pool"
     }
 
     fn get_description(&self) -> &'a str {
-        return "migrate general pool";
+        "migrate general pool"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![arg(ARG_CASE, true).value_name("TOKEN").help("Case")];
+        vec![arg(ARG_CASE, true).value_name("TOKEN").help("Case")]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

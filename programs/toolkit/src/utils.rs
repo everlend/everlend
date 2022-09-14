@@ -330,7 +330,7 @@ pub fn download_account(pubkey: &Pubkey, mm_name: &str, account_name: &str) {
             ]
         }}
         ",
-            pubkey.to_string()
+            pubkey
         ))
         .send()
         .expect("failed to get response")
@@ -346,5 +346,5 @@ pub fn download_account(pubkey: &Pubkey, mm_name: &str, account_name: &str) {
     ))
     .unwrap();
     file.write_all(bytes.as_slice()).unwrap();
-    println!("{} {}", account_name, pubkey.to_string());
+    println!("{} {}", account_name, pubkey);
 }

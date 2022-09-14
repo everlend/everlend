@@ -30,22 +30,22 @@ pub struct CreateAccountsCommand;
 
 impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
     fn get_name(&self) -> &'a str {
-        return "create";
+        "create"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Create a new accounts";
+        "Create a new accounts"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![
+        vec![
             arg_multiple(ARG_MINTS, true).short("m"),
             arg_pubkey(ARG_REBALANCE_EXECUTOR, true).help("Rebalance executor pubkey"),
-        ];
+        ]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

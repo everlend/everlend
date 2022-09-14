@@ -11,19 +11,19 @@ pub struct SaveQuarryAccountsCommand;
 
 impl<'a> ToolkitCommand<'a> for SaveQuarryAccountsCommand {
     fn get_name(&self) -> &'a str {
-        return "save-quarry-accounts";
+        "save-quarry-accounts"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Save Quarry accounts";
+        "Save Quarry accounts"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![];
+        vec![]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, _arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

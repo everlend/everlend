@@ -12,24 +12,24 @@ pub struct CreatePoolCommand;
 
 impl<'a> ToolkitCommand<'a> for CreatePoolCommand {
     fn get_name(&self) -> &'a str {
-        return "create-pool";
+        "create-pool"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Create a new collateral pool";
+        "Create a new collateral pool"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![
+        vec![
             arg(ARG_MONEY_MARKET, true)
                 .value_name("NUMBER")
                 .help("Money market index"),
             arg_multiple(ARG_MINTS, true).short("m"),
-        ];
+        ]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

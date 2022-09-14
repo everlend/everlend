@@ -12,22 +12,22 @@ pub struct CreateDepositorTransitAccountCommand;
 
 impl<'a> ToolkitCommand<'a> for CreateDepositorTransitAccountCommand {
     fn get_name(&self) -> &'a str {
-        return "create-transit-token-account";
+        "create-transit-token-account"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Run create depositor transit token account";
+        "Run create depositor transit token account"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![
+        vec![
             arg(ARG_SEED, true).value_name("SEED").help("Transit seed"),
             arg_pubkey(ARG_TOKEN_MINT, true).help("Rewards token mint"),
-        ];
+        ]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

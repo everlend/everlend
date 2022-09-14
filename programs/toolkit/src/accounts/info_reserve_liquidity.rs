@@ -6,19 +6,19 @@ pub struct InfoReserveLiquidityCommand;
 
 impl<'a> ToolkitCommand<'a> for InfoReserveLiquidityCommand {
     fn get_name(&self) -> &'a str {
-        return "info-reserve-liquidity";
+        "info-reserve-liquidity"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Info reserve accounts";
+        "Info reserve accounts"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![];
+        vec![]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, _arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

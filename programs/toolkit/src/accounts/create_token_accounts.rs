@@ -17,19 +17,19 @@ const ARG_MINTS: &str = "mints";
 
 impl<'a> ToolkitCommand<'a> for CreateTokenAccountsCommand {
     fn get_name(&self) -> &'a str {
-        return "create-token-accounts";
+        "create-token-accounts"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Create a new token accounts";
+        "Create a new token accounts"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![arg_multiple(ARG_MINTS, true).short("m")];
+        vec![arg_multiple(ARG_MINTS, true).short("m")]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

@@ -12,22 +12,22 @@ pub struct AddReserveLiquidityCommand;
 
 impl<'a> ToolkitCommand<'a> for AddReserveLiquidityCommand {
     fn get_name(&self) -> &'a str {
-        return "add-reserve-liquidity";
+        "add-reserve-liquidity"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Transfer liquidity to reserve account";
+        "Transfer liquidity to reserve account"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![
+        vec![
             arg(ARG_MINT, true).short("m"),
             arg_amount(ARG_AMOUNT, true).help("Liquidity amount"),
-        ];
+        ]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

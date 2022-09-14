@@ -12,22 +12,22 @@ pub struct InitPoolMarketCommand;
 
 impl<'a> ToolkitCommand<'a> for InitPoolMarketCommand {
     fn get_name(&self) -> &'a str {
-        return "init-pool-market";
+        "init-pool-market"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Init a new general pool market";
+        "Init a new general pool market"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![
+        vec![
             arg_keypair(ARG_KEYPAIR, false),
             arg_pubkey(ARG_REGISTRY, true).help("Registry pubkey"),
-        ];
+        ]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

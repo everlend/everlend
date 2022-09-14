@@ -12,26 +12,26 @@ pub struct UpdateAuthorityCommand;
 
 impl<'a> ToolkitCommand<'a> for UpdateAuthorityCommand {
     fn get_name(&self) -> &'a str {
-        return "update-liquidity-oracle-authority";
+        "update-liquidity-oracle-authority"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Update liquidity oracle authority";
+        "Update liquidity oracle authority"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![
+        vec![
             arg_keypair(ARG_AUTHORITY, true)
                 .value_name("AUTHORITY")
                 .help("Old manager keypair"),
             arg_keypair(ARG_NEW_AUTHORITY, true)
                 .value_name("NEW-AUTHORITY")
                 .help("New manager keypair"),
-        ];
+        ]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

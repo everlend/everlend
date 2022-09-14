@@ -54,6 +54,7 @@ pub trait ToolkitCommand<'a> {
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()>;
 }
 
+#[allow(clippy::borrowed_box)]
 fn build_command<'a>(cmd: &Box<dyn ToolkitCommand<'a>>) -> App<'a, 'a> {
     let commands: Vec<App> = cmd
         .get_subcommands()
@@ -78,10 +79,10 @@ async fn main() -> anyhow::Result<()> {
     init()
 }
 
-fn init<'a>() -> anyhow::Result<()> {
+fn init() -> anyhow::Result<()> {
     solana_logger::setup_with_default("solana=info");
 
-    let commands: Vec<Box<dyn ToolkitCommand<'a>>> = vec![
+    let commands: Vec<Box<dyn ToolkitCommand>> = vec![
         Box::new(RegistryCommand),
         Box::new(GeneralPoolCommand),
         Box::new(CollateralPoolCommand),
@@ -215,7 +216,7 @@ fn get_config(matches: &ArgMatches) -> Config {
         owner,
         fee_payer,
         network,
-        initialized_accounts: initialized_accounts,
+        initialized_accounts,
     }
 }
 

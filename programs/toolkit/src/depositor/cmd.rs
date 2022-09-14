@@ -9,23 +9,23 @@ pub struct DepositorCommand;
 
 impl<'a> ToolkitCommand<'a> for DepositorCommand {
     fn get_name(&self) -> &'a str {
-        return "depositor";
+        "depositor"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Depositor tools";
+        "Depositor tools"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![];
+        vec![]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![
+        vec![
             Box::new(CreateDepositorCommand),
             Box::new(CreateDepositorTransitAccountCommand),
             Box::new(ResetRebalancingCommand),
-        ];
+        ]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

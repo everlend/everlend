@@ -12,24 +12,24 @@ pub struct ExecuteCommand;
 
 impl<'a> ToolkitCommand<'a> for ExecuteCommand {
     fn get_name(&self) -> &'a str {
-        return "execute";
+        "execute"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Execute transaction";
+        "Execute transaction"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![
+        vec![
             arg_pubkey(ARG_TRANSACTION, true)
                 .help("Transaction account pubkey")
                 .short("tx"),
             arg_pubkey(ARG_MULTISIG, true).help("Multisig pubkey"),
-        ];
+        ]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

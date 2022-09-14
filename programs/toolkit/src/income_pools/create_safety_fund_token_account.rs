@@ -11,19 +11,19 @@ pub struct CreateSafetyFundTokenAccountCommand;
 
 impl<'a> ToolkitCommand<'a> for CreateSafetyFundTokenAccountCommand {
     fn get_name(&self) -> &'a str {
-        return "create-safety-fund-token-account";
+        "create-safety-fund-token-account"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Run create income pool safety fund token account";
+        "Run create income pool safety fund token account"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![arg(ARG_CASE, true).value_name("NAME").index(1).help("Case")];
+        vec![arg(ARG_CASE, true).value_name("NAME").index(1).help("Case")]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

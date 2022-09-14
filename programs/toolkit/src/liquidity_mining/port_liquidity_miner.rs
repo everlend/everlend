@@ -18,7 +18,7 @@ fn save_new_mining_account(
     mining_account: &Keypair,
 ) -> Result<()> {
     write_keypair_file(
-        &mining_account,
+        mining_account,
         &format!(
             ".keypairs/{}_port_mining_{}.json",
             token,
@@ -48,7 +48,7 @@ fn save_new_obligation_account(
     obligation_account: &Keypair,
 ) -> Result<()> {
     write_keypair_file(
-        &obligation_account,
+        obligation_account,
         &format!(
             ".keypairs/{}_port_obligation_{}.json",
             token,

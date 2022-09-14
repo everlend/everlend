@@ -15,19 +15,19 @@ pub struct InitRegistryCommand;
 
 impl<'a> ToolkitCommand<'a> for InitRegistryCommand {
     fn get_name(&self) -> &'a str {
-        return "init";
+        "init"
     }
 
     fn get_description(&self) -> &'a str {
-        return "init registry";
+        "init registry"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![arg_keypair(ARG_REGISTRY, true)];
+        vec![arg_keypair(ARG_REGISTRY, true)]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

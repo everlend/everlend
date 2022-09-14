@@ -12,19 +12,19 @@ pub struct TestLarixMiningRawCommand;
 
 impl<'a> ToolkitCommand<'a> for TestLarixMiningRawCommand {
     fn get_name(&self) -> &'a str {
-        return "test-larix-mining-raw";
+        "test-larix-mining-raw"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Test larix mining raw";
+        "Test larix mining raw"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![];
+        vec![]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, _arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
@@ -44,9 +44,9 @@ impl<'a> ToolkitCommand<'a> for TestLarixMiningRawCommand {
         let collateral_transit = Keypair::new();
         let dividends_account = Keypair::new();
         let withdraw_account = Keypair::new();
-        larix_raw_test::init_mining_accounts(&config, &mining_account)?;
+        larix_raw_test::init_mining_accounts(config, &mining_account)?;
         println!("init mining accounts finished");
-        larix_raw_test::deposit_liquidity(&config, amount, &source_sol, &collateral_transit)?;
+        larix_raw_test::deposit_liquidity(config, amount, &source_sol, &collateral_transit)?;
 
         let collateral_balance = config
             .rpc_client
@@ -62,7 +62,7 @@ impl<'a> ToolkitCommand<'a> for TestLarixMiningRawCommand {
 
         println!("deposit liquidity finished");
         larix_raw_test::deposit_collateral(
-            &config,
+            config,
             collateral_amount,
             &mining_account.pubkey(),
             &collateral_transit.pubkey(),
@@ -71,12 +71,12 @@ impl<'a> ToolkitCommand<'a> for TestLarixMiningRawCommand {
         thread::sleep(time::Duration::from_secs(60));
         println!("claim dividends finished");
         larix_raw_test::withdraw_collateral(
-            &config,
+            config,
             collateral_amount,
             &withdraw_account,
             &mining_account.pubkey(),
         )?;
-        larix_raw_test::claim_mining(&config, &dividends_account, &mining_account.pubkey())?;
+        larix_raw_test::claim_mining(config, &dividends_account, &mining_account.pubkey())?;
         println!("withdraw collateral finished");
         Ok(())
     }

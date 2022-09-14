@@ -9,19 +9,19 @@ pub struct InfoCommand;
 
 impl<'a> ToolkitCommand<'a> for InfoCommand {
     fn get_name(&self) -> &'a str {
-        return "info";
+        "info"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Print out env information";
+        "Print out env information"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![];
+        vec![]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, _arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

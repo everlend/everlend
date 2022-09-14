@@ -10,19 +10,19 @@ pub struct InitPoolMarketCommand;
 
 impl<'a> ToolkitCommand<'a> for InitPoolMarketCommand {
     fn get_name(&self) -> &'a str {
-        return "init-pool-market";
+        "init-pool-market"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Init a new income pool market";
+        "Init a new income pool market"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![arg_keypair(ARG_KEYPAIR, false)];
+        vec![arg_keypair(ARG_KEYPAIR, false)]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

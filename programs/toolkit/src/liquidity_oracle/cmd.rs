@@ -7,22 +7,22 @@ pub struct LiquidityOracleCommand;
 
 impl<'a> ToolkitCommand<'a> for LiquidityOracleCommand {
     fn get_name(&self) -> &'a str {
-        return "liquidity-oracle";
+        "liquidity-oracle"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Liquidity Oracle tools";
+        "Liquidity Oracle tools"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![];
+        vec![]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![
+        vec![
             Box::new(CreateLiquidityOracleCommand),
             Box::new(UpdateAuthorityCommand),
-        ];
+        ]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

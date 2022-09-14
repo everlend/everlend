@@ -11,19 +11,19 @@ pub struct CreatePoolWithdrawAuthorityCommand;
 
 impl<'a> ToolkitCommand<'a> for CreatePoolWithdrawAuthorityCommand {
     fn get_name(&self) -> &'a str {
-        return "create-pool-withdraw-authority";
+        "create-pool-withdraw-authority"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Create pool withdraw authority";
+        "Create pool withdraw authority"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![];
+        vec![]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

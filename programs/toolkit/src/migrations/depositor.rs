@@ -11,26 +11,26 @@ pub struct MigrateDepositorCommand;
 
 impl<'a> ToolkitCommand<'a> for MigrateDepositorCommand {
     fn get_name(&self) -> &'a str {
-        return "depositor";
+        "depositor"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Migrate Depositor account. Must be invoke after migrate-registry-config.";
+        "Migrate Depositor account. Must be invoke after migrate-registry-config."
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![
+        vec![
             arg_pubkey(ARG_SOURCE, true)
                 .help("Old registry")
                 .value_name("SOURCE"),
             arg_pubkey(ARG_TARGET, true)
                 .help("New registry")
                 .value_name("TARGET"),
-        ];
+        ]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

@@ -12,19 +12,19 @@ pub struct MigratePoolMarketCommand;
 
 impl<'a> ToolkitCommand<'a> for MigratePoolMarketCommand {
     fn get_name(&self) -> &'a str {
-        return "pool-market";
+        "pool-market"
     }
 
     fn get_description(&self) -> &'a str {
-        return "migrate pool market";
+        "migrate pool market"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![arg_keypair(ARG_POOL_MARKET, true)];
+        vec![arg_keypair(ARG_POOL_MARKET, true)]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

@@ -13,22 +13,22 @@ pub struct InitQuarryMiningAccountsCommand;
 
 impl<'a> ToolkitCommand<'a> for InitQuarryMiningAccountsCommand {
     fn get_name(&self) -> &'a str {
-        return "init-quarry-mining-accounts";
+        "init-quarry-mining-accounts"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Init Quarry mining accounts";
+        "Init Quarry mining accounts"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![arg(ARG_TOKEN, true)
+        vec![arg(ARG_TOKEN, true)
             .short("t")
             .help("Token")
-            .value_name("TOKEN")];
+            .value_name("TOKEN")]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

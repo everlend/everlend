@@ -8,19 +8,19 @@ pub struct RegistryCommand;
 
 impl<'a> ToolkitCommand<'a> for RegistryCommand {
     fn get_name(&self) -> &'a str {
-        return "registry";
+        "registry"
     }
 
     fn get_description(&self) -> &'a str {
-        return "registry tools";
+        "registry tools"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![];
+        vec![]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![Box::new(InitRegistryCommand)];
+        vec![Box::new(InitRegistryCommand)]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

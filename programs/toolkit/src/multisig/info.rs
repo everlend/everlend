@@ -13,19 +13,19 @@ pub struct InfoCommand;
 
 impl<'a> ToolkitCommand<'a> for InfoCommand {
     fn get_name(&self) -> &'a str {
-        return "info";
+        "info"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Multisig info";
+        "Multisig info"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![arg_pubkey(ARG_MULTISIG, true).help("Multisig pubkey")];
+        vec![arg_pubkey(ARG_MULTISIG, true).help("Multisig pubkey")]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

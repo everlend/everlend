@@ -254,7 +254,7 @@ pub fn migrate_depositor(
 
     config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
-    let depositor: Depositor = config.get_account_unpack(&depositor)?;
+    let depositor: Depositor = config.get_account_unpack(depositor)?;
     println!("Migration of Depositor finished: \n{:?}", &depositor);
 
     Ok(())

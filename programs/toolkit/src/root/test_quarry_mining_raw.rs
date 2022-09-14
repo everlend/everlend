@@ -14,19 +14,19 @@ pub struct TestQuarryMiningRawCommand;
 
 impl<'a> ToolkitCommand<'a> for TestQuarryMiningRawCommand {
     fn get_name(&self) -> &'a str {
-        return "test-quarry-mining-raw";
+        "test-quarry-mining-raw"
     }
 
     fn get_description(&self) -> &'a str {
-        return "";
+        "Test Quarry mining raw"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![arg(ARG_TOKEN, true)];
+        vec![arg(ARG_TOKEN, true)]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

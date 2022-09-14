@@ -12,24 +12,24 @@ pub struct InitPoolMarketCommand;
 
 impl<'a> ToolkitCommand<'a> for InitPoolMarketCommand {
     fn get_name(&self) -> &'a str {
-        return "init-pool-market";
+        "init-pool-market"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Init a new collateral pool market";
+        "Init a new collateral pool market"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![
+        vec![
             arg(ARG_MONEY_MARKET, true)
                 .value_name("NUMBER")
                 .help("Money market index"),
             arg_keypair(ARG_KEYPAIR, false),
-        ];
+        ]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
@@ -40,7 +40,7 @@ impl<'a> ToolkitCommand<'a> for InitPoolMarketCommand {
 
         let mut initialiazed_accounts = config.get_initialized_accounts();
 
-        let mm_pool_market_pubkey = create_collateral_market(&config, keypair)?;
+        let mm_pool_market_pubkey = create_collateral_market(config, keypair)?;
 
         initialiazed_accounts.mm_pool_markets[money_market as usize] = mm_pool_market_pubkey;
 

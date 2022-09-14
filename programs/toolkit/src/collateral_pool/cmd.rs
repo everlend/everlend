@@ -9,24 +9,24 @@ pub struct CollateralPoolCommand;
 
 impl<'a> ToolkitCommand<'a> for CollateralPoolCommand {
     fn get_name(&self) -> &'a str {
-        return "collateral-pool";
+        "collateral-pool"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Collateral pool tools";
+        "Collateral pool tools"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![];
+        vec![]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![
+        vec![
             Box::new(CreatePoolCommand),
             Box::new(CreatePoolWithdrawAuthorityCommand),
             Box::new(CreatePoolsCommand),
             Box::new(InitPoolMarketCommand),
-        ];
+        ]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

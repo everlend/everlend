@@ -16,15 +16,15 @@ pub struct ResetRebalancingCommand;
 
 impl<'a> ToolkitCommand<'a> for ResetRebalancingCommand {
     fn get_name(&self) -> &'a str {
-        return "reset-rebalancing";
+        "reset-rebalancing"
     }
 
     fn get_description(&self) -> &'a str {
-        return "Reset rebalancing";
+        "Reset rebalancing"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![
+        vec![
             arg_pubkey(ARG_REBALANCING, true).help("Rebalancing pubkey"),
             arg_amount(ARG_AMOUNT, true).help("Amount to distribute"),
             arg_amount(ARG_DISTRIBUTED_LIQUIDITY, true).help("Distributed liduidity"),
@@ -32,11 +32,11 @@ impl<'a> ToolkitCommand<'a> for ResetRebalancingCommand {
                 .value_name("DISTRIBUTION")
                 .short("d")
                 .number_of_values(10),
-        ];
+        ]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![];
+        vec![]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

@@ -9,24 +9,24 @@ pub struct GeneralPoolCommand;
 
 impl<'a> ToolkitCommand<'a> for GeneralPoolCommand {
     fn get_name(&self) -> &'a str {
-        return "general-pool";
+        "general-pool"
     }
 
     fn get_description(&self) -> &'a str {
-        return "General pool tools";
+        "General pool tools"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        return vec![];
+        vec![]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        return vec![
+        vec![
             Box::new(InitMiningCommand),
             Box::new(CancelWithdrawRequestCommand),
             Box::new(SetPoolConfigCommand),
             Box::new(InitPoolMarketCommand),
-        ];
+        ]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
