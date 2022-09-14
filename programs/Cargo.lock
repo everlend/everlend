@@ -1173,6 +1173,7 @@ dependencies = [
 name = "everlend-general-pool"
 version = "0.1.0"
 dependencies = [
+ "anchor-lang",
  "borsh 0.9.3",
  "eld-config",
  "eld-rewards",
@@ -1276,6 +1277,7 @@ dependencies = [
  "everlend-registry",
  "everlend-utils",
  "larix-lending",
+ "num-derive",
  "port-finance-staking",
  "port-variable-rate-lending-instructions",
  "quarry-mine",

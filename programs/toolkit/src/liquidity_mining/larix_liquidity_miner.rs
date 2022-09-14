@@ -20,7 +20,7 @@ fn save_new_mining_account(
 ) -> Result<()> {
     let mut initialized_accounts = config.get_initialized_accounts();
     write_keypair_file(
-        &mining_account,
+        mining_account,
         &format!(
             ".keypairs/{}_larix_mining_{}.json",
             token,
@@ -78,7 +78,7 @@ impl LiquidityMiner for LarixLiquidityMiner {
         execute_account_creation(
             config,
             &default_accounts.larix.program_id,
-            &mining_account,
+            mining_account,
             LARIX_MINING_SIZE,
         )?;
         save_new_mining_account(config, token, mining_account)?;
@@ -115,14 +115,12 @@ impl LiquidityMiner for LarixLiquidityMiner {
         let (depositor_authority, _) =
             find_program_address(&everlend_depositor::id(), &initialized_accounts.depositor);
 
-        let additional_reward_token_account = if sub_reward_token_mint.is_some() {
-            Some(spl_associated_token_account::get_associated_token_address(
+        let additional_reward_token_account = sub_reward_token_mint.map(|sub_reward_token_mint| {
+            spl_associated_token_account::get_associated_token_address(
                 &depositor_authority,
-                &sub_reward_token_mint.unwrap(),
-            ))
-        } else {
-            None
-        };
+                &sub_reward_token_mint,
+            )
+        });
 
         println!(
             "Additional reward token account {:?}",
