@@ -9,6 +9,7 @@ members = [
   "registry",
   "tests",
   "toolkit",
+  "rewards"
 ]
 
 [profile.release]

@@ -97,6 +97,16 @@ pub enum EverlendError {
     /// Reserve threshold exceeded
     #[error("Reserve threshold exceeded")]
     ReserveThreshold,
+
+    /// Rewards
+
+    /// Invalid vault
+    #[error("Rewards: Invalid vault")]
+    RewardsInvalidVault,
+
+    /// No deposits
+    #[error("Rewards: No deposits")]
+    RewardsNoDeposits,
 }
 
 impl PrintProgramError for EverlendError {
