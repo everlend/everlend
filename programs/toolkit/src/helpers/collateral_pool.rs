@@ -21,7 +21,7 @@ pub struct PoolPubkeys {
     pub token_account: Pubkey,
 }
 
-pub fn create_market(
+pub fn create_collateral_market(
     config: &Config,
     pool_market_keypair: Option<Keypair>,
 ) -> Result<Pubkey, ClientError> {
@@ -67,7 +67,7 @@ pub fn create_market(
     Ok(pool_market_keypair.pubkey())
 }
 
-pub fn create_pool(
+pub fn create_collateral_pool(
     config: &Config,
     pool_market_pubkey: &Pubkey,
     token_mint: &Pubkey,
@@ -107,7 +107,7 @@ pub fn create_pool(
                 spl_token::state::Account::LEN as u64,
                 &spl_token::id(),
             ),
-            instruction::create_pool(
+            everlend_collateral_pool::instruction::create_pool(
                 &everlend_collateral_pool::id(),
                 pool_market_pubkey,
                 token_mint,
@@ -167,7 +167,7 @@ pub fn create_pool_withdraw_authority(
     Ok(pool_withdraw_authority)
 }
 
-pub fn update_manager(
+pub fn collateral_pool_update_manager(
     config: &Config,
     pool_market: &Pubkey,
     manager: &Keypair,

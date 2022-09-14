@@ -11,7 +11,7 @@ use solana_sdk::{
     transaction::Transaction,
 };
 
-pub fn create_market(
+pub fn create_income_pool_market(
     config: &Config,
     income_pool_market_keypair: Option<Keypair>,
     general_pool_market_pubkey: &Pubkey,
@@ -62,7 +62,7 @@ pub fn create_market(
     Ok(income_pool_market_keypair.pubkey())
 }
 
-pub fn create_pool(
+pub fn create_income_pool(
     config: &Config,
     income_pool_market_pubkey: &Pubkey,
     token_mint: &Pubkey,
@@ -154,7 +154,7 @@ pub fn create_income_pool_safety_fund_token_account(
     Ok(())
 }
 
-pub fn update_manager(
+pub fn income_pools_update_manager(
     config: &Config,
     pool_market: &Pubkey,
     manager: &Keypair,

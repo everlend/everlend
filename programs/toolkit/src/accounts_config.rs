@@ -10,7 +10,7 @@ use serde_with::{serde_as, DisplayFromStr};
 use solana_program::pubkey::Pubkey;
 
 #[serde_as]
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
 pub struct PortFinanceAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub program_id: Pubkey,
@@ -25,7 +25,7 @@ pub struct PortFinanceAccounts {
 }
 
 #[serde_as]
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
 pub struct LarixAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub program_id: Pubkey,
@@ -44,7 +44,7 @@ pub struct LarixAccounts {
 }
 
 #[serde_as]
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
 pub struct QuarryAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub mine_program_id: Pubkey,
@@ -65,7 +65,7 @@ pub struct QuarryAccounts {
 }
 
 #[serde_as]
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
 pub struct SolendAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub program_id: Pubkey,
@@ -85,7 +85,7 @@ pub struct SolendAccounts {
 }
 
 #[serde_as]
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
 pub struct TulipAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub program_id: Pubkey,
@@ -100,7 +100,7 @@ pub struct TulipAccounts {
 }
 
 #[serde_as]
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
 pub struct FranciumAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub program_id: Pubkey,
@@ -113,7 +113,7 @@ pub struct FranciumAccounts {
 }
 
 #[serde_as]
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
 pub struct DefaultAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub sol_mint: Pubkey,
@@ -193,14 +193,14 @@ pub struct DefaultAccounts {
 }
 
 #[serde_as]
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
 pub struct PortAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub staking_pool: Pubkey,
 }
 
 #[serde_as]
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
 pub struct QuarryMining {
     #[serde_as(as = "DisplayFromStr")]
     pub token_mint: Pubkey,
@@ -230,7 +230,7 @@ impl QuarryMining {
 }
 
 #[serde_as]
-#[derive(Serialize, Deserialize, Debug, PartialEq, Default)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
 pub struct InitializedAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub payer: Pubkey,
@@ -264,7 +264,7 @@ pub struct InitializedAccounts {
 }
 
 #[serde_as]
-#[derive(Serialize, Deserialize, Debug, PartialEq, Default)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
 pub struct TokenAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub mint: Pubkey,
@@ -299,7 +299,7 @@ pub struct TokenAccounts {
 }
 
 #[serde_as]
-#[derive(Serialize, Deserialize, Debug, PartialEq, Default, Copy, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Default, Copy, Clone)]
 pub struct MiningAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub staking_account: Pubkey,
@@ -308,7 +308,7 @@ pub struct MiningAccounts {
 }
 
 #[serde_as]
-#[derive(Serialize, Deserialize, Debug, PartialEq, Default)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
 pub struct MoneyMarketAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub pool: Pubkey,
@@ -321,7 +321,7 @@ pub struct MoneyMarketAccounts {
 }
 
 #[serde_as]
-#[derive(Serialize, Deserialize, Debug, PartialEq, Default)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
 pub struct CollateralPoolAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub pool: Pubkey,

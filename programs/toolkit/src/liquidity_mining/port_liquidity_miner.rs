@@ -1,5 +1,5 @@
 use super::LiquidityMiner;
-use crate::depositor;
+use crate::helpers::create_transit;
 use crate::liquidity_mining::execute_account_creation;
 use crate::utils::*;
 use anyhow::Result;
@@ -18,7 +18,7 @@ fn save_new_mining_account(
     mining_account: &Keypair,
 ) -> Result<()> {
     write_keypair_file(
-        &mining_account,
+        mining_account,
         &format!(
             ".keypairs/{}_port_mining_{}.json",
             token,
@@ -48,7 +48,7 @@ fn save_new_obligation_account(
     obligation_account: &Keypair,
 ) -> Result<()> {
     write_keypair_file(
-        &obligation_account,
+        obligation_account,
         &format!(
             ".keypairs/{}_port_obligation_{}.json",
             token,
@@ -110,7 +110,7 @@ impl LiquidityMiner for PortLiquidityMiner {
         }
 
         if sub_reward_token_mint.is_some() {
-            depositor::create_transit(
+            create_transit(
                 config,
                 &initialized_accounts.depositor,
                 &sub_reward_token_mint.unwrap(),
