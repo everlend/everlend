@@ -59,11 +59,15 @@ export class PoolConfig extends Account<PoolConfigData> {
 
     const poolConfigAccounts = await connection.getMultipleAccountsInfo(poolConfigs)
     return poolConfigAccounts.map((account, idx) => {
-        try {
-            return new PoolConfig(poolConfigs[idx], account)
-        } catch (err) {
-            console.error(new Error(`cannot deserialize pool config for ${pools[idx].toString()}`))
-        }
+      if (account == null) {
+        return
+      }
+
+      try {
+          return new PoolConfig(poolConfigs[idx], account)
+      } catch (err) {
+          console.error(new Error(`cannot deserialize pool config for ${pools[idx].toString()}`))
+      }
     }).filter(Boolean)
   }
 }
