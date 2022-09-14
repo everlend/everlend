@@ -3,7 +3,7 @@ use crate::helpers::{
     create_collateral_market, create_collateral_pool, create_transit, PoolPubkeys,
 };
 use crate::utils::get_asset_maps;
-use crate::{Config, InitializedAccounts, ToolkitCommand, ARG_ACCOUNTS};
+use crate::{Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 use everlend_registry::state::TOTAL_DISTRIBUTIONS;
 use solana_client::client_error::ClientError;
@@ -30,16 +30,13 @@ impl<'a> ToolkitCommand<'a> for CreatePoolsCommand {
         vec![]
     }
 
-    fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
-        let arg_matches = arg_matches.unwrap();
-        let accounts_path = arg_matches.value_of(ARG_ACCOUNTS).unwrap();
-
+    fn handle(&self, config: &Config, _arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
         let collateral_pool_markets = vec![
             create_collateral_market(config, None)?,
             create_collateral_market(config, None)?,
             create_collateral_market(config, None)?,
         ];
-        let mut initialized_accounts = InitializedAccounts::load(accounts_path).unwrap();
+        let mut initialized_accounts = config.get_initialized_accounts();
         initialized_accounts.collateral_pool_markets = collateral_pool_markets;
 
         let default_accounts = config.get_default_accounts();
@@ -110,7 +107,9 @@ impl<'a> ToolkitCommand<'a> for CreatePoolsCommand {
             let mut accounts = pair.1;
             accounts.collateral_pools = collateral_pools;
         }
-        initialized_accounts.save(accounts_path).unwrap();
+        initialized_accounts
+            .save(config.accounts_path.as_str())
+            .unwrap();
         Ok(())
     }
 }

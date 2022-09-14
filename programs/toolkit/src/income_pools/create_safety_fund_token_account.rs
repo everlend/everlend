@@ -1,6 +1,6 @@
 use crate::helpers::create_income_pool_safety_fund_token_account;
 use crate::utils::arg;
-use crate::{Config, InitializedAccounts, ToolkitCommand};
+use crate::{Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 use solana_clap_utils::input_parsers::value_of;
 
@@ -29,10 +29,9 @@ impl<'a> ToolkitCommand<'a> for CreateSafetyFundTokenAccountCommand {
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
         let arg_matches = arg_matches.unwrap();
 
-        let accounts_path = arg_matches.value_of("accounts").unwrap_or("accounts.yaml");
         let case = value_of::<String>(arg_matches, "case").unwrap();
 
-        let initialiazed_accounts = InitializedAccounts::load(accounts_path).unwrap_or_default();
+        let initialiazed_accounts = config.get_initialized_accounts();
 
         let token = initialiazed_accounts.token_accounts.get(&case).unwrap();
 

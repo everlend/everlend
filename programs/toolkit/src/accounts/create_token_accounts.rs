@@ -176,7 +176,7 @@ impl<'a> ToolkitCommand<'a> for CreateTokenAccountsCommand {
         }
 
         initialiazed_accounts
-            .save(&format!("accounts.{}.yaml", config.network))
+            .save(config.accounts_path.as_str())
             .unwrap();
 
         Ok(())

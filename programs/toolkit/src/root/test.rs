@@ -4,7 +4,7 @@ use crate::helpers::{
     start_rebalancing, update_token_distribution, withdraw as helper_withdraw, withdraw_request,
 };
 use crate::utils::{arg, delay};
-use crate::{distribution, Config, InitializedAccounts, ToolkitCommand, ARG_ACCOUNTS};
+use crate::{distribution, Config, InitializedAccounts, ToolkitCommand};
 use anyhow::Context;
 use clap::{Arg, ArgMatches};
 use everlend_depositor::find_rebalancing_program_address;
@@ -42,15 +42,12 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
         let arg_matches = arg_matches.unwrap();
-        let accounts_path = arg_matches
-            .value_of(ARG_ACCOUNTS)
-            .unwrap_or("accounts.yaml");
         let case = value_of::<String>(arg_matches, ARG_CASE);
 
         println!("Run {:?}", case);
 
         let default_accounts = config.get_default_accounts();
-        let initialized_accounts = InitializedAccounts::load(accounts_path).unwrap_or_default();
+        let initialized_accounts = config.get_initialized_accounts();
         println!("default_accounts = {:#?}", default_accounts);
 
         let InitializedAccounts {

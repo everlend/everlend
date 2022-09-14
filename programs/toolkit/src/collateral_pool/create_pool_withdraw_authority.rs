@@ -1,5 +1,5 @@
 use crate::helpers::create_pool_withdraw_authority;
-use crate::{Config, InitializedAccounts, ToolkitCommand, ARG_ACCOUNTS};
+use crate::{Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 use everlend_utils::find_program_address;
 use solana_client::client_error::ClientError;
@@ -26,12 +26,8 @@ impl<'a> ToolkitCommand<'a> for CreatePoolWithdrawAuthorityCommand {
         vec![]
     }
 
-    fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
-        let arg_matches = arg_matches.unwrap();
-        let accounts_path = arg_matches
-            .value_of(ARG_ACCOUNTS)
-            .unwrap_or("accounts.yaml");
-        let mut initialized_accounts = InitializedAccounts::load(accounts_path).unwrap_or_default();
+    fn handle(&self, config: &Config, _arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
+        let mut initialized_accounts = config.get_initialized_accounts();
         let pool_markets = initialized_accounts.collateral_pool_markets;
         let depositor = initialized_accounts.depositor;
         let token_accounts = initialized_accounts.token_accounts.iter_mut();
