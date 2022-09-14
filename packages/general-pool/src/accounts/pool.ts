@@ -65,8 +65,8 @@ export class Pool extends Account<PoolData> {
 
   static getPDA(poolMarket: PublicKey, tokenMint: PublicKey) {
     return GeneralPoolsProgram.findProgramAddress([
-      new PublicKey(poolMarket).toBuffer(),
-      new PublicKey(tokenMint).toBuffer(),
+      poolMarket.toBuffer(),
+      tokenMint.toBuffer(),
     ])
   }
 
