@@ -45,7 +45,7 @@ export class PoolConfig extends Account<PoolConfigData> {
    * Get batch pool configs
    *
    * @param connection the JSON RPC connection instance.
-   * @param filters the filter config object.
+   * @param pools public keys of pools to load configs for
    */
   static async findMany(
     connection: Connection,
