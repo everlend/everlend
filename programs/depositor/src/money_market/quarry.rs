@@ -27,7 +27,7 @@ impl<'a, 'b> Quarry<'a> {
         rewarder: &Pubkey,
     ) -> Result<Quarry<'a>, ProgramError> {
         let quarry_mining_program_id_info = next_account_info(account_info_iter)?;
-        assert_account_key(quarry_mining_program_id_info, &quarry::id())?;
+        assert_account_key(quarry_mining_program_id_info, &quarry::staking_program_id())?;
 
         let rewarder_info = next_account_info(account_info_iter)?;
         assert_account_key(rewarder_info, rewarder)?;

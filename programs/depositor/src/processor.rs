@@ -949,14 +949,14 @@ impl Processor {
             MiningType::Quarry {
                 rewarder,
             } => {
-                assert_account_key(staking_program_id_info, &cpi::quarry::id())?;
+                assert_account_key(staking_program_id_info, &cpi::quarry::staking_program_id())?;
 
                 let rewarder_info = next_account_info(account_info_iter)?;
                 assert_account_key(rewarder_info, &rewarder)?;
 
                 let quarry_info = next_account_info(account_info_iter)?;
                 let (quarry, _) = cpi::quarry::find_quarry_program_address(
-                    &cpi::quarry::id(),
+                    &cpi::quarry::staking_program_id(),
                     &rewarder,
                     collateral_mint_info.key,
                 );
@@ -964,7 +964,7 @@ impl Processor {
 
                 let miner_info = next_account_info(account_info_iter)?;
                 let (miner_pubkey, _) = cpi::quarry::find_miner_program_address(
-                    &cpi::quarry::id(),
+                    &cpi::quarry::staking_program_id(),
                     &quarry,
                     depositor_authority_info.key,
                 );
@@ -1190,12 +1190,20 @@ impl Processor {
             MiningType::Quarry {
                 rewarder,
             } => {
-                assert_account_key(staking_program_id_info,&cpi::quarry::id())?;
+                assert_account_key(staking_program_id_info,&cpi::quarry::staking_program_id())?;
                 let mint_wrapper = next_account_info(account_info_iter)?;
                 let mint_wrapper_program = next_account_info(account_info_iter)?;
                 let minter = next_account_info(account_info_iter)?;
+                // IOU token mint
                 let rewards_token_mint = next_account_info(account_info_iter)?;
                 let rewards_token_account = next_account_info(account_info_iter)?;
+                let (reward_token_account_pubkey, _) = find_transit_program_address(
+                    program_id,
+                    depositor_info.key,
+                    rewards_token_mint.key,
+                    "lm_reward",
+                );
+                assert_account_key(rewards_token_account, &reward_token_account_pubkey)?;
                 let rewards_fee_account = next_account_info(account_info_iter)?;
                 let miner = next_account_info(account_info_iter)?;
                 let quarry_rewarder = next_account_info(account_info_iter)?;
@@ -1225,18 +1233,15 @@ impl Processor {
 
                 let redeemer_program_id_info = next_account_info(account_info_iter)?;
                 let redeemer_info = next_account_info(account_info_iter)?;
-                let iou_mint_info = next_account_info(account_info_iter)?;
-                let iou_source_info = next_account_info(account_info_iter)?;
                 let redemption_vault_info = next_account_info(account_info_iter)?;
-                let redemption_destination_info = next_account_info(account_info_iter)?;
 
                 cpi::quarry::redeem_all_tokens(
                     redeemer_program_id_info.key,
                     redeemer_info.clone(),
-                    iou_mint_info.clone(),
-                    iou_source_info.clone(),
+                    rewards_token_mint.clone(),
+                    rewards_token_account.clone(),
                     redemption_vault_info.clone(),
-                    redemption_destination_info.clone(),
+                    reward_accounts.reward_transit_info.clone(),
                     depositor_authority_info.clone(),
                     &[signers_seeds.as_ref()],
                 )?;

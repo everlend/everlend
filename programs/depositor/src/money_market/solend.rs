@@ -20,11 +20,11 @@ pub struct Solend<'a> {
     reserve_liquidity_switchboard_oracle: AccountInfo<'a>,
 }
 
-impl<'a> Solend<'a> {
+impl<'a, 'b> Solend<'a> {
     ///
     pub fn init(
         money_market_program_id: Pubkey,
-        account_info_iter: &mut Iter<AccountInfo<'a>>,
+        account_info_iter: &'b mut Iter<AccountInfo<'a>>,
     ) -> Result<Solend<'a>, ProgramError> {
         let reserve_info = next_account_info(account_info_iter)?;
         let reserve_liquidity_supply_info = next_account_info(account_info_iter)?;

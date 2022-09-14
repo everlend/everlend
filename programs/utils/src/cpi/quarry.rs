@@ -1,5 +1,5 @@
 use anchor_lang::InstructionData;
-pub use quarry_mine::id;
+use quarry_mine::id;
 use quarry_mine::instruction::{ClaimRewardsV2, CreateMinerV2, StakeTokens, WithdrawTokens};
 use quarry_redeemer::instruction::{RedeemAllTokens};
 use solana_program::account_info::AccountInfo;
@@ -14,6 +14,9 @@ pub fn miner_seed() -> String {
     String::from("Miner")
 }
 
+pub fn staking_program_id() -> Pubkey{
+    return quarry_mine::id()
+}
 /// Generates internal mining address
 pub fn find_miner_program_address(
     program_id: &Pubkey,
