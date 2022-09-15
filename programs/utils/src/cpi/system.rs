@@ -48,11 +48,6 @@ pub fn realloc_with_rent<'a, 'b>(
     new_len: usize,
 ) -> ProgramResult {
     let balance = acc.lamports();
-    if rent.is_exempt(balance, new_len) {
-        return Ok(());
-    }
-
-    // Transfer some lamports
     let min_balance = rent.minimum_balance(new_len);
     if balance.ge(&min_balance) {
         return Ok(());

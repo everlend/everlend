@@ -52,7 +52,7 @@ pub enum LiquidityOracleInstruction {
     /// Accounts:
     /// [R] Liquidity oracle - off-chain created account.
     /// [R]  Token mint account
-    /// [RW] TokenDistribution - token distribution to update state
+    /// [W] TokenDistribution - token distribution to update state
     /// [RS] Authority - liquidity oracle authority.
     /// [R] Clock sysvar.
     UpdateReserveRates { value: DistributionArray },
@@ -62,7 +62,7 @@ pub enum LiquidityOracleInstruction {
     /// Accounts:
     /// [R] Liquidity oracle - off-chain created account.
     /// [R]  Token mint account
-    /// [RW] TokenDistribution - token distribution to update state
+    /// [W] TokenDistribution - token distribution to update state
     /// [RS] Authority - liquidity oracle authority.
     /// [R]  Rent sysvar
     /// [R]  System program id

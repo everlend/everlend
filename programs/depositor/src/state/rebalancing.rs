@@ -91,46 +91,43 @@ impl Rebalancing {
             let new_amount = math::share_floor(amount_to_distribute, new_percent)?;
             let amount = math::abs_diff(new_amount, prev_amount)?;
 
-            let step = match new_amount.cmp(&prev_amount) {
+            match new_amount.cmp(&prev_amount) {
                 // Deposit
                 Ordering::Greater => {
                     // Сheck collateral leak (only if it's set for market)
                     let collateral_percent = token_distribution.reserve_rates[index];
                     let expected_collateral = math::share_floor(amount, collateral_percent)?;
                     if collateral_percent > 0 && expected_collateral == 0 {
-                        None
-                    } else {
-                        Some(RebalancingStep::new(
-                            index as u8,
-                            RebalancingOperation::Deposit,
-                            amount,
-                            None, // Will be calculated at the deposit stage
-                        ))
+                        continue;
                     }
+
+                    self.add_step(RebalancingStep::new(
+                        index as u8,
+                        RebalancingOperation::Deposit,
+                        amount,
+                        None, // Will be calculated at the deposit stage
+                    ));
                 }
+
                 // Withdraw
                 Ordering::Less => {
                     let collateral_amount =
                         math::percent_ratio(amount, prev_amount, self.received_collateral[index])?;
 
-                    Some(RebalancingStep::new(
+                    self.add_step(RebalancingStep::new(
                         index as u8,
                         RebalancingOperation::Withdraw,
                         amount,
                         Some(collateral_amount),
-                    ))
+                    ));
                 }
-                Ordering::Equal => None,
+                Ordering::Equal => {}
             };
 
-            if let Some(s) = step {
-                self.add_step(s);
-
-                // Update distributed_liquidity
-                distributed_liquidity = distributed_liquidity
-                    .checked_add(new_amount)
-                    .ok_or(EverlendError::MathOverflow)?;
-            }
+            // Update distributed_liquidity
+            distributed_liquidity = distributed_liquidity
+                .checked_add(new_amount)
+                .ok_or(EverlendError::MathOverflow)?;
         }
 
         // Sort steps
