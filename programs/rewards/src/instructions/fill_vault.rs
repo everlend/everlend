@@ -6,8 +6,10 @@ use solana_program::pubkey::Pubkey;
 use everlend_utils::{AccountLoader, EverlendError};
 use crate::state::RewardPool;
 
+const FEE_PERCENTAGE: u64 = 2;
+
 pub struct FillVaultContext<'a, 'b> {
-    config: &'a AccountInfo<'b>,
+    root_account: &'a AccountInfo<'b>,
     reward_pool: &'a AccountInfo<'b>,
     reward_mint: &'a AccountInfo<'b>,
     vault: &'a AccountInfo<'b>,
@@ -24,7 +26,7 @@ impl<'a, 'b> FillVaultContext<'a, 'b> {
     ) -> Result<FillVaultContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter().enumerate();
 
-        let config = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let root_account = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let reward_pool = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let reward_mint = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let vault = AccountLoader::next_unchecked(account_info_iter)?;
@@ -33,7 +35,7 @@ impl<'a, 'b> FillVaultContext<'a, 'b> {
         let from = AccountLoader::next_signer(account_info_iter)?;
 
         Ok(FillVaultContext {
-            config,
+            root_account,
             reward_pool,
             reward_mint,
             vault,
@@ -43,7 +45,7 @@ impl<'a, 'b> FillVaultContext<'a, 'b> {
         })
     }
 
-    pub fn process(&self, amount: u64) -> ProgramResult {
+    pub fn process(&self, program_id: &Pubkey, amount: u64) -> ProgramResult {
         let mut reward_pool = RewardPool::unpack(&self.reward_pool.data.borrow())?;
 
         let fee_amount = amount
@@ -74,6 +76,11 @@ impl<'a, 'b> FillVaultContext<'a, 'b> {
                 &[]
             )?;
         }
+
+        RewardPool::pack(
+            reward_pool,
+            *self.reward_pool.data.borrow_mut()
+        )?;
 
         Ok(())
     }

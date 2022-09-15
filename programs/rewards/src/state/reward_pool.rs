@@ -1,8 +1,8 @@
-use borsh::BorshSerialize;
+use borsh::{BorshSerialize, BorshDeserialize, BorshSchema};
 use solana_program::entrypoint::ProgramResult;
 use solana_program::msg;
 use solana_program::program_error::ProgramError;
-use solana_program::program_pack::{Pack, Sealed};
+use solana_program::program_pack::{IsInitialized, Pack, Sealed};
 use solana_program::pubkey::Pubkey;
 use everlend_utils::EverlendError;
 use crate::state::Mining;
@@ -14,7 +14,7 @@ pub const MAX_REWARDS: usize = 5;
 #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
 pub struct RewardPool {
 
-    pub config: Pubkey,
+    pub root_account: Pubkey,
     pub bump: u8,
 
     pub liquidity_mint: Pubkey,
@@ -34,7 +34,7 @@ impl RewardPool {
         params: InitRewardPoolParams
     ) -> RewardPool {
         RewardPool {
-            config: params.config,
+            root_account: params.root_account,
             bump: params.bump,
             liquidity_mint: params.liquidity_mint,
             total_share: 0,
@@ -65,7 +65,7 @@ impl RewardPool {
             .vaults
             .iter_mut()
             .find(|v| v.reward_mint == reward_mint)
-            .ok_or(EverlendError::RewardsInvalidVault.into())?;
+            .ok_or(EverlendError::RewardsInvalidVault)?;
 
         let index = PRECISION
             .checked_mul(rewards as u128)
@@ -96,7 +96,7 @@ impl RewardPool {
     pub fn withdraw(
         &mut self,
         mining: &mut Mining,
-        amount: u64w,
+        amount: u64,
     ) -> ProgramResult {
         mining.refresh_rewards(self.vaults.iter())?;
 
@@ -110,7 +110,7 @@ impl RewardPool {
 /// Initialize a Reward Pool params
 pub struct InitRewardPoolParams {
     /// Pool market
-    pub config: Pubkey,
+    pub root_account: Pubkey,
     ///
     pub bump: u8,
     ///
@@ -128,15 +128,22 @@ impl Pack for RewardPool {
         self.serialize(&mut slice).unwrap()
     }
 
-    fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
+    fn unpack_from_slice(src: &[u8]) -> Result<RewardPool, ProgramError> {
         Self::try_from_slice(src).map_err(|_| {
             msg!("Failed to deserialize");
-            msg!("Actual LEN: {}", std::mem::size_of::<Pool>());
+            msg!("Actual LEN: {}", std::mem::size_of::<RewardPool>());
             ProgramError::InvalidAccountData
         })
     }
 }
 
+impl IsInitialized for RewardPool {
+    fn is_initialized(&self) -> bool {
+        self.root_account != Pubkey::default()
+    }
+}
+
+#[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
 pub struct RewardVault {
     pub bump: u8,
     pub reward_mint: Pubkey,
@@ -147,3 +154,4 @@ pub struct RewardVault {
 impl RewardVault {
     pub const LEN: usize = 1 + 32 + 16 + 32;
 }
+

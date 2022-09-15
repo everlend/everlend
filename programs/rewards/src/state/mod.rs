@@ -1,7 +1,7 @@
 mod mining;
 mod reward_pool;
-mod config;
+mod root_account;
 
 pub use mining::*;
 pub use reward_pool::*;
-pub use config::*;
+pub use root_account::*;

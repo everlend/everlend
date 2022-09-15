@@ -1,24 +1,24 @@
-use borsh::BorshSerialize;
+use borsh::{BorshDeserialize, BorshSerialize, BorshSchema};
 use solana_program::msg;
 use solana_program::program_error::ProgramError;
 use solana_program::program_pack::{Pack, Sealed};
 use solana_program::pubkey::Pubkey;
 
-#[derive(Debug, BorshDeserialize, BorshSerializem BorshSchema, Default)]
-pub struct Config {
+#[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
+pub struct RootAccount {
     pub authority: Pubkey,
 }
 
-impl Config {
-    pub fn init(authority: Pubkey) -> Config {
-        Config {
+impl RootAccount {
+    pub fn init(authority: Pubkey) -> RootAccount {
+        RootAccount {
             authority
         }
     }
 }
 
-impl Sealed for Config {}
-impl Pack for Config {
+impl Sealed for RootAccount {}
+impl Pack for RootAccount {
     const LEN: usize = 32;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
@@ -29,7 +29,7 @@ impl Pack for Config {
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
         Self::try_from_slice(src).map_err(|_| {
             msg!("Failed to deserialize");
-            msg!("Actual LEN: {}", std::mem::size_of::<Pool>());
+            msg!("Actual LEN: {}", std::mem::size_of::<RootAccount>());
             ProgramError::InvalidAccountData
         })
     }

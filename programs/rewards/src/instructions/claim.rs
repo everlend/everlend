@@ -1,16 +1,14 @@
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
-use solana_program::program::invoke_signed;
 use solana_program::program_error::ProgramError;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_program::system_program;
-use spl_token::state::Mint;
 use everlend_utils::{AccountLoader, assert_account_key, EverlendError};
 use crate::state::{Mining, RewardPool};
 
 pub struct ClaimContext<'a, 'b> {
-    config: &'a AccountInfo<'b>,
+    root_account: &'a AccountInfo<'b>,
     reward_pool: &'a AccountInfo<'b>,
     reward_mint: &'a AccountInfo<'b>,
     vault: &'a AccountInfo<'b>,
@@ -19,16 +17,16 @@ pub struct ClaimContext<'a, 'b> {
     user_reward_token_account: &'a AccountInfo<'b>,
 }
 
-impl<'a, 'b> ClaimContext {
+impl<'a, 'b> ClaimContext<'a, 'b> {
     pub fn new(
         _program_id: &Pubkey,
         accounts: &'a [AccountInfo<'b>],
     ) -> Result<ClaimContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter().enumerate();
 
-        let config = AccountLoader::next_unchecked(account_info_iter)?;
+        let root_account = AccountLoader::next_unchecked(account_info_iter)?;
         let reward_pool = AccountLoader::next_uninitialized(account_info_iter)?;
-        let reward_mint = AccountLoader::next_with_owner(account_info_iter, spl_token::id())?;
+        let reward_mint = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let vault = AccountLoader::next_unchecked(account_info_iter)?;
         let mining = AccountLoader::next_unchecked(account_info_iter)?;
         let user = AccountLoader::next_signer(account_info_iter)?;
@@ -40,7 +38,7 @@ impl<'a, 'b> ClaimContext {
 
         Ok(
             ClaimContext {
-                config,
+                root_account,
                 reward_pool,
                 reward_mint,
                 vault,
@@ -57,13 +55,13 @@ impl<'a, 'b> ClaimContext {
 
         let reward_pool_seeds = &[
             b"reward_pool".as_ref(),
-            &reward_pool.config.to_bytes()[..32],
+            &reward_pool.root_account.to_bytes()[..32],
             &reward_pool.liquidity_mint.to_bytes()[..32],
             &[reward_pool.bump],
         ];
 
         {
-            assert_account_key(self.config, &reward_pool.config)?;
+            assert_account_key(self.root_account, &reward_pool.root_account)?;
             assert_account_key(self.reward_pool, &mining.reward_pool)?;
             assert_account_key(
                 self.reward_pool,
@@ -74,7 +72,7 @@ impl<'a, 'b> ClaimContext {
             )?;
 
             let bump = reward_pool.vaults.iter().find(|v| {
-                v.reward_mint == self.reward_mint.key()
+                &v.reward_mint == self.reward_mint.key
             }).ok_or(EverlendError::MathOverflow)?.bump;// todo make error
             let vault_seeds = &[
                 b"vault".as_ref(),
@@ -90,10 +88,10 @@ impl<'a, 'b> ClaimContext {
 
         mining.refresh_rewards(reward_pool.vaults.iter())?;
 
-        let reward_mint = Mint::unpack(&self.reward_mint.data.borrow())?;
-
-        let mut reward_index = mining.reward_index_mut(reward_mint.key());
+        let mut reward_index = mining.reward_index_mut(*self.reward_mint.key);
         let amount = reward_index.rewards;
+
+        reward_index.rewards = 0;
 
         everlend_utils::cpi::spl_token::transfer(
             self.vault.clone(),
@@ -105,11 +103,11 @@ impl<'a, 'b> ClaimContext {
 
         Mining::pack(
             mining,
-            *self.reward_pool.data.borrow()
+            *self.reward_pool.data.borrow_mut()
         )?;
         RewardPool::pack(
             reward_pool,
-            *self.reward_pool.data.borrow()
+            *self.reward_pool.data.borrow_mut()
         )?;
 
         Ok(())

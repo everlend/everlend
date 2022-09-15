@@ -7,7 +7,7 @@ use everlend_utils::{AccountLoader, assert_account_key};
 use crate::state::{Mining, RewardPool};
 
 pub struct DepositMiningContext<'a, 'b> {
-    config: &'a AccountInfo<'b>,
+    root_account: &'a AccountInfo<'b>,
     reward_pool: &'a AccountInfo<'b>,
     mining: &'a AccountInfo<'b>,
     user: &'a AccountInfo<'b>,
@@ -22,14 +22,14 @@ impl<'a, 'b> DepositMiningContext<'a, 'b> {
     ) -> Result<DepositMiningContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter().enumerate();
 
-        let config = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let root_account = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let reward_pool = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let mining = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let user = AccountLoader::next_unchecked(account_info_iter)?;
         let deposit_authority = AccountLoader::next_signer(account_info_iter)?;
 
         Ok(DepositMiningContext {
-            config,
+            root_account,
             reward_pool,
             mining,
             user,
@@ -39,7 +39,7 @@ impl<'a, 'b> DepositMiningContext<'a, 'b> {
 
     pub fn process(&self, program_id: &Pubkey, amount: u64) -> ProgramResult {
         let mut reward_pool = RewardPool::unpack(&self.reward_pool.data.borrow())?;
-        let mut mining = Mining::unpack(&self.mining.mining.borrow())?;
+        let mut mining = Mining::unpack(&self.mining.data.borrow())?;
 
         {
             let mining_pubkey = Pubkey::create_program_address(
@@ -53,7 +53,7 @@ impl<'a, 'b> DepositMiningContext<'a, 'b> {
             )?;
             assert_account_key(self.mining, &mining_pubkey)?;
             assert_account_key(self.deposit_authority, &reward_pool.deposit_authority)?;
-            assert_account_key(self.config, &reward_pool.config)?;
+            assert_account_key(self.root_account, &reward_pool.root_account)?;
             assert_account_key(self.reward_pool, &mining.reward_pool)?;
             assert_account_key(self.user, &mining.owner)?;
         }
@@ -62,11 +62,11 @@ impl<'a, 'b> DepositMiningContext<'a, 'b> {
 
         RewardPool::pack(
             reward_pool,
-            *self.reward_pool.data.borrow(),
+            *self.reward_pool.data.borrow_mut(),
         )?;
         Mining::pack(
             mining,
-            *self.mining.data.borrow(),
+            *self.mining.data.borrow_mut(),
         )?;
 
         Ok(())

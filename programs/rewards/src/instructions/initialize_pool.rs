@@ -5,12 +5,12 @@ use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::system_program;
-use solana_program::sysvar::Sysvar;
+use solana_program::sysvar::{Sysvar, SysvarId};
 use everlend_utils::{AccountLoader, assert_account_key};
-use crate::state::{Config, InitRewardPoolParams, RewardPool};
+use crate::state::{RootAccount, InitRewardPoolParams, RewardPool};
 
 pub struct InitializePoolContext<'a, 'b> {
-    config: &'a AccountInfo<'b>,
+    root_account: &'a AccountInfo<'b>,
     reward_pool: &'a AccountInfo<'b>,
     liquidity_mint: &'a AccountInfo<'b>,
     deposit_authority: &'a AccountInfo<'b>,
@@ -18,27 +18,27 @@ pub struct InitializePoolContext<'a, 'b> {
     rent: &'a AccountInfo<'b>,
 }
 
-impl<'a, 'b> InitializePoolContext {
+impl<'a, 'b> InitializePoolContext<'a, 'b> {
     pub fn new(
         _program_id: &Pubkey,
         accounts: &'a [AccountInfo<'b>],
     ) -> Result<InitializePoolContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter().enumerate();
 
-        let config = AccountLoader::next_unchecked(account_info_iter)?;
+        let root_account = AccountLoader::next_unchecked(account_info_iter)?;
         let reward_pool = AccountLoader::next_uninitialized(account_info_iter)?;
-        let liquidity_mint = AccountLoader::next_with_owner(account_info_iter, spl_token::id())?;
+        let liquidity_mint = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let deposit_authority = AccountLoader::next_unchecked(account_info_iter)?;
         let payer = AccountLoader::next_signer(account_info_iter)?;
         let _token_program =
             AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
         let _system_program =
             AccountLoader::next_with_key(account_info_iter, &system_program::id())?;
-        let rent = AccountLoader::next_unchecked(account_info_iter)?;
+        let rent = AccountLoader::next_with_key(account_info_iter, &Rent::id())?;
 
         Ok(
             InitializePoolContext {
-                config,
+                root_account,
                 reward_pool,
                 liquidity_mint,
                 deposit_authority,
@@ -49,18 +49,18 @@ impl<'a, 'b> InitializePoolContext {
     }
 
     pub fn process(&self, program_id: &Pubkey) -> ProgramResult {
-        let config = Config::init(*self.deposit_authority.key);
+        let root_account = RootAccount::init(*self.deposit_authority.key);
         let rent = Rent::from_account_info(self.rent)?;
 
-        Config::pack(
-            config,
-            *self.config.data.borrow(),
+        RootAccount::pack(
+            root_account,
+            *self.root_account.data.borrow_mut(),
         )?;
 
         let (reward_pool_pubkey, bump) = Pubkey::find_program_address(
             &[
                 "reward_pool".as_bytes(),
-                self.config.key.as_ref(),
+                self.root_account.key.as_ref(),
                 self.liquidity_mint.key.as_ref()
             ],
             program_id
@@ -68,9 +68,9 @@ impl<'a, 'b> InitializePoolContext {
 
         assert_account_key(self.reward_pool, &reward_pool_pubkey)?;
 
-        let signers_seeds = &[
+        let reward_pool_seeds = &[
             "reward_pool".as_bytes(),
-            self.config.key.as_ref(),
+            self.root_account.key.as_ref(),
             self.liquidity_mint.key.as_ref(),
             &[bump]
         ];
@@ -79,13 +79,13 @@ impl<'a, 'b> InitializePoolContext {
             program_id,
             self.payer.clone(),
             self.reward_pool.clone(),
-            &[signers_seeds],
+            &[reward_pool_seeds],
             &rent
         )?;
 
         let reward_pool = RewardPool::init(
             InitRewardPoolParams {
-                config: *self.config.key,
+                root_account: *self.root_account.key,
                 bump,
                 liquidity_mint: *self.liquidity_mint.key,
                 deposit_authority: *self.deposit_authority.key
@@ -93,7 +93,7 @@ impl<'a, 'b> InitializePoolContext {
         );
         RewardPool::pack(
             reward_pool,
-            *self.reward_pool.data.borrow(),
+            *self.reward_pool.data.borrow_mut(),
         )?;
 
         Ok(())

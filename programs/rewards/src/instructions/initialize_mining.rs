@@ -5,12 +5,11 @@ use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::sysvar::Sysvar;
-use spl_token::state::Mint;
 use everlend_utils::{AccountLoader, assert_account_key};
 use crate::state::{Mining, RewardPool};
 
 pub struct InitializeMiningContext<'a, 'b> {
-    config: &'a AccountInfo<'b>,
+    root_account: &'a AccountInfo<'b>,
     reward_pool: &'a AccountInfo<'b>,
     mining: &'a AccountInfo<'b>,
     user: &'a AccountInfo<'b>,
@@ -27,7 +26,7 @@ impl<'a, 'b> InitializeMiningContext<'a, 'b> {
     ) -> Result<InitializeMiningContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter().enumerate();
 
-        let config = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let root_account = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let reward_pool = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let mining = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let user = AccountLoader::next_unchecked(account_info_iter)?;
@@ -36,7 +35,7 @@ impl<'a, 'b> InitializeMiningContext<'a, 'b> {
         let rent = AccountLoader::next_unchecked(account_info_iter)?;
 
         Ok(InitializeMiningContext {
-            config,
+            root_account,
             reward_pool,
             mining,
             user,
@@ -53,8 +52,8 @@ impl<'a, 'b> InitializeMiningContext<'a, 'b> {
         let (mining_pubkey, mining_bump) = Pubkey::find_program_address(
             &[
                 b"mining".as_ref(),
-                user.key().as_ref(),
-                reward_pool.key().as_ref()
+                self.user.key.as_ref(),
+                self.reward_pool.key.as_ref()
             ],
             program_id
         );
@@ -70,13 +69,13 @@ impl<'a, 'b> InitializeMiningContext<'a, 'b> {
         )?;
 
         let mining = Mining::initialize(
-            reward_pool.key(),
+            *self.reward_pool.key,
             mining_bump,
             *self.user.key,
         );
         Mining::pack(
             mining,
-            *self.mining.data.borrow()
+            *self.mining.data.borrow_mut()
         )?;
 
         Ok(())

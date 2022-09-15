@@ -1,14 +1,14 @@
 use std::slice::Iter;
-use borsh::BorshSerialize;
+use borsh::{BorshSerialize, BorshDeserialize, BorshSchema};
 use solana_program::entrypoint::ProgramResult;
 use solana_program::msg;
 use solana_program::program_error::ProgramError;
-use solana_program::program_pack::{Pack, Sealed};
+use solana_program::program_pack::{IsInitialized, Pack, Sealed};
 use solana_program::pubkey::Pubkey;
 use everlend_utils::EverlendError;
 use crate::state::{MAX_REWARDS, PRECISION, RewardVault};
 
-#[derive(Debug, BorshDeserialize, BorshSerializem BorshSchema, Default)]
+#[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
 pub struct Mining {
     pub anchor_id: [u8; 8],
     pub reward_pool: Pubkey,
@@ -36,9 +36,9 @@ impl Mining {
             .iter()
             .position(|mi| mi.reward_mint == reward_mint)
         {
-            Some(i) => &mut self.indeces[i],
+            Some(i) => &mut self.indexes[i],
             None => {
-                self.indeces.push(RewardIndex {
+                self.indexes.push(RewardIndex {
                     reward_mint,
                     ..Default::default()
                 });
@@ -93,13 +93,19 @@ impl Pack for Mining {
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
         Self::try_from_slice(src).map_err(|_| {
             msg!("Failed to deserialize");
-            msg!("Actual LEN: {}", std::mem::size_of::<Pool>());
+            msg!("Actual LEN: {}", std::mem::size_of::<Mining>());
             ProgramError::InvalidAccountData
         })
     }
 }
 
-#[derive(BorshSerialize, BorshDeserialize, Default, Clone)]
+impl IsInitialized for Mining {
+    fn is_initialized(&self) -> bool {
+        self.owner != Pubkey::default()
+    }
+}
+
+#[derive(Debug, BorshSerialize, BorshDeserialize, BorshSchema, Default, Clone)]
 pub struct RewardIndex {
     pub reward_mint: Pubkey,
     pub index_with_precision: u128,
@@ -107,5 +113,5 @@ pub struct RewardIndex {
 }
 
 impl RewardIndex {
-    pub const LEN:usice = 32 + 16 + 8;
+    pub const LEN: usize = 32 + 16 + 8;
 }

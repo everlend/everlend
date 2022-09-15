@@ -1,3 +1,4 @@
+use borsh::{BorshDeserialize, BorshSerialize};
 
 #[derive(Debug, BorshDeserialize, BorshSerialize, PartialEq)]
 pub enum RewardsInstruction {
