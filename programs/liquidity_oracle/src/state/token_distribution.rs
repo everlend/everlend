@@ -28,8 +28,11 @@ pub struct TokenDistribution {
 
 impl TokenDistribution {
     /// Initialize a liquidity oracle.
-    pub fn init(&mut self) {
-        self.account_type = AccountType::TokenDistribution;
+    pub fn init() -> TokenDistribution {
+        TokenDistribution {
+            account_type: AccountType::TokenDistribution,
+            ..Default::default()
+        }
     }
 
     /// Update a liquidity oracle token distribution
@@ -40,7 +43,7 @@ impl TokenDistribution {
     ) -> Result<(), ProgramError> {
         self.updated_at = slot;
         // Total distribution always should be < 1 * PRECISION_SCALER
-        if distribution.iter().sum::<u64>() > (1 * PRECISION_SCALER) as u64 {
+        if distribution.iter().sum::<u64>() > (PRECISION_SCALER) as u64 {
             return Err(ProgramError::InvalidArgument);
         }
         self.distribution = distribution;

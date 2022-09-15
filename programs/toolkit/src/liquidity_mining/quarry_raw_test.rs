@@ -1,4 +1,4 @@
-use crate::spl_create_associated_token_account;
+use crate::utils::spl_create_associated_token_account;
 use anchor_lang::{prelude::AccountMeta, InstructionData};
 use quarry_mine::instruction::{ClaimRewardsV2, CreateMinerV2, StakeTokens, WithdrawTokens};
 use solana_client::client_error::ClientError;
@@ -81,7 +81,7 @@ pub fn withdraw_tokens(config: &Config, token: &String, amount: u64) -> Result<(
     let mut initialized_accounts = config.get_initialized_accounts();
     let quarry_mining = initialized_accounts.quarry_mining.get_mut(token).unwrap();
     let miner = find_miner_address(config, &config.fee_payer.pubkey());
-    let stake_instruction = Instruction {
+    let withdraw_instruction = Instruction {
         program_id: default_accounts.quarry.mine_program_id,
         accounts: vec![
             AccountMeta::new_readonly(config.fee_payer.pubkey(), true),
@@ -95,7 +95,7 @@ pub fn withdraw_tokens(config: &Config, token: &String, amount: u64) -> Result<(
         data: WithdrawTokens { amount }.data(),
     };
     let transaction =
-        Transaction::new_with_payer(&[stake_instruction], Some(&config.fee_payer.pubkey()));
+        Transaction::new_with_payer(&[withdraw_instruction], Some(&config.fee_payer.pubkey()));
     config.sign_and_send_and_confirm_transaction(transaction, vec![config.fee_payer.as_ref()])?;
     let balance = config
         .rpc_client

@@ -1,3 +1,5 @@
+#![allow(clippy::ptr_arg)]
+
 use crate::utils::*;
 use anyhow::Result;
 use everlend_depositor::{instruction::InitMiningAccountsPubkeys, state::MiningType};

@@ -1,9 +1,9 @@
 use super::{get_account, BanksClientResult};
 use everlend_registry::{
-    find_config_program_address,
-    state::{Registry, RegistryConfig, RegistryPrograms, RegistryRootAccounts, RegistrySettings, SetRegistryPoolConfigParams, RegistryPoolConfig}, find_registry_pool_config_program_address,
+    instructions::{UpdateRegistryData, UpdateRegistryMarketsData},
+    state::{Registry, RegistryMarkets},
 };
-use solana_program::{program_pack::Pack, system_instruction, pubkey::Pubkey};
+use solana_program::{program_pack::Pack, system_instruction};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{
     signature::{Keypair, Signer},
@@ -29,42 +29,18 @@ impl TestRegistry {
         Registry::unpack_unchecked(&account.data).unwrap()
     }
 
-    pub async fn get_config_data(
-        &self,
-        context: &mut ProgramTestContext,
-    ) -> (
-        RegistryConfig,
-        RegistryPrograms,
-        RegistryRootAccounts,
-        RegistrySettings,
-    ) {
-        let (registry_config, _) =
-            find_config_program_address(&everlend_registry::id(), &self.keypair.pubkey());
-        let account = get_account(context, &registry_config).await;
-        println!("{:#?}", account.owner);
-        (
-            RegistryConfig::unpack_unchecked(&account.data).unwrap(),
-            RegistryPrograms::unpack_from_slice(&account.data).unwrap(),
-            RegistryRootAccounts::unpack_from_slice(&account.data).unwrap(),
-            RegistrySettings::unpack_from_slice(&account.data).unwrap(),
-        )
+    pub async fn get_registry_markets(&self, context: &mut ProgramTestContext) -> RegistryMarkets {
+        let account = get_account(context, &self.keypair.pubkey()).await;
+        RegistryMarkets::unpack_from_slice(&account.data).unwrap()
     }
 
     pub async fn init(&self, context: &mut ProgramTestContext) -> BanksClientResult<()> {
-        let rent = context.banks_client.get_rent().await.unwrap();
         let tx = Transaction::new_signed_with_payer(
             &[
                 system_instruction::transfer(
                     &context.payer.pubkey(),
                     &self.manager.pubkey(),
                     999999999,
-                ),
-                system_instruction::create_account(
-                    &context.payer.pubkey(),
-                    &self.keypair.pubkey(),
-                    rent.minimum_balance(Registry::LEN),
-                    Registry::LEN as u64,
-                    &everlend_registry::id(),
                 ),
                 everlend_registry::instruction::init(
                     &everlend_registry::id(),
@@ -73,83 +49,50 @@ impl TestRegistry {
                 ),
             ],
             Some(&context.payer.pubkey()),
-            &[&context.payer, &self.keypair],
+            &[&context.payer, &self.keypair, &self.manager],
             context.last_blockhash,
         );
 
         context.banks_client.process_transaction(tx).await
     }
 
-    pub async fn set_registry_config(
+    pub async fn update_registry(
         &self,
         context: &mut ProgramTestContext,
-        programs: RegistryPrograms,
-        roots: RegistryRootAccounts,
-        settings: RegistrySettings,
+        data: UpdateRegistryData,
     ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
-            &[everlend_registry::instruction::set_registry_config(
+            &[everlend_registry::instruction::update_registry(
                 &everlend_registry::id(),
                 &self.keypair.pubkey(),
                 &self.manager.pubkey(),
-                programs,
-                roots,
-                settings,
+                data,
             )],
-            Some(&context.payer.pubkey()),
-            &[&context.payer, &self.manager],
+            Some(&self.manager.pubkey()),
+            &[&self.manager],
             context.last_blockhash,
         );
 
         context.banks_client.process_transaction(tx).await
     }
 
-    pub async fn set_registry_root_accounts(
+    pub async fn update_registry_markets(
         &self,
         context: &mut ProgramTestContext,
-        roots: RegistryRootAccounts,
+        data: UpdateRegistryMarketsData,
     ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
-            &[everlend_registry::instruction::set_registry_root_accounts(
+            &[everlend_registry::instruction::update_registry_markets(
                 &everlend_registry::id(),
                 &self.keypair.pubkey(),
                 &self.manager.pubkey(),
-                roots,
+                data,
             )],
-            Some(&context.payer.pubkey()),
-            &[&context.payer, &self.manager],
+            Some(&self.manager.pubkey()),
+            &[&self.manager],
             context.last_blockhash,
         );
 
         context.banks_client.process_transaction(tx).await
-    }
-
-    pub async fn set_registry_pool_config(
-        &self,
-        context: &mut ProgramTestContext,
-        pool: &Pubkey,
-        params: SetRegistryPoolConfigParams,
-    ) -> BanksClientResult<()> {
-        let tx = Transaction::new_signed_with_payer(
-            &[everlend_registry::instruction::set_registry_pool_config(
-                &everlend_registry::id(),
-                &self.keypair.pubkey(),
-                &self.manager.pubkey(),
-                pool,
-                params,
-            )],
-            Some(&context.payer.pubkey()),
-            &[&context.payer, &self.manager],
-            context.last_blockhash,
-        );
-
-        context.banks_client.process_transaction(tx).await
-    }
-
-    pub async fn get_registry_pool_config(&self, context: &mut ProgramTestContext, pool: &Pubkey) -> RegistryPoolConfig {
-        let (registry_pool_config, _) =
-            find_registry_pool_config_program_address(&everlend_registry::id(), &self.keypair.pubkey(), pool);
-        let account = get_account(context, &registry_pool_config).await;
-        RegistryPoolConfig::unpack_unchecked(&account.data).unwrap()
     }
 }

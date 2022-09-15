@@ -1,6 +1,6 @@
 //! Utils
 
-use crate::money_market::{CollateralPool, CollateralStorage, MoneyMarket};
+use crate::money_market::{CollateralPool, CollateralStorage, Francium, MoneyMarket, Tulip};
 use crate::money_market::{Larix, PortFinance, SPLLending, Solend};
 use crate::{
     find_transit_program_address,
@@ -8,7 +8,7 @@ use crate::{
 };
 use everlend_collateral_pool::find_pool_withdraw_authority_program_address;
 use everlend_income_pools::utils::IncomePoolAccounts;
-use everlend_registry::state::{RegistryPrograms, RegistryRootAccounts};
+use everlend_registry::state::RegistryMarkets;
 use everlend_utils::{
     abs_diff, assert_account_key, cpi, find_program_address, integrations, EverlendError,
 };
@@ -24,14 +24,13 @@ use solana_program::{
 use spl_token::state::Account;
 use std::{cmp::Ordering, slice::Iter};
 
-const RESERVE_THRESHOLD: u64 = 2;
+const RESERVE_THRESHOLD: u64 = 20;
 
 /// Deposit
 #[allow(clippy::too_many_arguments)]
 pub fn deposit<'a, 'b>(
     program_id: &Pubkey,
-    registry_programs: &RegistryPrograms,
-    root_accounts: &RegistryRootAccounts,
+    registry_markets: &RegistryMarkets,
     collateral_transit: AccountInfo<'a>,
     collateral_mint: AccountInfo<'a>,
     liquidity_transit: AccountInfo<'a>,
@@ -53,7 +52,7 @@ pub fn deposit<'a, 'b>(
         internal_mining_type.is_some() && internal_mining_type != Some(MiningType::None);
 
     let money_market = money_market(
-        registry_programs,
+        registry_markets,
         money_market_program,
         money_market_account_info_iter,
         internal_mining_type,
@@ -93,8 +92,7 @@ pub fn deposit<'a, 'b>(
 
         msg!("Deposit into collateral pool");
         let coll_pool = CollateralPool::init(
-            registry_programs,
-            root_accounts,
+            registry_markets,
             collateral_mint,
             authority.clone(),
             money_market_account_info_iter,
@@ -118,8 +116,7 @@ pub fn deposit<'a, 'b>(
 #[allow(clippy::too_many_arguments)]
 pub fn withdraw<'a, 'b>(
     program_id: &Pubkey,
-    registry_programs: &RegistryPrograms,
-    root_accounts: &RegistryRootAccounts,
+    registry_markets: &RegistryMarkets,
     income_pool_accounts: IncomePoolAccounts<'a>,
     collateral_transit: AccountInfo<'a>,
     collateral_mint: AccountInfo<'a>,
@@ -146,7 +143,7 @@ pub fn withdraw<'a, 'b>(
         internal_mining_type.is_some() && internal_mining_type != Some(MiningType::None);
 
     let money_market = money_market(
-        registry_programs,
+        registry_markets,
         money_market_program,
         money_market_account_info_iter,
         internal_mining_type,
@@ -168,8 +165,7 @@ pub fn withdraw<'a, 'b>(
     } else {
         msg!("Withdraw from collateral pool");
         let coll_pool = CollateralPool::init(
-            registry_programs,
-            root_accounts,
+            registry_markets,
             collateral_mint.clone(),
             authority.clone(),
             money_market_account_info_iter,
@@ -242,16 +238,18 @@ pub fn withdraw<'a, 'b>(
 
 /// Money market
 pub fn money_market<'a, 'b>(
-    registry_programs: &RegistryPrograms,
+    registry_markets: &RegistryMarkets,
     money_market_program: AccountInfo<'a>,
     money_market_account_info_iter: &'b mut Iter<AccountInfo<'a>>,
     internal_mining_type: Option<MiningType>,
     collateral_token_mint: &Pubkey,
     depositor_authority: &Pubkey,
 ) -> Result<Box<dyn MoneyMarket<'a> + 'a>, ProgramError> {
-    let port_finance_program_id = registry_programs.money_market_program_ids[0];
-    let larix_program_id = registry_programs.money_market_program_ids[1];
-    let solend_program_id = registry_programs.money_market_program_ids[2];
+    let port_finance_program_id = registry_markets.money_markets[0];
+    let larix_program_id = registry_markets.money_markets[1];
+    let solend_program_id = registry_markets.money_markets[2];
+    let tulip_program_id = registry_markets.money_markets[3];
+    let francium_program_id = registry_markets.money_markets[4];
 
     // Only for tests
     if money_market_program.key.to_string() == integrations::SPL_TOKEN_LENDING_PROGRAM_ID {
@@ -282,6 +280,16 @@ pub fn money_market<'a, 'b>(
     if *money_market_program.key == solend_program_id {
         let solend = Solend::init(*money_market_program.key, money_market_account_info_iter)?;
         return Ok(Box::new(solend));
+    }
+
+    if *money_market_program.key == tulip_program_id {
+        let tulip = Tulip::init(*money_market_program.key, money_market_account_info_iter)?;
+        return Ok(Box::new(tulip));
+    }
+
+    if *money_market_program.key == francium_program_id {
+        let francium = Francium::init(*money_market_program.key, money_market_account_info_iter)?;
+        return Ok(Box::new(francium));
     }
 
     Err(EverlendError::IncorrectInstructionProgramId.into())

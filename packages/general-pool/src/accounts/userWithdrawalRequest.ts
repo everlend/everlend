@@ -54,8 +54,8 @@ export class UserWithdrawalRequest extends Account<UserWithdrawalRequestData> {
   static getPDA(withdrawalRequests: PublicKey, from: PublicKey) {
     return GeneralPoolsProgram.findProgramAddress([
       Buffer.from('withdrawal'),
-      new PublicKey(withdrawalRequests).toBuffer(),
-      new PublicKey(from).toBuffer(),
+      withdrawalRequests.toBuffer(),
+      from.toBuffer(),
     ])
   }
 

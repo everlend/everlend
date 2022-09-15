@@ -1,23 +1,26 @@
-use std::collections::HashMap;
-use std::{thread, time};
-
 use anchor_lang::AccountDeserialize;
+use clap::Arg;
+use reqwest::header::{HeaderMap, CONTENT_TYPE};
+use serde_json::Value;
 use solana_account_decoder::UiAccountEncoding;
+use solana_clap_utils::input_validators::{is_amount, is_keypair, is_pubkey};
 use solana_client::{
     client_error::ClientError,
     rpc_client::RpcClient,
     rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
     rpc_filter::{Memcmp, MemcmpEncodedBytes, MemcmpEncoding, RpcFilterType},
 };
+use solana_program::program_pack::{IsInitialized, Pack};
+use solana_program::pubkey::Pubkey;
 use solana_program::system_instruction;
-use solana_program::{
-    program_pack::{IsInitialized, Pack},
-    pubkey::Pubkey,
-};
 use solana_sdk::signature::Keypair;
 use solana_sdk::{
     account::Account, signature::Signature, signer::Signer, transaction::Transaction,
 };
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::Write;
+use std::{thread, time};
 
 use crate::accounts_config::{DefaultAccounts, InitializedAccounts};
 
@@ -35,10 +38,11 @@ macro_rules! distribution {
 
 pub struct Config {
     pub rpc_client: RpcClient,
-    pub verbose: bool,
     pub owner: Box<dyn Signer>,
     pub fee_payer: Box<dyn Signer>,
     pub network: String,
+
+    pub initialized_accounts: InitializedAccounts,
 }
 
 impl Config {
@@ -250,4 +254,97 @@ pub fn init_token_account(
         vec![config.fee_payer.as_ref(), account],
     )?;
     Ok(())
+}
+
+pub fn arg_keypair(name: &str, required: bool) -> Arg {
+    Arg::with_name(name)
+        .long(name)
+        .validator(is_keypair)
+        .value_name("KEYPAIR")
+        .takes_value(true)
+        .required(required)
+        .help("Keypair [default: new keypair]")
+}
+
+pub fn arg_pubkey(name: &str, required: bool) -> Arg {
+    Arg::with_name(name)
+        .long(name)
+        .validator(is_pubkey)
+        .value_name("ADDRESS")
+        .takes_value(true)
+        .required(required)
+        .help("Pubkey")
+}
+
+pub fn arg_amount(name: &str, required: bool) -> Arg {
+    Arg::with_name(name)
+        .long(name)
+        .validator(is_amount)
+        .value_name("NUMBER")
+        .takes_value(true)
+        .required(required)
+}
+
+pub fn arg_multiple(name: &str, required: bool) -> Arg {
+    Arg::with_name(name)
+        .multiple(true)
+        .long(name)
+        .required(required)
+        .min_values(1)
+        .takes_value(true)
+}
+
+pub fn arg_path(name: &str, required: bool) -> Arg {
+    Arg::with_name(name)
+        .long(name)
+        .value_name("PATH")
+        .takes_value(true)
+        .required(required)
+}
+
+pub fn arg(name: &str, required: bool) -> Arg {
+    Arg::with_name(name)
+        .long(name)
+        .takes_value(true)
+        .required(required)
+}
+
+pub fn download_account(pubkey: &Pubkey, mm_name: &str, account_name: &str) {
+    let client = reqwest::blocking::Client::new();
+    let mut headers = HeaderMap::new();
+    headers.insert(CONTENT_TYPE, "application/json".parse().unwrap());
+    let res = client
+        .post("https://api.devnet.solana.com")
+        .headers(headers)
+        .body(format!(
+            "
+        {{
+            \"jsonrpc\": \"2.0\",
+            \"id\": 1,
+            \"method\": \"getAccountInfo\",
+            \"params\": [
+                \"{}\",
+                {{
+                \"encoding\": \"base64\"
+                }}
+            ]
+        }}
+        ",
+            pubkey
+        ))
+        .send()
+        .expect("failed to get response")
+        .text()
+        .expect("failed to get payload");
+    let json: Value = serde_json::from_str(&res).unwrap();
+    let data = &json["result"]["value"]["data"][0];
+    let string = data.as_str().unwrap();
+    let bytes = base64::decode(string).unwrap();
+    let mut file = File::create(format!(
+        "../tests/tests/fixtures/{}/{}.bin",
+        mm_name, account_name
+    ))
+    .unwrap();
+    file.write_all(bytes.as_slice()).unwrap();
+    println!("{} {}", account_name, pubkey);
 }

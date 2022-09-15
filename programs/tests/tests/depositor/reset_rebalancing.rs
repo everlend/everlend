@@ -1,6 +1,6 @@
 use everlend_depositor::find_transit_program_address;
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::{RegistryRootAccounts, SetRegistryPoolConfigParams};
+use everlend_registry::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
 use everlend_utils::find_program_address;
 use solana_program_test::*;
 use solana_sdk::signer::Signer;
@@ -35,17 +35,6 @@ async fn setup() -> (TestEnvironment, TestGeneralPool, TestDepositor) {
         .create(&mut env.context, &general_pool_market)
         .await
         .unwrap();
-    env.registry
-        .set_registry_pool_config(
-            &mut env.context,
-            &general_pool.pool_pubkey,
-            SetRegistryPoolConfigParams {
-                deposit_minimum: 0,
-                withdraw_minimum: 0,
-            },
-        )
-        .await
-        .unwrap();
 
     // 1.1 Add liquidity to general pool
 
@@ -65,7 +54,6 @@ async fn setup() -> (TestEnvironment, TestGeneralPool, TestDepositor) {
     general_pool
         .deposit(
             &mut env.context,
-            &env.registry,
             &general_pool_market,
             &liquidity_provider,
             mining_acc,
@@ -187,16 +175,30 @@ async fn setup() -> (TestEnvironment, TestGeneralPool, TestDepositor) {
         .unwrap();
 
     let ten = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
-    let collateral_pool_markets = ten.map(|_| mm_pool_market.keypair.pubkey().clone());
-    let mut roots = RegistryRootAccounts {
-        general_pool_market: general_pool_market.keypair.pubkey(),
-        income_pool_market: income_pool_market.keypair.pubkey(),
-        liquidity_oracle: test_liquidity_oracle.keypair.pubkey(),
-        collateral_pool_markets,
-    };
-    roots.collateral_pool_markets[0] = mm_pool_market.keypair.pubkey();
+    let mut collateral_pool_markets = ten.map(|_| mm_pool_market.keypair.pubkey().clone());
+    collateral_pool_markets[0] = mm_pool_market.keypair.pubkey();
+
     env.registry
-        .set_registry_root_accounts(&mut env.context, roots)
+        .update_registry(
+            &mut env.context,
+            UpdateRegistryData {
+                general_pool_market: Some(general_pool_market.keypair.pubkey()),
+                income_pool_market: Some(income_pool_market.keypair.pubkey()),
+                liquidity_oracle: Some(test_liquidity_oracle.keypair.pubkey()),
+                refresh_income_interval: None,
+            },
+        )
+        .await
+        .unwrap();
+
+    env.registry
+        .update_registry_markets(
+            &mut env.context,
+            UpdateRegistryMarketsData {
+                money_markets: None,
+                collateral_pool_markets: Some(collateral_pool_markets),
+            },
+        )
         .await
         .unwrap();
 

@@ -86,6 +86,10 @@ pub enum EverlendError {
     #[error("Withdraw amount too small")]
     WithdrawAmountTooSmall,
 
+    /// The reward supply amount is not equal to the collateral amount
+    #[error("Reward supply amount and collateral amount mismatch")]
+    RewardAndCollateralMismatch,
+
     /// Money market mining not implemented
     #[error("Mining not implemented")]
     MiningNotImplemented,

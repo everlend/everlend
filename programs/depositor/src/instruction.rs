@@ -9,7 +9,7 @@ use solana_program::{
 use spl_associated_token_account::get_associated_token_address;
 use everlend_general_pool::find_withdrawal_requests_program_address;
 use everlend_liquidity_oracle::{
-    find_liquidity_oracle_token_distribution_program_address, state::DistributionArray,
+    find_token_distribution_program_address, state::DistributionArray,
 };
 use everlend_utils::cpi::quarry;
 use everlend_utils::find_program_address;
@@ -196,11 +196,8 @@ pub enum DepositorInstruction {
     /// Migrate Depositor
     ///
     /// Accounts:
-    /// [R] Depositor
-    /// [R] Registry
-    /// [W] Rebalance account
-    /// [R] Manager
-    /// [R] Rent
+    /// [W] Depositor
+    /// [S] Manager
     MigrateDepositor,
 
     /// Set current rebalancing
@@ -289,12 +286,9 @@ pub fn start_rebalancing(
     rebalance_executor: &Pubkey,
     refresh_income: bool,
 ) -> Instruction {
-    let (registry_config, _) =
-        everlend_registry::find_config_program_address(&everlend_registry::id(), registry);
-
     let (depositor_authority, _) = find_program_address(program_id, depositor);
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, mint);
-    let (token_distribution, _) = find_liquidity_oracle_token_distribution_program_address(
+    let (token_distribution, _) = find_token_distribution_program_address(
         &everlend_liquidity_oracle::id(),
         liquidity_oracle,
         mint,
@@ -322,7 +316,7 @@ pub fn start_rebalancing(
     let (liquidity_transit, _) = find_transit_program_address(program_id, depositor, mint, "");
 
     let accounts = vec![
-        AccountMeta::new_readonly(registry_config, false),
+        AccountMeta::new_readonly(*registry, false),
         AccountMeta::new_readonly(*depositor, false),
         AccountMeta::new_readonly(depositor_authority, false),
         AccountMeta::new(rebalancing, false),
@@ -399,8 +393,6 @@ pub fn deposit(
     money_market_accounts: Vec<AccountMeta>,
     collateral_storage_accounts: Vec<AccountMeta>,
 ) -> Instruction {
-    let (registry_config, _) =
-        everlend_registry::find_config_program_address(&everlend_registry::id(), registry);
     let (depositor_authority, _) = find_program_address(program_id, depositor);
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
 
@@ -417,7 +409,7 @@ pub fn deposit(
     );
 
     let mut accounts = vec![
-        AccountMeta::new_readonly(registry_config, false),
+        AccountMeta::new_readonly(*registry, false),
         AccountMeta::new_readonly(*depositor, false),
         AccountMeta::new_readonly(depositor_authority, false),
         AccountMeta::new(rebalancing, false),
@@ -456,8 +448,6 @@ pub fn withdraw(
     money_market_accounts: Vec<AccountMeta>,
     collateral_storage_accounts: Vec<AccountMeta>,
 ) -> Instruction {
-    let (registry_config, _) =
-        everlend_registry::find_config_program_address(&everlend_registry::id(), registry);
     let (depositor_authority, _) = find_program_address(program_id, depositor);
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
 
@@ -484,7 +474,7 @@ pub fn withdraw(
     );
 
     let mut accounts = vec![
-        AccountMeta::new_readonly(registry_config, false),
+        AccountMeta::new_readonly(*registry, false),
         AccountMeta::new_readonly(*depositor, false),
         AccountMeta::new_readonly(depositor_authority, false),
         AccountMeta::new(rebalancing, false),
@@ -516,21 +506,10 @@ pub fn withdraw(
 
 /// Creates 'MigrateDepositor' instruction.
 #[allow(clippy::too_many_arguments)]
-pub fn migrate_depositor(
-    program_id: &Pubkey,
-    depositor: &Pubkey,
-    registry: &Pubkey,
-    manager: &Pubkey,
-    liquidity_mint: &Pubkey,
-) -> Instruction {
-    let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
-
+pub fn migrate_depositor(program_id: &Pubkey, depositor: &Pubkey, manager: &Pubkey) -> Instruction {
     let accounts = vec![
-        AccountMeta::new_readonly(*depositor, false),
-        AccountMeta::new_readonly(*registry, false),
-        AccountMeta::new(rebalancing, false),
+        AccountMeta::new(*depositor, false),
         AccountMeta::new(*manager, true),
-        AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
 
     Instruction::new_with_borsh(

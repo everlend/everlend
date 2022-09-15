@@ -1,7 +1,6 @@
 //! Instruction types
 
 use borsh::{BorshDeserialize, BorshSerialize};
-use everlend_registry::find_registry_pool_config_program_address;
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
@@ -11,9 +10,10 @@ use solana_program::{
 use everlend_utils::find_program_address;
 
 use crate::{
-    find_pool_borrow_authority_program_address, find_pool_program_address,
-    find_transit_program_address, find_withdrawal_request_program_address,
-    find_withdrawal_requests_program_address,
+    find_pool_borrow_authority_program_address, find_pool_config_program_address,
+    find_pool_program_address, find_transit_program_address,
+    find_withdrawal_request_program_address, find_withdrawal_requests_program_address,
+    state::SetPoolConfigParams,
 };
 
 /// Instructions supported by the program
@@ -23,7 +23,7 @@ pub enum LiquidityPoolsInstruction {
     ///
     /// Accounts:
     /// [W] Pool market - uninitialized
-    /// [R] Market manager
+    /// [S] Market manager
     /// [R] Registry
     /// [R] Rent sysvar
     InitPoolMarket,
@@ -33,6 +33,7 @@ pub enum LiquidityPoolsInstruction {
     /// Accounts:
     /// [R] Pool market
     /// [W] Pool
+    /// [W] Pool Config
     /// [W] Withdrawals requests account
     /// [R] Token mint
     /// [W] Token account
@@ -85,7 +86,6 @@ pub enum LiquidityPoolsInstruction {
     /// Deposit funds in the pool
     ///
     /// Accounts:
-    /// [R] Registry
     /// [R] Pool config
     /// [R] Pool market
     /// [R] Pool
@@ -161,7 +161,6 @@ pub enum LiquidityPoolsInstruction {
     /// Move pool tokens to transit account and create withdraw request
     ///
     /// Accounts:
-    /// [R] Registry
     /// [R] Pool config
     /// [R] Pool market
     /// [R] Pool
@@ -232,6 +231,36 @@ pub enum LiquidityPoolsInstruction {
         /// The URI of the token, limited to 200 bytes. This URI points to an off-chain JSON file that contains additional data
         uri: String,
     },
+
+    /// Set pool config
+    ///
+    /// Accounts:
+    /// [R] Pool Market
+    /// [R] Pool
+    /// [W] Pool config
+    /// [WS] Manager
+    /// [R] Rent sysvar
+    /// [R] System program
+    SetPoolConfig {
+        /// Pool config update params
+        params: SetPoolConfigParams,
+    },
+
+    /// Move pool tokens to destination user account
+    ///
+    /// Accounts:
+    /// [R] Pool
+    /// [W] Source account
+    /// [W] Destination account
+    /// [RS] User transfer authority
+    /// [R] Destination user transfer authority
+    /// [W] Mining reward pool
+    /// [W] Mining reward user account
+    /// [W] Destination mining reward user account
+    /// [R] Everlend config account
+    /// [R] Everlend rewards program account
+    /// [R] Token program id
+    TransferDeposit,
 }
 
 /// Creates 'InitPoolMarket' instruction.
@@ -244,7 +273,7 @@ pub fn init_pool_market(
 ) -> Instruction {
     let accounts = vec![
         AccountMeta::new(*pool_market, false),
-        AccountMeta::new_readonly(*manager, false),
+        AccountMeta::new_readonly(*manager, true),
         AccountMeta::new_readonly(*registry, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
@@ -268,6 +297,7 @@ pub fn create_pool(
 ) -> Instruction {
     let (pool_market_authority, _) = find_program_address(program_id, pool_market);
     let (pool, _) = find_pool_program_address(program_id, pool_market, token_mint);
+    let (pool_config, _) = find_pool_config_program_address(program_id, &pool);
     let (transit_collateral, _) = find_transit_program_address(program_id, pool_market, pool_mint);
     let (withdrawal_requests, _) =
         find_withdrawal_requests_program_address(program_id, pool_market, token_mint);
@@ -275,6 +305,7 @@ pub fn create_pool(
     let accounts = vec![
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new(pool, false),
+        AccountMeta::new(pool_config, false),
         AccountMeta::new(withdrawal_requests, false),
         AccountMeta::new_readonly(*token_mint, false),
         AccountMeta::new(*token_account, false),
@@ -383,7 +414,6 @@ pub fn delete_pool_borrow_authority(
 #[allow(clippy::too_many_arguments)]
 pub fn deposit(
     program_id: &Pubkey,
-    registry: &Pubkey,
     pool_market: &Pubkey,
     pool: &Pubkey,
     source: &Pubkey,
@@ -397,12 +427,10 @@ pub fn deposit(
     amount: u64,
 ) -> Instruction {
     let (pool_market_authority, _) = find_program_address(program_id, pool_market);
-    let (registry_pool_config, _) =
-        find_registry_pool_config_program_address(&everlend_registry::id(), registry, pool);
+    let (pool_config, _) = find_pool_config_program_address(program_id, pool);
 
     let accounts = vec![
-        AccountMeta::new_readonly(*registry, false),
-        AccountMeta::new_readonly(registry_pool_config, false),
+        AccountMeta::new_readonly(pool_config, false),
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new_readonly(*pool, false),
         AccountMeta::new(*source, false),
@@ -421,6 +449,41 @@ pub fn deposit(
     Instruction::new_with_borsh(
         *program_id,
         &LiquidityPoolsInstruction::Deposit { amount },
+        accounts,
+    )
+}
+
+/// Creates 'TransferDeposit' instruction
+#[allow(clippy::too_many_arguments)]
+pub fn transfer_deposit(
+    program_id: &Pubkey,
+    pool: &Pubkey,
+    source: &Pubkey,
+    destination: &Pubkey,
+    user_transfer_authority: &Pubkey,
+    destination_user_transfer_authority: &Pubkey,
+    mining_reward_pool: &Pubkey,
+    mining_reward_acc: &Pubkey,
+    destination_mining_reward_acc: &Pubkey,
+    config: &Pubkey,
+) -> Instruction {
+    let accounts = vec![
+        AccountMeta::new_readonly(*pool, false),
+        AccountMeta::new(*source, false),
+        AccountMeta::new(*destination, false),
+        AccountMeta::new_readonly(*user_transfer_authority, true),
+        AccountMeta::new_readonly(*destination_user_transfer_authority, false),
+        AccountMeta::new(*mining_reward_pool, false),
+        AccountMeta::new(*mining_reward_acc, false),
+        AccountMeta::new(*destination_mining_reward_acc, false),
+        AccountMeta::new_readonly(*config, false),
+        AccountMeta::new_readonly(eld_rewards::id(), false),
+        AccountMeta::new_readonly(spl_token::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &LiquidityPoolsInstruction::TransferDeposit,
         accounts,
     )
 }
@@ -470,7 +533,6 @@ pub fn withdraw(
 #[allow(clippy::too_many_arguments)]
 pub fn withdraw_request(
     program_id: &Pubkey,
-    registry: &Pubkey,
     pool_market: &Pubkey,
     pool: &Pubkey,
     source: &Pubkey,
@@ -492,12 +554,10 @@ pub fn withdraw_request(
         &withdrawal_requests,
         user_transfer_authority,
     );
-    let (registry_pool_config, _) =
-        find_registry_pool_config_program_address(&everlend_registry::id(), registry, pool);
+    let (pool_config, _) = find_pool_config_program_address(program_id, pool);
 
     let accounts = vec![
-        AccountMeta::new_readonly(*registry, false),
-        AccountMeta::new_readonly(registry_pool_config, false),
+        AccountMeta::new_readonly(pool_config, false),
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new_readonly(*pool, false),
         AccountMeta::new(*pool_mint, false),
@@ -658,7 +718,6 @@ pub fn init_user_mining(
     pool: &Pubkey,
     user_collateral_token_account: &Pubkey,
     user_authority: &Pubkey,
-    registry: &Pubkey,
     manager: &Pubkey,
     mining_reward_pool: &Pubkey,
     mining_reward_acc: &Pubkey,
@@ -669,7 +728,6 @@ pub fn init_user_mining(
         AccountMeta::new_readonly(*pool, false),
         AccountMeta::new_readonly(*user_collateral_token_account, false),
         AccountMeta::new_readonly(*user_authority, false),
-        AccountMeta::new_readonly(*registry, false),
         AccountMeta::new(*manager, true),
         AccountMeta::new(*mining_reward_pool, false),
         AccountMeta::new(*mining_reward_acc, false),
@@ -715,6 +773,32 @@ pub fn update_manager(
     Instruction::new_with_borsh(
         *program_id,
         &LiquidityPoolsInstruction::UpdateManager,
+        accounts,
+    )
+}
+
+/// Creates 'SetRegistryPoolConfig' instruction.
+pub fn set_pool_config(
+    program_id: &Pubkey,
+    pool_market: &Pubkey,
+    pool: &Pubkey,
+    manager: &Pubkey,
+    params: SetPoolConfigParams,
+) -> Instruction {
+    let (pool_config, _) = find_pool_config_program_address(program_id, pool);
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*pool_market, false),
+        AccountMeta::new_readonly(*pool, false),
+        AccountMeta::new(pool_config, false),
+        AccountMeta::new(*manager, true),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+        AccountMeta::new_readonly(system_program::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &LiquidityPoolsInstruction::SetPoolConfig { params },
         accounts,
     )
 }

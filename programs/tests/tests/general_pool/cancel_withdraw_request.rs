@@ -1,8 +1,8 @@
 use everlend_general_pool::find_transit_program_address;
-use everlend_registry::state::SetRegistryPoolConfigParams;
-use solana_program::pubkey::Pubkey;
+use everlend_utils::EverlendError;
+use solana_program::{instruction::InstructionError, pubkey::Pubkey};
 use solana_program_test::*;
-use solana_sdk::signer::Signer;
+use solana_sdk::{signer::Signer, transaction::TransactionError};
 
 use crate::utils::*;
 
@@ -12,7 +12,6 @@ async fn setup(
     token_mint: Option<Pubkey>,
 ) -> (
     ProgramTestContext,
-    TestRegistry,
     TestGeneralPoolMarket,
     TestGeneralPool,
     TestGeneralPoolBorrowAuthority,
@@ -30,17 +29,6 @@ async fn setup(
     let test_pool = TestGeneralPool::new(&test_pool_market, token_mint);
     test_pool
         .create(&mut env.context, &test_pool_market)
-        .await
-        .unwrap();
-    env.registry
-        .set_registry_pool_config(
-            &mut env.context,
-            &test_pool.pool_pubkey,
-            SetRegistryPoolConfigParams {
-                deposit_minimum: 0,
-                withdraw_minimum: 0,
-            },
-        )
         .await
         .unwrap();
 
@@ -75,20 +63,12 @@ async fn setup(
         .await;
 
     test_pool
-        .deposit(
-            &mut env.context,
-            &env.registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            100,
-        )
+        .deposit(&mut env.context, &test_pool_market, &user, mining_acc, 100)
         .await
         .unwrap();
 
     (
         env.context,
-        env.registry,
         test_pool_market,
         test_pool,
         test_pool_borrow_authority,
@@ -99,25 +79,11 @@ async fn setup(
 
 #[tokio::test]
 async fn success() {
-    let (
-        mut context,
-        registry,
-        test_pool_market,
-        test_pool,
-        _pool_borrow_authority,
-        user,
-        mining_acc,
-    ) = setup(None).await;
+    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user, mining_acc) =
+        setup(None).await;
 
     test_pool
-        .withdraw_request(
-            &mut context,
-            &registry,
-            &test_pool_market,
-            &user,
-            mining_acc,
-            45,
-        )
+        .withdraw_request(&mut context, &test_pool_market, &user, mining_acc, 45)
         .await
         .unwrap();
 
@@ -133,20 +99,34 @@ async fn success() {
         45
     );
 
-    test_pool
+    let err = test_pool
         .cancel_withdraw_request(&mut context, &test_pool_market, &user)
         .await
+        .unwrap_err()
         .unwrap();
 
     assert_eq!(
-        get_token_balance(&mut context, &user.pool_account).await,
-        100
-    );
-    assert_eq!(
-        get_token_balance(&mut context, &collateral_transit_account).await,
-        0
+        err,
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::TemporaryUnavailable as u32)
+        )
     );
 
-    let user_account = get_account(&mut context, &user.owner.pubkey()).await;
-    assert_eq!(user_account.lamports, INITIAL_USER_BALANCE);
+    // TEMP unavailable
+    // test_pool
+    // .cancel_withdraw_request(&mut context, &test_pool_market, &user)
+    // .await
+    // .unwrap();
+    // assert_eq!(
+    //     get_token_balance(&mut context, &user.pool_account).await,
+    //     100
+    // );
+    // assert_eq!(
+    //     get_token_balance(&mut context, &collateral_transit_account).await,
+    //     0
+    // );
+
+    // let user_account = get_account(&mut context, &user.owner.pubkey()).await;
+    // assert_eq!(user_account.lamports, INITIAL_USER_BALANCE);
 }

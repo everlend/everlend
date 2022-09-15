@@ -4,6 +4,7 @@
 
 pub mod cpi;
 pub mod instruction;
+pub mod instructions;
 pub mod processor;
 pub mod state;
 pub mod utils;
@@ -103,6 +104,26 @@ pub fn find_transit_sol_unwrap_address(
     withdrawal_request: &Pubkey,
 ) -> (Pubkey, u8) {
     Pubkey::find_program_address(&[br"unwrap", &withdrawal_request.to_bytes()], program_id)
+}
+
+/// Calculates address of pool config
+pub fn find_pool_config_program_address(program_id: &Pubkey, pool: &Pubkey) -> (Pubkey, u8) {
+    Pubkey::find_program_address(&["config".as_bytes(), &pool.to_bytes()], program_id)
+}
+
+/// Generates user mining address
+pub fn find_user_mining_address(
+    user: &Pubkey,
+    pool_market: &Pubkey,
+) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[
+            b"mining".as_ref(),
+            user.as_ref(),
+            pool_market.as_ref(),
+        ],
+        &eld_rewards::id(),
+    )
 }
 
 /// Generate withdraw accounts for SOL mint

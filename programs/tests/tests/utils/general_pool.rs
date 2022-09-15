@@ -1,9 +1,12 @@
+use super::BanksClientResult;
 use super::{
     general_pool_borrow_authority::TestGeneralPoolBorrowAuthority, get_account, get_liquidity_mint,
     LiquidityProvider, TestGeneralPoolMarket, User,
 };
-use super::{BanksClientResult, TestRegistry};
-use everlend_general_pool::state::{WithdrawalRequest, WithdrawalRequests};
+use everlend_general_pool::find_pool_config_program_address;
+use everlend_general_pool::state::{
+    PoolConfig, SetPoolConfigParams, WithdrawalRequest, WithdrawalRequests,
+};
 use everlend_general_pool::{
     find_pool_program_address, find_transit_sol_unwrap_address,
     find_withdrawal_request_program_address, find_withdrawal_requests_program_address, instruction,
@@ -24,6 +27,7 @@ use solana_sdk::{
 #[derive(Debug)]
 pub struct TestGeneralPool {
     pub pool_pubkey: Pubkey,
+    pub pool_config_pubkey: Pubkey,
     pub token_mint_pubkey: Pubkey,
     pub token_account: Keypair,
     pub pool_mint: Keypair,
@@ -55,8 +59,12 @@ impl TestGeneralPool {
             &eld_rewards::id(),
         );
 
+        let (pool_config_pubkey, _) =
+            find_pool_config_program_address(&everlend_general_pool::id(), &pool_pubkey);
+
         Self {
             pool_pubkey,
+            pool_config_pubkey,
             token_mint_pubkey,
             token_account: Keypair::new(),
             pool_mint: Keypair::new(),
@@ -178,7 +186,6 @@ impl TestGeneralPool {
     pub async fn deposit(
         &self,
         context: &mut ProgramTestContext,
-        test_registry: &TestRegistry,
         test_pool_market: &TestGeneralPoolMarket,
         user: &LiquidityProvider,
         mining_account: Pubkey,
@@ -187,7 +194,6 @@ impl TestGeneralPool {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::deposit(
                 &everlend_general_pool::id(),
-                &test_registry.keypair.pubkey(),
                 &test_pool_market.keypair.pubkey(),
                 &self.pool_pubkey,
                 &user.token_account,
@@ -199,6 +205,35 @@ impl TestGeneralPool {
                 &mining_account,
                 &self.config.pubkey(),
                 amount,
+            )],
+            Some(&context.payer.pubkey()),
+            &[&context.payer, &user.owner],
+            context.last_blockhash,
+        );
+
+        context.banks_client.process_transaction(tx).await
+    }
+
+    pub async fn transfer_deposit(
+        &self,
+        context: &mut ProgramTestContext,
+        user: &LiquidityProvider,
+        destination_user: &LiquidityProvider,
+        mining_account: Pubkey,
+        destination_mining_account: Pubkey,
+    ) -> BanksClientResult<()> {
+        let tx = Transaction::new_signed_with_payer(
+            &[instruction::transfer_deposit(
+                &everlend_general_pool::id(),
+                &self.pool_pubkey,
+                &user.pool_account,
+                &destination_user.pool_account,
+                &user.owner.pubkey(),
+                &destination_user.owner.pubkey(),
+                &self.mining_reward_pool,
+                &mining_account,
+                &destination_mining_account,
+                &self.config.pubkey(),
             )],
             Some(&context.payer.pubkey()),
             &[&context.payer, &user.owner],
@@ -265,7 +300,6 @@ impl TestGeneralPool {
     pub async fn withdraw_request(
         &self,
         context: &mut ProgramTestContext,
-        test_registry: &TestRegistry,
         test_pool_market: &TestGeneralPoolMarket,
         user: &LiquidityProvider,
         mining_acc: Pubkey,
@@ -279,7 +313,6 @@ impl TestGeneralPool {
         let tx = Transaction::new_signed_with_payer(
             &[instruction::withdraw_request(
                 &everlend_general_pool::id(),
-                &test_registry.keypair.pubkey(),
                 &test_pool_market.keypair.pubkey(),
                 &self.pool_pubkey,
                 &user.pool_account,
@@ -433,5 +466,32 @@ impl TestGeneralPool {
         );
 
         context.banks_client.process_transaction(tx).await
+    }
+
+    pub async fn set_pool_config(
+        &self,
+        context: &mut ProgramTestContext,
+        pool_market: &TestGeneralPoolMarket,
+        params: SetPoolConfigParams,
+    ) -> BanksClientResult<()> {
+        let tx = Transaction::new_signed_with_payer(
+            &[instruction::set_pool_config(
+                &everlend_general_pool::id(),
+                &pool_market.keypair.pubkey(),
+                &self.pool_pubkey,
+                &pool_market.manager.pubkey(),
+                params,
+            )],
+            Some(&context.payer.pubkey()),
+            &[&context.payer, &pool_market.manager],
+            context.last_blockhash,
+        );
+
+        context.banks_client.process_transaction(tx).await
+    }
+
+    pub async fn get_pool_config(&self, context: &mut ProgramTestContext) -> PoolConfig {
+        let account = get_account(context, &self.pool_config_pubkey).await;
+        PoolConfig::unpack_unchecked(&account.data).unwrap()
     }
 }

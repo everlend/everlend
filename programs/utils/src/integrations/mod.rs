@@ -4,6 +4,8 @@ use solana_program::{instruction::AccountMeta, pubkey::Pubkey};
 pub mod larix;
 pub mod solend;
 pub mod spl_token_lending;
+pub mod tulip;
+pub mod francium;
 
 // Program IDs
 pub const SPL_TOKEN_LENDING_PROGRAM_ID: &str = "Bp1MJ1qr4g8t9AQJjm5H6zDB2NmRrkJL8H8zuvb1g7oV";
@@ -17,6 +19,8 @@ pub enum MoneyMarket {
     PortFinance,
     Larix,
     Solend,
+    Tulip,
+    Francium,
 }
 
 #[derive(Debug, IntoPrimitive, FromPrimitive, Clone, Copy, PartialEq)]
@@ -36,6 +40,8 @@ pub enum MoneyMarketPubkeys {
     PortFinance(spl_token_lending::AccountPubkeys),
     Larix(larix::AccountPubkeys),
     Solend(solend::AccountPubkeys),
+    Tulip(tulip::AccountPubkeys),
+    Francium(francium::AccountPubkeys),
 }
 
 pub fn deposit_accounts(program_id: &Pubkey, pubkeys: &MoneyMarketPubkeys) -> Vec<AccountMeta> {
@@ -45,6 +51,8 @@ pub fn deposit_accounts(program_id: &Pubkey, pubkeys: &MoneyMarketPubkeys) -> Ve
         }
         MoneyMarketPubkeys::Larix(pubkeys) => larix::accounts::deposit(program_id, pubkeys),
         MoneyMarketPubkeys::Solend(pubkeys) => solend::accounts::deposit(program_id, pubkeys),
+        MoneyMarketPubkeys::Tulip(pubkeys) => tulip::accounts::deposit(program_id, pubkeys),
+        MoneyMarketPubkeys::Francium(pubkeys) => francium::accounts::deposit(program_id, pubkeys),
         _ => vec![],
     }
 }
@@ -56,6 +64,8 @@ pub fn withdraw_accounts(program_id: &Pubkey, pubkeys: &MoneyMarketPubkeys) -> V
         }
         MoneyMarketPubkeys::Larix(pubkeys) => larix::accounts::withdraw(program_id, pubkeys),
         MoneyMarketPubkeys::Solend(pubkeys) => solend::accounts::withdraw(program_id, pubkeys),
+        MoneyMarketPubkeys::Tulip(pubkeys) => tulip::accounts::withdraw(program_id, pubkeys),
+        MoneyMarketPubkeys::Francium(pubkeys) => francium::accounts::withdraw(program_id, pubkeys),
         _ => vec![],
     }
 }

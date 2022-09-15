@@ -1,11 +1,14 @@
 use anchor_lang::InstructionData;
-use eld_rewards::instruction::{InitializePool, FillVault, InitializeMining, DepositMining, WithdrawMining};
+use eld_rewards::instruction::{
+    DepositMining, FillVault, InitializeMining, InitializePool, WithdrawMining,
+};
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
     system_program, sysvar,
 };
 
+#[allow(clippy::too_many_arguments)]
 pub fn initialize_pool(
     program_id: &Pubkey,
     config: &Pubkey,
@@ -30,6 +33,7 @@ pub fn initialize_pool(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn fill_vault(
     program_id: &Pubkey,
     config: &Pubkey,
@@ -98,7 +102,7 @@ pub fn deposit_mining(
             AccountMeta::new_readonly(*user, false),
             AccountMeta::new_readonly(*deposit_authority, true),
         ],
-        data: DepositMining{amount}.data(),
+        data: DepositMining { amount }.data(),
     }
 }
 
@@ -120,6 +124,6 @@ pub fn withdraw_mining(
             AccountMeta::new_readonly(*user, false),
             AccountMeta::new_readonly(*deposit_authority, true),
         ],
-        data: WithdrawMining{amount}.data(),
+        data: WithdrawMining { amount }.data(),
     }
 }
