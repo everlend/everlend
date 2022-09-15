@@ -92,6 +92,7 @@ impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
             create_collateral_market(config, None)?,
             create_collateral_market(config, None)?,
             create_collateral_market(config, None)?,
+            create_collateral_market(config, None)?,
         ];
 
         let mut collateral_pool_markets = DistributionPubkeys::default();

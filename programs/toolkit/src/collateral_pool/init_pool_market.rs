@@ -41,8 +41,8 @@ impl<'a> ToolkitCommand<'a> for InitPoolMarketCommand {
         let mut initialiazed_accounts = config.get_initialized_accounts();
 
         let mm_pool_market_pubkey = create_collateral_market(config, keypair)?;
-
-        initialiazed_accounts.mm_pool_markets[money_market as usize] = mm_pool_market_pubkey;
+        initialiazed_accounts.collateral_pool_markets[money_market as usize] =
+            mm_pool_market_pubkey;
 
         initialiazed_accounts
             .save(config.accounts_path.as_str())

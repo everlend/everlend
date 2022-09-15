@@ -35,6 +35,8 @@ impl<'a> ToolkitCommand<'a> for CreatePoolsCommand {
             create_collateral_market(config, None)?,
             create_collateral_market(config, None)?,
             create_collateral_market(config, None)?,
+            create_collateral_market(config, None)?,
+            create_collateral_market(config, None)?,
         ];
         let mut initialized_accounts = config.get_initialized_accounts();
         initialized_accounts.collateral_pool_markets = collateral_pool_markets;
