@@ -96,15 +96,14 @@ async fn setup() -> (TestEnvironment, TestGeneralPool, TestDepositor) {
     let mut distribution = DistributionArray::default();
     distribution[0] = 500_000_000u64; // 50%
 
-    let test_token_distribution =
-        TestTokenDistribution::new(general_pool.token_mint_pubkey, distribution);
+    let test_token_oracle = TestTokenOracle::new(general_pool.token_mint_pubkey, distribution);
 
-    test_token_distribution
+    test_token_oracle
         .init(&mut env.context, &test_liquidity_oracle, payer_pubkey)
         .await
         .unwrap();
 
-    test_token_distribution
+    test_token_oracle
         .update(
             &mut env.context,
             &test_liquidity_oracle,

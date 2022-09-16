@@ -1,7 +1,7 @@
 use crate::utils::*;
 use everlend_depositor::find_transit_program_address;
 use everlend_depositor::state::{Rebalancing, RebalancingOperation};
-use everlend_liquidity_oracle::state::{DistributionArray, TokenDistribution};
+use everlend_liquidity_oracle::state::{DistributionArray, TokenOracle};
 use everlend_registry::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
 use everlend_registry::state::DistributionPubkeys;
 use everlend_utils::{abs_diff, percent_ratio};
@@ -35,7 +35,7 @@ async fn setup(
     LiquidityProvider,
     TestDepositor,
     TestLiquidityOracle,
-    TestTokenDistribution,
+    TestTokenOracle,
     DistributionArray,
 ) {
     let mut env = presetup().await;
@@ -126,15 +126,14 @@ async fn setup(
     let mut distribution = DistributionArray::default();
     distribution[0] = 500_000_000u64; // 50%
 
-    let test_token_distribution =
-        TestTokenDistribution::new(general_pool.token_mint_pubkey, distribution);
+    let test_token_oracle = TestTokenOracle::new(general_pool.token_mint_pubkey, distribution);
 
-    test_token_distribution
+    test_token_oracle
         .init(&mut env.context, &test_liquidity_oracle, payer_pubkey)
         .await
         .unwrap();
 
-    test_token_distribution
+    test_token_oracle
         .update(
             &mut env.context,
             &test_liquidity_oracle,
@@ -259,7 +258,7 @@ async fn setup(
         liquidity_provider,
         test_depositor,
         test_liquidity_oracle,
-        test_token_distribution,
+        test_token_oracle,
         distribution,
     )
 }
@@ -370,7 +369,7 @@ async fn success_with_refresh_income() {
         liquidity_provider,
         test_depositor,
         test_liquidity_oracle,
-        test_token_distribution,
+        test_token_oracle,
         mut distribution,
     ) = setup(100 * EXP).await;
     let payer_pubkey = context.payer.pubkey();
@@ -416,7 +415,7 @@ async fn success_with_refresh_income() {
         .unwrap();
 
     distribution[0] = 0;
-    test_token_distribution
+    test_token_oracle
         .update(
             &mut context,
             &test_liquidity_oracle,
@@ -512,7 +511,7 @@ async fn fail_with_already_refreshed_income() {
         _,
         test_depositor,
         test_liquidity_oracle,
-        test_token_distribution,
+        test_token_oracle,
         mut distribution,
     ) = setup(100 * EXP).await;
     let payer_pubkey = context.payer.pubkey();
@@ -558,7 +557,7 @@ async fn fail_with_already_refreshed_income() {
         .unwrap();
 
     distribution[0] = 0;
-    test_token_distribution
+    test_token_oracle
         .update(
             &mut context,
             &test_liquidity_oracle,
@@ -919,7 +918,7 @@ async fn rebalancing_math_round() {
     p[2] = Keypair::new().pubkey();
 
     let distr_amount: u64 = 4610400063;
-    let mut distribution = TokenDistribution::default();
+    let mut oracle = TokenOracle::default();
     let mut r = Rebalancing::default();
 
     for (i, elem) in vec![
@@ -937,9 +936,11 @@ async fn rebalancing_math_round() {
         d[2] = elem.2;
 
         let current_slot = 1;
-        distribution.reserve_rates_updated_at = current_slot;
-        distribution.update_distribution(i as u64 + 1, d).unwrap();
-        r.compute(&p, distribution.clone(), distr_amount, current_slot)
+        oracle.reserve_rates.updated_at = current_slot;
+        oracle
+            .update_liquidity_distribution(i as u64 + 1, d)
+            .unwrap();
+        r.compute(&p, oracle.clone(), distr_amount, current_slot)
             .unwrap();
         println!("{}", r.distributed_liquidity);
         assert_eq!(distr_amount >= r.distributed_liquidity, true);
@@ -959,7 +960,7 @@ async fn rebalancing_check_steps() {
     p[1] = Keypair::new().pubkey();
 
     let distr_amount: u64 = 10001;
-    let mut distribution = TokenDistribution::default();
+    let mut oracle = TokenOracle::default();
     let mut r = Rebalancing::default();
 
     struct TestCase {
@@ -998,9 +999,11 @@ async fn rebalancing_check_steps() {
         d[1] = elem.distribution.1;
 
         let current_slot = 1;
-        distribution.reserve_rates_updated_at = current_slot;
-        distribution.update_distribution(i as u64 + 1, d).unwrap();
-        r.compute(&p, distribution.clone(), distr_amount, current_slot)
+        oracle.reserve_rates.updated_at = current_slot;
+        oracle
+            .update_liquidity_distribution(i as u64 + 1, d)
+            .unwrap();
+        r.compute(&p, oracle.clone(), distr_amount, current_slot)
             .unwrap();
 
         println!("{:?}", r.steps);
@@ -1033,8 +1036,8 @@ async fn rebalancing_check_steps_math() {
     d[0] = 500_000_000;
     d[1] = 500_000_000;
 
-    let mut distribution = TokenDistribution::default();
-    distribution.distribution = d;
+    let mut oracle = TokenOracle::default();
+    oracle.liquidity_distribution.values = d;
 
     let mut received_collateral = [0; 10];
     received_collateral[0] = 5218140718;
@@ -1044,18 +1047,18 @@ async fn rebalancing_check_steps_math() {
     r.amount_to_distribute = 25643897678;
     r.distributed_liquidity = 25643897678;
     r.received_collateral = received_collateral;
-    r.token_distribution = distribution.clone();
+    r.liquidity_distribution = oracle.liquidity_distribution.clone();
 
     d[0] = 333_333_333;
     d[1] = 333_333_333;
     d[2] = 333_333_333;
 
-    distribution.update_distribution(10, d).unwrap();
+    oracle.update_liquidity_distribution(10, d).unwrap();
 
     let amount_to_distribute = 25365814993;
     let current_slot = 1;
-    distribution.reserve_rates_updated_at = current_slot;
-    r.compute(&p, distribution.clone(), amount_to_distribute, current_slot)
+    oracle.reserve_rates.updated_at = current_slot;
+    r.compute(&p, oracle.clone(), amount_to_distribute, current_slot)
         .unwrap();
 
     println!("{:?}", r.steps);

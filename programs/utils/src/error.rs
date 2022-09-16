@@ -62,7 +62,7 @@ pub enum EverlendError {
 
     /// Token distribution is stale
     #[error("Rebalancing: Token distribution is stale")]
-    TokenDistributionIsStale,
+    LiquidityDistributionIsStale,
 
     /// Income has already been refreshed recently
     #[error("Rebalancing: Income has already been refreshed recently")]

@@ -4,8 +4,8 @@ use borsh::BorshDeserialize;
 use everlend_general_pool::{find_withdrawal_requests_program_address, state::WithdrawalRequests};
 use everlend_income_pools::utils::IncomePoolAccounts;
 use everlend_liquidity_oracle::{
-    find_token_distribution_program_address,
-    state::{DistributionArray, TokenDistribution},
+    find_token_oracle_program_address,
+    state::{DistributionArray, TokenOracle},
 };
 use everlend_registry::state::{Registry, RegistryMarkets};
 use everlend_utils::{
@@ -155,7 +155,7 @@ impl Processor {
 
         // TODO: we can do it optional for refresh income case in the future
         let liquidity_oracle_info = next_account_info(account_info_iter)?;
-        let token_distribution_info = next_account_info(account_info_iter)?;
+        let token_oracle_info = next_account_info(account_info_iter)?;
         let executor_info = next_account_info(account_info_iter)?;
 
         let rent_info = next_account_info(account_info_iter)?;
@@ -182,12 +182,12 @@ impl Processor {
         let registry = Registry::unpack(&registry_info.data.borrow())?;
 
         // Check external programs
-        assert_owned_by(token_distribution_info, &everlend_liquidity_oracle::id())?;
+        assert_owned_by(token_oracle_info, &everlend_liquidity_oracle::id())?;
         assert_owned_by(general_pool_market_info, &everlend_general_pool::id())?;
         assert_owned_by(general_pool_info, &everlend_general_pool::id())?;
         assert_owned_by(withdrawal_requests_info, &everlend_general_pool::id())?;
         assert_owned_by(liquidity_oracle_info, &everlend_liquidity_oracle::id())?;
-        assert_owned_by(token_distribution_info, &everlend_liquidity_oracle::id())?;
+        assert_owned_by(token_oracle_info, &everlend_liquidity_oracle::id())?;
 
         // Check root accounts
         assert_account_key(general_pool_market_info, &registry.general_pool_market)?;
@@ -245,13 +245,13 @@ impl Processor {
         }
 
         {
-            // Check token distribution
-            let (token_distribution_pubkey, _) = find_token_distribution_program_address(
+            // Check token oracle
+            let (token_oracle_pubkey, _) = find_token_oracle_program_address(
                 &everlend_liquidity_oracle::id(),
                 liquidity_oracle_info.key,
                 mint_info.key,
             );
-            assert_account_key(token_distribution_info, &token_distribution_pubkey)?;
+            assert_account_key(token_oracle_info, &token_oracle_pubkey)?;
 
             // Check general pool
             let (general_pool_pubkey, _) = everlend_general_pool::find_pool_program_address(
@@ -362,12 +362,11 @@ impl Processor {
             )?;
         } else {
             // Compute rebalancing steps
-            let token_distribution =
-                TokenDistribution::unpack(&token_distribution_info.data.borrow())?;
+            let token_oracle = TokenOracle::unpack(&token_oracle_info.data.borrow())?;
 
             rebalancing.compute(
                 &registry_markets.money_markets,
-                token_distribution,
+                token_oracle,
                 amount_to_distribute,
                 clock.slot,
             )?;

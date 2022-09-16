@@ -8,9 +8,7 @@ use solana_program::{
 };
 
 use everlend_general_pool::find_withdrawal_requests_program_address;
-use everlend_liquidity_oracle::{
-    find_token_distribution_program_address, state::DistributionArray,
-};
+use everlend_liquidity_oracle::{find_token_oracle_program_address, state::DistributionArray};
 use everlend_utils::cpi;
 use everlend_utils::find_program_address;
 
@@ -288,11 +286,8 @@ pub fn start_rebalancing(
 ) -> Instruction {
     let (depositor_authority, _) = find_program_address(program_id, depositor);
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, mint);
-    let (token_distribution, _) = find_token_distribution_program_address(
-        &everlend_liquidity_oracle::id(),
-        liquidity_oracle,
-        mint,
-    );
+    let (token_oracle, _) =
+        find_token_oracle_program_address(&everlend_liquidity_oracle::id(), liquidity_oracle, mint);
     // General pool
     let (general_pool_market_authority, _) =
         find_program_address(&everlend_general_pool::id(), general_pool_market);
@@ -329,7 +324,7 @@ pub fn start_rebalancing(
         AccountMeta::new_readonly(withdrawal_requests, false),
         AccountMeta::new(liquidity_transit, false),
         AccountMeta::new_readonly(*liquidity_oracle, false),
-        AccountMeta::new_readonly(token_distribution, false),
+        AccountMeta::new_readonly(token_oracle, false),
         AccountMeta::new(*rebalance_executor, true),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(sysvar::clock::id(), false),

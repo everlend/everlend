@@ -1,6 +1,6 @@
 use crate::utils::*;
 use everlend_liquidity_oracle::{
-    find_token_distribution_program_address, instruction,
+    find_token_oracle_program_address, instruction,
     state::{DistributionArray, LiquidityOracle},
 };
 use solana_client::client_error::ClientError;
@@ -77,13 +77,13 @@ pub fn update(
     Ok(())
 }
 
-pub fn create_token_distribution(
+pub fn create_token_oracle(
     config: &Config,
     oracle_pubkey: &Pubkey,
     token_mint: &Pubkey,
     distribution: &DistributionArray,
 ) -> Result<Pubkey, ClientError> {
-    let (token_distribution_pubkey, _) = find_token_distribution_program_address(
+    let (token_oracle_pubkey, _) = find_token_oracle_program_address(
         &everlend_liquidity_oracle::id(),
         oracle_pubkey,
         token_mint,
@@ -91,14 +91,14 @@ pub fn create_token_distribution(
 
     let account_info = config
         .rpc_client
-        .get_account_with_commitment(&token_distribution_pubkey, config.rpc_client.commitment())?
+        .get_account_with_commitment(&token_oracle_pubkey, config.rpc_client.commitment())?
         .value;
     if account_info.is_some() {
-        return Ok(token_distribution_pubkey);
+        return Ok(token_oracle_pubkey);
     }
 
     let tx = Transaction::new_with_payer(
-        &[instruction::create_token_distribution(
+        &[instruction::create_token_oracle(
             &everlend_liquidity_oracle::id(),
             oracle_pubkey,
             &config.fee_payer.pubkey(),
@@ -110,17 +110,17 @@ pub fn create_token_distribution(
 
     config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
-    Ok(token_distribution_pubkey)
+    Ok(token_oracle_pubkey)
 }
 
-pub fn update_token_distribution(
+pub fn update_liquidity_distribution(
     config: &Config,
     oracle_pubkey: &Pubkey,
     token_mint: &Pubkey,
     distribution: &DistributionArray,
 ) -> Result<Pubkey, ClientError> {
     let tx = Transaction::new_with_payer(
-        &[instruction::update_token_distribution(
+        &[instruction::update_liquidity_distribution(
             &everlend_liquidity_oracle::id(),
             oracle_pubkey,
             &config.fee_payer.pubkey(),
@@ -132,11 +132,11 @@ pub fn update_token_distribution(
 
     config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
-    let (token_distribution_pubkey, _) = find_token_distribution_program_address(
+    let (token_oracle_pubkey, _) = find_token_oracle_program_address(
         &everlend_liquidity_oracle::id(),
         oracle_pubkey,
         token_mint,
     );
 
-    Ok(token_distribution_pubkey)
+    Ok(token_oracle_pubkey)
 }

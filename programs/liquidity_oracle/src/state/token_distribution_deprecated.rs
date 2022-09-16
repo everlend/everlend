@@ -48,7 +48,7 @@ impl Pack for DeprecatedTokenDistribution {
 
 impl IsInitialized for DeprecatedTokenDistribution {
     fn is_initialized(&self) -> bool {
-        self.account_type == AccountType::TokenDistribution
+        self.account_type == AccountType::TokenOracle
     }
 }
 
