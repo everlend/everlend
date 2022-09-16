@@ -49,15 +49,14 @@ pub fn realloc_with_rent<'a, 'b>(
 ) -> ProgramResult {
     let balance = acc.lamports();
     let min_balance = rent.minimum_balance(new_len);
-    if balance.ge(&min_balance) {
-        return Ok(());
-    }
 
     // Send some lamports
-    invoke(
-        &system_instruction::transfer(payer.key, acc.key, min_balance - balance),
-        &[payer.clone(), acc.clone()],
-    )?;
+    if balance.lt(&min_balance) {
+        invoke(
+            &system_instruction::transfer(payer.key, acc.key, min_balance - balance),
+            &[payer.clone(), acc.clone()],
+        )?;
+    }
 
     // Realloc
     acc.realloc(new_len, false)

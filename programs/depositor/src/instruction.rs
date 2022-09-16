@@ -501,10 +501,22 @@ pub fn withdraw(
 
 /// Creates 'MigrateDepositor' instruction.
 #[allow(clippy::too_many_arguments)]
-pub fn migrate_depositor(program_id: &Pubkey, depositor: &Pubkey, manager: &Pubkey) -> Instruction {
+pub fn migrate_depositor(
+    program_id: &Pubkey,
+    depositor: &Pubkey,
+    registry: &Pubkey,
+    manager: &Pubkey,
+    rebalancing: &Pubkey,
+    liquidity_mint: &Pubkey,
+) -> Instruction {
     let accounts = vec![
-        AccountMeta::new(*depositor, false),
+        AccountMeta::new_readonly(*depositor, false),
+        AccountMeta::new_readonly(*registry, false),
         AccountMeta::new(*manager, true),
+        AccountMeta::new(*rebalancing, false),
+        AccountMeta::new_readonly(*liquidity_mint, false),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+        AccountMeta::new_readonly(system_program::id(), false),
     ];
 
     Instruction::new_with_borsh(

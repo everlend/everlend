@@ -66,7 +66,7 @@ impl Rebalancing {
     ) -> Result<(), ProgramError> {
         if token_oracle.liquidity_distribution.updated_at <= self.liquidity_distribution.updated_at
         {
-            return Err(EverlendError::LiquidityDistributionIsStale.into());
+            return Err(EverlendError::LiquidityDistributionStale.into());
         }
 
         if token_oracle.reserve_rates.updated_at != current_slot {

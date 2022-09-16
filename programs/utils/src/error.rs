@@ -60,9 +60,9 @@ pub enum EverlendError {
     #[error("Rebalancing: Amount does not match")]
     InvalidRebalancingAmount,
 
-    /// Token distribution is stale
-    #[error("Rebalancing: Token distribution is stale")]
-    LiquidityDistributionIsStale,
+    /// Liquidity distribution is stale
+    #[error("Rebalancing: Liquidity distribution is stale")]
+    LiquidityDistributionStale,
 
     /// Income has already been refreshed recently
     #[error("Rebalancing: Income has already been refreshed recently")]
