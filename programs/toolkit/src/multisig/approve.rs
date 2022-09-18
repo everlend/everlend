@@ -1,0 +1,49 @@
+use crate::helpers::approve;
+use crate::utils::arg_pubkey;
+use crate::{Config, ToolkitCommand};
+use clap::{Arg, ArgMatches};
+use solana_clap_utils::input_parsers::pubkey_of;
+
+const ARG_TRANSACTION: &str = "transaction";
+const ARG_MULTISIG: &str = "multisig";
+
+#[derive(Clone, Copy)]
+pub struct ApproveCommand;
+
+impl<'a> ToolkitCommand<'a> for ApproveCommand {
+    fn get_name(&self) -> &'a str {
+        "approve"
+    }
+
+    fn get_description(&self) -> &'a str {
+        "Approve transaction"
+    }
+
+    fn get_args(&self) -> Vec<Arg<'a, 'a>> {
+        vec![
+            arg_pubkey(ARG_TRANSACTION, true)
+                .help("Transaction account pubkey")
+                .short("tx"),
+            arg_pubkey(ARG_MULTISIG, true).help("Multisig pubkey"),
+        ]
+    }
+
+    fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
+        vec![]
+    }
+
+    fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
+        let arg_matches = arg_matches.unwrap();
+        let transaction_pubkey = pubkey_of(arg_matches, ARG_TRANSACTION).unwrap();
+        let multisig_pubkey = pubkey_of(arg_matches, ARG_MULTISIG).unwrap();
+
+        println!("transaction_pubkey = {:#?}", transaction_pubkey);
+        println!("multisig_pubkey = {:?}", multisig_pubkey);
+
+        let signature = approve(config, &multisig_pubkey, &transaction_pubkey)?;
+
+        println!("signature = {:?}", signature);
+
+        Ok(())
+    }
+}

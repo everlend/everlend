@@ -18,7 +18,7 @@ fn save_new_mining_account(
     mining_account: &Keypair,
 ) -> Result<()> {
     write_keypair_file(
-        &mining_account,
+        mining_account,
         &format!(
             ".keypairs/{}_quarry_mining_{}.json",
             token,
@@ -64,10 +64,10 @@ impl LiquidityMiner for QuarryLiquidityMiner {
         execute_account_creation(
             config,
             &spl_token::id(),
-            &mining_account,
+            mining_account,
             spl_token::state::Account::LEN as u64,
         )?;
-        save_new_mining_account(config, token, &mining_account)?;
+        save_new_mining_account(config, token, mining_account)?;
         Ok(())
     }
 

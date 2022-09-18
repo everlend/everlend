@@ -6,11 +6,9 @@ use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar;
 
-pub fn refresh_reserve<'a>(
+pub fn refresh_reserve(
     program_id: &Pubkey,
-    lending_market: AccountInfo<'a>,
-    reserve: AccountInfo<'a>,
-    clock: AccountInfo<'a>,
+    reserve: AccountInfo,
 ) -> Result<(), ProgramError> {
     #[derive(Debug, PartialEq, BorshSerialize)]
     pub struct UpdateLendingPool {
@@ -20,16 +18,14 @@ pub fn refresh_reserve<'a>(
     let ix = Instruction {
         program_id: *program_id,
         accounts: vec![
-            AccountMeta::new(*lending_market.key, false),
-            AccountMeta::new_readonly(*reserve.key, false),
-            AccountMeta::new_readonly(sysvar::clock::id(), false),
+            AccountMeta::new(*reserve.key, false),
         ],
-        data: UpdateLendingPool { instruction: 12 }.try_to_vec()?,
+        data: UpdateLendingPool { instruction: 17 }.try_to_vec()?,
     };
 
     invoke(
         &ix,
-        &[lending_market, reserve, clock],
+        &[reserve],
     )
 }
 
@@ -64,8 +60,9 @@ pub fn deposit<'a>(
             AccountMeta::new(*reserve_collateral_mint.key, false),
             AccountMeta::new_readonly(*lending_market.key, false),
             AccountMeta::new_readonly(*lending_market_authority.key, false),
-            AccountMeta::new(*user_transfer_authority.key, true),
+            AccountMeta::new_readonly(*user_transfer_authority.key, true),
             AccountMeta::new_readonly(sysvar::clock::id(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
         ],
         data: DepositToLendingPool {
             instruction: 4,
@@ -122,8 +119,9 @@ pub fn redeem<'a>(
             AccountMeta::new(*reserve_liquidity_supply.key, false),
             AccountMeta::new_readonly(*lending_market.key, false),
             AccountMeta::new_readonly(*lending_market_authority.key, false),
-            AccountMeta::new(*user_transfer_authority.key, true),
+            AccountMeta::new_readonly(*user_transfer_authority.key, true),
             AccountMeta::new_readonly(sysvar::clock::id(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
         ],
         data: WithdrawFromLendingPool {
             instruction: 5,

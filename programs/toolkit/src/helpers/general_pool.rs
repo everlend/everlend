@@ -14,7 +14,7 @@ use solana_sdk::{
     signer::Signer,
     transaction::Transaction,
 };
-pub fn create_market(
+pub fn create_general_pool_market(
     config: &Config,
     pool_market_keypair: Option<Keypair>,
     registry: &Pubkey,
@@ -62,7 +62,7 @@ pub fn create_market(
     Ok(pool_market_keypair.pubkey())
 }
 
-pub fn create_pool(
+pub fn create_general_pool(
     config: &Config,
     pool_market_pubkey: &Pubkey,
     token_mint: &Pubkey,
@@ -449,7 +449,7 @@ pub fn get_withdrawal_request_accounts(
     .collect())
 }
 
-pub fn update_manager(
+pub fn general_pool_update_manager(
     config: &Config,
     pool_market: &Pubkey,
     manager: &Keypair,

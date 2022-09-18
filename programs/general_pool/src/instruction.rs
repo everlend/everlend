@@ -245,6 +245,22 @@ pub enum LiquidityPoolsInstruction {
         /// Pool config update params
         params: SetPoolConfigParams,
     },
+
+    /// Move pool tokens to destination user account
+    ///
+    /// Accounts:
+    /// [R] Pool
+    /// [W] Source account
+    /// [W] Destination account
+    /// [RS] User transfer authority
+    /// [R] Destination user transfer authority
+    /// [W] Mining reward pool
+    /// [W] Mining reward user account
+    /// [W] Destination mining reward user account
+    /// [R] Everlend config account
+    /// [R] Everlend rewards program account
+    /// [R] Token program id
+    TransferDeposit,
 }
 
 /// Creates 'InitPoolMarket' instruction.
@@ -433,6 +449,41 @@ pub fn deposit(
     Instruction::new_with_borsh(
         *program_id,
         &LiquidityPoolsInstruction::Deposit { amount },
+        accounts,
+    )
+}
+
+/// Creates 'TransferDeposit' instruction
+#[allow(clippy::too_many_arguments)]
+pub fn transfer_deposit(
+    program_id: &Pubkey,
+    pool: &Pubkey,
+    source: &Pubkey,
+    destination: &Pubkey,
+    user_transfer_authority: &Pubkey,
+    destination_user_transfer_authority: &Pubkey,
+    mining_reward_pool: &Pubkey,
+    mining_reward_acc: &Pubkey,
+    destination_mining_reward_acc: &Pubkey,
+    config: &Pubkey,
+) -> Instruction {
+    let accounts = vec![
+        AccountMeta::new_readonly(*pool, false),
+        AccountMeta::new(*source, false),
+        AccountMeta::new(*destination, false),
+        AccountMeta::new_readonly(*user_transfer_authority, true),
+        AccountMeta::new_readonly(*destination_user_transfer_authority, false),
+        AccountMeta::new(*mining_reward_pool, false),
+        AccountMeta::new(*mining_reward_acc, false),
+        AccountMeta::new(*destination_mining_reward_acc, false),
+        AccountMeta::new_readonly(*config, false),
+        AccountMeta::new_readonly(eld_rewards::id(), false),
+        AccountMeta::new_readonly(spl_token::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &LiquidityPoolsInstruction::TransferDeposit,
         accounts,
     )
 }
