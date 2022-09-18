@@ -426,7 +426,7 @@ pub fn deposit(
         AccountMeta::new(*mining_reward_pool, false),
         AccountMeta::new(*mining_reward_acc, false),
         AccountMeta::new_readonly(*config, false),
-        AccountMeta::new_readonly(eld_rewards::id(), false),
+        AccountMeta::new_readonly(everlend_rewards::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
     ];
 
@@ -520,7 +520,7 @@ pub fn withdraw_request(
         AccountMeta::new(*mining_reward_pool, false),
         AccountMeta::new(*mining_reward_acc, false),
         AccountMeta::new_readonly(*config, false),
-        AccountMeta::new_readonly(eld_rewards::id(), false),
+        AccountMeta::new_readonly(everlend_rewards::id(), false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
@@ -681,7 +681,7 @@ pub fn init_user_mining(
         AccountMeta::new(*mining_reward_pool, false),
         AccountMeta::new(*mining_reward_acc, false),
         AccountMeta::new_readonly(*config, false),
-        AccountMeta::new_readonly(eld_rewards::id(), false),
+        AccountMeta::new_readonly(everlend_rewards::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];

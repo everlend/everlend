@@ -8,17 +8,25 @@ use solana_program::pubkey::Pubkey;
 use everlend_utils::EverlendError;
 use crate::state::{MAX_REWARDS, PRECISION, RewardVault};
 
+/// Mining
 #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
 pub struct Mining {
+    /// Anchor id(For Anchor legacy contract compatibility)
     pub anchor_id: [u8; 8],
+    /// Reward pool address
     pub reward_pool: Pubkey,
+    /// Saved bump for mining account
     pub bump: u8,
+    /// Share
     pub share: u64,
+    /// Mining owner
     pub owner: Pubkey,
+    /// Reward indexes
     pub indexes: Vec<RewardIndex>
 }
 
 impl Mining {
+    /// Initialize a Reward Pool
     pub fn initialize(reward_pool: Pubkey, bump: u8, owner: Pubkey) -> Mining {
         Mining {
             anchor_id: Default::default(),
@@ -30,6 +38,7 @@ impl Mining {
         }
     }
 
+    /// Returns reward index
     pub fn reward_index_mut(&mut self, reward_mint: Pubkey) -> &mut RewardIndex {
         match self
             .indexes
@@ -47,11 +56,13 @@ impl Mining {
         }
     }
 
+    /// Claim reward
     pub fn claim(&mut self, reward_mint: Pubkey) {
         let reward_index = self.reward_index_mut(reward_mint);
         reward_index.rewards = 0;
     }
 
+    /// Refresh rewards
     pub fn refresh_rewards(&mut self, vaults: Iter<RewardVault>) -> ProgramResult {
         let share = self.share;
 
@@ -91,9 +102,10 @@ impl Pack for Mining {
     }
 
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
-        Self::try_from_slice(src).map_err(|_| {
+        let mut src_mut = src;
+        Self::deserialize(&mut src_mut).map_err(|err| {
             msg!("Failed to deserialize");
-            msg!("Actual LEN: {}", std::mem::size_of::<Mining>());
+            msg!("{}", err.to_string());
             ProgramError::InvalidAccountData
         })
     }
@@ -105,13 +117,18 @@ impl IsInitialized for Mining {
     }
 }
 
+/// Reward index
 #[derive(Debug, BorshSerialize, BorshDeserialize, BorshSchema, Default, Clone)]
 pub struct RewardIndex {
+    /// Reward mint
     pub reward_mint: Pubkey,
+    /// Index with precision
     pub index_with_precision: u128,
+    /// Rewards amount
     pub rewards: u64,
 }
 
 impl RewardIndex {
-    pub const LEN: usize = 32 + 16 + 8;
+    /// 32 + 16 + 8
+    pub const LEN: usize = 56;
 }

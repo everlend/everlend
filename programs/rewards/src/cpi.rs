@@ -1,12 +1,11 @@
-use solana_program::{
-    account_info::AccountInfo,
-    entrypoint::ProgramResult,
-    program::{invoke, invoke_signed},
-    pubkey::Pubkey,
-};
+//! CPI
 
-use crate::instructions::rewards;
+use solana_program::account_info::AccountInfo;
+use solana_program::entrypoint::ProgramResult;
+use solana_program::program::{invoke, invoke_signed};
+use solana_program::pubkey::Pubkey;
 
+/// Rewards initialize mining
 #[allow(clippy::too_many_arguments)]
 pub fn initialize_mining<'a>(
     program_id: &Pubkey,
@@ -18,7 +17,7 @@ pub fn initialize_mining<'a>(
     system_program: AccountInfo<'a>,
     rent: AccountInfo<'a>,
 ) -> ProgramResult {
-    let ix = rewards::initialize_mining(
+    let ix = crate::instruction::initialize_mining(
         program_id,
         config.key,
         reward_pool.key,
@@ -41,6 +40,7 @@ pub fn initialize_mining<'a>(
     )
 }
 
+/// Rewards deposit mining
 #[allow(clippy::too_many_arguments)]
 pub fn deposit_mining<'a>(
     program_id: &Pubkey,
@@ -52,7 +52,7 @@ pub fn deposit_mining<'a>(
     amount: u64,
     signers_seeds: &[&[&[u8]]],
 ) -> ProgramResult {
-    let ix = rewards::deposit_mining(
+    let ix = crate::instruction::deposit_mining(
         program_id,
         config.key,
         reward_pool.key,
@@ -69,6 +69,7 @@ pub fn deposit_mining<'a>(
     )
 }
 
+/// Rewards withdraw mining
 #[allow(clippy::too_many_arguments)]
 pub fn withdraw_mining<'a>(
     program_id: &Pubkey,
@@ -80,7 +81,7 @@ pub fn withdraw_mining<'a>(
     amount: u64,
     signers_seeds: &[&[&[u8]]],
 ) -> ProgramResult {
-    let ix = rewards::withdraw_mining(
+    let ix = crate::instruction::withdraw_mining(
         program_id,
         config.key,
         reward_pool.key,
@@ -97,6 +98,7 @@ pub fn withdraw_mining<'a>(
     )
 }
 
+/// Rewards fill vault
 #[allow(clippy::too_many_arguments)]
 pub fn fill_vault<'a>(
     program_id: &Pubkey,
@@ -110,7 +112,7 @@ pub fn fill_vault<'a>(
     amount: u64,
     signers_seeds: &[&[&[u8]]],
 ) -> ProgramResult {
-    let ix = rewards::fill_vault(
+    let ix = crate::instruction::fill_vault(
         program_id,
         config.key,
         reward_pool.key,

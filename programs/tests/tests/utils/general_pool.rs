@@ -12,8 +12,7 @@ use everlend_general_pool::{
     find_withdrawal_request_program_address, find_withdrawal_requests_program_address, instruction,
     state::Pool,
 };
-use everlend_utils::instructions::rewards::initialize_mining;
-use everlend_utils::instructions::{config::initialize, rewards::initialize_pool};
+use everlend_utils::instructions::{config::initialize};
 use solana_program::{
     instruction::AccountMeta, program_pack::Pack, pubkey::Pubkey, system_instruction,
     system_program, sysvar,
@@ -56,7 +55,7 @@ impl TestGeneralPool {
                 &config.pubkey().to_bytes(),
                 &token_mint_pubkey.to_bytes(),
             ],
-            &eld_rewards::id(),
+            &everlend_rewards::id(),
         );
 
         let (pool_config_pubkey, _) =
@@ -166,8 +165,8 @@ impl TestGeneralPool {
                     &self.config.pubkey(),
                     &context.payer.pubkey(),
                 ),
-                initialize_pool(
-                    &eld_rewards::id(),
+                everlend_rewards::instruction::initialize_pool(
+                    &everlend_rewards::id(),
                     &self.config.pubkey(),
                     &self.mining_reward_pool,
                     &self.token_mint_pubkey,
@@ -401,12 +400,12 @@ impl TestGeneralPool {
                 user.owner.pubkey().as_ref(),
                 self.mining_reward_pool.as_ref(),
             ],
-            &eld_rewards::id(),
+            &everlend_rewards::id(),
         );
 
         let tx = Transaction::new_signed_with_payer(
-            &[initialize_mining(
-                &eld_rewards::id(),
+            &[everlend_rewards::instruction::initialize_mining(
+                &everlend_rewards::id(),
                 &self.config.pubkey(),
                 &self.mining_reward_pool,
                 &mining_account,

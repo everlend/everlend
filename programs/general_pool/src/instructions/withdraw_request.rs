@@ -8,7 +8,7 @@ use crate::{
     utils::total_pool_amount,
 };
 use everlend_utils::{
-    assert_account_key, assert_owned_by, cpi, cpi::rewards::withdraw_mining, AccountLoader,
+    assert_account_key, assert_owned_by, cpi, AccountLoader,
     EverlendError,
 };
 use solana_program::{
@@ -23,6 +23,7 @@ use solana_program::{
     sysvar::{Sysvar, SysvarId},
 };
 use spl_token::state::{Account, Mint};
+use everlend_rewards::cpi::withdraw_mining;
 
 /// Instruction context
 pub struct WithdrawRequestContext<'a, 'b> {
@@ -66,12 +67,12 @@ impl<'a, 'b> WithdrawRequestContext<'a, 'b> {
             AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let user_transfer_authority = AccountLoader::next_signer(account_info_iter)?;
         let mining_reward_pool =
-            AccountLoader::next_with_owner(account_info_iter, &eld_rewards::id())?;
+            AccountLoader::next_with_owner(account_info_iter, &everlend_rewards::id())?;
         let mining_reward_acc =
-            AccountLoader::next_with_owner(account_info_iter, &eld_rewards::id())?;
+            AccountLoader::next_with_owner(account_info_iter, &everlend_rewards::id())?;
         let everlend_config = AccountLoader::next_with_owner(account_info_iter, &eld_config::id())?;
         let everlend_rewards_program =
-            AccountLoader::next_with_key(account_info_iter, &eld_rewards::id())?;
+            AccountLoader::next_with_key(account_info_iter, &everlend_rewards::id())?;
         let rent = AccountLoader::next_with_key(account_info_iter, &Rent::id())?;
         let clock = AccountLoader::next_with_key(account_info_iter, &Clock::id())?;
         let _system_program =

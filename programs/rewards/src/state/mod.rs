@@ -1,3 +1,5 @@
+//! State types
+
 mod mining;
 mod reward_pool;
 mod root_account;

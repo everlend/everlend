@@ -4,7 +4,6 @@ use crate::{
 };
 use everlend_utils::{
     assert_account_key,
-    cpi::rewards::{deposit_mining, initialize_mining},
     AccountLoader,
 };
 use solana_program::{
@@ -12,6 +11,7 @@ use solana_program::{
     program_pack::Pack, pubkey::Pubkey, rent::Rent, system_program, sysvar::SysvarId,
 };
 use spl_token::state::Account;
+use everlend_rewards::cpi::{deposit_mining, initialize_mining};
 
 /// Instruction context
 pub struct InitUserMiningContext<'a, 'b> {
@@ -43,11 +43,11 @@ impl<'a, 'b> InitUserMiningContext<'a, 'b> {
         let user_authority = AccountLoader::next_unchecked(account_info_iter)?; // We don't need to check
         let manager = AccountLoader::next_signer(account_info_iter)?;
         let mining_reward_pool =
-            AccountLoader::next_with_owner(account_info_iter, &eld_rewards::id())?;
+            AccountLoader::next_with_owner(account_info_iter, &everlend_rewards::id())?;
         let mining_reward_acc = AccountLoader::next_uninitialized(account_info_iter)?;
         let everlend_config = AccountLoader::next_with_owner(account_info_iter, &eld_config::id())?;
         let everlend_rewards_program =
-            AccountLoader::next_with_key(account_info_iter, &eld_rewards::id())?;
+            AccountLoader::next_with_key(account_info_iter, &everlend_rewards::id())?;
         let system_program =
             AccountLoader::next_with_key(account_info_iter, &system_program::id())?;
         let rent = AccountLoader::next_with_key(account_info_iter, &Rent::id())?;

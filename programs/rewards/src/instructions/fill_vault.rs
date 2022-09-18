@@ -3,11 +3,12 @@ use solana_program::entrypoint::ProgramResult;
 use solana_program::program_error::ProgramError;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
-use everlend_utils::{AccountLoader, EverlendError};
+use everlend_utils::{AccountLoader, assert_account_key, EverlendError};
 use crate::state::RewardPool;
 
 const FEE_PERCENTAGE: u64 = 2;
 
+/// Instruction context
 pub struct FillVaultContext<'a, 'b> {
     root_account: &'a AccountInfo<'b>,
     reward_pool: &'a AccountInfo<'b>,
@@ -26,13 +27,14 @@ impl<'a, 'b> FillVaultContext<'a, 'b> {
     ) -> Result<FillVaultContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter().enumerate();
 
-        let root_account = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let root_account = AccountLoader::next_unchecked(account_info_iter)?;
         let reward_pool = AccountLoader::next_with_owner(account_info_iter, program_id)?;
-        let reward_mint = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let reward_mint = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let vault = AccountLoader::next_unchecked(account_info_iter)?;
-        let fee_account = AccountLoader::next_signer(account_info_iter)?;
+        let fee_account = AccountLoader::next_unchecked(account_info_iter)?;
         let authority = AccountLoader::next_signer(account_info_iter)?;
-        let from = AccountLoader::next_signer(account_info_iter)?;
+        let from = AccountLoader::next_unchecked(account_info_iter)?;
+        let _token_program = AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
 
         Ok(FillVaultContext {
             root_account,
@@ -45,8 +47,25 @@ impl<'a, 'b> FillVaultContext<'a, 'b> {
         })
     }
 
+    /// Process instruction
     pub fn process(&self, program_id: &Pubkey, amount: u64) -> ProgramResult {
         let mut reward_pool = RewardPool::unpack(&self.reward_pool.data.borrow())?;
+
+        {
+            let vault = reward_pool.vaults.iter().find(|v| {
+                &v.reward_mint == self.reward_mint.key
+            }).ok_or(ProgramError::InvalidArgument)?;
+            let vault_seeds = &[
+                b"vault".as_ref(),
+                &self.reward_pool.key.to_bytes()[..32],
+                &self.reward_mint.key.to_bytes()[..32],
+                &[vault.bump]
+            ];
+            assert_account_key(self.fee_account, &vault.fee_account)?;
+            assert_account_key(self.root_account, &reward_pool.root_account)?;
+            assert_account_key(self.reward_mint, &reward_pool.liquidity_mint)?;
+            assert_account_key(self.vault, &Pubkey::create_program_address(vault_seeds, program_id)?)?
+        }
 
         let fee_amount = amount
             .checked_mul(FEE_PERCENTAGE)
@@ -63,7 +82,7 @@ impl<'a, 'b> FillVaultContext<'a, 'b> {
             self.from.clone(),
             self.vault.clone(),
             self.authority.clone(),
-            amount,
+            reward_amount,
             &[]
         )?;
 
@@ -72,7 +91,7 @@ impl<'a, 'b> FillVaultContext<'a, 'b> {
                 self.from.clone(),
                 self.fee_account.clone(),
                 self.authority.clone(),
-                amount,
+                fee_amount,
                 &[]
             )?;
         }
@@ -85,97 +104,3 @@ impl<'a, 'b> FillVaultContext<'a, 'b> {
         Ok(())
     }
 }
-
-// #[derive(Accounts)]
-// #[instruction(amount: u64)]
-// pub struct FillVault<'info> {
-//     pub config: Account<'info, Config>,
-//
-//     /// Reward pool account
-//     #[account(
-//     mut,
-//     has_one = config,
-//
-//     )]
-//     pub reward_pool: Account<'info, RewardPool>,
-//
-//     /// Mint of rewards
-//     pub reward_mint: Account<'info, Mint>,
-//
-//     /// Vault for rewards
-//     #[account(
-//     mut,
-//     seeds = [b"vault".as_ref(), reward_pool.key().as_ref(), reward_mint.key().as_ref()],
-//     bump = reward_pool.vaults
-//     .iter()
-//     .find(|&v| v.reward_mint == reward_mint.key())
-//     .ok_or(EverlendError::RewardsInvalidVault)?.bump
-//     )]
-//     pub vault: Account<'info, TokenAccount>,
-//
-//     /// Account to collect fees
-//     #[account(
-//     mut,
-//     token::mint = reward_mint,
-//     address = reward_pool.vaults
-//     .iter()
-//     .find(|&v| v.reward_mint == reward_mint.key())
-//     .ok_or(EverlendError::RewardsInvalidVault)?.fee_account
-//     )]
-//     pub fee_account: Account<'info, TokenAccount>,
-//
-//     /// Transfer authority
-//     pub authority: Signer<'info>,
-//
-//     #[account(mut)]
-//     pub from: Account<'info, TokenAccount>,
-//
-//     #[account(address = token::ID)]
-//     pub token_program: Program<'info, Token>,
-// }
-//
-// impl<'info> FillVault<'info> {
-//     fn transfer_context(&self) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
-//         CpiContext::new(
-//             self.token_program.to_account_info(),
-//             Transfer {
-//                 from: self.from.to_account_info(),
-//                 to: self.vault.to_account_info(),
-//                 authority: self.authority.to_account_info(),
-//             },
-//         )
-//     }
-//
-//     fn fee_transfer_context(&self) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
-//         CpiContext::new(
-//             self.token_program.to_account_info(),
-//             Transfer {
-//                 from: self.from.to_account_info(),
-//                 to: self.fee_account.to_account_info(),
-//                 authority: self.authority.to_account_info(),
-//             },
-//         )
-//     }
-// }
-//
-// pub fn fill_vault_handler(ctx: Context<FillVault>, amount: u64) -> Result<()> {
-//     let reward_pool = &mut ctx.accounts.reward_pool;
-//     let reward_mint = &ctx.accounts.reward_mint;
-//
-//     let fee_amount = amount
-//         .checked_mul(FEE_PERCENTAGE)
-//         .ok_or(EverlendError::MathOverflow)?
-//         .checked_div(100)
-//         .ok_or(EverlendError::MathOverflow)?;
-//
-//     let reward_amount = amount.checked_sub(fee_amount).ok_or(EverlendError::MathOverflow)?;
-//
-//     reward_pool.fill(reward_mint.key(), reward_amount)?;
-//     token::transfer(ctx.accounts.transfer_context(), reward_amount)?;
-//
-//     if fee_amount > 0 {
-//         token::transfer(ctx.accounts.fee_transfer_context(), fee_amount)?;
-//     }
-//
-//     Ok(())
-// }

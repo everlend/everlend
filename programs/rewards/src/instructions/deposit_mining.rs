@@ -6,6 +6,7 @@ use solana_program::pubkey::Pubkey;
 use everlend_utils::{AccountLoader, assert_account_key};
 use crate::state::{Mining, RewardPool};
 
+/// Instruction context
 pub struct DepositMiningContext<'a, 'b> {
     root_account: &'a AccountInfo<'b>,
     reward_pool: &'a AccountInfo<'b>,
@@ -22,7 +23,7 @@ impl<'a, 'b> DepositMiningContext<'a, 'b> {
     ) -> Result<DepositMiningContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter().enumerate();
 
-        let root_account = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let root_account = AccountLoader::next_unchecked(account_info_iter)?;
         let reward_pool = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let mining = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let user = AccountLoader::next_unchecked(account_info_iter)?;
@@ -37,6 +38,7 @@ impl<'a, 'b> DepositMiningContext<'a, 'b> {
         })
     }
 
+    /// Process instruction
     pub fn process(&self, program_id: &Pubkey, amount: u64) -> ProgramResult {
         let mut reward_pool = RewardPool::unpack(&self.reward_pool.data.borrow())?;
         let mut mining = Mining::unpack(&self.mining.data.borrow())?;

@@ -32,6 +32,7 @@ pub mod ulp_pool;
 pub mod ulp_pool_borrow_authority;
 pub mod ulp_pool_market;
 pub mod users;
+pub mod rewards;
 
 pub use collateral_pool::*;
 pub use collateral_pool_borrow_authority::*;
@@ -50,6 +51,7 @@ pub use ulp_pool::*;
 pub use ulp_pool_borrow_authority::*;
 pub use ulp_pool_market::*;
 pub use users::*;
+pub use rewards::*;
 
 use self::larix::{add_larix, TestLarix};
 
@@ -103,6 +105,11 @@ pub fn program_test() -> ProgramTest {
         processor!(everlend_registry::processor::process_instruction),
     );
     program.add_program(
+        "everlend_rewards",
+        everlend_rewards::id(),
+        processor!(everlend_rewards::processor::process_instruction),
+    );
+    program.add_program(
         "spl_token_lending",
         spl_token_lending::id(),
         processor!(spl_token_lending::processor::process_instruction),
@@ -112,7 +119,6 @@ pub fn program_test() -> ProgramTest {
     program.prefer_bpf(true);
 
     program.add_program("eld_config", eld_config::id(), None);
-    program.add_program("eld_rewards", eld_rewards::id(), None);
 
     program.prefer_bpf(false);
     program

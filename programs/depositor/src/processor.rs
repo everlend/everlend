@@ -1141,7 +1141,7 @@ impl Processor {
             let reward_transit_account =
                 Account::unpack(&reward_accounts.reward_transit_info.data.borrow())?;
 
-            cpi::rewards::fill_vault(
+            everlend_rewards::cpi::fill_vault(
                 eld_reward_program_id.key,
                 eld_config_info.clone(),
                 reward_pool_info.clone(),

@@ -1158,6 +1158,7 @@ dependencies = [
  "everlend-income-pools",
  "everlend-liquidity-oracle",
  "everlend-registry",
+ "everlend-rewards",
  "everlend-ulp",
  "everlend-utils",
  "num-derive",
@@ -1177,6 +1178,7 @@ dependencies = [
  "eld-config",
  "eld-rewards",
  "everlend-registry",
+ "everlend-rewards",
  "everlend-utils",
  "num-derive",
  "num-traits",
@@ -1241,8 +1243,6 @@ dependencies = [
  "borsh 0.9.3",
  "everlend-utils",
  "solana-program",
- "solana-program-test",
- "solana-sdk",
  "spl-token 3.2.0",
 ]
 
@@ -1251,13 +1251,13 @@ name = "everlend-tests"
 version = "0.1.0"
 dependencies = [
  "eld-config",
- "eld-rewards",
  "everlend-collateral-pool",
  "everlend-depositor",
  "everlend-general-pool",
  "everlend-income-pools",
  "everlend-liquidity-oracle",
  "everlend-registry",
+ "everlend-rewards",
  "everlend-ulp",
  "everlend-utils",
  "larix-lending",

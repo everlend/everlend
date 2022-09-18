@@ -4,17 +4,19 @@ use solana_program::program_error::ProgramError;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
+use solana_program::{system_program};
 use solana_program::sysvar::Sysvar;
 use everlend_utils::{AccountLoader, assert_account_key};
+use crate::find_mining_program_address;
 use crate::state::{Mining, RewardPool};
 
+/// Instruction context
 pub struct InitializeMiningContext<'a, 'b> {
     root_account: &'a AccountInfo<'b>,
     reward_pool: &'a AccountInfo<'b>,
     mining: &'a AccountInfo<'b>,
     user: &'a AccountInfo<'b>,
     payer: &'a AccountInfo<'b>,
-    deposit_authority: &'a AccountInfo<'b>,
     rent: &'a AccountInfo<'b>,
 }
 
@@ -26,12 +28,13 @@ impl<'a, 'b> InitializeMiningContext<'a, 'b> {
     ) -> Result<InitializeMiningContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter().enumerate();
 
-        let root_account = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let root_account = AccountLoader::next_unchecked(account_info_iter)?;
         let reward_pool = AccountLoader::next_with_owner(account_info_iter, program_id)?;
-        let mining = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        let mining = AccountLoader::next_uninitialized(account_info_iter)?;
         let user = AccountLoader::next_unchecked(account_info_iter)?;
-        let deposit_authority = AccountLoader::next_unchecked(account_info_iter)?;
         let payer = AccountLoader::next_signer(account_info_iter)?;
+        let _system_program =
+            AccountLoader::next_with_key(account_info_iter, &system_program::id())?;
         let rent = AccountLoader::next_unchecked(account_info_iter)?;
 
         Ok(InitializeMiningContext {
@@ -40,31 +43,39 @@ impl<'a, 'b> InitializeMiningContext<'a, 'b> {
             mining,
             user,
             payer,
-            deposit_authority,
             rent
         })
     }
 
+    /// Process instruction
     pub fn process(&self, program_id: &Pubkey) -> ProgramResult {
-        let reward_pool = RewardPool::unpack(&self.reward_pool.data.borrow())?;
         let rent = Rent::from_account_info(self.rent)?;
 
-        let (mining_pubkey, mining_bump) = Pubkey::find_program_address(
-            &[
-                b"mining".as_ref(),
-                self.user.key.as_ref(),
-                self.reward_pool.key.as_ref()
-            ],
-            program_id
+        let (mining_pubkey, mining_bump) = find_mining_program_address(
+            program_id,
+            self.user.key,
+            self.reward_pool.key
         );
 
-        assert_account_key(self.mining, &mining_pubkey)?;
+        {
+            let reward_pool = RewardPool::unpack(&self.reward_pool.data.borrow())?;
+
+            assert_account_key(self.root_account, &reward_pool.root_account)?;
+            assert_account_key(self.mining, &mining_pubkey)?;
+        }
+
+        let signers_seeds = &[
+            "mining".as_bytes(),
+            &self.user.key.to_bytes(),
+            &self.reward_pool.key.to_bytes(),
+            &[mining_bump]
+        ];
 
         everlend_utils::cpi::system::create_account::<Mining>(
             program_id,
-            self.user.clone(),
+            self.payer.clone(),
             self.mining.clone(),
-            &[],
+            &[signers_seeds],
             &rent,
         )?;
 
@@ -81,52 +92,3 @@ impl<'a, 'b> InitializeMiningContext<'a, 'b> {
         Ok(())
     }
 }
-
-// #[derive(Accounts)]
-// pub struct InitializeMining<'info> {
-//     pub config: Account<'info, Config>,
-//
-//     /// Reward pool account
-//     #[account(
-//     mut,
-//     has_one = config,
-//     )]
-//     pub reward_pool: Account<'info, RewardPool>,
-//
-//     /// Mining account
-//     #[account(
-//     init,
-//     seeds = [
-//     b"mining".as_ref(),
-//     user.key().as_ref(),
-//     reward_pool.key().as_ref(),
-//     ],
-//     bump,
-//     payer = payer,
-//     space = Mining::LEN,
-//     )]
-//     pub mining: Account<'info, Mining>,
-//
-//     /// CHECK: Owner of mining account
-//     pub user: UncheckedAccount<'info>,
-//
-//     #[account(mut)]
-//     pub payer: Signer<'info>,
-//
-//     pub system_program: Program<'info, System>,
-//     pub rent: Sysvar<'info, Rent>,
-// }
-//
-// pub fn initialize_mining_handler(ctx: Context<InitializeMining>) -> Result<()> {
-//     let reward_pool = &ctx.accounts.reward_pool;
-//     let mining = &mut ctx.accounts.mining;
-//     let user = &ctx.accounts.user;
-//
-//     mining.initialize(
-//         reward_pool.key(),
-//         *ctx.bumps.get("mining").unwrap(),
-//         user.key(),
-//     );
-//
-//     Ok(())
-// }

@@ -4,11 +4,13 @@ use solana_program::program_error::ProgramError;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
-use solana_program::system_program;
+use solana_program::{system_program};
 use solana_program::sysvar::{Sysvar, SysvarId};
 use everlend_utils::{AccountLoader, assert_account_key};
-use crate::state::{RootAccount, InitRewardPoolParams, RewardPool};
+use crate::find_reward_pool_program_address;
+use crate::state::{InitRewardPoolParams, RewardPool, RootAccount};
 
+/// Instruction context
 pub struct InitializePoolContext<'a, 'b> {
     root_account: &'a AccountInfo<'b>,
     reward_pool: &'a AccountInfo<'b>,
@@ -19,6 +21,7 @@ pub struct InitializePoolContext<'a, 'b> {
 }
 
 impl<'a, 'b> InitializePoolContext<'a, 'b> {
+    /// New instruction context
     pub fn new(
         _program_id: &Pubkey,
         accounts: &'a [AccountInfo<'b>],
@@ -48,25 +51,22 @@ impl<'a, 'b> InitializePoolContext<'a, 'b> {
         )
     }
 
+    /// Process instruction
     pub fn process(&self, program_id: &Pubkey) -> ProgramResult {
-        let root_account = RootAccount::init(*self.deposit_authority.key);
         let rent = Rent::from_account_info(self.rent)?;
 
-        RootAccount::pack(
-            root_account,
-            *self.root_account.data.borrow_mut(),
-        )?;
-
-        let (reward_pool_pubkey, bump) = Pubkey::find_program_address(
-            &[
-                "reward_pool".as_bytes(),
-                self.root_account.key.as_ref(),
-                self.liquidity_mint.key.as_ref()
-            ],
-            program_id
+        let (reward_pool_pubkey, bump) = find_reward_pool_program_address(
+            program_id,
+            self.root_account.key,
+            self.liquidity_mint.key
         );
 
-        assert_account_key(self.reward_pool, &reward_pool_pubkey)?;
+        {
+            let root_account = RootAccount::unpack(&self.root_account.data.borrow())?;
+
+            assert_account_key(self.payer, &root_account.authority)?;
+            assert_account_key(self.reward_pool, &reward_pool_pubkey)?;
+        }
 
         let reward_pool_seeds = &[
             "reward_pool".as_bytes(),
@@ -99,59 +99,3 @@ impl<'a, 'b> InitializePoolContext<'a, 'b> {
         Ok(())
     }
 }
-
-// #[derive(Accounts)]
-// pub struct InitializePool<'info> {
-//     #[account(constraint = config.authority == payer.key())]
-//     pub config: Account<'info, Config>,
-//
-//     /// Reward pool account
-//     #[account(
-//     init,
-//     seeds = [
-//     b"reward_pool".as_ref(),
-//     config.key().as_ref(),
-//     liquidity_mint.key().as_ref(),
-//     ],
-//     bump,
-//     payer = payer,
-//     space = RewardPool::LEN
-//     )]
-//     pub reward_pool: Account<'info, RewardPool>,
-//
-//     /// Mint of liquidity
-//     pub liquidity_mint: Account<'info, Mint>,
-//
-//     /// CHECK: Authority to executes deposits on the reward pool
-//     pub deposit_authority: UncheckedAccount<'info>,
-//
-//     #[account(mut)]
-//     pub payer: Signer<'info>,
-//
-//     #[account(address = token::ID)]
-//     pub token_program: Program<'info, Token>,
-//     pub system_program: Program<'info, System>,
-//     pub rent: Sysvar<'info, Rent>,
-// }
-//
-// pub fn initialize_pool_handler(ctx: Context<InitializePool>) -> Result<()> {
-//     let config = &ctx.accounts.config;
-//     let reward_pool = &mut ctx.accounts.reward_pool;
-//     let liquidity_mint = &ctx.accounts.liquidity_mint;
-//     let deposit_authority = &ctx.accounts.deposit_authority;
-//
-//     reward_pool.initialize(
-//         config.key(),
-//         *ctx.bumps.get("reward_pool").unwrap(),
-//         liquidity_mint.key(),
-//         deposit_authority.key(),
-//     );
-//
-//     emit!(InitializePoolEvent {
-//         config: config.key(),
-//         reward_pool: reward_pool.key(),
-//         liquidity_mint: liquidity_mint.key(),
-//     });
-//
-//     Ok(())
-// }
