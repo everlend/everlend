@@ -1,15 +1,11 @@
-use anchor_lang::AccountDeserialize;
-use eld_rewards::state::Mining;
-use everlend_utils::cpi::rewards::withdraw_mining;
+use everlend_rewards::state::Mining;
 use everlend_utils::{
     assert_account_key,
-    cpi::{self, rewards::deposit_mining},
+    cpi::{self},
     AccountLoader, EverlendError,
 };
-use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
-    program_pack::Pack, pubkey::Pubkey,
-};
+use everlend_rewards::cpi::{deposit_mining, withdraw_mining};
+use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey};
 use spl_token::state::Account;
 
 use crate::{find_pool_program_address, find_user_mining_address, state::Pool};
@@ -88,7 +84,7 @@ impl<'a, 'b> TransferDepositContext<'a, 'b> {
 
         let collateral_amount = source_account.amount;
         let reward_share =
-            Mining::try_deserialize(&mut self.mining_reward_acc.data.borrow().as_ref())?.share;
+            Mining::unpack(&mut self.mining_reward_acc.data.borrow().as_ref())?.share;
 
         if collateral_amount != reward_share {
             return Err(EverlendError::RewardAndCollateralMismatch.into());

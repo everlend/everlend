@@ -6,7 +6,8 @@ use everlend_general_pool::{
         AccountType, Pool, PoolMarket, SetPoolConfigParams, WithdrawalRequest, WithdrawalRequests,
     },
 };
-use everlend_utils::instructions::{config::initialize, rewards::initialize_pool};
+use everlend_utils::instructions::{config::initialize};
+use everlend_rewards::instruction::initialize_pool;
 use solana_client::client_error::ClientError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_sdk::{

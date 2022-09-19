@@ -1174,7 +1174,6 @@ dependencies = [
 name = "everlend-general-pool"
 version = "0.1.0"
 dependencies = [
- "anchor-lang",
  "borsh 0.9.3",
  "eld-config",
  "eld-rewards",
@@ -1252,6 +1251,7 @@ name = "everlend-tests"
 version = "0.1.0"
 dependencies = [
  "eld-config",
+ "eld-rewards",
  "everlend-collateral-pool",
  "everlend-depositor",
  "everlend-general-pool",
@@ -1287,6 +1287,7 @@ dependencies = [
  "everlend-income-pools",
  "everlend-liquidity-oracle",
  "everlend-registry",
+ "everlend-rewards",
  "everlend-utils",
  "larix-lending",
  "num-derive",
