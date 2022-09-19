@@ -102,8 +102,13 @@ pub enum EverlendError {
     #[error("Reserve threshold exceeded")]
     ReserveThreshold,
 
+    /// Reserve rates not updated
     #[error("Reserve rates have not been updated within this slot")]
     ReserveRatesStale,
+
+    /// Collateral leak
+    #[error("Returned collateral amount is less than expected")]
+    CollateralLeak,
 }
 
 impl PrintProgramError for EverlendError {
