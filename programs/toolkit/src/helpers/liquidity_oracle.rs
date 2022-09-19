@@ -55,7 +55,7 @@ pub fn init_liquidity_oracle(
     Ok(oracle_keypair.pubkey())
 }
 
-pub fn update(
+pub fn update_oracle_authority(
     config: &Config,
     oracle: Pubkey,
     authority: Keypair,

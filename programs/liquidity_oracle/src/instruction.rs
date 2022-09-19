@@ -190,3 +190,28 @@ pub fn update_reserve_rates(
         accounts,
     )
 }
+
+pub fn migrate(
+    program_id: &Pubkey,
+    liquidity_oracle: &Pubkey,
+    authority: &Pubkey,
+    token_mint: &Pubkey,
+) -> Instruction {
+    let (token_oracle, _) =
+        find_token_oracle_program_address(program_id, liquidity_oracle, token_mint);
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*liquidity_oracle, false),
+        AccountMeta::new_readonly(*token_mint, false),
+        AccountMeta::new(token_oracle, false),
+        AccountMeta::new_readonly(*authority, true),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+        AccountMeta::new_readonly(system_program::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &LiquidityOracleInstruction::Migrate {},
+        accounts,
+    )
+}
