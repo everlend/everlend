@@ -13,7 +13,9 @@ use clap::{
 use migrations::MigrationsCommand;
 use regex::Regex;
 use registry::RegistryCommand;
-use root::{TestLarixMiningRawCommand, TestQuarryMiningRawCommand, UpdateManagerCommand};
+use root::{
+    CreateTokenCommand, TestLarixMiningRawCommand, TestQuarryMiningRawCommand, UpdateManagerCommand,
+};
 use solana_clap_utils::{fee_payer::fee_payer_arg, keypair::signer_from_path};
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::commitment_config::CommitmentConfig;
@@ -104,6 +106,7 @@ fn init() -> anyhow::Result<()> {
         Box::new(MigrationsCommand),
         Box::new(UpdateManagerCommand),
         Box::new(MultisigCommand),
+        Box::new(CreateTokenCommand),
     ];
 
     let subcommands: Vec<App> = commands
