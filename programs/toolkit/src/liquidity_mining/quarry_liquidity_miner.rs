@@ -38,7 +38,7 @@ fn save_new_mining_account(
         .get_mut(token)
         .unwrap()
         .miner_vault = mining_account.pubkey();
-    initialized_accounts.save(&format!("accounts.{}.yaml", config.network))?;
+    initialized_accounts.save(config.accounts_path.as_str())?;
     Ok(())
 }
 
