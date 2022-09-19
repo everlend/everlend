@@ -11,7 +11,7 @@ pub enum RewardsInstruction {
     /// Creates and initializes a reward pool account
     ///
     /// Accounts:
-    /// [R] Root account (ex-Config program account)
+    /// [RS] Root account (ex-Config program account)
     /// [W] Reward pool account
     /// [R] Liquidity mint account
     /// [R] Deposit authority
@@ -113,7 +113,7 @@ pub fn initialize_pool(
     payer: &Pubkey,
 ) -> Instruction {
     let accounts = vec![
-        AccountMeta::new_readonly(*root_account, false),
+        AccountMeta::new(*root_account, true),
         AccountMeta::new(*reward_pool, false),
         AccountMeta::new_readonly(*liquidity_mint, false),
         AccountMeta::new_readonly(*authority, false),

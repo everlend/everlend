@@ -70,7 +70,7 @@ impl<'a, 'b> WithdrawRequestContext<'a, 'b> {
             AccountLoader::next_with_owner(account_info_iter, &everlend_rewards::id())?;
         let mining_reward_acc =
             AccountLoader::next_with_owner(account_info_iter, &everlend_rewards::id())?;
-        let everlend_config = AccountLoader::next_with_owner(account_info_iter, &eld_config::id())?;
+        let everlend_config = AccountLoader::next_with_owner(account_info_iter, &everlend_rewards::id())?;
         let everlend_rewards_program =
             AccountLoader::next_with_key(account_info_iter, &everlend_rewards::id())?;
         let rent = AccountLoader::next_with_key(account_info_iter, &Rent::id())?;

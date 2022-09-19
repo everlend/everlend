@@ -477,7 +477,7 @@ pub fn transfer_deposit(
         AccountMeta::new(*mining_reward_acc, false),
         AccountMeta::new(*destination_mining_reward_acc, false),
         AccountMeta::new_readonly(*config, false),
-        AccountMeta::new_readonly(eld_rewards::id(), false),
+        AccountMeta::new_readonly(everlend_rewards::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
     ];
 

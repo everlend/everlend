@@ -6,7 +6,6 @@ use everlend_general_pool::{
         AccountType, Pool, PoolMarket, SetPoolConfigParams, WithdrawalRequest, WithdrawalRequests,
     },
 };
-use everlend_utils::instructions::{config::initialize};
 use everlend_rewards::instruction::initialize_pool;
 use solana_client::client_error::ClientError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
@@ -137,18 +136,13 @@ pub fn create_general_pool(
             &anchor_config.pubkey().to_bytes(),
             &token_mint.to_bytes(),
         ],
-        &eld_rewards::id(),
+        &everlend_rewards::id(),
     );
 
     let tx = Transaction::new_with_payer(
         &[
-            initialize(
-                &eld_config::id(),
-                &anchor_config.pubkey(),
-                &config.fee_payer.pubkey(),
-            ),
             initialize_pool(
-                &eld_rewards::id(),
+                &everlend_rewards::id(),
                 &anchor_config.pubkey(),
                 &mining_reward_pool,
                 token_mint,

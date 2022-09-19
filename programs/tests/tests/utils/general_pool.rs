@@ -12,7 +12,6 @@ use everlend_general_pool::{
     find_withdrawal_request_program_address, find_withdrawal_requests_program_address, instruction,
     state::Pool,
 };
-use everlend_utils::instructions::{config::initialize};
 use solana_program::{
     instruction::AccountMeta, program_pack::Pack, pubkey::Pubkey, system_instruction,
     system_program, sysvar,
@@ -160,11 +159,6 @@ impl TestGeneralPool {
         // Initialize mining pool
         let tx = Transaction::new_signed_with_payer(
             &[
-                initialize(
-                    &eld_config::id(),
-                    &self.config.pubkey(),
-                    &context.payer.pubkey(),
-                ),
                 everlend_rewards::instruction::initialize_pool(
                     &everlend_rewards::id(),
                     &self.config.pubkey(),

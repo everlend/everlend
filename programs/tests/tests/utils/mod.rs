@@ -115,12 +115,6 @@ pub fn program_test() -> ProgramTest {
         processor!(spl_token_lending::processor::process_instruction),
     );
 
-    // Eld-next (remember to rebuild and upgrade the .so files)
-    program.prefer_bpf(true);
-
-    program.add_program("eld_config", eld_config::id(), None);
-
-    program.prefer_bpf(false);
     program
 }
 

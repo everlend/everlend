@@ -2,7 +2,6 @@ use solana_program::pubkey::Pubkey;
 use solana_program_test::ProgramTestContext;
 use solana_sdk::signature::{Keypair, Signer};
 use solana_sdk::transaction::Transaction;
-use everlend_utils::instructions::config::initialize;
 use crate::utils::{BanksClientResult, get_liquidity_mint};
 
 #[derive(Debug)]
@@ -46,11 +45,6 @@ impl TestRewards {
         // Initialize mining pool
         let tx = Transaction::new_signed_with_payer(
             &[
-                initialize(
-                    &eld_config::id(),
-                    &self.root_account.pubkey(),
-                    &context.payer.pubkey(),
-                ),
                 everlend_rewards::instruction::initialize_pool(
                     &everlend_rewards::id(),
                     &self.root_account.pubkey(),

@@ -1,6 +1,6 @@
 use crate::find_reward_pool_program_address;
 use crate::state::{InitRewardPoolParams, RewardPool, RootAccount};
-use everlend_utils::{assert_account_key, AccountLoader};
+use everlend_utils::{assert_account_key, AccountLoader, assert_signer};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint_deprecated::ProgramResult;
 use solana_program::program_error::ProgramError;
@@ -28,7 +28,7 @@ impl<'a, 'b> InitializePoolContext<'a, 'b> {
     ) -> Result<InitializePoolContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter().enumerate();
 
-        let root_account = AccountLoader::next_unchecked(account_info_iter)?;
+        let root_account = AccountLoader::next_uninitialized(account_info_iter)?;
         let reward_pool = AccountLoader::next_uninitialized(account_info_iter)?;
         let liquidity_mint = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let deposit_authority = AccountLoader::next_unchecked(account_info_iter)?;
@@ -59,11 +59,22 @@ impl<'a, 'b> InitializePoolContext<'a, 'b> {
         );
 
         {
-            let root_account = RootAccount::unpack(&self.root_account.data.borrow())?;
-
-            assert_account_key(self.payer, &root_account.authority)?;
+            assert_signer(self.root_account)?;
             assert_account_key(self.reward_pool, &reward_pool_pubkey)?;
         }
+
+        everlend_utils::cpi::system::create_account::<RootAccount>(
+            program_id,
+            self.payer.clone(),
+            self.root_account.clone(),
+            &[],
+            &rent
+        )?;
+        let root_account = RootAccount::init(*self.payer.key);
+        RootAccount::pack(
+            root_account,
+            *self.root_account.data.borrow_mut()
+        )?;
 
         let reward_pool_seeds = &[
             "reward_pool".as_bytes(),

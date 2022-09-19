@@ -122,7 +122,7 @@ pub fn find_user_mining_address(
             user.as_ref(),
             pool_market.as_ref(),
         ],
-        &eld_rewards::id(),
+        &everlend_rewards::id(),
     )
 }
 

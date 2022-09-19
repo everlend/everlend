@@ -13,6 +13,16 @@ pub struct RootAccount {
     pub authority: Pubkey,
 }
 
+impl RootAccount {
+    /// Init root account
+    pub fn init(authority: Pubkey) -> RootAccount {
+        RootAccount {
+            anchor_id: Default::default(),
+            authority
+        }
+    }
+}
+
 impl Sealed for RootAccount {}
 impl Pack for RootAccount {
     const LEN: usize = 8 + (32);

@@ -22,5 +22,3 @@ everlend-liquidity-oracle = { path = "../liquidity_oracle", features = [ "no-ent
 everlend-registry = { path = "../registry", features = [ "no-entrypoint" ] }
 everlend-rewards = { path = "../rewards", features = ["no-entrypoint"] }
 everlend-utils = { path = "../utils" }
-eld-rewards = { git = "ssh://git@github.com/everlend/everlend-next.git", branch = "main",  features = [ "no-entrypoint" ] }
-eld-config = { git = "ssh://git@github.com/everlend/everlend-next.git", branch = "main",  features = [ "no-entrypoint" ] }
