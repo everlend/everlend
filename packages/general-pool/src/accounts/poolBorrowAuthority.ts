@@ -46,8 +46,8 @@ export class PoolBorrowAuthority extends Account<PoolBorrowAuthorityData> {
 
   static getPDA(pool: PublicKey, borrowAuthority: PublicKey) {
     return GeneralPoolsProgram.findProgramAddress([
-      new PublicKey(pool).toBuffer(),
-      new PublicKey(borrowAuthority).toBuffer(),
+      pool.toBuffer(),
+      borrowAuthority.toBuffer(),
     ])
   }
 

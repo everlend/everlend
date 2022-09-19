@@ -59,7 +59,7 @@ impl<'a> ToolkitCommand<'a> for CreateTokenAccountsCommand {
                 .get(key)
                 .unwrap()
                 .iter()
-                .zip(initialiazed_accounts.mm_pool_markets.iter())
+                .zip(initialiazed_accounts.collateral_pool_markets.iter())
                 .filter_map(|(collateral_mint, mm_pool_market_pubkey)| {
                     collateral_mint.map(|coll_mint| (coll_mint, *mm_pool_market_pubkey))
                 })
@@ -176,7 +176,7 @@ impl<'a> ToolkitCommand<'a> for CreateTokenAccountsCommand {
         }
 
         initialiazed_accounts
-            .save(&format!("accounts.{}.yaml", config.network))
+            .save(config.accounts_path.as_str())
             .unwrap();
 
         Ok(())

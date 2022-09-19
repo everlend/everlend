@@ -37,7 +37,7 @@ fn save_new_mining_account(
         .staking_account = mining_account.pubkey();
 
     initialized_accounts
-        .save(&format!("accounts.{}.yaml", config.network))
+        .save(config.accounts_path.as_str())
         .unwrap();
     Ok(())
 }

@@ -26,28 +26,29 @@ impl<'a> ToolkitCommand<'a> for InfoCommand {
 
     fn handle(&self, config: &Config, _arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
         let default_accounts = config.get_default_accounts();
+        let initialized_accounts = config.get_initialized_accounts();
 
-        println!("fee_payer: {:?}", config.initialized_accounts.payer);
+        println!("fee_payer: {:?}", initialized_accounts.payer);
         println!("default_accounts = {:#?}", default_accounts);
-        println!("{:#?}", config.initialized_accounts);
+        println!("{:#?}", initialized_accounts);
 
         println!(
             "{:#?}",
-            get_general_pool_market(config, &config.initialized_accounts.general_pool_market)?
+            get_general_pool_market(config, &initialized_accounts.general_pool_market)?
         );
 
-        for (_, token_accounts) in config.initialized_accounts.token_accounts.iter() {
+        for (_, token_accounts) in initialized_accounts.token_accounts.iter() {
             println!("mint = {:?}", token_accounts.mint);
             let (withdraw_requests_pubkey, withdraw_requests) = get_withdrawal_requests(
                 config,
-                &config.initialized_accounts.general_pool_market,
+                &initialized_accounts.general_pool_market,
                 &token_accounts.mint,
             )?;
             println!("{:#?}", (withdraw_requests_pubkey, &withdraw_requests));
 
             let (rebalancing_pubkey, _) = find_rebalancing_program_address(
                 &everlend_depositor::id(),
-                &config.initialized_accounts.depositor,
+                &initialized_accounts.depositor,
                 &token_accounts.mint,
             );
 

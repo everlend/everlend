@@ -130,7 +130,6 @@ fn init() -> anyhow::Result<()> {
         .arg(
             arg_path(ARG_ACCOUNTS, false)
                 .global(true)
-                .default_value("accounts.yaml")
                 .help("Accounts file")
                 .short("A"),
         )
@@ -208,15 +207,17 @@ fn get_config(matches: &ArgMatches) -> Config {
     println!("fee_payer = {:?}", fee_payer);
     println!("owner = {:?}", owner);
 
-    let accounts_path = matches.value_of(ARG_ACCOUNTS).unwrap();
-    let initialized_accounts = InitializedAccounts::load(accounts_path).unwrap();
+    let accounts_path = matches
+        .value_of(ARG_ACCOUNTS)
+        .unwrap_or(&format!("accounts.{}.yaml", network))
+        .to_string();
 
     Config {
         rpc_client: RpcClient::new_with_commitment(json_rpc_url, CommitmentConfig::confirmed()),
         owner,
         fee_payer,
         network,
-        initialized_accounts,
+        accounts_path,
     }
 }
 

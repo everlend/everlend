@@ -48,7 +48,7 @@ impl<'a> ToolkitCommand<'a> for CreateDepositorCommand {
         initialiazed_accounts.rebalance_executor = rebalance_executor;
 
         initialiazed_accounts
-            .save(&format!("accounts.{}.yaml", config.network))
+            .save(config.accounts_path.as_str())
             .unwrap();
 
         Ok(())

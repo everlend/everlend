@@ -44,10 +44,11 @@ impl<'a> ToolkitCommand<'a> for UpdateManagerCommand {
         let source = keypair_of(arg_matches, ARG_SOURCE).unwrap();
         let target = keypair_of(arg_matches, ARG_TARGET).unwrap();
         let program = arg_matches.value_of(ARG_PROGRAM).unwrap();
+        let initialized_accounts = config.get_initialized_accounts();
 
         match program {
             "collateral-pool" => {
-                for p in config.initialized_accounts.collateral_pool_markets.iter() {
+                for p in initialized_accounts.collateral_pool_markets.iter() {
                     println!("Updating collateral pool manager: Pool market: {}", p);
                     collateral_pool_update_manager(config, p, &source, &target)?;
                 }
@@ -55,11 +56,11 @@ impl<'a> ToolkitCommand<'a> for UpdateManagerCommand {
             "general-pool" => {
                 println!(
                     "Updating general pool manager: Market {}",
-                    config.initialized_accounts.general_pool_market
+                    initialized_accounts.general_pool_market
                 );
                 general_pool_update_manager(
                     config,
-                    &config.initialized_accounts.general_pool_market,
+                    &initialized_accounts.general_pool_market,
                     &source,
                     &target,
                 )?;
@@ -67,11 +68,11 @@ impl<'a> ToolkitCommand<'a> for UpdateManagerCommand {
             "income-pools" => {
                 println!(
                     "Updating income pool manager: Market {}",
-                    config.initialized_accounts.income_pool_market
+                    initialized_accounts.income_pool_market
                 );
                 income_pools_update_manager(
                     config,
-                    &config.initialized_accounts.income_pool_market,
+                    &initialized_accounts.income_pool_market,
                     &source,
                     &target,
                 )?;
@@ -79,14 +80,9 @@ impl<'a> ToolkitCommand<'a> for UpdateManagerCommand {
             "registry" => {
                 println!(
                     "Updating registry manager: Registry {}",
-                    config.initialized_accounts.registry
+                    initialized_accounts.registry
                 );
-                registry_update_manager(
-                    config,
-                    &config.initialized_accounts.registry,
-                    &source,
-                    &target,
-                )?;
+                registry_update_manager(config, &initialized_accounts.registry, &source, &target)?;
             }
             _ => {
                 return Err(anyhow::anyhow!("wrong program"));
