@@ -1,10 +1,10 @@
+use crate::state::{Mining, RewardPool};
+use everlend_utils::{assert_account_key, AccountLoader};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::program_error::ProgramError;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
-use everlend_utils::{AccountLoader, assert_account_key};
-use crate::state::{Mining, RewardPool};
 
 /// Instruction context
 pub struct WithdrawMiningContext<'a, 'b> {
@@ -34,12 +34,12 @@ impl<'a, 'b> WithdrawMiningContext<'a, 'b> {
             reward_pool,
             mining,
             user,
-            deposit_authority
+            deposit_authority,
         })
     }
 
     /// Process instruction
-    pub fn process(&self, program_id: &Pubkey,  amount: u64) -> ProgramResult {
+    pub fn process(&self, program_id: &Pubkey, amount: u64) -> ProgramResult {
         let mut reward_pool = RewardPool::unpack(&self.reward_pool.data.borrow())?;
         let mut mining = Mining::unpack(&self.mining.data.borrow())?;
 
@@ -49,9 +49,9 @@ impl<'a, 'b> WithdrawMiningContext<'a, 'b> {
                     b"mining".as_ref(),
                     self.user.key.as_ref(),
                     self.reward_pool.key.as_ref(),
-                    &[mining.bump]
+                    &[mining.bump],
                 ],
-                program_id
+                program_id,
             )?;
             assert_account_key(self.mining, &mining_pubkey)?;
             assert_account_key(self.deposit_authority, &reward_pool.deposit_authority)?;
@@ -62,14 +62,8 @@ impl<'a, 'b> WithdrawMiningContext<'a, 'b> {
 
         reward_pool.withdraw(&mut mining, amount)?;
 
-        RewardPool::pack(
-            reward_pool,
-            *self.reward_pool.data.borrow_mut(),
-        )?;
-        Mining::pack(
-            mining,
-            *self.mining.data.borrow_mut(),
-        )?;
+        RewardPool::pack(reward_pool, *self.reward_pool.data.borrow_mut())?;
+        Mining::pack(mining, *self.mining.data.borrow_mut())?;
 
         Ok(())
     }

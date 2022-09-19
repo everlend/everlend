@@ -1,14 +1,14 @@
+use crate::find_mining_program_address;
+use crate::state::{Mining, RewardPool};
+use everlend_utils::{assert_account_key, AccountLoader};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::program_error::ProgramError;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
-use solana_program::{system_program};
+use solana_program::system_program;
 use solana_program::sysvar::Sysvar;
-use everlend_utils::{AccountLoader, assert_account_key};
-use crate::find_mining_program_address;
-use crate::state::{Mining, RewardPool};
 
 /// Instruction context
 pub struct InitializeMiningContext<'a, 'b> {
@@ -43,7 +43,7 @@ impl<'a, 'b> InitializeMiningContext<'a, 'b> {
             mining,
             user,
             payer,
-            rent
+            rent,
         })
     }
 
@@ -51,11 +51,8 @@ impl<'a, 'b> InitializeMiningContext<'a, 'b> {
     pub fn process(&self, program_id: &Pubkey) -> ProgramResult {
         let rent = Rent::from_account_info(self.rent)?;
 
-        let (mining_pubkey, mining_bump) = find_mining_program_address(
-            program_id,
-            self.user.key,
-            self.reward_pool.key
-        );
+        let (mining_pubkey, mining_bump) =
+            find_mining_program_address(program_id, self.user.key, self.reward_pool.key);
 
         {
             let reward_pool = RewardPool::unpack(&self.reward_pool.data.borrow())?;
@@ -68,7 +65,7 @@ impl<'a, 'b> InitializeMiningContext<'a, 'b> {
             "mining".as_bytes(),
             &self.user.key.to_bytes(),
             &self.reward_pool.key.to_bytes(),
-            &[mining_bump]
+            &[mining_bump],
         ];
 
         everlend_utils::cpi::system::create_account::<Mining>(
@@ -79,15 +76,8 @@ impl<'a, 'b> InitializeMiningContext<'a, 'b> {
             &rent,
         )?;
 
-        let mining = Mining::initialize(
-            *self.reward_pool.key,
-            mining_bump,
-            *self.user.key,
-        );
-        Mining::pack(
-            mining,
-            *self.mining.data.borrow_mut()
-        )?;
+        let mining = Mining::initialize(*self.reward_pool.key, mining_bump, *self.user.key);
+        Mining::pack(mining, *self.mining.data.borrow_mut())?;
 
         Ok(())
     }

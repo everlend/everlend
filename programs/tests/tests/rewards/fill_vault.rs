@@ -1,21 +1,13 @@
-use std::borrow::Borrow;
+use crate::utils::*;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::*;
-use solana_sdk::{
-    signer::Signer
-};
 use solana_sdk::signature::Keypair;
+use solana_sdk::signer::Signer;
 use spl_token::state::Account;
-use crate::utils::*;
+use std::borrow::Borrow;
 
-async fn setup() -> (
-    ProgramTestContext,
-    TestRewards,
-    Pubkey,
-    Pubkey,
-    Pubkey,
-) {
+async fn setup() -> (ProgramTestContext, TestRewards, Pubkey, Pubkey, Pubkey) {
     let mut env = presetup().await;
     let owner = &env.context.payer.pubkey();
 
@@ -38,49 +30,48 @@ async fn setup() -> (
         .unwrap();
 
     let rewarder = Keypair::new();
-    create_token_account(
-        &mut env.context,
-        &rewarder,
-        &mint.pubkey(),
-        owner,
-        0
-    )
+    create_token_account(&mut env.context, &rewarder, &mint.pubkey(), owner, 0)
         .await
         .unwrap();
     mint_tokens(
         &mut env.context,
         &mint.pubkey(),
         &rewarder.pubkey(),
-        1_000_000
+        1_000_000,
     )
-        .await
-        .unwrap();
+    .await
+    .unwrap();
 
-    let fee_keypair= Keypair::new();
+    let fee_keypair = Keypair::new();
     create_token_account(
         &mut env.context,
         &fee_keypair,
         &test_reward_pool.token_mint_pubkey,
         &user.pubkey(),
-        0
-    ).await.unwrap();
+        0,
+    )
+    .await
+    .unwrap();
 
     let vault = test_reward_pool
-        .add_vault(&mut env.context, &fee_keypair.pubkey()).await;
+        .add_vault(&mut env.context, &fee_keypair.pubkey())
+        .await;
 
-    (env.context, test_reward_pool, vault, fee_keypair.pubkey(), rewarder.pubkey())
+    (
+        env.context,
+        test_reward_pool,
+        vault,
+        fee_keypair.pubkey(),
+        rewarder.pubkey(),
+    )
 }
 
 #[tokio::test]
 async fn success() {
     let (mut context, test_rewards, vault, fee, rewarder) = setup().await;
 
-    test_rewards.fill_vault(
-        &mut context,
-        &fee,
-        &rewarder,
-        1_000_000,
-    )
+    test_rewards
+        .fill_vault(&mut context, &fee, &rewarder, 1_000_000)
         .await
         .unwrap();
 

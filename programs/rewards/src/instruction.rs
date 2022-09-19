@@ -48,7 +48,7 @@ pub enum RewardsInstruction {
     /// [R] Token program
     FillVault {
         /// Amount to fill
-        amount: u64
+        amount: u64,
     },
 
     /// Initializes mining account for the specified user
@@ -73,7 +73,7 @@ pub enum RewardsInstruction {
     /// [RS] Deposit authority
     DepositMining {
         /// Amount to deposit
-        amount: u64
+        amount: u64,
     },
 
     /// Withdraws amount of supply to the mining account
@@ -86,7 +86,7 @@ pub enum RewardsInstruction {
     /// [RS] Deposit authority
     WithdrawMining {
         /// Amount to withdraw
-        amount: u64
+        amount: u64,
     },
 
     /// Claims amount of rewards
@@ -100,7 +100,7 @@ pub enum RewardsInstruction {
     /// [RS] User
     /// [W] User reward token account
     /// [R] Token program
-    Claim
+    Claim,
 }
 
 /// Creates 'InitializePool' instruction.
@@ -123,11 +123,7 @@ pub fn initialize_pool(
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
 
-    Instruction::new_with_borsh(
-        *program_id,
-        &RewardsInstruction::InitializePool,
-        accounts
-    )
+    Instruction::new_with_borsh(*program_id, &RewardsInstruction::InitializePool, accounts)
 }
 
 /// Creates 'AddVault' instruction.
@@ -152,11 +148,7 @@ pub fn add_vault(
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
 
-    Instruction::new_with_borsh(
-        *program_id,
-        &RewardsInstruction::AddVault,
-        accounts
-    )
+    Instruction::new_with_borsh(*program_id, &RewardsInstruction::AddVault, accounts)
 }
 
 /// Creates 'FillVault' instruction.
@@ -186,7 +178,7 @@ pub fn fill_vault(
     Instruction::new_with_borsh(
         *program_id,
         &RewardsInstruction::FillVault { amount },
-        accounts
+        accounts,
     )
 }
 
@@ -209,11 +201,7 @@ pub fn initialize_mining(
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
 
-    Instruction::new_with_borsh(
-        *program_id,
-        &RewardsInstruction::InitializeMining,
-        accounts
-    )
+    Instruction::new_with_borsh(*program_id, &RewardsInstruction::InitializeMining, accounts)
 }
 
 /// Creates 'DepositMining' instruction.
@@ -236,8 +224,8 @@ pub fn deposit_mining(
 
     Instruction::new_with_borsh(
         *program_id,
-        &RewardsInstruction::DepositMining {amount},
-        accounts
+        &RewardsInstruction::DepositMining { amount },
+        accounts,
     )
 }
 
@@ -261,8 +249,8 @@ pub fn withdraw_mining(
 
     Instruction::new_with_borsh(
         *program_id,
-        &RewardsInstruction::WithdrawMining {amount},
-        accounts
+        &RewardsInstruction::WithdrawMining { amount },
+        accounts,
     )
 }
 
@@ -289,9 +277,5 @@ pub fn claim(
         AccountMeta::new_readonly(spl_token::id(), false),
     ];
 
-    Instruction::new_with_borsh(
-        *program_id,
-        &RewardsInstruction::Claim,
-        accounts
-    )
+    Instruction::new_with_borsh(*program_id, &RewardsInstruction::Claim, accounts)
 }

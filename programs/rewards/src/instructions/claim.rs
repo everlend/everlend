@@ -1,10 +1,10 @@
+use crate::state::{Mining, RewardPool};
+use everlend_utils::{assert_account_key, AccountLoader};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::program_error::ProgramError;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
-use everlend_utils::{AccountLoader, assert_account_key};
-use crate::state::{Mining, RewardPool};
 
 /// Instruction context
 pub struct ClaimContext<'a, 'b> {
@@ -31,21 +31,19 @@ impl<'a, 'b> ClaimContext<'a, 'b> {
         let vault = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let mining = AccountLoader::next_unchecked(account_info_iter)?;
         let user = AccountLoader::next_signer(account_info_iter)?;
-        let user_reward_token_account = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
-        let _token_program =
-            AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
+        let user_reward_token_account =
+            AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let _token_program = AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
 
-        Ok(
-            ClaimContext {
-                root_account,
-                reward_pool,
-                reward_mint,
-                vault,
-                mining,
-                user,
-                user_reward_token_account
-            }
-        )
+        Ok(ClaimContext {
+            root_account,
+            reward_pool,
+            reward_mint,
+            vault,
+            mining,
+            user,
+            user_reward_token_account,
+        })
     }
 
     /// Process instruction
@@ -67,25 +65,25 @@ impl<'a, 'b> ClaimContext<'a, 'b> {
             assert_account_key(self.reward_pool, &mining.reward_pool)?;
             assert_account_key(
                 self.reward_pool,
-                &Pubkey::create_program_address(
-                    reward_pool_seeds,
-                    program_id
-                )?
+                &Pubkey::create_program_address(reward_pool_seeds, program_id)?,
             )?;
 
-            let bump = reward_pool.vaults.iter().find(|v| {
-                &v.reward_mint == self.reward_mint.key
-            }).ok_or(ProgramError::InvalidArgument)?.bump;
+            let bump = reward_pool
+                .vaults
+                .iter()
+                .find(|v| &v.reward_mint == self.reward_mint.key)
+                .ok_or(ProgramError::InvalidArgument)?
+                .bump;
             let vault_seeds = &[
                 b"vault".as_ref(),
                 &self.reward_pool.key.to_bytes()[..32],
                 &self.reward_mint.key.to_bytes()[..32],
-                &[bump]
+                &[bump],
             ];
-            assert_account_key(self.vault, &Pubkey::create_program_address(
-                vault_seeds,
-                program_id,
-            )?)?;
+            assert_account_key(
+                self.vault,
+                &Pubkey::create_program_address(vault_seeds, program_id)?,
+            )?;
         }
 
         mining.refresh_rewards(reward_pool.vaults.iter())?;
@@ -100,13 +98,10 @@ impl<'a, 'b> ClaimContext<'a, 'b> {
             self.user_reward_token_account.clone(),
             self.reward_pool.clone(),
             amount,
-            &[reward_pool_seeds]
+            &[reward_pool_seeds],
         )?;
 
-        Mining::pack(
-            mining,
-            *self.mining.data.borrow_mut()
-        )?;
+        Mining::pack(mining, *self.mining.data.borrow_mut())?;
 
         Ok(())
     }

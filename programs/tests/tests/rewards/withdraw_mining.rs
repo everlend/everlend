@@ -1,20 +1,13 @@
-use std::borrow::Borrow;
+use crate::utils::*;
+use everlend_rewards::state::{Mining, RewardPool};
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::*;
-use solana_sdk::{
-    signer::Signer
-};
 use solana_sdk::signature::Keypair;
-use everlend_rewards::state::{Mining, RewardPool};
-use crate::utils::*;
+use solana_sdk::signer::Signer;
+use std::borrow::Borrow;
 
-async fn setup() -> (
-    ProgramTestContext,
-    TestRewards,
-    Pubkey,
-    Pubkey,
-) {
+async fn setup() -> (ProgramTestContext, TestRewards, Pubkey, Pubkey) {
     let mut env = presetup().await;
 
     let test_reward_pool = TestRewards::new(None);
@@ -45,8 +38,7 @@ async fn success() {
         .await
         .unwrap();
 
-    let reward_pool_account = get_account(&mut context, &test_rewards.mining_reward_pool)
-        .await;
+    let reward_pool_account = get_account(&mut context, &test_rewards.mining_reward_pool).await;
     let reward_pool = RewardPool::unpack(reward_pool_account.data.borrow()).unwrap();
 
     assert_eq!(reward_pool.total_share, 70);

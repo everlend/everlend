@@ -1,11 +1,11 @@
-use borsh::{BorshSerialize, BorshDeserialize, BorshSchema};
+use crate::state::Mining;
+use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+use everlend_utils::EverlendError;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::msg;
 use solana_program::program_error::ProgramError;
 use solana_program::program_pack::{IsInitialized, Pack, Sealed};
 use solana_program::pubkey::Pubkey;
-use everlend_utils::EverlendError;
-use crate::state::Mining;
 
 /// Precision for index calculation
 pub const PRECISION: u128 = 10_000_000_000_000_000;
@@ -34,9 +34,7 @@ pub struct RewardPool {
 
 impl RewardPool {
     /// Init reward pool
-    pub fn init(
-        params: InitRewardPoolParams
-    ) -> RewardPool {
+    pub fn init(params: InitRewardPoolParams) -> RewardPool {
         RewardPool {
             anchor_id: Default::default(),
             root_account: params.root_account,
@@ -44,28 +42,21 @@ impl RewardPool {
             liquidity_mint: params.liquidity_mint,
             total_share: 0,
             vaults: vec![],
-            deposit_authority: params.deposit_authority
+            deposit_authority: params.deposit_authority,
         }
     }
 
     /// Process add vault
-    pub fn add_vault(
-        &mut self,
-        reward: RewardVault,
-    ) -> ProgramResult {
+    pub fn add_vault(&mut self, reward: RewardVault) -> ProgramResult {
         self.vaults.push(reward);
 
         Ok(())
     }
 
     /// Process fill
-    pub fn fill(
-        &mut self,
-        reward_mint: Pubkey,
-        rewards: u64
-    ) -> ProgramResult {
+    pub fn fill(&mut self, reward_mint: Pubkey, rewards: u64) -> ProgramResult {
         if self.total_share == 0 {
-            return Err(EverlendError::RewardsNoDeposits.into())
+            return Err(EverlendError::RewardsNoDeposits.into());
         }
 
         let vault = self
@@ -80,7 +71,8 @@ impl RewardPool {
             .checked_div(self.total_share as u128)
             .ok_or(EverlendError::MathOverflow)?;
 
-        vault.index_with_precision = vault.index_with_precision
+        vault.index_with_precision = vault
+            .index_with_precision
             .checked_add(index)
             .ok_or(EverlendError::MathOverflow)?;
 
@@ -88,29 +80,33 @@ impl RewardPool {
     }
 
     /// Process deposit
-    pub fn deposit(
-        &mut self,
-        mining: &mut Mining,
-        amount: u64,
-    ) -> ProgramResult {
+    pub fn deposit(&mut self, mining: &mut Mining, amount: u64) -> ProgramResult {
         mining.refresh_rewards(self.vaults.iter())?;
 
-        self.total_share = self.total_share.checked_add(amount).ok_or(EverlendError::MathOverflow)?;
-        mining.share = mining.share.checked_add(amount).ok_or(EverlendError::MathOverflow)?;
+        self.total_share = self
+            .total_share
+            .checked_add(amount)
+            .ok_or(EverlendError::MathOverflow)?;
+        mining.share = mining
+            .share
+            .checked_add(amount)
+            .ok_or(EverlendError::MathOverflow)?;
 
         Ok(())
     }
 
     /// Process withdraw
-    pub fn withdraw(
-        &mut self,
-        mining: &mut Mining,
-        amount: u64,
-    ) -> ProgramResult {
+    pub fn withdraw(&mut self, mining: &mut Mining, amount: u64) -> ProgramResult {
         mining.refresh_rewards(self.vaults.iter())?;
 
-        self.total_share = self.total_share.checked_sub(amount).ok_or(EverlendError::MathOverflow)?;
-        mining.share = mining.share.checked_sub(amount).ok_or(EverlendError::MathOverflow)?;
+        self.total_share = self
+            .total_share
+            .checked_sub(amount)
+            .ok_or(EverlendError::MathOverflow)?;
+        mining.share = mining
+            .share
+            .checked_sub(amount)
+            .ok_or(EverlendError::MathOverflow)?;
 
         Ok(())
     }
@@ -172,4 +168,3 @@ impl RewardVault {
     /// 1 + 32 + 16 + 32
     pub const LEN: usize = 81;
 }
-

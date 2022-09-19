@@ -1,12 +1,12 @@
-use std::slice::Iter;
-use borsh::{BorshSerialize, BorshDeserialize, BorshSchema};
+use crate::state::{RewardVault, MAX_REWARDS, PRECISION};
+use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+use everlend_utils::EverlendError;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::msg;
 use solana_program::program_error::ProgramError;
 use solana_program::program_pack::{IsInitialized, Pack, Sealed};
 use solana_program::pubkey::Pubkey;
-use everlend_utils::EverlendError;
-use crate::state::{MAX_REWARDS, PRECISION, RewardVault};
+use std::slice::Iter;
 
 /// Mining
 #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
@@ -22,7 +22,7 @@ pub struct Mining {
     /// Mining owner
     pub owner: Pubkey,
     /// Reward indexes
-    pub indexes: Vec<RewardIndex>
+    pub indexes: Vec<RewardIndex>,
 }
 
 impl Mining {
@@ -34,7 +34,7 @@ impl Mining {
             bump,
             share: 0,
             owner,
-            indexes: vec![]
+            indexes: vec![],
         }
     }
 
@@ -70,7 +70,8 @@ impl Mining {
             let reward_index = self.reward_index_mut(vault.reward_mint);
 
             if vault.index_with_precision > reward_index.index_with_precision {
-                let rewards = vault.index_with_precision
+                let rewards = vault
+                    .index_with_precision
                     .checked_sub(reward_index.index_with_precision)
                     .ok_or(EverlendError::MathOverflow)?
                     .checked_mul(share as u128)
@@ -79,7 +80,8 @@ impl Mining {
                     .ok_or(EverlendError::MathOverflow)?;
 
                 if rewards > 0 {
-                    reward_index.rewards = reward_index.rewards
+                    reward_index.rewards = reward_index
+                        .rewards
                         .checked_add(rewards as u64)
                         .ok_or(EverlendError::MathOverflow)?;
                 }

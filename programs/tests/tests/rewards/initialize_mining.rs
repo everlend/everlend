@@ -1,17 +1,12 @@
-use std::borrow::Borrow;
+use crate::utils::*;
+use everlend_rewards::state::Mining;
 use solana_program::program_pack::Pack;
 use solana_program_test::*;
-use solana_sdk::{
-    signer::Signer
-};
 use solana_sdk::signature::Keypair;
-use everlend_rewards::state::{Mining};
-use crate::utils::*;
+use solana_sdk::signer::Signer;
+use std::borrow::Borrow;
 
-async fn setup() -> (
-    ProgramTestContext,
-    TestRewards,
-) {
+async fn setup() -> (ProgramTestContext, TestRewards) {
     let mut env = presetup().await;
     let test_reward_pool = TestRewards::new(None);
 

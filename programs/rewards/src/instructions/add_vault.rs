@@ -1,14 +1,14 @@
+use crate::find_vault_program_address;
+use everlend_utils::{assert_account_key, AccountLoader};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::program_error::ProgramError;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
-use solana_program::{system_program};
+use solana_program::system_program;
 use solana_program::sysvar::{Sysvar, SysvarId};
-use spl_token::state::{Account};
-use everlend_utils::{AccountLoader, assert_account_key};
-use crate::find_vault_program_address;
+use spl_token::state::Account;
 
 use crate::state::{RewardPool, RewardVault, RootAccount};
 
@@ -37,8 +37,7 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
         let vault = AccountLoader::next_uninitialized(account_info_iter)?;
         let fee_account = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let payer = AccountLoader::next_signer(account_info_iter)?;
-        let _token_program =
-            AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
+        let _token_program = AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
         let _system_program =
             AccountLoader::next_with_key(account_info_iter, &system_program::id())?;
         let rent = AccountLoader::next_with_key(account_info_iter, &Rent::id())?;
@@ -50,7 +49,7 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
             vault,
             fee_account,
             payer,
-            rent
+            rent,
         })
     }
 
@@ -58,11 +57,8 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
     pub fn process(&self, program_id: &Pubkey) -> ProgramResult {
         let mut reward_pool = RewardPool::unpack(&self.reward_pool.data.borrow())?;
 
-        let (vault_pubkey, bump) = find_vault_program_address(
-            program_id,
-            &self.reward_pool.key,
-            &self.reward_mint.key,
-        );
+        let (vault_pubkey, bump) =
+            find_vault_program_address(program_id, &self.reward_pool.key, &self.reward_mint.key);
 
         {
             let root_account = RootAccount::unpack(&self.root_account.data.borrow())?;
@@ -73,20 +69,25 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
 
         let rent = Rent::from_account_info(self.rent)?;
 
-        let signers_seeds = &[b"vault".as_ref(), self.reward_pool.key.as_ref(), self.reward_mint.key.as_ref(), &[bump]];
+        let signers_seeds = &[
+            b"vault".as_ref(),
+            self.reward_pool.key.as_ref(),
+            self.reward_mint.key.as_ref(),
+            &[bump],
+        ];
 
         everlend_utils::cpi::system::create_account::<Account>(
             &spl_token::id(),
             self.payer.clone(),
             self.vault.clone(),
             &[signers_seeds],
-            &rent
+            &rent,
         )?;
         everlend_utils::cpi::spl_token::initialize_account(
             self.vault.clone(),
             self.reward_mint.clone(),
             self.reward_pool.clone(),
-            self.rent.clone()
+            self.rent.clone(),
         )?;
 
         reward_pool.add_vault(RewardVault {
@@ -96,10 +97,7 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
             ..Default::default()
         })?;
 
-        RewardPool::pack(
-            reward_pool,
-            *self.reward_pool.data.borrow_mut(),
-        )?;
+        RewardPool::pack(reward_pool, *self.reward_pool.data.borrow_mut())?;
 
         Ok(())
     }

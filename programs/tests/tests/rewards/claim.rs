@@ -1,13 +1,11 @@
-use std::borrow::Borrow;
+use crate::utils::*;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::*;
-use solana_sdk::{
-    signer::Signer
-};
 use solana_sdk::signature::Keypair;
+use solana_sdk::signer::Signer;
 use spl_token::state::Account;
-use crate::utils::*;
+use std::borrow::Borrow;
 
 async fn setup() -> (
     ProgramTestContext,
@@ -39,49 +37,49 @@ async fn setup() -> (
         .unwrap();
 
     let rewarder = Keypair::new();
-    create_token_account(
-        &mut env.context,
-        &rewarder,
-        &mint.pubkey(),
-        owner,
-        0
-    )
+    create_token_account(&mut env.context, &rewarder, &mint.pubkey(), owner, 0)
         .await
         .unwrap();
     mint_tokens(
         &mut env.context,
         &mint.pubkey(),
         &rewarder.pubkey(),
-        1_000_000
+        1_000_000,
     )
-        .await
-        .unwrap();
+    .await
+    .unwrap();
 
-    let fee_keypair= Keypair::new();
+    let fee_keypair = Keypair::new();
     create_token_account(
         &mut env.context,
         &fee_keypair,
         &test_reward_pool.token_mint_pubkey,
         &user.pubkey(),
-        0
-    ).await.unwrap();
+        0,
+    )
+    .await
+    .unwrap();
 
     test_reward_pool
-        .add_vault(&mut env.context, &fee_keypair.pubkey()).await;
+        .add_vault(&mut env.context, &fee_keypair.pubkey())
+        .await;
 
-    (env.context, test_reward_pool, user, user_mining, fee_keypair.pubkey(), rewarder.pubkey())
+    (
+        env.context,
+        test_reward_pool,
+        user,
+        user_mining,
+        fee_keypair.pubkey(),
+        rewarder.pubkey(),
+    )
 }
 
 #[tokio::test]
 async fn success() {
     let (mut context, test_rewards, user, user_mining, fee, rewarder) = setup().await;
 
-    test_rewards.fill_vault(
-        &mut context,
-        &fee,
-        &rewarder,
-        1_000_000,
-    )
+    test_rewards
+        .fill_vault(&mut context, &fee, &rewarder, 1_000_000)
         .await
         .unwrap();
 
@@ -91,17 +89,13 @@ async fn success() {
         &user_reward,
         &test_rewards.token_mint_pubkey,
         &user.pubkey(),
-        0
+        0,
     )
-        .await
-        .unwrap();
+    .await
+    .unwrap();
 
-    test_rewards.claim(
-        &mut context,
-        &user,
-        &user_mining,
-        &user_reward.pubkey(),
-    )
+    test_rewards
+        .claim(&mut context, &user, &user_mining, &user_reward.pubkey())
         .await
         .unwrap();
 
@@ -124,12 +118,8 @@ async fn with_two_users() {
         .await
         .unwrap();
 
-    test_rewards.fill_vault(
-        &mut context,
-        &fee,
-        &rewarder,
-        1_000_000,
-    )
+    test_rewards
+        .fill_vault(&mut context, &fee, &rewarder, 1_000_000)
         .await
         .unwrap();
 
@@ -139,17 +129,13 @@ async fn with_two_users() {
         &user_reward1,
         &test_rewards.token_mint_pubkey,
         &user1.pubkey(),
-        0
+        0,
     )
-        .await
-        .unwrap();
+    .await
+    .unwrap();
 
-    test_rewards.claim(
-        &mut context,
-        &user1,
-        &user_mining1,
-        &user_reward1.pubkey(),
-    )
+    test_rewards
+        .claim(&mut context, &user1, &user_mining1, &user_reward1.pubkey())
         .await
         .unwrap();
 
@@ -159,17 +145,13 @@ async fn with_two_users() {
         &user_reward2,
         &test_rewards.token_mint_pubkey,
         &user2.pubkey(),
-        0
+        0,
     )
-        .await
-        .unwrap();
+    .await
+    .unwrap();
 
-    test_rewards.claim(
-        &mut context,
-        &user2,
-        &user_mining2,
-        &user_reward2.pubkey(),
-    )
+    test_rewards
+        .claim(&mut context, &user2, &user_mining2, &user_reward2.pubkey())
         .await
         .unwrap();
 

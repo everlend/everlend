@@ -2,11 +2,11 @@
 
 //! Rewards contract
 
-pub mod state;
-pub mod instructions;
-pub mod instruction;
-pub mod processor;
 pub mod cpi;
+pub mod instruction;
+pub mod instructions;
+pub mod processor;
+pub mod state;
 
 #[cfg(not(feature = "no-entrypoint"))]
 pub mod entrypoint;
@@ -23,7 +23,11 @@ pub fn find_mining_program_address(
     reward_pool: &Pubkey,
 ) -> (Pubkey, u8) {
     Pubkey::find_program_address(
-        &["mining".as_bytes(), &user.to_bytes(), &reward_pool.to_bytes()],
+        &[
+            "mining".as_bytes(),
+            &user.to_bytes(),
+            &reward_pool.to_bytes(),
+        ],
         program_id,
     )
 }
@@ -35,8 +39,12 @@ pub fn find_vault_program_address(
     reward_mint: &Pubkey,
 ) -> (Pubkey, u8) {
     Pubkey::find_program_address(
-        &["vault".as_bytes(), &reward_pool.to_bytes(), &reward_mint.to_bytes()],
-        program_id
+        &[
+            "vault".as_bytes(),
+            &reward_pool.to_bytes(),
+            &reward_mint.to_bytes(),
+        ],
+        program_id,
     )
 }
 
@@ -50,8 +58,8 @@ pub fn find_reward_pool_program_address(
         &[
             "reward_pool".as_bytes(),
             &root_account.to_bytes(),
-            &liquidity_mint.to_bytes()
+            &liquidity_mint.to_bytes(),
         ],
-        program_id
+        program_id,
     )
 }
