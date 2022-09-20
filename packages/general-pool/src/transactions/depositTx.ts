@@ -8,6 +8,7 @@ import {
 import BN from 'bn.js'
 import { Borsh } from '@everlend/common'
 import { GeneralPoolsProgram } from '../program'
+import { RewardProgram } from '../rewardProgram'
 
 export class DepositTxData extends Borsh.Data<{ amount: BN }> {
   static readonly SCHEMA = this.struct([
@@ -29,7 +30,6 @@ type DepositTxParams = {
   rewardPool: PublicKey
   rewardAccount: PublicKey
   config: PublicKey
-  rewardProgramId: PublicKey
   poolMarketAuthority: PublicKey
   amount: BN
 }
@@ -49,7 +49,6 @@ export class DepositTx extends Transaction {
       rewardPool,
       rewardAccount,
       config,
-      rewardProgramId,
       poolMarketAuthority,
       amount,
     } = params
@@ -71,7 +70,7 @@ export class DepositTx extends Transaction {
           { pubkey: rewardPool, isSigner: false, isWritable: true },
           { pubkey: rewardAccount, isSigner: false, isWritable: true },
           { pubkey: config, isSigner: false, isWritable: false },
-          { pubkey: rewardProgramId, isSigner: false, isWritable: false },
+          { pubkey: RewardProgram.PUBKEY, isSigner: false, isWritable: false },
           { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
         ],
         programId: GeneralPoolsProgram.PUBKEY,

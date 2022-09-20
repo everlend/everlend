@@ -8,46 +8,37 @@ import {
 } from '@solana/web3.js'
 import BN from 'bn.js'
 import { Borsh } from '@everlend/common'
-import { GeneralPoolsProgram } from '../program'
+import { RewardProgram } from '../rewardProgram'
 
 type InitializeMiningTxParams = {
-  poolMarket: PublicKey
-  pool: PublicKey
-  poolMintATA: PublicKey
-  config: PublicKey
+  rootAccount: PublicKey
   rewardPool: PublicKey
   mining: PublicKey
   user: PublicKey
-  rewardProgramId: PublicKey
 }
 
 export class InitializeMiningData extends Borsh.Data<{ amount: BN }> {
   static readonly SCHEMA = this.struct([['instruction', 'u8']])
 
-  instruction = 13
+  instruction = 3
 }
 
 export class InitializeMining extends Transaction {
   constructor(options: TransactionCtorFields, params: InitializeMiningTxParams) {
     super(options)
     const { feePayer } = options
-    const { pool, poolMarket, poolMintATA, config, rewardPool, rewardProgramId, mining, user } =
-      params
+    const { rootAccount, rewardPool, mining, user } = params
 
     const data = InitializeMiningData.serialize()
 
     this.add(
       new TransactionInstruction({
         keys: [
-          { pubkey: poolMarket, isSigner: false, isWritable: false },
-          { pubkey: pool, isSigner: false, isWritable: false },
-          { pubkey: poolMintATA, isSigner: false, isWritable: false },
-          { pubkey: user, isSigner: false, isWritable: false },
-          { pubkey: feePayer, isSigner: false, isWritable: true },
+          { pubkey: rootAccount, isSigner: false, isWritable: false },
           { pubkey: rewardPool, isSigner: false, isWritable: true },
           { pubkey: mining, isSigner: false, isWritable: true },
-          { pubkey: config, isSigner: false, isWritable: false },
-          { pubkey: rewardProgramId, isSigner: false, isWritable: false },
+          { pubkey: user, isSigner: false, isWritable: false },
+          { pubkey: feePayer, isSigner: true, isWritable: false },
           {
             pubkey: SystemProgram.programId,
             isSigner: false,
@@ -55,7 +46,7 @@ export class InitializeMining extends Transaction {
           },
           { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
         ],
-        programId: GeneralPoolsProgram.PUBKEY,
+        programId: RewardProgram.PUBKEY,
         data,
       }),
     )

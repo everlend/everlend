@@ -9,9 +9,11 @@ import {
 } from '@solana/web3.js'
 import BN from 'bn.js'
 import {
+  Mining,
   Pool,
   PoolBorrowAuthority,
   PoolMarket,
+  RewardPool,
   UserWithdrawalRequest,
   WithdrawalRequestsState,
 } from './accounts'
@@ -33,6 +35,7 @@ import {
 } from './transactions'
 import { Buffer } from 'buffer'
 import { InitializeMining } from './transactions/initializeMiningTx'
+import { ClaimTx } from './transactions'
 
 /** The type is returned by actions, e.g. [[prepareDepositTx]] or [[prepareWithdrawalRequestTx]]. */
 export type ActionResult = {
@@ -138,7 +141,6 @@ export const prepareCreatePoolTx = async (
  * @param actionOptions
  * @param pool the general pool public key for a specific token, e.g. there can be a general pool for USDT or USDC etc.
  * @param amount the amount of tokens in lamports to deposit.
- * @param rewardProgramId reward program id
  * @param config const
  * @param rewardPool public key of reward pool
  * @param rewardAccount public key of user reward account
@@ -153,7 +155,6 @@ export const prepareDepositTx = async (
   { connection, payerPublicKey }: ActionOptions,
   pool: PublicKey,
   amount: BN,
-  rewardProgramId: PublicKey,
   config: PublicKey,
   rewardPool: PublicKey,
   rewardAccount: PublicKey,
@@ -230,7 +231,6 @@ export const prepareDepositTx = async (
         rewardPool,
         rewardAccount,
         config,
-        rewardProgramId,
         poolMarketAuthority,
         amount,
       },
@@ -254,7 +254,6 @@ export const prepareDepositTx = async (
  * @param actionOptions
  * @param pool the general pool public key for a specific token, e.g. there can be a general pool for USDT or USDC etc.
  * @param collateralAmount the amount of collateral tokens in lamports which will be taken from a user.
- * @param rewardProgramId reward program id
  * @param config const
  * @param rewardPool public key of reward pool
  * @param rewardAccount public key of user reward account
@@ -269,7 +268,6 @@ export const prepareWithdrawalRequestTx = async (
   { connection, payerPublicKey }: ActionOptions,
   pool: PublicKey,
   collateralAmount: BN,
-  rewardProgramId: PublicKey,
   config: PublicKey,
   rewardPool: PublicKey,
   rewardAccount: PublicKey,
@@ -323,7 +321,6 @@ export const prepareWithdrawalRequestTx = async (
         collateralAmount,
         rewardPool,
         rewardAccount,
-        rewardProgramId,
         config,
       },
     ),
@@ -494,42 +491,22 @@ export const prepareRepayTx = async (
 }
 
 export const prepareInititalizeMining = async (
-  { connection, payerPublicKey }: ActionOptions,
+  { payerPublicKey }: ActionOptions,
   rewardPool: PublicKey,
-  rewardAccount: PublicKey,
-  config: PublicKey,
-  rewardProgramId: PublicKey,
-  pool: PublicKey,
-  poolMarket: PublicKey,
-  poolMint: PublicKey,
-  poolMintATA: PublicKey,
+  rootAccount: PublicKey,
 ): Promise<ActionResult> => {
   const tx = new Transaction()
 
-  if (!(await connection.getAccountInfo(poolMintATA))) {
-    tx.add(
-      new CreateAssociatedTokenAccount(
-        { feePayer: payerPublicKey },
-        {
-          associatedTokenAddress: poolMintATA,
-          tokenMint: new PublicKey(poolMint),
-        },
-      ),
-    )
-  }
+  const mining = await Mining.getPDA(payerPublicKey, rewardPool)
 
   tx.add(
     new InitializeMining(
       { feePayer: payerPublicKey },
       {
-        config,
+        rootAccount,
         rewardPool,
-        mining: rewardAccount,
+        mining,
         user: payerPublicKey,
-        rewardProgramId,
-        pool,
-        poolMarket,
-        poolMintATA,
       },
     ),
   )
@@ -549,12 +526,11 @@ export const prepareInititalizeMining = async (
  * @param rewardAccount public key of user reward account
  * @param destinationRewardAccount public key of destination user reward account
  * @param config const
- * @param rewardProgramId reward program id
  *
  * @returns the object with a prepared transfer transaction.
  */
 export const prepareTransferDepositTx = async (
-  { connection, payerPublicKey }: ActionOptions,
+  { payerPublicKey }: ActionOptions,
   pool: PublicKey,
   source: PublicKey,
   destination: PublicKey,
@@ -563,7 +539,6 @@ export const prepareTransferDepositTx = async (
   rewardAccount: PublicKey,
   destinationRewardAccount: PublicKey,
   config: PublicKey,
-  rewardProgramId: PublicKey,
 ): Promise<ActionResult> => {
   const tx = new Transaction()
 
@@ -579,7 +554,35 @@ export const prepareTransferDepositTx = async (
         rewardAccount,
         destinationRewardAccount,
         config,
-        rewardProgramId,
+      },
+    ),
+  )
+
+  return { tx }
+}
+
+export const prepareClaimTx = async (
+  { payerPublicKey }: ActionOptions,
+  rootAccount: PublicKey,
+  rewardPool: PublicKey,
+  rewardMint: PublicKey,
+  userRewardTokenAccount: PublicKey,
+): Promise<ActionResult> => {
+  const tx = new Transaction()
+
+  const mining = await Mining.getPDA(payerPublicKey, rewardPool)
+  const vault = await RewardPool.getVaultPDA(rewardMint, rewardPool)
+
+  tx.add(
+    new ClaimTx(
+      { feePayer: payerPublicKey },
+      {
+        rootAccount,
+        rewardPool,
+        rewardMint,
+        vault,
+        mining,
+        userRewardTokenAccount,
       },
     ),
   )
