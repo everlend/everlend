@@ -239,15 +239,20 @@ pub fn depositor_withdraw(
 pub fn migrate_depositor(
     config: &Config,
     depositor: &Pubkey,
-    _registry: &Pubkey,
-    _new_registry: &Pubkey,
+    registry: &Pubkey,
+    liquidity_mint: &Pubkey,
 ) -> Result<(), ClientError> {
-    println!("Depositor: {}", depositor);
+    let (rebalancing, _) =
+        find_rebalancing_program_address(&everlend_depositor::id(), depositor, liquidity_mint);
+
     let tx = Transaction::new_with_payer(
         &[everlend_depositor::instruction::migrate_depositor(
             &everlend_depositor::id(),
             depositor,
+            registry,
             &config.fee_payer.pubkey(),
+            &rebalancing,
+            liquidity_mint,
         )],
         Some(&config.fee_payer.pubkey()),
     );

@@ -26,7 +26,7 @@ impl<'a> ToolkitCommand<'a> for IncomePoolCommand {
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
-        let (cmd_name, _) = arg_matches.unwrap().subcommand();
+        let (cmd_name, arg_matches) = arg_matches.unwrap().subcommand();
         println!("{}", cmd_name);
 
         let cmd = self

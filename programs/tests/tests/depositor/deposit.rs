@@ -29,7 +29,7 @@ async fn setup() -> (
     LiquidityProvider,
     TestDepositor,
     TestLiquidityOracle,
-    TestTokenDistribution,
+    TestTokenOracle,
     DistributionArray,
     Pubkey,
 ) {
@@ -124,15 +124,14 @@ async fn setup() -> (
     let mut distribution = DistributionArray::default();
     distribution[0] = 500_000_000u64; // 50%
 
-    let test_token_distribution =
-        TestTokenDistribution::new(general_pool.token_mint_pubkey, distribution);
+    let test_token_oracle = TestTokenOracle::new(general_pool.token_mint_pubkey, distribution);
 
-    test_token_distribution
+    test_token_oracle
         .init(&mut env.context, &test_liquidity_oracle, payer_pubkey)
         .await
         .unwrap();
 
-    test_token_distribution
+    test_token_oracle
         .update(
             &mut env.context,
             &test_liquidity_oracle,
@@ -213,6 +212,7 @@ async fn setup() -> (
             &general_pool,
             &test_liquidity_oracle,
             false,
+            DistributionArray::default(),
         )
         .await
         .unwrap();
@@ -230,7 +230,7 @@ async fn setup() -> (
         liquidity_provider,
         test_depositor,
         test_liquidity_oracle,
-        test_token_distribution,
+        test_token_oracle,
         distribution,
         mining_acc,
     )
@@ -326,7 +326,7 @@ async fn success_increased_liquidity() {
         liquidity_provider,
         test_depositor,
         test_liquidity_oracle,
-        test_token_distribution,
+        test_token_oracle,
         distribution,
         mining_acc,
     ) = setup().await;
@@ -361,7 +361,7 @@ async fn success_increased_liquidity() {
 
     // 2. Update token distribution
 
-    test_token_distribution
+    test_token_oracle
         .update(
             &mut context,
             &test_liquidity_oracle,
@@ -393,6 +393,7 @@ async fn success_increased_liquidity() {
             &general_pool,
             &test_liquidity_oracle,
             false,
+            DistributionArray::default(),
         )
         .await
         .unwrap();
