@@ -7,7 +7,6 @@ use solana_program::program_pack::Pack;
 use solana_program::system_instruction;
 use solana_sdk::transaction::Transaction;
 use solana_sdk::{signature::Keypair, signer::Signer};
-use spl_associated_token_account::get_associated_token_address;
 use spl_token::instruction::AuthorityType;
 
 const ARG_TOKEN_MINT: &str = "mint";
@@ -51,14 +50,8 @@ impl<'a> ToolkitCommand<'a> for CreateTokenCommand {
         let metadata_symbol = String::from("TSTST");
         let metadata_uri = String::from("http://test.com");
 
-        let multisig_token_acc = get_associated_token_address(&multisig, &mint.pubkey());
-
-        // spl_token::instruction::initialize_account(
-        //     native_sol_context.unwrap_sol.clone(),
-        //     native_sol_context.token_mint.clone(),
-        //     self.pool_market_authority.clone(),
-        //     native_sol_context.rent.clone(),
-        // )?;
+        let multisig_token_acc =
+            spl_associated_token_account::get_associated_token_address(&multisig, &mint.pubkey());
 
         let metadata_account =
             find_metadata_program_address(&mpl_token_metadata::id(), &mint.pubkey());
@@ -66,10 +59,6 @@ impl<'a> ToolkitCommand<'a> for CreateTokenCommand {
         let mint_rent = config
             .rpc_client
             .get_minimum_balance_for_rent_exemption(spl_token::state::Mint::LEN)?;
-
-        let token_acc_rent = config
-            .rpc_client
-            .get_minimum_balance_for_rent_exemption(spl_token::state::Account::LEN)?;
 
         let tx = Transaction::new_with_payer(
             &[
@@ -80,13 +69,6 @@ impl<'a> ToolkitCommand<'a> for CreateTokenCommand {
                     spl_token::state::Mint::LEN as u64,
                     &spl_token::id(),
                 ),
-                system_instruction::create_account(
-                    &config.fee_payer.pubkey(),
-                    &multisig_token_acc,
-                    token_acc_rent,
-                    spl_token::state::Account::LEN as u64,
-                    &spl_token::id(),
-                ),
                 spl_token::instruction::initialize_mint(
                     &spl_token::id(),
                     &mint.pubkey(),
@@ -94,6 +76,11 @@ impl<'a> ToolkitCommand<'a> for CreateTokenCommand {
                     None,
                     decimals,
                 )?,
+                spl_associated_token_account::create_associated_token_account(
+                    &config.fee_payer.pubkey(),
+                    &multisig,
+                    &mint.pubkey(),
+                ),
                 spl_token::instruction::mint_to(
                     &spl_token::id(),
                     &mint.pubkey(),

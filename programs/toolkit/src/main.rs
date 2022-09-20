@@ -1,11 +1,7 @@
 use std::path::PathBuf;
 use std::process::exit;
 
-use crate::accounts::{
-    AddReserveLiquidityCommand, CreateAccountsCommand, CreateTokenAccountsCommand, InfoCommand,
-    InfoReserveLiquidityCommand, InitQuarryMiningAccountsCommand, SaveLarixAccountsCommand,
-    SaveQuarryAccountsCommand,
-};
+use accounts::AccountsCommand;
 use clap::{
     crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, ArgMatches,
     SubCommand,
@@ -91,19 +87,12 @@ fn init() -> anyhow::Result<()> {
         Box::new(IncomePoolCommand),
         Box::new(LiquidityOracleCommand),
         Box::new(DepositorCommand),
-        Box::new(SaveLarixAccountsCommand),
         Box::new(TestLarixMiningRawCommand),
-        Box::new(SaveQuarryAccountsCommand),
-        Box::new(InitQuarryMiningAccountsCommand),
         Box::new(TestQuarryMiningRawCommand),
-        Box::new(CreateTokenAccountsCommand),
-        Box::new(AddReserveLiquidityCommand),
         Box::new(CancelWithdrawRequestCommand),
-        Box::new(InfoReserveLiquidityCommand),
-        Box::new(CreateAccountsCommand),
-        Box::new(InfoCommand),
         Box::new(TestCommand),
         Box::new(MigrationsCommand),
+        Box::new(AccountsCommand),
         Box::new(UpdateManagerCommand),
         Box::new(MultisigCommand),
         Box::new(CreateTokenCommand),
