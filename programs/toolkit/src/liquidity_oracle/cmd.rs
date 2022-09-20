@@ -1,4 +1,4 @@
-use super::{CreateLiquidityOracleCommand, UpdateAuthorityCommand};
+use super::{CreateLiquidityOracleCommand, GetTokenOracleAccountCommand, UpdateAuthorityCommand};
 use crate::{utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 
@@ -22,11 +22,12 @@ impl<'a> ToolkitCommand<'a> for LiquidityOracleCommand {
         vec![
             Box::new(CreateLiquidityOracleCommand),
             Box::new(UpdateAuthorityCommand),
+            Box::new(GetTokenOracleAccountCommand),
         ]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
-        let (cmd_name, _) = arg_matches.unwrap().subcommand();
+        let (cmd_name, arg_matches) = arg_matches.unwrap().subcommand();
         println!("{}", cmd_name);
 
         let cmd = self

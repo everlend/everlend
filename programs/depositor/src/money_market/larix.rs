@@ -1,6 +1,6 @@
 use super::{CollateralStorage, MoneyMarket};
 use crate::state::MiningType;
-use everlend_utils::{assert_account_key, cpi::larix};
+use everlend_utils::{assert_account_key, cpi::larix, EverlendError};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     program_error::ProgramError,
@@ -163,10 +163,8 @@ impl<'a> MoneyMarket<'a> for Larix<'a> {
         let collateral_amount =
             Account::unpack_unchecked(&collateral_transit.data.borrow())?.amount;
 
-        // TODO check collateral_amount
         if collateral_amount == 0 {
-            // return Ok(collateral_amount);
-            return Ok(0);
+            return Err(EverlendError::CollateralLeak.into());
         }
 
         self.deposit_collateral_tokens(

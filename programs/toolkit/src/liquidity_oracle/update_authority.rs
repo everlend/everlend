@@ -1,4 +1,4 @@
-use crate::helpers::update;
+use crate::helpers::update_oracle_authority;
 use crate::{arg_keypair, Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 use solana_clap_utils::input_parsers::keypair_of;
@@ -47,7 +47,7 @@ impl<'a> ToolkitCommand<'a> for UpdateAuthorityCommand {
             new_authority.pubkey()
         );
 
-        update(
+        update_oracle_authority(
             config,
             initialiazed_accounts.liquidity_oracle,
             authority,

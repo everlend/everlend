@@ -1,8 +1,8 @@
 use super::{get_account, BanksClientResult};
 
 use everlend_liquidity_oracle::{
-    find_token_distribution_program_address, instruction, state::DistributionArray,
-    state::LiquidityOracle, state::TokenDistribution,
+    find_token_oracle_program_address, instruction, state::DistributionArray,
+    state::LiquidityOracle, state::TokenOracle,
 };
 use solana_program_test::*;
 use solana_sdk::pubkey::Pubkey;
@@ -73,15 +73,15 @@ impl TestLiquidityOracle {
     }
 }
 
-pub struct TestTokenDistribution {
+pub struct TestTokenOracle {
     pub keypair: Keypair,
     pub token_mint: Pubkey,
     pub distribution: DistributionArray,
 }
 
-impl TestTokenDistribution {
+impl TestTokenOracle {
     pub fn new(token_mint: Pubkey, distribution_array: DistributionArray) -> Self {
-        TestTokenDistribution {
+        TestTokenOracle {
             keypair: Keypair::new(),
             token_mint,
             distribution: distribution_array,
@@ -95,7 +95,7 @@ impl TestTokenDistribution {
         authority: Pubkey,
     ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
-            &[instruction::create_token_distribution(
+            &[instruction::create_token_oracle(
                 &everlend_liquidity_oracle::id(),
                 &liquidity_oracle.keypair.pubkey(),
                 &authority,
@@ -118,7 +118,7 @@ impl TestTokenDistribution {
         distribution: DistributionArray,
     ) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
-            &[instruction::update_token_distribution(
+            &[instruction::update_liquidity_distribution(
                 &everlend_liquidity_oracle::id(),
                 &liquidity_oracle.keypair.pubkey(),
                 &authority,
@@ -133,19 +133,42 @@ impl TestTokenDistribution {
         context.banks_client.process_transaction(tx).await
     }
 
+    pub async fn update_reserve_rates(
+        &self,
+        context: &mut ProgramTestContext,
+        liquidity_oracle: &TestLiquidityOracle,
+        authority: Pubkey,
+        reserve_rates: DistributionArray,
+    ) -> BanksClientResult<()> {
+        let tx = Transaction::new_signed_with_payer(
+            &[instruction::update_reserve_rates(
+                &everlend_liquidity_oracle::id(),
+                &liquidity_oracle.keypair.pubkey(),
+                &authority,
+                &self.token_mint,
+                reserve_rates,
+            )],
+            Some(&context.payer.pubkey()),
+            &[&context.payer],
+            context.last_blockhash,
+        );
+
+        context.banks_client.process_transaction(tx).await
+    }
+
     pub async fn get_data(
         &self,
         context: &mut ProgramTestContext,
         program_id: &Pubkey,
         liquidity_oracle: &TestLiquidityOracle,
-    ) -> TokenDistribution {
-        let (token_distribution, _) = find_token_distribution_program_address(
+    ) -> TokenOracle {
+        let (token_oracle, _) = find_token_oracle_program_address(
             program_id,
             &liquidity_oracle.keypair.pubkey(),
             &self.token_mint,
         );
 
-        let account = get_account(context, &token_distribution).await;
-        TokenDistribution::unpack_unchecked(&account.data).unwrap()
+        let account = get_account(context, &token_oracle).await;
+        TokenOracle::unpack_unchecked(&account.data).unwrap()
     }
 }

@@ -60,9 +60,9 @@ pub enum EverlendError {
     #[error("Rebalancing: Amount does not match")]
     InvalidRebalancingAmount,
 
-    /// Token distribution is stale
-    #[error("Rebalancing: Token distribution is stale")]
-    TokenDistributionIsStale,
+    /// Liquidity distribution is stale
+    #[error("Rebalancing: Liquidity distribution is stale")]
+    LiquidityDistributionStale,
 
     /// Income has already been refreshed recently
     #[error("Rebalancing: Income has already been refreshed recently")]
@@ -101,6 +101,14 @@ pub enum EverlendError {
     /// Reserve threshold exceeded
     #[error("Reserve threshold exceeded")]
     ReserveThreshold,
+
+    /// Reserve rates not updated
+    #[error("Reserve rates have not been updated within this slot")]
+    ReserveRatesStale,
+
+    /// Collateral leak
+    #[error("Returned collateral amount is less than expected")]
+    CollateralLeak,
 }
 
 impl PrintProgramError for EverlendError {
