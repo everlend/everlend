@@ -45,10 +45,10 @@ impl<'a> ToolkitCommand<'a> for CreateTokenCommand {
         let multisig = pubkey_of(arg_matches, ARG_MULTISIG_ADDR).unwrap();
 
         let decimals: u8 = 9;
-        let mint_amount: u64 = 1_000_000_000;
-        let metadata_name = String::from("Test Token");
-        let metadata_symbol = String::from("TSTST");
-        let metadata_uri = String::from("http://test.com");
+        let mint_amount: u64 = 1_000_000_000__000_000_000;
+        let metadata_name = String::from("Everlend Token TESTNET");
+        let metadata_symbol = String::from("ELD");
+        let metadata_uri = String::from("https://everlend.github.io/meta/eld.json");
 
         let multisig_token_acc =
             spl_associated_token_account::get_associated_token_address(&multisig, &mint.pubkey());
