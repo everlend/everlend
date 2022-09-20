@@ -69,10 +69,6 @@ impl TokenOracle {
         slot: Slot,
         rates: DistributionArray,
     ) -> Result<(), ProgramError> {
-        if rates.iter().any(|r| r > &(PRECISION_SCALER as u64)) {
-            return Err(ProgramError::InvalidArgument);
-        }
-
         self.reserve_rates = Distribution {
             values: rates,
             updated_at: slot,
