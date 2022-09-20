@@ -1,13 +1,13 @@
 //! Program processor.
-use borsh::BorshDeserialize;
-use solana_program::msg;
-use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey};
-
 use crate::instruction::LiquidityOracleInstruction;
 use crate::instructions::{
-    CreateTokenOracleContext, InitContext, MigrateContext, UpdateAuthorityContext,
+    CreateTokenOracleContext, InitContext, UpdateAuthorityContext,
     UpdateLiquidityDistributionContext, UpdateReserveRatesContext,
 };
+use borsh::BorshDeserialize;
+use everlend_utils::EverlendError;
+use solana_program::msg;
+use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey};
 
 /// Instruction processing router.
 pub fn process_instruction(
@@ -46,7 +46,7 @@ pub fn process_instruction(
 
         LiquidityOracleInstruction::Migrate => {
             msg!("LiquidityOracleInstruction: Migrate");
-            MigrateContext::new(program_id, accounts)?.process(program_id)
+            Err(EverlendError::TemporaryUnavailable.into())
         }
     }
 }
