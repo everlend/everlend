@@ -10,7 +10,7 @@ use borsh::BorshDeserialize;
 use everlend_general_pool::state::Pool;
 use everlend_utils::{
     assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
-    assert_zero_amount, cpi, find_program_address, math, EverlendError,
+    assert_non_zero_amount, cpi, find_program_address, math, EverlendError,
 };
 
 use solana_program::{
@@ -138,7 +138,7 @@ impl Processor {
         let user_transfer_authority_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
-        assert_zero_amount(amount)?;
+        assert_non_zero_amount(amount)?;
         assert_signer(user_transfer_authority_info)?;
 
         // Check programs
@@ -208,7 +208,7 @@ impl Processor {
         let mut token_amount =
             Account::unpack_unchecked(&income_pool_token_account_info.data.borrow())?.amount;
 
-        assert_zero_amount(token_amount)?;
+        assert_non_zero_amount(token_amount)?;
 
         let safety_fund_amount = math::share_floor(token_amount, INCOME_FEE)?;
 

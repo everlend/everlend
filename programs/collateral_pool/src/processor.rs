@@ -3,7 +3,7 @@
 use borsh::BorshDeserialize;
 use everlend_utils::{
     assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
-    assert_zero_amount, cpi, find_program_address, EverlendError,
+    assert_non_zero_amount, cpi, find_program_address, EverlendError,
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -400,7 +400,7 @@ impl Processor {
         let user_transfer_authority_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
-        assert_zero_amount(amount)?;
+        assert_non_zero_amount(amount)?;
         assert_signer(user_transfer_authority_info)?;
 
         assert_owned_by(pool_market_info, program_id)?;
@@ -434,7 +434,7 @@ impl Processor {
         let withdraw_authority_info = next_account_info(account_info_iter)?;
         let _token_program_info = next_account_info(account_info_iter)?;
 
-        assert_zero_amount(amount)?;
+        assert_non_zero_amount(amount)?;
         assert_signer(withdraw_authority_info)?;
 
         assert_owned_by(pool_market_info, program_id)?;
