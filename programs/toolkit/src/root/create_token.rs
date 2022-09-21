@@ -46,7 +46,7 @@ impl<'a> ToolkitCommand<'a> for CreateTokenCommand {
 
         let decimals: u8 = 9;
         let mint_amount: u64 = 1_000_000_000__000_000_000;
-        let metadata_name = String::from("Everlend Token TESTNET");
+        let metadata_name = String::from("Everlend Token");
         let metadata_symbol = String::from("ELD");
         let metadata_uri = String::from("https://everlend.github.io/meta/eld.json");
 
@@ -110,7 +110,7 @@ impl<'a> ToolkitCommand<'a> for CreateTokenCommand {
                     &spl_token::id(),
                     &mint.pubkey(),
                     None,
-                    AuthorityType::MintTokens, // TODO: do we need to do same for close authority?
+                    AuthorityType::MintTokens,
                     &temp_authority.pubkey(),
                     &[],
                 )?,
