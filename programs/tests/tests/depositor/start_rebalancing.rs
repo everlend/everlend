@@ -316,6 +316,7 @@ async fn success_with_refresh_income() {
         test_token_distribution,
         mut distribution,
     ) = setup().await;
+
     let payer_pubkey = context.payer.pubkey();
     let reserve = money_market.get_reserve_data(&mut context).await;
     let money_market_pubkeys =
@@ -406,23 +407,11 @@ async fn success_with_refresh_income() {
         .await;
 
     test_depositor
-        .withdraw(
+        .refresh_mm_incomes(
             &mut context,
             &registry,
             &income_pool_market,
             &income_pool,
-            &mm_pool_market,
-            &mm_pool,
-            &spl_token_lending::id(),
-            &money_market_pubkeys,
-        )
-        .await
-        .unwrap();
-
-    test_depositor
-        .deposit(
-            &mut context,
-            &registry,
             &mm_pool_market,
             &mm_pool,
             &spl_token_lending::id(),
@@ -883,6 +872,7 @@ async fn rebalancing_math_round() {
         r.compute_with_refresh_income(&p, 0, i as u64 + 1, distr_amount)
             .unwrap();
         println!("{}", r.distributed_liquidity);
+        println!("{:?}", r.steps);
         assert_eq!(distr_amount >= r.distributed_liquidity, true);
     }
 }

@@ -168,16 +168,17 @@ impl Rebalancing {
             if prev_amount.gt(&0) {
                 self.add_step(RebalancingStep::new(
                     index as u8,
-                    RebalancingOperation::Withdraw,
+                    RebalancingOperation::RefreshWithdraw,
                     prev_amount,
                     Some(collateral_amount),
                 ));
             }
 
+            //TODO should be necessary for batch processing?
             if new_amount.gt(&0) {
                 self.add_step(RebalancingStep::new(
                     index as u8,
-                    RebalancingOperation::Deposit,
+                    RebalancingOperation::RefreshDeposit,
                     new_amount,
                     None, // Will be calculated at the deposit stage
                 ));
@@ -187,10 +188,6 @@ impl Rebalancing {
                     .ok_or(EverlendError::MathOverflow)?;
             }
         }
-
-        // Sort steps
-        self.steps
-            .sort_by(|a, b| a.operation.partial_cmp(&b.operation).unwrap());
 
         self.income_refreshed_at = income_refreshed_at;
         self.amount_to_distribute = amount_to_distribute;
@@ -250,10 +247,12 @@ impl Rebalancing {
 
         // Update collateral ammount
         self.received_collateral[money_market_index] = match operation {
-            RebalancingOperation::Deposit => self.received_collateral[money_market_index]
+            RebalancingOperation::Deposit | RebalancingOperation::RefreshDeposit => self
+                .received_collateral[money_market_index]
                 .checked_add(collateral_amount)
                 .ok_or(EverlendError::MathOverflow)?,
-            RebalancingOperation::Withdraw => self.received_collateral[money_market_index]
+            RebalancingOperation::Withdraw | RebalancingOperation::RefreshWithdraw => self
+                .received_collateral[money_market_index]
                 .checked_sub(collateral_amount)
                 .ok_or(EverlendError::MathOverflow)?,
         };

@@ -3,13 +3,11 @@ use everlend_collateral_pool::{
     cpi, find_pool_withdraw_authority_program_address, utils::CollateralPoolAccounts,
 };
 use everlend_registry::state::RegistryMarkets;
-use everlend_utils::{assert_account_key, assert_owned_by};
+use everlend_utils::{assert_account_key, AccountLoader};
 use solana_program::{
-    account_info::{next_account_info, AccountInfo},
-    msg,
-    program_error::ProgramError,
-    program_pack::Pack,
+    account_info::AccountInfo, msg, program_error::ProgramError, program_pack::Pack,
 };
+use std::{iter::Enumerate, slice::Iter};
 
 /// Container
 #[derive(Clone)]
@@ -21,25 +19,24 @@ pub struct CollateralPool<'a> {
     collateral_pool_withdraw_authority: Option<AccountInfo<'a>>,
 }
 
-use std::slice::Iter;
-
-impl<'a> CollateralPool<'a> {
+impl<'a, 'b> CollateralPool<'a> {
     ///
     pub fn init(
         registry_markets: &RegistryMarkets,
-        collateral_mint: AccountInfo<'a>,
-        authority: AccountInfo<'a>,
-        account_info_iter: &mut Iter<AccountInfo<'a>>,
+        collateral_mint: &'b AccountInfo<'a>,
+        authority: &'b AccountInfo<'a>,
+        account_info_iter: &mut Enumerate<Iter<'_, AccountInfo<'a>>>,
         is_withdraw_expected: bool,
     ) -> Result<CollateralPool<'a>, ProgramError> {
-        let collateral_pool_market_info = next_account_info(account_info_iter)?;
-        let collateral_pool_market_authority_info = next_account_info(account_info_iter)?;
-        let collateral_pool_info = next_account_info(account_info_iter)?;
-        let collateral_pool_token_account_info = next_account_info(account_info_iter)?;
-
-        // Check external programs
-        assert_owned_by(collateral_pool_market_info, &everlend_collateral_pool::id())?;
-        assert_owned_by(collateral_pool_info, &everlend_collateral_pool::id())?;
+        msg!("Init CollateralPool");
+        let collateral_pool_market_info =
+            AccountLoader::next_with_owner(account_info_iter, &everlend_collateral_pool::id())?;
+        let collateral_pool_market_authority_info =
+            AccountLoader::next_unchecked(account_info_iter)?;
+        let collateral_pool_info =
+            AccountLoader::next_with_owner(account_info_iter, &everlend_collateral_pool::id())?;
+        let collateral_pool_token_account_info =
+            AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
 
         // Check collateral pool market
         if !registry_markets
@@ -61,7 +58,7 @@ impl<'a> CollateralPool<'a> {
             everlend_collateral_pool::state::Pool::unpack(&collateral_pool_info.data.borrow())?;
 
         // Check collateral pool accounts
-        assert_account_key(&collateral_mint, &collateral_pool.token_mint)?;
+        assert_account_key(collateral_mint, &collateral_pool.token_mint)?;
         assert_account_key(
             collateral_pool_token_account_info,
             &collateral_pool.token_account,
@@ -69,7 +66,8 @@ impl<'a> CollateralPool<'a> {
 
         let mut collateral_pool_withdraw_authority: Option<AccountInfo<'a>> = None;
         if is_withdraw_expected {
-            let collateral_pool_withdraw_authority_info = next_account_info(account_info_iter)?;
+            let collateral_pool_withdraw_authority_info =
+                AccountLoader::next_unchecked(account_info_iter)?;
 
             let (collateral_pool_withdraw_authority_pubkey, _) =
                 find_pool_withdraw_authority_program_address(
@@ -77,6 +75,7 @@ impl<'a> CollateralPool<'a> {
                     collateral_pool_info.key,
                     authority.key,
                 );
+
             assert_account_key(
                 collateral_pool_withdraw_authority_info,
                 &collateral_pool_withdraw_authority_pubkey,
@@ -86,7 +85,7 @@ impl<'a> CollateralPool<'a> {
                 Some(collateral_pool_withdraw_authority_info.clone());
         }
 
-        let _everlend_collateral_pool_info = next_account_info(account_info_iter)?;
+        let _everlend_collateral_pool_info = AccountLoader::next_with_key(account_info_iter, &everlend_collateral_pool::id())?;
 
         Ok(CollateralPool {
             collateral_pool_market: collateral_pool_market_info.clone(),

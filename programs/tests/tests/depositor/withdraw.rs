@@ -802,7 +802,11 @@ async fn fail_with_invalid_income_pool_token_account() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
+                TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
+        )
+        // TransactionError::InstructionError(0, InstructionError::InvalidArgument)
     );
 }
 
@@ -960,7 +964,10 @@ async fn fail_with_invalid_mm_pool_token_account() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
+        )
     );
 }
 
@@ -1362,14 +1369,17 @@ async fn fail_with_invalid_withdraw_authority() {
         AccountMeta::new(liquidity_transit, false),
         AccountMeta::new(liquidity_reserve_transit, false),
         AccountMeta::new_readonly(liquidity_mint, false),
+        AccountMeta::new_readonly(context.payer.pubkey(), true),
         AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
         AccountMeta::new_readonly(everlend_income_pools::id(), false),
         AccountMeta::new_readonly(*money_market_program_id, false),
+        // Internal mining
+        AccountMeta::new_readonly(Pubkey::new_unique(), false),
     ];
 
-    accounts.extend(collateral_pool_withdraw_accounts);
     accounts.extend(withdraw_accounts);
+    accounts.extend(collateral_pool_withdraw_accounts);
 
     let instruction = Instruction::new_with_borsh(
         everlend_depositor::id(),

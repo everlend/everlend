@@ -3,6 +3,7 @@
 //! Depositor contract
 
 pub mod instruction;
+pub mod instructions;
 pub mod money_market;
 pub mod processor;
 pub mod state;

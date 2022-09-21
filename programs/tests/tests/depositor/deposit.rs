@@ -683,7 +683,10 @@ async fn fail_with_invalid_mm_pool_token_account() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
+        )
     );
 }
 #[tokio::test]
@@ -872,6 +875,7 @@ async fn fail_with_invalid_money_market_program_id() {
 
     let deposit_collateral_storage_accounts = mm_pool.deposit_accounts(&mm_pool_market);
 
+
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::deposit(
             &everlend_depositor::id(),
@@ -898,7 +902,7 @@ async fn fail_with_invalid_money_market_program_id() {
             .unwrap(),
         TransactionError::InstructionError(
             0,
-            InstructionError::Custom(EverlendError::InvalidRebalancingMoneyMarket as u32),
+            InstructionError::Custom(EverlendError::IncorrectInstructionProgramId as u32),
         )
     );
 }
