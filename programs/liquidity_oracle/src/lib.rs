@@ -12,8 +12,8 @@ use solana_program::pubkey::Pubkey;
 
 solana_program::declare_id!("LiqNiHY9SnsjQMsfikadZQAsfskBZzzoHZTo3XUeoBV");
 
-/// Generates liquidity oracle token distribution authority address
-pub fn find_token_distribution_program_address(
+/// Generates liquidity oracle token oracle address
+pub fn find_token_oracle_program_address(
     program_id: &Pubkey,
     liquidity_oracle: &Pubkey,
     token_mint: &Pubkey,

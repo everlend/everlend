@@ -4,13 +4,14 @@ use borsh::BorshDeserialize;
 use everlend_general_pool::{find_withdrawal_requests_program_address, state::WithdrawalRequests};
 use everlend_income_pools::utils::IncomePoolAccounts;
 use everlend_liquidity_oracle::{
-    find_token_distribution_program_address,
-    state::{DistributionArray, TokenDistribution},
+    find_token_oracle_program_address,
+    state::{DistributionArray, TokenOracle},
 };
 use everlend_registry::state::{Registry, RegistryMarkets};
 use everlend_utils::{
     assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
-    cpi, find_program_address, EverlendError,
+    cpi::{self},
+    find_program_address, EverlendError,
 };
 use num_traits::Zero;
 use solana_program::program_error::ProgramError;
@@ -155,7 +156,7 @@ impl Processor {
 
         // TODO: we can do it optional for refresh income case in the future
         let liquidity_oracle_info = next_account_info(account_info_iter)?;
-        let token_distribution_info = next_account_info(account_info_iter)?;
+        let token_oracle_info = next_account_info(account_info_iter)?;
         let executor_info = next_account_info(account_info_iter)?;
 
         let rent_info = next_account_info(account_info_iter)?;
@@ -182,12 +183,12 @@ impl Processor {
         let registry = Registry::unpack(&registry_info.data.borrow())?;
 
         // Check external programs
-        assert_owned_by(token_distribution_info, &everlend_liquidity_oracle::id())?;
+        assert_owned_by(token_oracle_info, &everlend_liquidity_oracle::id())?;
         assert_owned_by(general_pool_market_info, &everlend_general_pool::id())?;
         assert_owned_by(general_pool_info, &everlend_general_pool::id())?;
         assert_owned_by(withdrawal_requests_info, &everlend_general_pool::id())?;
         assert_owned_by(liquidity_oracle_info, &everlend_liquidity_oracle::id())?;
-        assert_owned_by(token_distribution_info, &everlend_liquidity_oracle::id())?;
+        assert_owned_by(token_oracle_info, &everlend_liquidity_oracle::id())?;
 
         // Check root accounts
         assert_account_key(general_pool_market_info, &registry.general_pool_market)?;
@@ -244,44 +245,44 @@ impl Processor {
             return Err(EverlendError::IncompleteRebalancing.into());
         }
 
-        // Check token distribution
-        let (token_distribution_pubkey, _) = find_token_distribution_program_address(
-            &everlend_liquidity_oracle::id(),
-            liquidity_oracle_info.key,
-            mint_info.key,
-        );
-        assert_account_key(token_distribution_info, &token_distribution_pubkey)?;
-        let new_token_distribution =
-            TokenDistribution::unpack(&token_distribution_info.data.borrow())?;
+        {
+            // Check token oracle
+            let (token_oracle_pubkey, _) = find_token_oracle_program_address(
+                &everlend_liquidity_oracle::id(),
+                liquidity_oracle_info.key,
+                mint_info.key,
+            );
+            assert_account_key(token_oracle_info, &token_oracle_pubkey)?;
 
-        // Check general pool
-        let (general_pool_pubkey, _) = everlend_general_pool::find_pool_program_address(
-            &everlend_general_pool::id(),
-            general_pool_market_info.key,
-            mint_info.key,
-        );
-        assert_account_key(general_pool_info, &general_pool_pubkey)?;
+            // Check general pool
+            let (general_pool_pubkey, _) = everlend_general_pool::find_pool_program_address(
+                &everlend_general_pool::id(),
+                general_pool_market_info.key,
+                mint_info.key,
+            );
+            assert_account_key(general_pool_info, &general_pool_pubkey)?;
 
-        let general_pool =
-            everlend_general_pool::state::Pool::unpack(&general_pool_info.data.borrow())?;
+            let general_pool =
+                everlend_general_pool::state::Pool::unpack(&general_pool_info.data.borrow())?;
 
-        // Check general pool accounts
-        assert_account_key(general_pool_market_info, &general_pool.pool_market)?;
-        assert_account_key(general_pool_token_account_info, &general_pool.token_account)?;
-        assert_account_key(mint_info, &general_pool.token_mint)?;
+            // Check general pool accounts
+            assert_account_key(general_pool_market_info, &general_pool.pool_market)?;
+            assert_account_key(general_pool_token_account_info, &general_pool.token_account)?;
+            assert_account_key(mint_info, &general_pool.token_mint)?;
 
-        // Check withdrawal requests
-        let (withdrawal_requests_pubkey, _) = find_withdrawal_requests_program_address(
-            &everlend_general_pool::id(),
-            general_pool_market_info.key,
-            &general_pool.token_mint,
-        );
-        assert_account_key(withdrawal_requests_info, &withdrawal_requests_pubkey)?;
+            // Check withdrawal requests
+            let (withdrawal_requests_pubkey, _) = find_withdrawal_requests_program_address(
+                &everlend_general_pool::id(),
+                general_pool_market_info.key,
+                &general_pool.token_mint,
+            );
+            assert_account_key(withdrawal_requests_info, &withdrawal_requests_pubkey)?;
 
-        // Check transit: liquidity
-        let (liquidity_transit_pubkey, _) =
-            find_transit_program_address(program_id, depositor_info.key, mint_info.key, "");
-        assert_account_key(liquidity_transit_info, &liquidity_transit_pubkey)?;
+            // Check transit: liquidity
+            let (liquidity_transit_pubkey, _) =
+                find_transit_program_address(program_id, depositor_info.key, mint_info.key, "");
+            assert_account_key(liquidity_transit_info, &liquidity_transit_pubkey)?;
+        }
 
         let general_pool = Account::unpack(&general_pool_token_account_info.data.borrow())?;
         let liquidity_transit = Account::unpack(&liquidity_transit_info.data.borrow())?;
@@ -305,37 +306,19 @@ impl Processor {
 
         msg!("amount_to_distribute: {}", amount_to_distribute);
 
-        let (depositor_authority_pubkey, bump_seed) =
-            find_program_address(program_id, depositor_info.key);
-        assert_account_key(depositor_authority_info, &depositor_authority_pubkey)?;
-        let signers_seeds = &[&depositor_info.key.to_bytes()[..32], &[bump_seed]];
+        {
+            let (depositor_authority_pubkey, bump_seed) =
+                find_program_address(program_id, depositor_info.key);
+            assert_account_key(depositor_authority_info, &depositor_authority_pubkey)?;
+            let signers_seeds = &[&depositor_info.key.to_bytes()[..32], &[bump_seed]];
 
-        if amount_to_distribute.gt(&available_liquidity) {
-            let borrow_amount = amount_to_distribute
-                .checked_sub(available_liquidity)
-                .ok_or(EverlendError::MathOverflow)?;
+            if amount_to_distribute.gt(&available_liquidity) {
+                let borrow_amount = amount_to_distribute
+                    .checked_sub(available_liquidity)
+                    .ok_or(EverlendError::MathOverflow)?;
 
-            msg!("Borrow from General Pool");
-            everlend_general_pool::cpi::borrow(
-                general_pool_market_info.clone(),
-                general_pool_market_authority_info.clone(),
-                general_pool_info.clone(),
-                general_pool_borrow_authority_info.clone(),
-                liquidity_transit_info.clone(),
-                general_pool_token_account_info.clone(),
-                depositor_authority_info.clone(),
-                borrow_amount,
-                &[signers_seeds],
-            )?;
-        } else if !withdrawal_requests.liquidity_supply.is_zero() {
-            let repay_amount = withdrawal_requests
-                .liquidity_supply
-                .saturating_sub(general_pool.amount);
-
-            let repay_amount = min(repay_amount, liquidity_transit.amount);
-            if !repay_amount.is_zero() {
-                msg!("Repay to General Pool");
-                everlend_general_pool::cpi::repay(
+                msg!("Borrow from General Pool");
+                everlend_general_pool::cpi::borrow(
                     general_pool_market_info.clone(),
                     general_pool_market_authority_info.clone(),
                     general_pool_info.clone(),
@@ -343,14 +326,33 @@ impl Processor {
                     liquidity_transit_info.clone(),
                     general_pool_token_account_info.clone(),
                     depositor_authority_info.clone(),
-                    repay_amount,
-                    0,
+                    borrow_amount,
                     &[signers_seeds],
                 )?;
+            } else if !withdrawal_requests.liquidity_supply.is_zero() {
+                let repay_amount = withdrawal_requests
+                    .liquidity_supply
+                    .saturating_sub(general_pool.amount);
+
+                let repay_amount = min(repay_amount, liquidity_transit.amount);
+                if !repay_amount.is_zero() {
+                    msg!("Repay to General Pool");
+                    everlend_general_pool::cpi::repay(
+                        general_pool_market_info.clone(),
+                        general_pool_market_authority_info.clone(),
+                        general_pool_info.clone(),
+                        general_pool_borrow_authority_info.clone(),
+                        liquidity_transit_info.clone(),
+                        general_pool_token_account_info.clone(),
+                        depositor_authority_info.clone(),
+                        repay_amount,
+                        0,
+                        &[signers_seeds],
+                    )?;
+                }
             }
         }
 
-        // Compute rebalancing steps
         msg!("Computing");
         if refresh_income {
             rebalancing.compute_with_refresh_income(
@@ -360,10 +362,14 @@ impl Processor {
                 amount_to_distribute,
             )?;
         } else {
+            // Compute rebalancing steps
+            let token_oracle = TokenOracle::unpack(&token_oracle_info.data.borrow())?;
+
             rebalancing.compute(
                 &registry_markets.money_markets,
-                new_token_distribution,
+                token_oracle,
                 amount_to_distribute,
+                clock.slot,
             )?;
         }
 
