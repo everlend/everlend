@@ -1,5 +1,5 @@
 use everlend_utils::{
-    assert_account_key,
+    assert_account_key, assert_zero_amount,
     cpi::{self, rewards::deposit_mining},
     find_program_address, AccountLoader, EverlendError,
 };
@@ -79,6 +79,8 @@ impl<'a, 'b> DepositContext<'a, 'b> {
 
     /// Process instruction
     pub fn process(&self, program_id: &Pubkey, amount: u64) -> ProgramResult {
+        assert_zero_amount(amount)?;
+
         // Get pool state
         let pool = Pool::unpack(&self.pool.data.borrow())?;
 

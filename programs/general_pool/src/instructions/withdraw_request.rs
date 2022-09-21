@@ -8,8 +8,8 @@ use crate::{
     utils::total_pool_amount,
 };
 use everlend_utils::{
-    assert_account_key, assert_owned_by, cpi, cpi::rewards::withdraw_mining, AccountLoader,
-    EverlendError,
+    assert_account_key, assert_owned_by, assert_zero_amount, cpi, cpi::rewards::withdraw_mining,
+    AccountLoader, EverlendError,
 };
 use solana_program::{
     account_info::AccountInfo,
@@ -102,6 +102,8 @@ impl<'a, 'b> WithdrawRequestContext<'a, 'b> {
     /// Process instruction
     pub fn process(&self, program_id: &Pubkey, collateral_amount: u64) -> ProgramResult {
         let pool = Pool::unpack(&self.pool.data.borrow())?;
+
+        assert_zero_amount(collateral_amount)?;
 
         // Check pool accounts
         assert_account_key(self.pool_market, &pool.pool_market)?;

@@ -97,7 +97,7 @@ async fn success() {
 }
 
 #[tokio::test]
-async fn success_with_zero_balance() {
+async fn fail_with_zero_balance() {
     let (mut context, test_income_pool_market, test_income_pool, test_general_pool) = setup().await;
 
     assert_eq!(
@@ -117,11 +117,17 @@ async fn success_with_zero_balance() {
 
     context.warp_to_slot(3).unwrap();
 
-    //todo fail on withdraw with zero balance?
-    test_income_pool
-        .withdraw(&mut context, &test_income_pool_market, &test_general_pool)
-        .await
-        .unwrap();
+    assert_eq!(
+        test_income_pool
+            .withdraw(&mut context, &test_income_pool_market, &test_general_pool)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::ZeroAmount as u32)
+        )
+    );
 }
 
 #[tokio::test]

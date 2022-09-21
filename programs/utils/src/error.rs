@@ -101,6 +101,10 @@ pub enum EverlendError {
     /// Reserve threshold exceeded
     #[error("Reserve threshold exceeded")]
     ReserveThreshold,
+
+    /// Amount cannot be zero
+    #[error("Amount cannot be zero")]
+    ZeroAmount
 }
 
 impl PrintProgramError for EverlendError {
