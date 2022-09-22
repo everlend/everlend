@@ -1,9 +1,10 @@
+use crate::money_market::CollateralStorage;
 use crate::{
     find_internal_mining_program_address, find_rebalancing_program_address,
     find_transit_program_address,
+    money_market::CollateralPool,
     state::{Depositor, Rebalancing, RebalancingOperation},
     utils::{deposit, money_market, withdraw},
-    money_market::CollateralPool,
 };
 use everlend_income_pools::utils::IncomePoolAccounts;
 use everlend_registry::state::RegistryMarkets;
@@ -13,7 +14,6 @@ use solana_program::{
     program_error::ProgramError, program_pack::Pack, pubkey::Pubkey, sysvar::clock, sysvar::Sysvar,
 };
 use std::{iter::Enumerate, slice::Iter};
-use crate::money_market::CollateralStorage;
 
 /// Instruction context
 pub struct RefreshMMIncomesContext<'a, 'b> {
@@ -203,8 +203,8 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
             self.internal_mining,
         )?;
 
-        let collateral_stor : Option<Box<dyn CollateralStorage>> = {
-            if !is_mining{
+        let collateral_stor: Option<Box<dyn CollateralStorage>> = {
+            if !is_mining {
                 let coll_pool = CollateralPool::init(
                     &registry_markets,
                     self.collateral_mint,
@@ -213,7 +213,7 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
                     true,
                 )?;
                 Some(Box::new(coll_pool))
-            }else {
+            } else {
                 None
             }
         };

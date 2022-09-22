@@ -364,7 +364,6 @@ pub fn claim_reward<'a>(
     // sub_reward_token_pool: Option<AccountInfo<'a>>,
     // sub_reward_destination: Option<AccountInfo<'a>>,
     clock: AccountInfo<'a>,
-    token_program: AccountInfo<'a>,
     signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
     let (sub_reward_token_pool, sub_reward_destination, mut sub_reward_accounts) =
@@ -397,7 +396,6 @@ pub fn claim_reward<'a>(
         reward_destination,
         staking_pool_authority,
         clock,
-        token_program,
     ];
 
     accounts.append(&mut sub_reward_accounts);

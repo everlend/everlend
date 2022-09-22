@@ -875,7 +875,6 @@ async fn fail_with_invalid_money_market_program_id() {
 
     let deposit_collateral_storage_accounts = mm_pool.deposit_accounts(&mm_pool_market);
 
-
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::deposit(
             &everlend_depositor::id(),

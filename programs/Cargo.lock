@@ -1153,6 +1153,8 @@ name = "everlend-depositor"
 version = "0.1.0"
 dependencies = [
  "borsh 0.9.3",
+ "eld-config",
+ "eld-rewards",
  "everlend-collateral-pool",
  "everlend-general-pool",
  "everlend-income-pools",

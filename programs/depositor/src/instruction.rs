@@ -577,7 +577,11 @@ pub fn refresh_mm_incomes(
     accounts.extend(money_market_accounts);
     accounts.extend(collateral_storage_accounts);
 
-    Instruction::new_with_borsh(*program_id, &DepositorInstruction::RefreshMMIncomes, accounts)
+    Instruction::new_with_borsh(
+        *program_id,
+        &DepositorInstruction::RefreshMMIncomes,
+        accounts,
+    )
 }
 
 /// Creates 'MigrateDepositor' instruction.

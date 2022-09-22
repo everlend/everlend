@@ -16,7 +16,10 @@ async fn setup() -> (ProgramTestContext, TestDepositor) {
     test_liquidity_oracle.init(&mut env.context).await.unwrap();
 
     let general_pool_market = TestGeneralPoolMarket::new();
-    general_pool_market.init(&mut env.context, &env.registry.keypair.pubkey()).await.unwrap();
+    general_pool_market
+        .init(&mut env.context, &env.registry.keypair.pubkey())
+        .await
+        .unwrap();
 
     let income_pool_market = TestIncomePoolMarket::new();
     income_pool_market
@@ -25,7 +28,10 @@ async fn setup() -> (ProgramTestContext, TestDepositor) {
         .unwrap();
 
     let test_depositor = TestDepositor::new();
-    test_depositor.init(&mut env.context, &env.registry).await.unwrap();
+    test_depositor
+        .init(&mut env.context, &env.registry)
+        .await
+        .unwrap();
 
     (env.context, test_depositor)
 }

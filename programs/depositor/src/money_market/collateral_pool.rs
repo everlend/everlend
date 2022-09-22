@@ -85,7 +85,8 @@ impl<'a, 'b> CollateralPool<'a> {
                 Some(collateral_pool_withdraw_authority_info.clone());
         }
 
-        let _everlend_collateral_pool_info = AccountLoader::next_with_key(account_info_iter, &everlend_collateral_pool::id())?;
+        let _everlend_collateral_pool_info =
+            AccountLoader::next_with_key(account_info_iter, &everlend_collateral_pool::id())?;
 
         Ok(CollateralPool {
             collateral_pool_market: collateral_pool_market_info.clone(),

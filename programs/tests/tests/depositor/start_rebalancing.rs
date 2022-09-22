@@ -780,7 +780,10 @@ async fn fail_with_invalid_general_pool_token_account() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32)
+        )
     );
 }
 
@@ -872,7 +875,6 @@ async fn rebalancing_math_round() {
         r.compute_with_refresh_income(&p, 0, i as u64 + 1, distr_amount)
             .unwrap();
         println!("{}", r.distributed_liquidity);
-        println!("{:?}", r.steps);
         assert_eq!(distr_amount >= r.distributed_liquidity, true);
     }
 }

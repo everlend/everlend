@@ -10,16 +10,12 @@ use everlend_collateral_pool::find_pool_withdraw_authority_program_address;
 use everlend_income_pools::utils::IncomePoolAccounts;
 use everlend_registry::state::RegistryMarkets;
 use everlend_utils::{
-    abs_diff, assert_account_key, cpi, find_program_address, integrations, EverlendError,
+    abs_diff, assert_account_key, cpi, find_program_address, integrations, AccountLoader,
+    EverlendError,
 };
 use solana_program::{
-    account_info::{next_account_info, AccountInfo},
-    entrypoint::ProgramResult,
-    instruction::AccountMeta,
-    msg,
-    program_error::ProgramError,
-    program_pack::Pack,
-    pubkey::Pubkey,
+    account_info::AccountInfo, entrypoint::ProgramResult, instruction::AccountMeta, msg,
+    program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,
 };
 use spl_token::state::Account;
 use std::{cmp::Ordering, iter::Enumerate, slice::Iter};
@@ -71,8 +67,8 @@ pub fn deposit<'a, 'b>(
         }
 
         msg!("Deposit into collateral pool");
-        if collateral_storage.is_none(){
-            return Err(ProgramError::InvalidArgument)
+        if collateral_storage.is_none() {
+            return Err(ProgramError::InvalidArgument);
         }
 
         collateral_storage.unwrap().deposit_collateral_tokens(
@@ -123,16 +119,19 @@ pub fn withdraw<'a, 'b>(
         msg!("Withdraw from collateral pool");
 
         if collateral_storage.is_none() {
-            return Err(ProgramError::InvalidArgument)
+            return Err(ProgramError::InvalidArgument);
         }
 
-        collateral_storage.as_ref().unwrap().withdraw_collateral_tokens(
-            collateral_transit.clone(),
-            authority.clone(),
-            clock.clone(),
-            collateral_amount,
-            signers_seeds,
-        )?;
+        collateral_storage
+            .as_ref()
+            .unwrap()
+            .withdraw_collateral_tokens(
+                collateral_transit.clone(),
+                authority.clone(),
+                clock.clone(),
+                collateral_amount,
+                signers_seeds,
+            )?;
 
         msg!("Redeem from Money market");
         money_market.money_market_redeem(
@@ -346,16 +345,16 @@ pub struct FillRewardAccounts<'a> {
 
 /// Collateral pool deposit account
 #[allow(clippy::too_many_arguments)]
-pub fn parse_fill_reward_accounts<'a>(
+pub fn parse_fill_reward_accounts<'a, 'b>(
     program_id: &Pubkey,
     depositor_id: &Pubkey,
     reward_pool_id: &Pubkey,
     eld_reward_program_id: &Pubkey,
-    account_info_iter: &mut Iter<AccountInfo<'a>>,
+    account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
     check_transit_reward_destination: bool,
-) -> Result<FillRewardAccounts<'a>, ProgramError> {
-    let reward_mint_info = next_account_info(account_info_iter)?;
-    let reward_transit_info = next_account_info(account_info_iter)?;
+) -> Result<FillRewardAccounts<'b>, ProgramError> {
+    let reward_mint_info = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+    let reward_transit_info = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
 
     // Check rewards destination account only if needed
     if check_transit_reward_destination {
@@ -368,18 +367,20 @@ pub fn parse_fill_reward_accounts<'a>(
         assert_account_key(reward_transit_info, &reward_token_account)?;
     }
 
-    let vault_info = next_account_info(account_info_iter)?;
-    let fee_account_info = next_account_info(account_info_iter)?;
+    let vault_info = AccountLoader::next_unchecked(account_info_iter)?;
+    let fee_account_info = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
 
-    let (vault, _) = Pubkey::find_program_address(
-        &[
-            b"vault".as_ref(),
-            &reward_pool_id.to_bytes(),
-            &reward_mint_info.key.to_bytes(),
-        ],
-        eld_reward_program_id,
-    );
-    assert_account_key(vault_info, &vault)?;
+    {
+        let (vault, _) = Pubkey::find_program_address(
+            &[
+                b"vault".as_ref(),
+                &reward_pool_id.to_bytes(),
+                &reward_mint_info.key.to_bytes(),
+            ],
+            eld_reward_program_id,
+        );
+        assert_account_key(vault_info, &vault)?;
+    }
 
     Ok(FillRewardAccounts {
         reward_mint_info: reward_mint_info.clone(),
