@@ -577,6 +577,61 @@ impl Processor {
         Ok(())
     }
 
+    /// Process DeletePool instruction
+    pub fn delete_pool(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let pool_market_info = next_account_info(account_info_iter)?;
+        let pool_info = next_account_info(account_info_iter)?;
+        let manager_info = next_account_info(account_info_iter)?;
+        let token_mint_info = next_account_info(account_info_iter)?;
+
+        assert_signer(manager_info)?;
+        assert_owned_by(pool_info, program_id)?;
+        assert_owned_by(pool_market_info, program_id)?;
+
+        let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+        assert_account_key(manager_info, &pool_market.manager)?;
+
+        let (pool_pubkey, _) =
+            find_pool_program_address(program_id, pool_market_info.key, token_mint_info.key);
+        assert_account_key(pool_info, &pool_pubkey)?;
+
+        // Close pool account and return rent
+        let from_starting_lamports = manager_info.lamports();
+        let deprecated_account_lamports = pool_info.lamports();
+
+        **pool_info.lamports.borrow_mut() = 0;
+        **manager_info.lamports.borrow_mut() = from_starting_lamports
+            .checked_add(deprecated_account_lamports)
+            .ok_or(EverlendError::MathOverflow)?;
+
+        Ok(())
+    }
+
+    /// Process DeletePoolMarket instruction
+    pub fn delete_pool_market(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let pool_market_info = next_account_info(account_info_iter)?;
+        let manager_info = next_account_info(account_info_iter)?;
+
+        assert_signer(manager_info)?;
+        assert_owned_by(pool_market_info, program_id)?;
+
+        let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+        assert_account_key(manager_info, &pool_market.manager)?;
+
+        // Close pool market account and return rent
+        let from_starting_lamports = manager_info.lamports();
+        let deprecated_account_lamports = pool_market_info.lamports();
+
+        **pool_market_info.lamports.borrow_mut() = 0;
+        **manager_info.lamports.borrow_mut() = from_starting_lamports
+            .checked_add(deprecated_account_lamports)
+            .ok_or(EverlendError::MathOverflow)?;
+
+        Ok(())
+    }
+
     /// Instruction processing router
     pub fn process_instruction(
         program_id: &Pubkey,
@@ -637,6 +692,16 @@ impl Processor {
             LiquidityPoolsInstruction::UpdateManager => {
                 msg!("LiquidityPoolsInstruction: UpdateManager");
                 Self::update_manager(program_id, accounts)
+            }
+
+            LiquidityPoolsInstruction::DeletePool => {
+                msg!("LiquidityPoolsInstruction: DeletePool");
+                Self::delete_pool(program_id, accounts)
+            }
+
+            LiquidityPoolsInstruction::DeletePoolMarket => {
+                msg!("LiquidityPoolsInstruction: DeletePoolMarket");
+                Self::delete_pool_market(program_id, accounts)
             }
         }
     }

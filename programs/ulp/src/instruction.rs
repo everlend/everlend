@@ -148,6 +148,22 @@ pub enum LiquidityPoolsInstruction {
     /// [RS] New manager
     ///
     UpdateManager,
+
+    /// Delete pool
+    ///
+    /// Accounts:
+    /// [R] Pool market
+    /// [W] Pool
+    /// [WS] Manager
+    /// [R] Token mint
+    DeletePool,
+
+    /// Delete pool market
+    ///
+    /// Accounts:
+    /// [WS] Pool market
+    /// [WS] Manager
+    DeletePoolMarket,
 }
 
 /// Creates 'InitPoolMarket' instruction.
@@ -439,5 +455,45 @@ pub fn update_manager(
         *program_id,
         &LiquidityPoolsInstruction::UpdateManager,
         accounts,
+    )
+}
+
+/// Creates 'DeletePool' instruction.
+pub fn delete_pool(
+    program_id: &Pubkey,
+    pool_market: &Pubkey,
+    pool: &Pubkey,
+    manager: &Pubkey,
+    token_mint: &Pubkey,
+) -> Instruction {
+    let accounts = vec![
+        AccountMeta::new_readonly(*pool_market, false),
+        AccountMeta::new(*pool, false),
+        AccountMeta::new(*manager, true),
+        AccountMeta::new_readonly(*token_mint, false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &LiquidityPoolsInstruction::DeletePool,
+        accounts
+    )
+}
+
+/// Creates 'DeletePoolMarket' instruction.
+pub fn delete_pool_market(
+    program_id: &Pubkey,
+    pool_market: &Pubkey,
+    manager: &Pubkey,
+) -> Instruction {
+    let accounts = vec![
+        AccountMeta::new(*pool_market, true),
+        AccountMeta::new(*manager, true),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &LiquidityPoolsInstruction::DeletePoolMarket,
+        accounts
     )
 }

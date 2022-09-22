@@ -42,6 +42,7 @@ everlend-income-pools = { path = "../income_pools", features = [ "no-entrypoint"
 everlend-depositor = { path = "../depositor", features = [ "no-entrypoint" ] }
 everlend-liquidity-oracle = { path = "../liquidity_oracle", features = [ "no-entrypoint" ] }
 everlend-utils = { path = "../utils" }
+everlend-ulp = { path = "../ulp", features = [ "no-entrypoint" ] }
 port-variable-rate-lending-instructions = "0.2.9"
 serum-multisig = { git = "https://github.com/everlend/multisig", features = [ "no-entrypoint" ] }
 solend-program = { git = "https://github.com/everlend/solend-program", features = [ "no-entrypoint" ], branch = "mainnet" }

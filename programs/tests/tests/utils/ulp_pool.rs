@@ -197,4 +197,25 @@ impl UniversalLiquidityPool {
 
         context.banks_client.process_transaction(tx).await
     }
+
+    pub async fn delete_pool(
+        &self,
+        context: &mut ProgramTestContext,
+        test_pool_market: &UlpMarket,
+    ) -> BanksClientResult<()> {
+        let tx = Transaction::new_signed_with_payer(
+            &[instruction::delete_pool(
+                &everlend_ulp::id(),
+                &test_pool_market.keypair.pubkey(),
+                &self.pool_pubkey,
+                &test_pool_market.manager.pubkey(),
+                &self.token_mint_pubkey,
+            )],
+            Some(&context.payer.pubkey()),
+            &[&context.payer, &test_pool_market.manager],
+            context.last_blockhash,
+        );
+
+        context.banks_client.process_transaction(tx).await
+    }
 }

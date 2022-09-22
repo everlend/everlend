@@ -4,7 +4,7 @@ use std::process::exit;
 use crate::accounts::{
     AddReserveLiquidityCommand, CreateAccountsCommand, CreateTokenAccountsCommand, InfoCommand,
     InfoReserveLiquidityCommand, InitQuarryMiningAccountsCommand, SaveLarixAccountsCommand,
-    SaveQuarryAccountsCommand,
+    SaveQuarryAccountsCommand, DeleteUPLAccountsCommand
 };
 use clap::{
     crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, ArgMatches,
@@ -104,6 +104,7 @@ fn init() -> anyhow::Result<()> {
         Box::new(MigrationsCommand),
         Box::new(UpdateManagerCommand),
         Box::new(MultisigCommand),
+        Box::new(DeleteUPLAccountsCommand)
     ];
 
     let subcommands: Vec<App> = commands
