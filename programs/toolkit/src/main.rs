@@ -42,14 +42,22 @@ mod root;
 mod utils;
 
 pub trait ToolkitCommand<'a> {
-    // const COMMAND_NAME: &'a str;
-    // const COMMAND_DESCRIPTION: &'a str;
-
     fn get_name(&self) -> &'a str;
     fn get_description(&self) -> &'a str;
     fn get_args(&self) -> Vec<Arg<'a, 'a>>;
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>>;
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()>;
+}
+
+fn print_commands(cmd: &dyn ToolkitCommand) {
+    let cmds = cmd
+        .get_subcommands()
+        .into_iter()
+        .map(|x| x.get_name())
+        .collect::<Vec<&str>>()
+        .join("\n\t");
+
+    println!("Available commands:\n\t{}", cmds);
 }
 
 #[allow(clippy::borrowed_box)]
