@@ -1278,6 +1278,7 @@ dependencies = [
  "everlend-ulp",
  "everlend-utils",
  "larix-lending",
+ "mpl-token-metadata",
  "num-derive",
  "port-finance-staking",
  "port-variable-rate-lending-instructions",
