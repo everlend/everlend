@@ -114,8 +114,6 @@ impl<'a, 'b> StartRebalancingContext<'a, 'b> {
         _account_info_iter: &'a mut Enumerate<Iter<'a, AccountInfo<'b>>>,
         refresh_income: bool,
     ) -> ProgramResult {
-        let rent = &Rent::from_account_info(self.rent)?;
-        let clock = Clock::from_account_info(self.clock)?;
 
         {
             // Get depositor state
@@ -149,6 +147,8 @@ impl<'a, 'b> StartRebalancingContext<'a, 'b> {
                     &self.mint.key.to_bytes()[..32],
                     &[bump_seed],
                 ];
+
+                let rent = &Rent::from_account_info(self.rent)?;
 
                 cpi::system::create_account::<Rebalancing>(
                     program_id,
@@ -299,6 +299,8 @@ impl<'a, 'b> StartRebalancingContext<'a, 'b> {
         // Compute rebalancing steps
         msg!("Computing");
         if refresh_income {
+            let clock = Clock::from_account_info(self.clock)?;
+
             rebalancing.compute_with_refresh_income(
                 &registry_markets.money_markets,
                 registry.refresh_income_interval,
