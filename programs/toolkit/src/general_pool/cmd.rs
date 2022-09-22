@@ -1,7 +1,7 @@
 use super::{
     CancelWithdrawRequestCommand, InitMiningCommand, InitPoolMarketCommand, SetPoolConfigCommand,
 };
-use crate::{utils::Config, ToolkitCommand};
+use crate::{print_commands, utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 
 #[derive(Clone, Copy)]
@@ -31,7 +31,10 @@ impl<'a> ToolkitCommand<'a> for GeneralPoolCommand {
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
         let (cmd_name, arg_matches) = arg_matches.unwrap().subcommand();
-        println!("{}", cmd_name);
+        if cmd_name.is_empty() {
+            print_commands(self);
+            return Ok(());
+        }
 
         let cmd = self
             .get_subcommands()
