@@ -1,8 +1,8 @@
 use crate::{
     find_internal_mining_program_address, find_rebalancing_program_address,
     find_transit_program_address,
+    money_market::{CollateralPool, CollateralStorage},
     state::{Depositor, Rebalancing, RebalancingOperation},
-    money_market::{CollateralStorage, CollateralPool},
     utils::{money_market, withdraw},
 };
 use everlend_income_pools::utils::IncomePoolAccounts;
@@ -204,8 +204,8 @@ impl<'a, 'b> WithdrawContext<'a, 'b> {
             self.internal_mining,
         )?;
 
-        let collateral_stor : Option<Box<dyn CollateralStorage>> = {
-            if !is_mining{
+        let collateral_stor: Option<Box<dyn CollateralStorage>> = {
+            if !is_mining {
                 let coll_pool = CollateralPool::init(
                     &registry_markets,
                     self.collateral_mint,
@@ -214,7 +214,7 @@ impl<'a, 'b> WithdrawContext<'a, 'b> {
                     true,
                 )?;
                 Some(Box::new(coll_pool))
-            }else {
+            } else {
                 None
             }
         };

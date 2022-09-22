@@ -2,7 +2,7 @@ use super::{
     CreatePoolCommand, CreatePoolWithdrawAuthorityCommand, CreatePoolsCommand,
     InitPoolMarketCommand,
 };
-use crate::{Config, ToolkitCommand};
+use crate::{print_commands, Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 
 pub struct CollateralPoolCommand;
@@ -30,8 +30,11 @@ impl<'a> ToolkitCommand<'a> for CollateralPoolCommand {
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
-        let (cmd_name, _) = arg_matches.unwrap().subcommand();
-        println!("{}", cmd_name);
+        let (cmd_name, arg_matches) = arg_matches.unwrap().subcommand();
+        if cmd_name.is_empty() {
+            print_commands(self);
+            return Ok(());
+        }
 
         let cmd = self
             .get_subcommands()

@@ -1,17 +1,23 @@
-use super::{CreateSafetyFundTokenAccountCommand, InitPoolMarketCommand};
 use crate::{print_commands, utils::Config, ToolkitCommand};
+
 use clap::{Arg, ArgMatches};
 
-#[derive(Clone, Copy)]
-pub struct IncomePoolCommand;
+use super::{
+    AddReserveLiquidityCommand, CreateAccountsCommand, CreateTokenAccountsCommand, GetTokenCommand,
+    InfoCommand, InfoReserveLiquidityCommand, InitQuarryMiningAccountsCommand,
+    SaveLarixAccountsCommand, SaveQuarryAccountsCommand,
+};
 
-impl<'a> ToolkitCommand<'a> for IncomePoolCommand {
+#[derive(Clone, Copy)]
+pub struct AccountsCommand;
+
+impl<'a> ToolkitCommand<'a> for AccountsCommand {
     fn get_name(&self) -> &'a str {
-        "income-pool"
+        "accounts"
     }
 
     fn get_description(&self) -> &'a str {
-        "Income pool tools"
+        "Accounts tools"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
@@ -20,8 +26,15 @@ impl<'a> ToolkitCommand<'a> for IncomePoolCommand {
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
         vec![
-            Box::new(CreateSafetyFundTokenAccountCommand),
-            Box::new(InitPoolMarketCommand),
+            Box::new(AddReserveLiquidityCommand),
+            Box::new(CreateAccountsCommand),
+            Box::new(CreateTokenAccountsCommand),
+            Box::new(GetTokenCommand),
+            Box::new(InfoCommand),
+            Box::new(InfoReserveLiquidityCommand),
+            Box::new(InitQuarryMiningAccountsCommand),
+            Box::new(SaveLarixAccountsCommand),
+            Box::new(SaveQuarryAccountsCommand),
         ]
     }
 

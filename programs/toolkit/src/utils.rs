@@ -41,8 +41,7 @@ pub struct Config {
     pub owner: Box<dyn Signer>,
     pub fee_payer: Box<dyn Signer>,
     pub network: String,
-
-    pub initialized_accounts: InitializedAccounts,
+    pub accounts_path: String,
 }
 
 impl Config {

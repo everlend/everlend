@@ -1,11 +1,7 @@
 use std::path::PathBuf;
 use std::process::exit;
 
-use crate::accounts::{
-    AddReserveLiquidityCommand, CreateAccountsCommand, CreateTokenAccountsCommand, InfoCommand,
-    InfoReserveLiquidityCommand, InitQuarryMiningAccountsCommand, SaveLarixAccountsCommand,
-    SaveQuarryAccountsCommand,
-};
+use accounts::AccountsCommand;
 use clap::{
     crate_description, crate_name, crate_version, value_t, App, AppSettings, Arg, ArgMatches,
     SubCommand,
@@ -13,7 +9,9 @@ use clap::{
 use migrations::MigrationsCommand;
 use regex::Regex;
 use registry::RegistryCommand;
-use root::{TestLarixMiningRawCommand, TestQuarryMiningRawCommand, UpdateManagerCommand};
+use root::{
+    CreateTokenCommand, TestLarixMiningRawCommand, TestQuarryMiningRawCommand, UpdateManagerCommand,
+};
 use solana_clap_utils::{fee_payer::fee_payer_arg, keypair::signer_from_path};
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::commitment_config::CommitmentConfig;
@@ -44,14 +42,22 @@ mod root;
 mod utils;
 
 pub trait ToolkitCommand<'a> {
-    // const COMMAND_NAME: &'a str;
-    // const COMMAND_DESCRIPTION: &'a str;
-
     fn get_name(&self) -> &'a str;
     fn get_description(&self) -> &'a str;
     fn get_args(&self) -> Vec<Arg<'a, 'a>>;
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>>;
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()>;
+}
+
+fn print_commands(cmd: &dyn ToolkitCommand) {
+    let cmds = cmd
+        .get_subcommands()
+        .into_iter()
+        .map(|x| x.get_name())
+        .collect::<Vec<&str>>()
+        .join("\n\t");
+
+    println!("Available commands:\n\t{}", cmds);
 }
 
 #[allow(clippy::borrowed_box)]
@@ -89,21 +95,15 @@ fn init() -> anyhow::Result<()> {
         Box::new(IncomePoolCommand),
         Box::new(LiquidityOracleCommand),
         Box::new(DepositorCommand),
-        Box::new(SaveLarixAccountsCommand),
         Box::new(TestLarixMiningRawCommand),
-        Box::new(SaveQuarryAccountsCommand),
-        Box::new(InitQuarryMiningAccountsCommand),
         Box::new(TestQuarryMiningRawCommand),
-        Box::new(CreateTokenAccountsCommand),
-        Box::new(AddReserveLiquidityCommand),
         Box::new(CancelWithdrawRequestCommand),
-        Box::new(InfoReserveLiquidityCommand),
-        Box::new(CreateAccountsCommand),
-        Box::new(InfoCommand),
         Box::new(TestCommand),
         Box::new(MigrationsCommand),
+        Box::new(AccountsCommand),
         Box::new(UpdateManagerCommand),
         Box::new(MultisigCommand),
+        Box::new(CreateTokenCommand),
     ];
 
     let subcommands: Vec<App> = commands
@@ -130,7 +130,6 @@ fn init() -> anyhow::Result<()> {
         .arg(
             arg_path(ARG_ACCOUNTS, false)
                 .global(true)
-                .default_value("accounts.yaml")
                 .help("Accounts file")
                 .short("A"),
         )
@@ -208,15 +207,17 @@ fn get_config(matches: &ArgMatches) -> Config {
     println!("fee_payer = {:?}", fee_payer);
     println!("owner = {:?}", owner);
 
-    let accounts_path = matches.value_of(ARG_ACCOUNTS).unwrap();
-    let initialized_accounts = InitializedAccounts::load(accounts_path).unwrap();
+    let accounts_path = matches
+        .value_of(ARG_ACCOUNTS)
+        .unwrap_or(&format!("accounts.{}.yaml", network))
+        .to_string();
 
     Config {
         rpc_client: RpcClient::new_with_commitment(json_rpc_url, CommitmentConfig::confirmed()),
         owner,
         fee_payer,
         network,
-        initialized_accounts,
+        accounts_path,
     }
 }
 
