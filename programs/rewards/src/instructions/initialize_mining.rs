@@ -8,11 +8,11 @@ use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::system_program;
-use solana_program::sysvar::Sysvar;
+use solana_program::sysvar::{Sysvar, SysvarId};
 
 /// Instruction context
 pub struct InitializeMiningContext<'a, 'b> {
-    root_account: &'a AccountInfo<'b>,
+    rewards_root: &'a AccountInfo<'b>,
     reward_pool: &'a AccountInfo<'b>,
     mining: &'a AccountInfo<'b>,
     user: &'a AccountInfo<'b>,
@@ -28,17 +28,17 @@ impl<'a, 'b> InitializeMiningContext<'a, 'b> {
     ) -> Result<InitializeMiningContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter().enumerate();
 
-        let root_account = AccountLoader::next_unchecked(account_info_iter)?;
+        let rewards_root = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let reward_pool = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let mining = AccountLoader::next_uninitialized(account_info_iter)?;
         let user = AccountLoader::next_unchecked(account_info_iter)?;
         let payer = AccountLoader::next_signer(account_info_iter)?;
         let _system_program =
             AccountLoader::next_with_key(account_info_iter, &system_program::id())?;
-        let rent = AccountLoader::next_unchecked(account_info_iter)?;
+        let rent = AccountLoader::next_with_key(account_info_iter, &Rent::id())?;
 
         Ok(InitializeMiningContext {
-            root_account,
+            rewards_root,
             reward_pool,
             mining,
             user,
@@ -57,7 +57,7 @@ impl<'a, 'b> InitializeMiningContext<'a, 'b> {
         {
             let reward_pool = RewardPool::unpack(&self.reward_pool.data.borrow())?;
 
-            assert_account_key(self.root_account, &reward_pool.root_account)?;
+            assert_account_key(self.rewards_root, &reward_pool.rewards_root)?;
             assert_account_key(self.mining, &mining_pubkey)?;
         }
 

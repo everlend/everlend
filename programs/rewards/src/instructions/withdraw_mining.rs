@@ -8,7 +8,7 @@ use solana_program::pubkey::Pubkey;
 
 /// Instruction context
 pub struct WithdrawMiningContext<'a, 'b> {
-    root_account: &'a AccountInfo<'b>,
+    rewards_root: &'a AccountInfo<'b>,
     reward_pool: &'a AccountInfo<'b>,
     mining: &'a AccountInfo<'b>,
     user: &'a AccountInfo<'b>,
@@ -23,14 +23,14 @@ impl<'a, 'b> WithdrawMiningContext<'a, 'b> {
     ) -> Result<WithdrawMiningContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter().enumerate();
 
-        let root_account = AccountLoader::next_unchecked(account_info_iter)?;
+        let rewards_root = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let reward_pool = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let mining = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let user = AccountLoader::next_unchecked(account_info_iter)?;
         let deposit_authority = AccountLoader::next_signer(account_info_iter)?;
 
         Ok(WithdrawMiningContext {
-            root_account,
+            rewards_root,
             reward_pool,
             mining,
             user,
@@ -55,7 +55,7 @@ impl<'a, 'b> WithdrawMiningContext<'a, 'b> {
             )?;
             assert_account_key(self.mining, &mining_pubkey)?;
             assert_account_key(self.deposit_authority, &reward_pool.deposit_authority)?;
-            assert_account_key(self.root_account, &reward_pool.root_account)?;
+            assert_account_key(self.rewards_root, &reward_pool.rewards_root)?;
             assert_account_key(self.reward_pool, &mining.reward_pool)?;
             assert_account_key(self.user, &mining.owner)?;
         }

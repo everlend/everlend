@@ -10,11 +10,11 @@ use solana_program::system_program;
 use solana_program::sysvar::{Sysvar, SysvarId};
 use spl_token::state::Account;
 
-use crate::state::{RewardPool, RewardVault, RootAccount};
+use crate::state::{RewardPool, RewardsRoot, RewardVault};
 
 /// Instruction context
 pub struct AddVaultContext<'a, 'b> {
-    root_account: &'a AccountInfo<'b>,
+    rewards_root: &'a AccountInfo<'b>,
     reward_pool: &'a AccountInfo<'b>,
     reward_mint: &'a AccountInfo<'b>,
     vault: &'a AccountInfo<'b>,
@@ -31,7 +31,7 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
     ) -> Result<AddVaultContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter().enumerate();
 
-        let root_account = AccountLoader::next_unchecked(account_info_iter)?;
+        let rewards_root = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let reward_pool = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let reward_mint = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let vault = AccountLoader::next_uninitialized(account_info_iter)?;
@@ -43,7 +43,7 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
         let rent = AccountLoader::next_with_key(account_info_iter, &Rent::id())?;
 
         Ok(AddVaultContext {
-            root_account,
+            rewards_root,
             reward_pool,
             reward_mint,
             vault,
@@ -61,10 +61,10 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
             find_vault_program_address(program_id, &self.reward_pool.key, &self.reward_mint.key);
 
         {
-            let root_account = RootAccount::unpack(&self.root_account.data.borrow())?;
+            let rewards_root = RewardsRoot::unpack(&self.rewards_root.data.borrow())?;
             assert_account_key(self.vault, &vault_pubkey)?;
-            assert_account_key(self.root_account, &reward_pool.root_account)?;
-            assert_account_key(self.payer, &root_account.authority)?;
+            assert_account_key(self.rewards_root, &reward_pool.rewards_root)?;
+            assert_account_key(self.payer, &rewards_root.authority)?;
         }
 
         let rent = Rent::from_account_info(self.rent)?;

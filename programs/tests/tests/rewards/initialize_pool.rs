@@ -25,8 +25,8 @@ async fn success() {
     let reward_pool = RewardPool::unpack(reward_pool_account.data.borrow()).unwrap();
 
     assert_eq!(
-        reward_pool.root_account,
-        test_reward_pool.root_account.pubkey()
+        reward_pool.rewards_root,
+        test_reward_pool.rewards_root.pubkey()
     );
     assert_eq!(
         reward_pool.deposit_authority,

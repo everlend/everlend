@@ -7,7 +7,7 @@ use crate::utils::{BanksClientResult, get_liquidity_mint};
 #[derive(Debug)]
 pub struct TestRewards {
     pub token_mint_pubkey: Pubkey,
-    pub root_account: Keypair,
+    pub rewards_root: Keypair,
     pub pool: Keypair,
     pub mining_reward_pool: Pubkey,
 }
@@ -19,12 +19,12 @@ impl TestRewards {
         let token_mint_pubkey = token_mint_pubkey.unwrap_or(get_liquidity_mint().1);
 
         let pool = Keypair::new();
-        let root_account = Keypair::new();
+        let rewards_root = Keypair::new();
 
         let (mining_reward_pool, _) = Pubkey::find_program_address(
             &[
                 b"reward_pool".as_ref(),
-                &root_account.pubkey().to_bytes(),
+                &rewards_root.pubkey().to_bytes(),
                 &token_mint_pubkey.to_bytes(),
             ],
             &everlend_rewards::id(),
@@ -33,7 +33,7 @@ impl TestRewards {
         Self {
             pool,
             token_mint_pubkey,
-            root_account,
+            rewards_root,
             mining_reward_pool,
         }
     }
@@ -45,9 +45,14 @@ impl TestRewards {
         // Initialize mining pool
         let tx = Transaction::new_signed_with_payer(
             &[
+                everlend_rewards::instruction::initialize_root(
+                    &everlend_rewards::id(),
+                    &self.rewards_root.pubkey(),
+                    &context.payer.pubkey(),
+                ),
                 everlend_rewards::instruction::initialize_pool(
                     &everlend_rewards::id(),
-                    &self.root_account.pubkey(),
+                    &self.rewards_root.pubkey(),
                     &self.mining_reward_pool,
                     &self.token_mint_pubkey,
                     &self.pool.pubkey(),
@@ -55,7 +60,7 @@ impl TestRewards {
                 ),
             ],
             Some(&context.payer.pubkey()),
-            &[&context.payer, &self.root_account],
+            &[&context.payer, &self.rewards_root],
             context.last_blockhash,
         );
 
@@ -79,7 +84,7 @@ impl TestRewards {
         let tx = Transaction::new_signed_with_payer(
             &[everlend_rewards::instruction::initialize_mining(
                 &everlend_rewards::id(),
-                &self.root_account.pubkey(),
+                &self.rewards_root.pubkey(),
                 &self.mining_reward_pool,
                 &mining_account,
                 user,
@@ -105,7 +110,7 @@ impl TestRewards {
         let tx = Transaction::new_signed_with_payer(
             &[everlend_rewards::instruction::deposit_mining(
                 &everlend_rewards::id(),
-                &self.root_account.pubkey(),
+                &self.rewards_root.pubkey(),
                 &self.mining_reward_pool,
                 &mining_account,
                 user,
@@ -130,7 +135,7 @@ impl TestRewards {
         let tx = Transaction::new_signed_with_payer(
             &[everlend_rewards::instruction::withdraw_mining(
                 &everlend_rewards::id(),
-                &self.root_account.pubkey(),
+                &self.rewards_root.pubkey(),
                 &self.mining_reward_pool,
                 &mining_account,
                 user,
@@ -158,7 +163,7 @@ impl TestRewards {
         let tx = Transaction::new_signed_with_payer(
             &[everlend_rewards::instruction::add_vault(
                 &everlend_rewards::id(),
-                &self.root_account.pubkey(),
+                &self.rewards_root.pubkey(),
                 &self.mining_reward_pool,
                 &self.token_mint_pubkey,
                 &vault_pubkey,
@@ -190,7 +195,7 @@ impl TestRewards {
         let tx = Transaction::new_signed_with_payer(
             &[everlend_rewards::instruction::fill_vault(
                 &everlend_rewards::id(),
-                &self.root_account.pubkey(),
+                &self.rewards_root.pubkey(),
                 &self.mining_reward_pool,
                 &self.token_mint_pubkey,
                 &vault_pubkey,
@@ -222,7 +227,7 @@ impl TestRewards {
         let tx = Transaction::new_signed_with_payer(
             &[everlend_rewards::instruction::claim(
                 &everlend_rewards::id(),
-                &self.root_account.pubkey(),
+                &self.rewards_root.pubkey(),
                 &self.mining_reward_pool,
                 &self.token_mint_pubkey,
                 &vault_pubkey,

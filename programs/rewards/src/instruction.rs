@@ -11,12 +11,11 @@ pub enum RewardsInstruction {
     /// Creates and initializes a reward pool account
     ///
     /// Accounts:
-    /// [RS] Root account (ex-Config program account)
+    /// [R] Root account (ex-Config program account)
     /// [W] Reward pool account
     /// [R] Liquidity mint account
     /// [R] Deposit authority
     /// [RS] Payer
-    /// [R] Token program
     /// [R] System program
     /// [R] Rent sysvar
     InitializePool,
@@ -101,6 +100,26 @@ pub enum RewardsInstruction {
     /// [W] User reward token account
     /// [R] Token program
     Claim,
+
+    /// Creates and initializes a reward root
+    ///
+    /// Accounts:
+    /// [WS] Root account (ex-Config program account)
+    /// [RS] Payer
+    /// [R] System program
+    /// [R] Rent sysvar
+    InitializeRoot,
+
+    /// Migrates reward pool
+    ///
+    /// Accounts:
+    /// [R] Root account (ex-Config program account)
+    /// [W] Reward pool account
+    /// [R] Liquidity mint account
+    /// [WS] Payer
+    /// [R] System program
+    /// [R] Rent sysvar
+    MigratePool,
 }
 
 /// Creates 'InitializePool' instruction.
@@ -113,12 +132,11 @@ pub fn initialize_pool(
     payer: &Pubkey,
 ) -> Instruction {
     let accounts = vec![
-        AccountMeta::new(*root_account, true),
+        AccountMeta::new_readonly(*root_account, false),
         AccountMeta::new(*reward_pool, false),
         AccountMeta::new_readonly(*liquidity_mint, false),
         AccountMeta::new_readonly(*authority, false),
-        AccountMeta::new(*payer, true),
-        AccountMeta::new_readonly(spl_token::id(), false),
+        AccountMeta::new_readonly(*payer, true),
         AccountMeta::new_readonly(system_program::id(), false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
@@ -278,4 +296,40 @@ pub fn claim(
     ];
 
     Instruction::new_with_borsh(*program_id, &RewardsInstruction::Claim, accounts)
+}
+
+/// Creates 'InitializeRoot' instruction.
+pub fn initialize_root(
+    program_id: &Pubkey,
+    root_account: &Pubkey,
+    payer: &Pubkey,
+) -> Instruction {
+    let accounts = vec![
+        AccountMeta::new(*root_account, true),
+        AccountMeta::new_readonly(*payer, true),
+        AccountMeta::new_readonly(system_program::id(), false),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+    ];
+
+    Instruction::new_with_borsh(*program_id, &RewardsInstruction::InitializeRoot, accounts)
+}
+
+/// Creates 'MigratePool' instruction.
+pub fn migrate_pool(
+    program_id: &Pubkey,
+    root_account: &Pubkey,
+    reward_pool: &Pubkey,
+    payer: &Pubkey,
+    liquidity_mint: &Pubkey,
+) -> Instruction {
+    let accounts = vec![
+        AccountMeta::new_readonly(*root_account, false),
+        AccountMeta::new(*reward_pool, false),
+        AccountMeta::new_readonly(*liquidity_mint, false),
+        AccountMeta::new(*payer, true),
+        AccountMeta::new_readonly(system_program::id(), false),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+    ];
+
+    Instruction::new_with_borsh(*program_id, &RewardsInstruction::MigratePool, accounts)
 }

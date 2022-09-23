@@ -45,5 +45,13 @@ pub fn process_instruction(
             msg!("RewardsInstruction: Claim");
             ClaimContext::new(program_id, accounts)?.process(program_id)
         }
+        RewardsInstruction::InitializeRoot => {
+            msg!("RewardsInstruction: InitializeRoot");
+            InitializeRootContext::new(program_id, accounts)?.process(program_id)
+        }
+        RewardsInstruction::MigratePool => {
+            msg!("RewardsInstruction: MigratePool");
+            MigratePoolContext::new(program_id, accounts)?.process(program_id)
+        }
     }
 }

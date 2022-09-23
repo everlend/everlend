@@ -1,4 +1,4 @@
-use crate::state::Mining;
+use crate::state::{AccountType, DeprecatedRewardPool, Mining};
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use everlend_utils::EverlendError;
 use solana_program::entrypoint::ProgramResult;
@@ -15,10 +15,10 @@ pub const MAX_REWARDS: usize = 5;
 /// Reward pool
 #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
 pub struct RewardPool {
-    /// Anchor id(For Anchor legacy contract compatibility)
-    pub anchor_id: [u8; 8],
-    /// Root account (ex-Config program account)
-    pub root_account: Pubkey,
+    /// Account type - RewardPool
+    pub account_type: AccountType,
+    /// Rewards root account (ex-Config program account)
+    pub rewards_root: Pubkey,
     /// Saved bump for reward pool account
     pub bump: u8,
     /// Liquidity mint
@@ -36,8 +36,8 @@ impl RewardPool {
     /// Init reward pool
     pub fn init(params: InitRewardPoolParams) -> RewardPool {
         RewardPool {
-            anchor_id: Default::default(),
-            root_account: params.root_account,
+            account_type: AccountType::RewardPool,
+            rewards_root: params.rewards_root,
             bump: params.bump,
             liquidity_mint: params.liquidity_mint,
             total_share: 0,
@@ -110,12 +110,25 @@ impl RewardPool {
 
         Ok(())
     }
+
+    /// Process migrate
+    pub fn migrate(deprecated_pool: &DeprecatedRewardPool) -> RewardPool {
+        Self {
+            account_type: AccountType::RewardPool,
+            rewards_root: deprecated_pool.rewards_root,
+            bump: deprecated_pool.bump,
+            liquidity_mint: deprecated_pool.liquidity_mint,
+            total_share: deprecated_pool.total_share,
+            vaults: deprecated_pool.vaults.clone(),
+            deposit_authority: deprecated_pool.deposit_authority
+        }
+    }
 }
 
 /// Initialize a Reward Pool params
 pub struct InitRewardPoolParams {
-    /// Root account (ex-Config program account)
-    pub root_account: Pubkey,
+    /// Rewards Root (ex-Config program account)
+    pub rewards_root: Pubkey,
     /// Saved bump for reward pool account
     pub bump: u8,
     /// Liquidity mint
@@ -127,8 +140,8 @@ pub struct InitRewardPoolParams {
 
 impl Sealed for RewardPool {}
 impl Pack for RewardPool {
-    /// 8 + 32 + 1 + 32 + 8 + (1 + 32 + 16 + 32) * 5 + 32 = 518
-    const LEN: usize = 8 + 32 + 1 + 32 + 8 + RewardVault::LEN * MAX_REWARDS + 32;
+    /// 1 + 32 + 1 + 32 + 8 + (1 + 32 + 16 + 32) * 5 + 32 = 518
+    const LEN: usize = 1 + 32 + 1 + 32 + 8 + RewardVault::LEN * MAX_REWARDS + 32;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;
@@ -147,12 +160,12 @@ impl Pack for RewardPool {
 
 impl IsInitialized for RewardPool {
     fn is_initialized(&self) -> bool {
-        self.root_account != Pubkey::default()
+        self.account_type == AccountType::RewardPool
     }
 }
 
 /// Reward vault
-#[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
+#[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default, Clone)]
 pub struct RewardVault {
     /// Bump of
     pub bump: u8,

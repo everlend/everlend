@@ -29,7 +29,7 @@ pub struct TestGeneralPool {
     pub token_mint_pubkey: Pubkey,
     pub token_account: Keypair,
     pub pool_mint: Keypair,
-    pub config: Keypair,
+    pub rewards_root: Keypair,
     pub mining_reward_pool: Pubkey,
 }
 
@@ -46,12 +46,12 @@ impl TestGeneralPool {
             &token_mint_pubkey,
         );
 
-        let config = Keypair::new();
+        let rewards_root = Keypair::new();
 
         let (mining_reward_pool, _) = Pubkey::find_program_address(
             &[
                 b"reward_pool".as_ref(),
-                &config.pubkey().to_bytes(),
+                &rewards_root.pubkey().to_bytes(),
                 &token_mint_pubkey.to_bytes(),
             ],
             &everlend_rewards::id(),
@@ -66,7 +66,7 @@ impl TestGeneralPool {
             token_mint_pubkey,
             token_account: Keypair::new(),
             pool_mint: Keypair::new(),
-            config,
+            rewards_root,
             mining_reward_pool,
         }
     }
@@ -159,9 +159,14 @@ impl TestGeneralPool {
         // Initialize mining pool
         let tx = Transaction::new_signed_with_payer(
             &[
+                everlend_rewards::instruction::initialize_root(
+                    &everlend_rewards::id(),
+                    &self.rewards_root.pubkey(),
+                    &context.payer.pubkey(),
+                ),
                 everlend_rewards::instruction::initialize_pool(
                     &everlend_rewards::id(),
-                    &self.config.pubkey(),
+                    &self.rewards_root.pubkey(),
                     &self.mining_reward_pool,
                     &self.token_mint_pubkey,
                     &self.pool_pubkey,
@@ -169,7 +174,7 @@ impl TestGeneralPool {
                 ),
             ],
             Some(&context.payer.pubkey()),
-            &[&context.payer, &self.config],
+            &[&context.payer, &self.rewards_root],
             context.last_blockhash,
         );
 
@@ -196,7 +201,7 @@ impl TestGeneralPool {
                 &user.pubkey(),
                 &self.mining_reward_pool,
                 &mining_account,
-                &self.config.pubkey(),
+                &self.rewards_root.pubkey(),
                 amount,
             )],
             Some(&context.payer.pubkey()),
@@ -226,7 +231,7 @@ impl TestGeneralPool {
                 &self.mining_reward_pool,
                 &mining_account,
                 &destination_mining_account,
-                &self.config.pubkey(),
+                &self.rewards_root.pubkey(),
             )],
             Some(&context.payer.pubkey()),
             &[&context.payer, &user.owner],
@@ -316,7 +321,7 @@ impl TestGeneralPool {
                 &user.pubkey(),
                 &self.mining_reward_pool,
                 &mining_acc,
-                &self.config.pubkey(),
+                &self.rewards_root.pubkey(),
                 collateral_amount,
             )],
             Some(&context.payer.pubkey()),
@@ -429,7 +434,7 @@ impl TestGeneralPool {
         let tx = Transaction::new_signed_with_payer(
             &[everlend_rewards::instruction::initialize_mining(
                 &everlend_rewards::id(),
-                &self.config.pubkey(),
+                &self.rewards_root.pubkey(),
                 &self.mining_reward_pool,
                 &mining_account,
                 &user.owner.pubkey(),

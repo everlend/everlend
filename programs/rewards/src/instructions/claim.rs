@@ -8,7 +8,7 @@ use solana_program::pubkey::Pubkey;
 
 /// Instruction context
 pub struct ClaimContext<'a, 'b> {
-    root_account: &'a AccountInfo<'b>,
+    rewards_root: &'a AccountInfo<'b>,
     reward_pool: &'a AccountInfo<'b>,
     reward_mint: &'a AccountInfo<'b>,
     vault: &'a AccountInfo<'b>,
@@ -25,18 +25,18 @@ impl<'a, 'b> ClaimContext<'a, 'b> {
     ) -> Result<ClaimContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter().enumerate();
 
-        let root_account = AccountLoader::next_unchecked(account_info_iter)?;
+        let rewards_root = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let reward_pool = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let reward_mint = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let vault = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
-        let mining = AccountLoader::next_unchecked(account_info_iter)?;
+        let mining = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let user = AccountLoader::next_signer(account_info_iter)?;
         let user_reward_token_account =
             AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let _token_program = AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
 
         Ok(ClaimContext {
-            root_account,
+            rewards_root,
             reward_pool,
             reward_mint,
             vault,
@@ -53,13 +53,13 @@ impl<'a, 'b> ClaimContext<'a, 'b> {
 
         let reward_pool_seeds = &[
             b"reward_pool".as_ref(),
-            &reward_pool.root_account.to_bytes()[..32],
+            &reward_pool.rewards_root.to_bytes()[..32],
             &reward_pool.liquidity_mint.to_bytes()[..32],
             &[reward_pool.bump],
         ];
 
         {
-            assert_account_key(self.root_account, &reward_pool.root_account)?;
+            assert_account_key(self.rewards_root, &reward_pool.rewards_root)?;
             assert_account_key(self.user, &mining.owner)?;
             assert_account_key(self.reward_mint, &reward_pool.liquidity_mint)?;
             assert_account_key(self.reward_pool, &mining.reward_pool)?;

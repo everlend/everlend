@@ -10,7 +10,7 @@ const FEE_PERCENTAGE: u64 = 2;
 
 /// Instruction context
 pub struct FillVaultContext<'a, 'b> {
-    root_account: &'a AccountInfo<'b>,
+    rewards_root: &'a AccountInfo<'b>,
     reward_pool: &'a AccountInfo<'b>,
     reward_mint: &'a AccountInfo<'b>,
     vault: &'a AccountInfo<'b>,
@@ -27,17 +27,17 @@ impl<'a, 'b> FillVaultContext<'a, 'b> {
     ) -> Result<FillVaultContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter().enumerate();
 
-        let root_account = AccountLoader::next_unchecked(account_info_iter)?;
+        let rewards_root = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let reward_pool = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let reward_mint = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
-        let vault = AccountLoader::next_unchecked(account_info_iter)?;
+        let vault = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let fee_account = AccountLoader::next_unchecked(account_info_iter)?;
         let authority = AccountLoader::next_signer(account_info_iter)?;
         let from = AccountLoader::next_unchecked(account_info_iter)?;
         let _token_program = AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
 
         Ok(FillVaultContext {
-            root_account,
+            rewards_root,
             reward_pool,
             reward_mint,
             vault,
@@ -64,7 +64,7 @@ impl<'a, 'b> FillVaultContext<'a, 'b> {
                 &[vault.bump],
             ];
             assert_account_key(self.fee_account, &vault.fee_account)?;
-            assert_account_key(self.root_account, &reward_pool.root_account)?;
+            assert_account_key(self.rewards_root, &reward_pool.rewards_root)?;
             assert_account_key(self.reward_mint, &reward_pool.liquidity_mint)?;
             assert_account_key(
                 self.vault,
