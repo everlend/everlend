@@ -218,7 +218,7 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
             }
         };
 
-        {
+        let prev_money_market_index= {
             let step = rebalancing.next_step();
 
             if !registry_markets.money_markets[usize::from(step.money_market_index)]
@@ -245,13 +245,14 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
             )?;
 
             rebalancing.execute_step(RebalancingOperation::RefreshWithdraw, None, clock.slot)?;
-        }
+            step.money_market_index
+        };
 
         {
             let step = rebalancing.next_step();
 
             if !registry_markets.money_markets[usize::from(step.money_market_index)]
-                .eq(self.money_market_program.key)
+                .eq(self.money_market_program.key) || prev_money_market_index != step.money_market_index
             {
                 return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
             }
