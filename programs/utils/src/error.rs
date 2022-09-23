@@ -112,7 +112,7 @@ pub enum EverlendError {
 
     /// Amount cannot be zero
     #[error("Amount cannot be zero")]
-    ZeroAmount
+    ZeroAmount,
 
     /// Rewards
 

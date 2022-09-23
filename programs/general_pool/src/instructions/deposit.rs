@@ -1,6 +1,5 @@
 use everlend_utils::{
     assert_account_key, assert_non_zero_amount,
-    assert_account_key,
     cpi::{self},
     find_program_address, AccountLoader, EverlendError,
 };
