@@ -203,10 +203,8 @@ impl<'a> MoneyMarket<'a> for PortFinance<'a> {
         let collateral_amount =
             Account::unpack_unchecked(&collateral_transit.data.borrow())?.amount;
 
-        // TODO check collateral_amount
         if collateral_amount == 0 {
-            // return Ok(collateral_amount);
-            return Ok(0);
+            return Err(EverlendError::CollateralLeak.into());
         }
 
         // TODO use DepositReserveLiquidityAndObligationCollateral after fix of collateral leak

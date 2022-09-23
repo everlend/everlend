@@ -4,6 +4,7 @@ use crate::utils::{arg, arg_multiple, get_asset_maps};
 use crate::{Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 use solana_clap_utils::input_parsers::value_of;
+use solana_program::pubkey::Pubkey;
 
 const ARG_MONEY_MARKET: &str = "money-market";
 const ARG_MINTS: &str = "mints";
@@ -42,14 +43,24 @@ impl<'a> ToolkitCommand<'a> for CreatePoolCommand {
 
         let (_, collateral_mint_map) = get_asset_maps(default_accounts);
         let money_market_index = money_market as usize;
-        let mm_pool_market_pubkey = initialiazed_accounts.mm_pool_markets[money_market_index];
+        let collateral_pool_market_pubkey =
+            initialiazed_accounts.collateral_pool_markets[money_market_index];
+        if collateral_pool_market_pubkey.eq(&Pubkey::default()) {
+            println!("collateral_pool_market_pubkey is empty. Create it first");
+            return Ok(());
+        }
 
         for key in required_mints {
             let collateral_mint =
                 collateral_mint_map.get(key).unwrap()[money_market_index].unwrap();
 
+            if collateral_mint.eq(&Pubkey::default()) {
+                println!("collateral_mint for {} missed", key);
+                continue;
+            }
+
             let pool_pubkeys =
-                create_collateral_pool(config, &mm_pool_market_pubkey, &collateral_mint)?;
+                create_collateral_pool(config, &collateral_pool_market_pubkey, &collateral_mint)?;
 
             create_transit(
                 config,
@@ -72,7 +83,7 @@ impl<'a> ToolkitCommand<'a> for CreatePoolCommand {
         }
 
         initialiazed_accounts
-            .save(&format!("accounts.{}.yaml", config.network))
+            .save(config.accounts_path.as_str())
             .unwrap();
 
         Ok(())

@@ -78,7 +78,7 @@ impl<'a> ToolkitCommand<'a> for InitRegistryCommand {
         initialized_accounts.registry = registry_pubkey;
 
         initialized_accounts
-            .save(&format!("accounts.{}.yaml", config.network))
+            .save(config.accounts_path.as_str())
             .unwrap();
 
         Ok(())

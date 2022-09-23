@@ -62,7 +62,7 @@ pub fn deposit<'a, 'b>(
 
     let collateral_amount = if is_mining {
         msg!("Deposit to Money market and deposit Mining");
-        let collateral_amount = money_market.money_market_deposit_and_deposit_mining(
+        money_market.money_market_deposit_and_deposit_mining(
             collateral_mint.clone(),
             liquidity_transit.clone(),
             collateral_transit.clone(),
@@ -70,9 +70,7 @@ pub fn deposit<'a, 'b>(
             clock.clone(),
             liquidity_amount,
             signers_seeds,
-        )?;
-
-        collateral_amount
+        )?
     } else {
         msg!("Deposit to Money market");
         let collateral_amount = money_market.money_market_deposit(
@@ -85,9 +83,8 @@ pub fn deposit<'a, 'b>(
             signers_seeds,
         )?;
 
-        // TODO check collateral_amount
         if collateral_amount == 0 {
-            return Ok(collateral_amount);
+            return Err(EverlendError::CollateralLeak.into());
         }
 
         msg!("Deposit into collateral pool");

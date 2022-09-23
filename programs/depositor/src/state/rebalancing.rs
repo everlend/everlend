@@ -3,8 +3,7 @@
 use super::{AccountType, RebalancingStep, TOTAL_REBALANCING_STEP};
 use crate::state::RebalancingOperation;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
-pub use deprecated::DeprecatedRebalancing;
-use everlend_liquidity_oracle::state::{DistributionArray, TokenDistribution};
+use everlend_liquidity_oracle::state::{Distribution, DistributionArray, TokenOracle};
 use everlend_registry::state::{DistributionPubkeys, TOTAL_DISTRIBUTIONS};
 use everlend_utils::{math, EverlendError};
 use solana_program::{
@@ -36,10 +35,10 @@ pub struct Rebalancing {
     pub distributed_liquidity: u64,
 
     /// Received collateral in each market
-    pub received_collateral: [u64; TOTAL_DISTRIBUTIONS],
+    pub received_collateral: DistributionArray,
 
     /// Current token distribution from liquidity oracle
-    pub token_distribution: TokenDistribution,
+    pub liquidity_distribution: Distribution,
 
     /// Rebalancing steps
     pub steps: Vec<RebalancingStep>,
@@ -60,11 +59,17 @@ impl Rebalancing {
     pub fn compute(
         &mut self,
         money_market_program_ids: &DistributionPubkeys,
-        token_distribution: TokenDistribution,
+        token_oracle: TokenOracle,
         amount_to_distribute: u64,
+        current_slot: Slot,
     ) -> Result<(), ProgramError> {
-        if token_distribution.updated_at <= self.token_distribution.updated_at {
-            return Err(EverlendError::TokenDistributionIsStale.into());
+        if token_oracle.liquidity_distribution.updated_at <= self.liquidity_distribution.updated_at
+        {
+            return Err(EverlendError::LiquidityDistributionStale.into());
+        }
+
+        if token_oracle.reserve_rates.updated_at != current_slot {
+            return Err(EverlendError::ReserveRatesStale.into());
         }
 
         // Reset steps
@@ -79,22 +84,23 @@ impl Rebalancing {
             .filter(|&id| *id.1 != Default::default())
         {
             // Spread percents
-            let prev_percent = self.token_distribution.distribution[index];
-            let new_percent = token_distribution.distribution[index];
+            let prev_percent = self.liquidity_distribution.values[index];
+            let new_percent = token_oracle.liquidity_distribution.values[index];
 
             let prev_amount = math::share_floor(self.amount_to_distribute, prev_percent)?;
             let new_amount = math::share_floor(amount_to_distribute, new_percent)?;
-
             let amount = math::abs_diff(new_amount, prev_amount)?;
-
-            // Update distributed_liquidity
-            distributed_liquidity = distributed_liquidity
-                .checked_add(new_amount)
-                .ok_or(EverlendError::MathOverflow)?;
 
             match new_amount.cmp(&prev_amount) {
                 // Deposit
                 Ordering::Greater => {
+                    // Сheck collateral leak (only if it's set for market)
+                    let collateral_percent = token_oracle.reserve_rates.values[index];
+                    let expected_collateral = math::share_floor(amount, collateral_percent)?;
+                    if collateral_percent > 0 && expected_collateral == 0 {
+                        continue;
+                    }
+
                     self.add_step(RebalancingStep::new(
                         index as u8,
                         RebalancingOperation::Deposit,
@@ -102,6 +108,7 @@ impl Rebalancing {
                         None, // Will be calculated at the deposit stage
                     ));
                 }
+
                 // Withdraw
                 Ordering::Less => {
                     let collateral_amount =
@@ -115,14 +122,19 @@ impl Rebalancing {
                     ));
                 }
                 Ordering::Equal => {}
-            }
+            };
+
+            // Update distributed_liquidity
+            distributed_liquidity = distributed_liquidity
+                .checked_add(new_amount)
+                .ok_or(EverlendError::MathOverflow)?;
         }
 
         // Sort steps
         self.steps
             .sort_by(|a, b| a.operation.partial_cmp(&b.operation).unwrap());
 
-        self.token_distribution = token_distribution;
+        self.liquidity_distribution = token_oracle.liquidity_distribution;
         self.amount_to_distribute = amount_to_distribute;
         self.distributed_liquidity = distributed_liquidity;
 
@@ -154,7 +166,7 @@ impl Rebalancing {
             .filter(|&id| *id.1 != Default::default())
         {
             // Spread percents
-            let percent = self.token_distribution.distribution[index];
+            let percent = self.liquidity_distribution.values[index];
             // Skip zero withdraws/deposits
             if percent == 0 {
                 continue;
@@ -209,7 +221,7 @@ impl Rebalancing {
         self.steps.retain(|&s| s.executed_at.is_some());
         self.amount_to_distribute = amount_to_distribute;
         self.distributed_liquidity = distributed_liquidity;
-        self.token_distribution.distribution = distribution_array;
+        self.liquidity_distribution.values = distribution_array;
 
         Ok(())
     }
@@ -286,10 +298,13 @@ pub struct InitRebalancingParams {
 
 impl Sealed for Rebalancing {}
 impl Pack for Rebalancing {
-    // 1 + 32 + 32 + 8 + 8 + (8 * 10) + 89 + (4 + 8 * 28) + 8 = 486
-    const LEN: usize = 81
+    const LEN: usize = 1
+        + 32
+        + 32
+        + 8
+        + 8
         + (8 * TOTAL_DISTRIBUTIONS)
-        + TokenDistribution::LEN
+        + Distribution::LEN
         + (4 + TOTAL_REBALANCING_STEP * RebalancingStep::LEN)
         + 8;
 
@@ -346,6 +361,7 @@ pub mod tests {
 
     #[test]
     fn computing() {
+        let current_slot = 1;
         let pk = Pubkey::new_unique();
         let mut rebalancing: Rebalancing = Default::default();
         rebalancing.init(InitRebalancingParams {
@@ -357,18 +373,22 @@ pub mod tests {
         money_market_program_ids[0] = pk;
         money_market_program_ids[1] = pk;
 
-        let mut token_distribution: TokenDistribution = Default::default();
+        let mut oracle: TokenOracle = Default::default();
         let mut distribution = DistributionArray::default();
         distribution[0] = 900_000_000u64;
         distribution[1] = 100_000_000u64;
 
-        token_distribution.update(2, distribution).unwrap();
+        oracle.reserve_rates.updated_at = current_slot;
+        oracle
+            .update_liquidity_distribution(2, distribution)
+            .unwrap();
 
         rebalancing
             .compute(
                 &money_market_program_ids,
-                token_distribution.clone(),
+                oracle.clone(),
                 100_000_000,
+                current_slot,
             )
             .unwrap();
 
@@ -381,6 +401,7 @@ pub mod tests {
 
     #[test]
     fn computing_with_one_zero() {
+        let current_slot = 1;
         let pk = Pubkey::new_unique();
         let mut rebalancing: Rebalancing = Default::default();
         rebalancing.init(InitRebalancingParams {
@@ -392,15 +413,23 @@ pub mod tests {
         money_market_program_ids[0] = pk;
         money_market_program_ids[1] = pk;
 
-        let mut token_distribution: TokenDistribution = Default::default();
+        let mut token_oracle: TokenOracle = Default::default();
         let mut distribution = DistributionArray::default();
         distribution[0] = 1_000_000_000u64;
         distribution[1] = 0;
 
-        token_distribution.update(2, distribution).unwrap();
+        token_oracle.reserve_rates.updated_at = current_slot;
+        token_oracle
+            .update_liquidity_distribution(2, distribution)
+            .unwrap();
 
         rebalancing
-            .compute(&money_market_program_ids, token_distribution.clone(), 1)
+            .compute(
+                &money_market_program_ids,
+                token_oracle.clone(),
+                1,
+                current_slot,
+            )
             .unwrap();
 
         rebalancing
@@ -408,74 +437,18 @@ pub mod tests {
             .unwrap();
 
         distribution[0] = 0;
-        token_distribution.update(4, distribution).unwrap();
+        token_oracle
+            .update_liquidity_distribution(4, distribution)
+            .unwrap();
         rebalancing
-            .compute(&money_market_program_ids, token_distribution.clone(), 1)
+            .compute(
+                &money_market_program_ids,
+                token_oracle.clone(),
+                1,
+                current_slot,
+            )
             .unwrap();
 
         println!("rebalancing = {:#?}", rebalancing);
-    }
-}
-
-mod deprecated {
-    use super::*;
-
-    /// Rebalancing
-    #[repr(C)]
-    #[derive(Debug, Clone, PartialEq, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
-    pub struct DeprecatedRebalancing {
-        /// Account type - Rebalancing
-        pub account_type: AccountType,
-
-        /// Depositor
-        pub depositor: Pubkey,
-
-        /// Mint
-        pub mint: Pubkey,
-
-        /// Real distributed liquidity (with all roundings)
-        pub distributed_liquidity: u64,
-
-        /// Received collateral in each market
-        pub received_collateral: [u64; TOTAL_DISTRIBUTIONS],
-
-        /// Current token distribution from liquidity oracle
-        pub token_distribution: TokenDistribution,
-
-        /// Rebalancing steps
-        pub steps: Vec<RebalancingStep>,
-
-        /// Income refreshed mark to avoid frequent refresh
-        pub income_refreshed_at: Slot,
-    }
-
-    impl Sealed for DeprecatedRebalancing {}
-    impl Pack for DeprecatedRebalancing {
-        // 1 + 32 + 32 + 8 + (8 * 10) + 89 + (4 + 8 * 28) + 8 = 478
-        const LEN: usize = 73
-            + (8 * TOTAL_DISTRIBUTIONS)
-            + TokenDistribution::LEN
-            + (4 + TOTAL_REBALANCING_STEP * RebalancingStep::LEN)
-            + 8;
-
-        fn pack_into_slice(&self, dst: &mut [u8]) {
-            let mut slice = dst;
-            self.serialize(&mut slice).unwrap()
-        }
-
-        fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
-            let mut src_mut = src;
-            Self::deserialize(&mut src_mut).map_err(|err| {
-                msg!("Failed to deserialize");
-                msg!(&err.to_string());
-                ProgramError::InvalidAccountData
-            })
-        }
-    }
-
-    impl IsInitialized for DeprecatedRebalancing {
-        fn is_initialized(&self) -> bool {
-            self.account_type == AccountType::Rebalancing
-        }
     }
 }

@@ -44,7 +44,7 @@ impl<'a> ToolkitCommand<'a> for InitPoolMarketCommand {
         initialiazed_accounts.general_pool_market = general_pool_market_pubkey;
 
         initialiazed_accounts
-            .save(&format!("accounts.{}.yaml", config.network))
+            .save(config.accounts_path.as_str())
             .unwrap();
 
         Ok(())

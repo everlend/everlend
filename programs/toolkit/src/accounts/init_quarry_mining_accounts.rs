@@ -63,7 +63,7 @@ impl<'a> ToolkitCommand<'a> for InitQuarryMiningAccountsCommand {
         )?;
         quarry_mining.fee_token_account = fee_account.pubkey();
         println!("fee token account {}", fee_account.pubkey());
-        initialized_accounts.save(&format!("accounts.{}.yaml", config.network))?;
+        initialized_accounts.save(config.accounts_path.as_str())?;
         Ok(())
     }
 }

@@ -1,10 +1,11 @@
 use crate::helpers::{
     deposit as helper_deposit, depositor_deposit, depositor_withdraw,
     get_withdrawal_request_accounts, start_rebalancing as helper_start_rebalancing,
-    start_rebalancing, update_token_distribution, withdraw as helper_withdraw, withdraw_request,
+    start_rebalancing, update_liquidity_distribution, withdraw as helper_withdraw,
+    withdraw_request,
 };
 use crate::utils::{arg, delay};
-use crate::{distribution, Config, InitializedAccounts, ToolkitCommand, ARG_ACCOUNTS};
+use crate::{distribution, Config, InitializedAccounts, ToolkitCommand};
 use anyhow::Context;
 use clap::{Arg, ArgMatches};
 use everlend_depositor::find_rebalancing_program_address;
@@ -42,15 +43,12 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
         let arg_matches = arg_matches.unwrap();
-        let accounts_path = arg_matches
-            .value_of(ARG_ACCOUNTS)
-            .unwrap_or("accounts.yaml");
         let case = value_of::<String>(arg_matches, ARG_CASE);
 
         println!("Run {:?}", case);
 
         let default_accounts = config.get_default_accounts();
-        let initialized_accounts = InitializedAccounts::load(accounts_path).unwrap_or_default();
+        let initialized_accounts = config.get_initialized_accounts();
         println!("default_accounts = {:#?}", default_accounts);
 
         let InitializedAccounts {
@@ -128,8 +126,8 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
             );
         };
 
-        let update_token_distribution = |d: DistributionArray| {
-            update_token_distribution(config, &liquidity_oracle, &sol.mint, &d)
+        let update_liquidity_distribution = |d: DistributionArray| {
+            update_liquidity_distribution(config, &liquidity_oracle, &sol.mint, &d)
         };
 
         let withdraw_requests =
@@ -319,52 +317,52 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
             Some("first") => {
                 general_pool_deposit(1000)?;
 
-                update_token_distribution(distribution!([1000000000, 0]))?;
+                update_liquidity_distribution(distribution!([1000000000, 0]))?;
                 let (_, rebalancing) = start_rebalancing()?;
                 complete_rebalancing(Some(rebalancing))?;
 
-                update_token_distribution(distribution!([959876767, 0]))?;
+                update_liquidity_distribution(distribution!([959876767, 0]))?;
                 let (_, rebalancing) = start_rebalancing()?;
                 complete_rebalancing(Some(rebalancing))?;
 
-                update_token_distribution(distribution!([959876767, 0]))?;
+                update_liquidity_distribution(distribution!([959876767, 0]))?;
                 let (_, rebalancing) = start_rebalancing()?;
                 complete_rebalancing(Some(rebalancing))?;
 
-                update_token_distribution(distribution!([959876767, 0]))?;
+                update_liquidity_distribution(distribution!([959876767, 0]))?;
                 let (_, rebalancing) = start_rebalancing()?;
                 println!("{:#?}", rebalancing);
             }
             Some("second") => {
                 general_pool_deposit(1000)?;
 
-                update_token_distribution(distribution!([500000000, 500000000]))?;
+                update_liquidity_distribution(distribution!([500000000, 500000000]))?;
                 let (_, rebalancing) = start_rebalancing()?;
                 complete_rebalancing(Some(rebalancing))?;
 
                 general_pool_deposit(10)?;
 
-                update_token_distribution(distribution!([900000000, 100000000]))?;
+                update_liquidity_distribution(distribution!([900000000, 100000000]))?;
                 let (_, rebalancing) = start_rebalancing()?;
                 complete_rebalancing(Some(rebalancing))?;
             }
             Some("third") => {
                 general_pool_deposit(1000)?;
 
-                update_token_distribution(distribution!([100000000, 100000000, 800000000]))?;
+                update_liquidity_distribution(distribution!([100000000, 100000000, 800000000]))?;
                 let (_, rebalancing) = start_rebalancing()?;
                 complete_rebalancing(Some(rebalancing))?;
 
                 general_pool_deposit(10)?;
 
-                update_token_distribution(distribution!([0, 300000000, 700000000]))?;
+                update_liquidity_distribution(distribution!([0, 300000000, 700000000]))?;
                 let (_, rebalancing) = start_rebalancing()?;
                 complete_rebalancing(Some(rebalancing))?;
             }
             Some("invalid-amount") => {
                 general_pool_deposit(1000)?;
 
-                update_token_distribution(distribution!([1000000000, 0, 0]))?;
+                update_liquidity_distribution(distribution!([1000000000, 0, 0]))?;
                 let (_, rebalancing) = start_rebalancing()?;
                 complete_rebalancing(Some(rebalancing))?;
 
@@ -380,41 +378,41 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
             Some("larix") => {
                 general_pool_deposit(1000)?;
 
-                update_token_distribution(distribution!([0, 0, 1000000000]))?;
+                update_liquidity_distribution(distribution!([0, 0, 1000000000]))?;
                 let (_, rebalancing) = start_rebalancing()?;
                 complete_rebalancing(Some(rebalancing))?;
             }
             Some("solend") => {
                 general_pool_deposit(1000)?;
 
-                update_token_distribution(distribution!([0, 0, 1000000000]))?;
+                update_liquidity_distribution(distribution!([0, 0, 1000000000]))?;
                 let (_, rebalancing) = start_rebalancing()?;
                 complete_rebalancing(Some(rebalancing))?;
             }
             Some("zero-distribution") => {
                 general_pool_deposit(1000)?;
 
-                update_token_distribution(distribution!([0, 0]))?;
+                update_liquidity_distribution(distribution!([0, 0]))?;
                 let (_, rebalancing) = start_rebalancing()?;
                 complete_rebalancing(Some(rebalancing))?;
             }
             Some("deposit") => {
                 general_pool_deposit(1000)?;
 
-                update_token_distribution(distribution!([1000000000, 0]))?;
+                update_liquidity_distribution(distribution!([1000000000, 0]))?;
                 let (_, rebalancing) = start_rebalancing()?;
                 complete_rebalancing(Some(rebalancing))?;
 
                 general_pool_deposit(1000)?;
 
-                update_token_distribution(distribution!([1000000000, 0]))?;
+                update_liquidity_distribution(distribution!([1000000000, 0]))?;
                 let (_, rebalancing) = start_rebalancing()?;
                 println!("{:#?}", rebalancing);
             }
             Some("full") => {
                 general_pool_deposit(1000)?;
 
-                update_token_distribution(distribution!([1000000000, 0]))?;
+                update_liquidity_distribution(distribution!([1000000000, 0]))?;
                 let (_, rebalancing) = start_rebalancing()?;
                 complete_rebalancing(Some(rebalancing))?;
 
@@ -422,18 +420,18 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
                 let withdraw_requests = withdraw_requests()?;
                 println!("{:#?}", withdraw_requests);
 
-                update_token_distribution(distribution!([1000000000, 0]))?;
+                update_liquidity_distribution(distribution!([1000000000, 0]))?;
                 let (_, rebalancing) = start_rebalancing()?;
                 complete_rebalancing(Some(rebalancing))?;
 
-                update_token_distribution(distribution!([1000000000, 0]))?;
+                update_liquidity_distribution(distribution!([1000000000, 0]))?;
                 let (_, rebalancing) = start_rebalancing()?;
                 println!("{:#?}", rebalancing);
 
                 delay(WITHDRAW_DELAY / 2);
                 general_pool_withdraw()?;
 
-                update_token_distribution(distribution!([1000000000, 0]))?;
+                update_liquidity_distribution(distribution!([1000000000, 0]))?;
                 let (_, rebalancing) = start_rebalancing()?;
                 println!("{:#?}", rebalancing);
             }
@@ -443,22 +441,22 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
             Some("11") => {
                 general_pool_deposit(4321)?;
 
-                update_token_distribution(distribution!([10, 10]))?;
+                update_liquidity_distribution(distribution!([10, 10]))?;
                 let (_, rebalancing) = start_rebalancing()?;
                 complete_rebalancing(Some(rebalancing))?;
 
-                update_token_distribution(distribution!([10, 20]))?;
+                update_liquidity_distribution(distribution!([10, 20]))?;
                 let (_, rebalancing) = start_rebalancing()?;
                 complete_rebalancing(Some(rebalancing))?;
             }
             Some("empty") => {
-                update_token_distribution(distribution!([1000000000, 0]))?;
+                update_liquidity_distribution(distribution!([1000000000, 0]))?;
                 start_rebalancing()?;
             }
             Some("refresh-income") => {
                 general_pool_deposit(1000)?;
 
-                update_token_distribution(distribution!([1000000000, 0]))?;
+                update_liquidity_distribution(distribution!([1000000000, 0]))?;
                 let (_, rebalancing) = start_rebalancing()?;
                 complete_rebalancing(Some(rebalancing))?;
 
@@ -468,23 +466,23 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
             None => {
                 general_pool_deposit(1000)?;
 
-                update_token_distribution(distribution!([500000000, 500000000]))?;
+                update_liquidity_distribution(distribution!([500000000, 500000000]))?;
                 let (_, rebalancing) = start_rebalancing()?;
                 complete_rebalancing(Some(rebalancing))?;
 
                 general_pool_withdraw_request(100)?;
 
-                update_token_distribution(distribution!([300000000, 600000000]))?;
+                update_liquidity_distribution(distribution!([300000000, 600000000]))?;
                 let (_, rebalancing) = start_rebalancing()?;
                 complete_rebalancing(Some(rebalancing))?;
 
-                update_token_distribution(distribution!([0, 1000000000]))?;
+                update_liquidity_distribution(distribution!([0, 1000000000]))?;
                 let (_, rebalancing) = start_rebalancing()?;
                 delay(WITHDRAW_DELAY / 2);
                 general_pool_withdraw()?;
                 complete_rebalancing(Some(rebalancing))?;
 
-                update_token_distribution(distribution!([100000000, 0]))?;
+                update_liquidity_distribution(distribution!([100000000, 0]))?;
                 let (_, rebalancing) = start_rebalancing()?;
                 complete_rebalancing(Some(rebalancing))?;
             }

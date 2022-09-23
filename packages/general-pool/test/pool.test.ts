@@ -107,7 +107,6 @@ describe('Pool', () => {
       const { tx } = await prepareDepositTx(
         { connection, payerPublicKey },
         POOL_PUBKEY,
-        REGISTRY_PUBKEY,
         amount,
         REWARD_PROGRAM_ID,
         CONFIG,
@@ -137,7 +136,6 @@ describe('Pool', () => {
       const { tx } = await prepareWithdrawalRequestTx(
         { connection, payerPublicKey },
         POOL_PUBKEY,
-        REGISTRY_PUBKEY,
         amount,
         REWARD_PROGRAM_ID,
         CONFIG,

@@ -36,7 +36,7 @@ impl<'a> ToolkitCommand<'a> for CreateLiquidityOracleCommand {
         initialiazed_accounts.liquidity_oracle = liquidity_oracle_pubkey;
 
         initialiazed_accounts
-            .save(&format!("accounts.{}.yaml", config.network))
+            .save(config.accounts_path.as_str())
             .unwrap();
 
         Ok(())
