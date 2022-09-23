@@ -146,6 +146,7 @@ impl<'a, 'b> WithdrawRequestContext<'a, 'b> {
             .ok_or(EverlendError::MathOverflow)?
             .checked_div(total_minted as u128)
             .ok_or(EverlendError::MathOverflow)? as u64;
+        assert_non_zero_amount(liquidity_amount)?;
 
         let (pool_config_pubkey, _) = find_pool_config_program_address(program_id, self.pool.key);
         assert_account_key(self.pool_config, &pool_config_pubkey)?;
