@@ -258,3 +258,20 @@ async fn fail_with_invalid_user_transfer_authority() {
         )
     );
 }
+
+#[tokio::test]
+async fn fail_with_zero_amount() {
+    let (mut context, _, test_income_pool_market, test_income_pool, user) = setup().await;
+
+    assert_eq!(
+        test_income_pool
+            .deposit(&mut context, &test_income_pool_market, &user, 0)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::ZeroAmount as u32)
+        )
+    );
+}

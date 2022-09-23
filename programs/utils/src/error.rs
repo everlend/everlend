@@ -109,6 +109,10 @@ pub enum EverlendError {
     /// Collateral leak
     #[error("Returned collateral amount is less than expected")]
     CollateralLeak,
+
+    /// Amount cannot be zero
+    #[error("Amount cannot be zero")]
+    ZeroAmount
 }
 
 impl PrintProgramError for EverlendError {

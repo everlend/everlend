@@ -74,3 +74,12 @@ pub fn assert_rent_exempt(rent: &Rent, account_info: &AccountInfo) -> ProgramRes
         Ok(())
     }
 }
+
+/// Assert a non-zero amount
+pub fn assert_non_zero_amount(amount: u64) -> ProgramResult {
+    if amount == 0 {
+        return Err(EverlendError::ZeroAmount.into())
+    }
+
+    Ok(())
+}
