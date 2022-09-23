@@ -1,8 +1,8 @@
+use crate::utils::{get_liquidity_mint, BanksClientResult};
 use solana_program::pubkey::Pubkey;
 use solana_program_test::ProgramTestContext;
 use solana_sdk::signature::{Keypair, Signer};
 use solana_sdk::transaction::Transaction;
-use crate::utils::{BanksClientResult, get_liquidity_mint};
 
 #[derive(Debug)]
 pub struct TestRewards {
@@ -13,9 +13,7 @@ pub struct TestRewards {
 }
 
 impl TestRewards {
-    pub fn new(
-        token_mint_pubkey: Option<Pubkey>,
-    ) -> Self {
+    pub fn new(token_mint_pubkey: Option<Pubkey>) -> Self {
         let token_mint_pubkey = token_mint_pubkey.unwrap_or(get_liquidity_mint().1);
 
         let pool = Keypair::new();
@@ -38,10 +36,7 @@ impl TestRewards {
         }
     }
 
-    pub async fn initialize_pool(
-        &self,
-        context: &mut ProgramTestContext,
-    ) -> BanksClientResult<()> {
+    pub async fn initialize_pool(&self, context: &mut ProgramTestContext) -> BanksClientResult<()> {
         // Initialize mining pool
         let tx = Transaction::new_signed_with_payer(
             &[
@@ -156,7 +151,11 @@ impl TestRewards {
         fee_account: &Pubkey,
     ) -> Pubkey {
         let (vault_pubkey, _) = Pubkey::find_program_address(
-            &[b"vault".as_ref(), self.mining_reward_pool.as_ref(), self.token_mint_pubkey.as_ref()],
+            &[
+                b"vault".as_ref(),
+                self.mining_reward_pool.as_ref(),
+                self.token_mint_pubkey.as_ref(),
+            ],
             &everlend_rewards::id(),
         );
 
@@ -188,7 +187,11 @@ impl TestRewards {
         amount: u64,
     ) -> BanksClientResult<()> {
         let (vault_pubkey, _) = Pubkey::find_program_address(
-            &[b"vault".as_ref(), self.mining_reward_pool.as_ref(), self.token_mint_pubkey.as_ref()],
+            &[
+                b"vault".as_ref(),
+                self.mining_reward_pool.as_ref(),
+                self.token_mint_pubkey.as_ref(),
+            ],
             &everlend_rewards::id(),
         );
 
@@ -202,7 +205,7 @@ impl TestRewards {
                 fee_account,
                 &context.payer.pubkey(),
                 from,
-                amount
+                amount,
             )],
             Some(&context.payer.pubkey()),
             &[&context.payer],
@@ -217,10 +220,14 @@ impl TestRewards {
         context: &mut ProgramTestContext,
         user: &Keypair,
         mining_account: &Pubkey,
-        user_reward_token: &Pubkey
+        user_reward_token: &Pubkey,
     ) -> BanksClientResult<()> {
         let (vault_pubkey, _) = Pubkey::find_program_address(
-            &[b"vault".as_ref(), self.mining_reward_pool.as_ref(), self.token_mint_pubkey.as_ref()],
+            &[
+                b"vault".as_ref(),
+                self.mining_reward_pool.as_ref(),
+                self.token_mint_pubkey.as_ref(),
+            ],
             &everlend_rewards::id(),
         );
 

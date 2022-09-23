@@ -10,7 +10,7 @@ use solana_program::system_program;
 use solana_program::sysvar::{Sysvar, SysvarId};
 use spl_token::state::Account;
 
-use crate::state::{RewardPool, RewardsRoot, RewardVault};
+use crate::state::{RewardPool, RewardVault, RewardsRoot};
 
 /// Instruction context
 pub struct AddVaultContext<'a, 'b> {

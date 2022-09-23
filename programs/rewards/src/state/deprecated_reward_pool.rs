@@ -1,9 +1,9 @@
-use borsh::{BorshSerialize, BorshDeserialize, BorshSchema};
+use crate::state::{RewardVault, MAX_REWARDS};
+use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use solana_program::msg;
 use solana_program::program_error::ProgramError;
 use solana_program::program_pack::{IsInitialized, Pack, Sealed};
 use solana_program::pubkey::Pubkey;
-use crate::state::{MAX_REWARDS, RewardVault};
 
 /// Deprecated Reward pool
 #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
@@ -46,5 +46,7 @@ impl Pack for DeprecatedRewardPool {
 }
 
 impl IsInitialized for DeprecatedRewardPool {
-    fn is_initialized(&self) -> bool { self.rewards_root != Pubkey::default() }
+    fn is_initialized(&self) -> bool {
+        self.rewards_root != Pubkey::default()
+    }
 }

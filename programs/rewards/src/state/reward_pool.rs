@@ -120,7 +120,7 @@ impl RewardPool {
             liquidity_mint: deprecated_pool.liquidity_mint,
             total_share: deprecated_pool.total_share,
             vaults: deprecated_pool.vaults.clone(),
-            deposit_authority: deprecated_pool.deposit_authority
+            deposit_authority: deprecated_pool.deposit_authority,
         }
     }
 }

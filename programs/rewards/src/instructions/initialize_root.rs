@@ -1,5 +1,5 @@
 use crate::state::RewardsRoot;
-use everlend_utils::{AccountLoader, assert_signer};
+use everlend_utils::{assert_signer, AccountLoader};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint_deprecated::ProgramResult;
 use solana_program::program_error::ProgramError;
@@ -48,13 +48,10 @@ impl<'a, 'b> InitializeRootContext<'a, 'b> {
             self.payer.clone(),
             self.rewards_root.clone(),
             &[],
-            &rent
+            &rent,
         )?;
         let rewards_root = RewardsRoot::init(*self.payer.key);
-        RewardsRoot::pack(
-            rewards_root,
-            *self.rewards_root.data.borrow_mut()
-        )?;
+        RewardsRoot::pack(rewards_root, *self.rewards_root.data.borrow_mut())?;
 
         Ok(())
     }

@@ -28,11 +28,11 @@ pub mod larix;
 pub mod liquidity_oracle;
 pub mod money_market;
 pub mod registry;
+pub mod rewards;
 pub mod ulp_pool;
 pub mod ulp_pool_borrow_authority;
 pub mod ulp_pool_market;
 pub mod users;
-pub mod rewards;
 
 pub use collateral_pool::*;
 pub use collateral_pool_borrow_authority::*;
@@ -47,11 +47,11 @@ pub use income_pool_market::*;
 pub use liquidity_oracle::*;
 pub use money_market::*;
 pub use registry::*;
+pub use rewards::*;
 pub use ulp_pool::*;
 pub use ulp_pool_borrow_authority::*;
 pub use ulp_pool_market::*;
 pub use users::*;
-pub use rewards::*;
 
 use self::larix::{add_larix, TestLarix};
 

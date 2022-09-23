@@ -1,9 +1,9 @@
+use crate::state::AccountType;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use solana_program::msg;
 use solana_program::program_error::ProgramError;
 use solana_program::program_pack::{IsInitialized, Pack, Sealed};
 use solana_program::pubkey::Pubkey;
-use crate::state::AccountType;
 
 /// Rewards Root
 #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
@@ -19,7 +19,7 @@ impl RewardsRoot {
     pub fn init(authority: Pubkey) -> RewardsRoot {
         RewardsRoot {
             account_type: AccountType::RewardsRoot,
-            authority
+            authority,
         }
     }
 }

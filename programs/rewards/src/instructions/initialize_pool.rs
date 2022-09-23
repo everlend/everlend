@@ -7,7 +7,7 @@ use solana_program::program_error::ProgramError;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
-use solana_program::{system_program};
+use solana_program::system_program;
 use solana_program::sysvar::{Sysvar, SysvarId};
 
 /// Instruction context

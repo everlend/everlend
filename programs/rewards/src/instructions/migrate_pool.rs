@@ -7,7 +7,7 @@ use solana_program::program_error::ProgramError;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
-use solana_program::{system_program};
+use solana_program::system_program;
 use solana_program::sysvar::{Sysvar, SysvarId};
 
 /// Instruction context
@@ -48,8 +48,7 @@ impl<'a, 'b> MigratePoolContext<'a, 'b> {
     pub fn process(&self, program_id: &Pubkey) -> ProgramResult {
         let rent = Rent::from_account_info(self.rent)?;
 
-        let deprecated_pool
-            = DeprecatedRewardPool::unpack(&self.reward_pool.data.borrow())?;
+        let deprecated_pool = DeprecatedRewardPool::unpack(&self.reward_pool.data.borrow())?;
         let reward_pool = RewardPool::migrate(&deprecated_pool);
 
         let (reward_pool_pubkey, bump) = find_reward_pool_program_address(
@@ -69,7 +68,9 @@ impl<'a, 'b> MigratePoolContext<'a, 'b> {
         let deprecated_pool_lamports = self.reward_pool.lamports();
 
         **self.reward_pool.lamports.borrow_mut() = 0;
-        **self.payer.lamports.borrow_mut() = self.payer.lamports()
+        **self.payer.lamports.borrow_mut() = self
+            .payer
+            .lamports()
             .checked_add(deprecated_pool_lamports)
             .ok_or(EverlendError::MathOverflow)?;
 
