@@ -546,3 +546,29 @@ async fn fail_with_amount_too_small() {
         )
     )
 }
+
+#[tokio::test]
+async fn fail_with_zero_amount() {
+    let (mut context, test_pool_market, test_pool, _pool_borrow_authority, user, mining_acc) =
+        setup().await;
+
+    context.warp_to_slot(WARP_SLOT + 5).unwrap();
+
+    assert_eq!(
+        test_pool
+            .withdraw_request(
+                &mut context,
+                &test_pool_market,
+                &user,
+                mining_acc,
+                0
+            )
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::ZeroAmount as u32)
+        )
+    )
+}

@@ -1,4 +1,4 @@
-use crate::{utils::Config, ToolkitCommand};
+use crate::{print_commands, utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 
 use super::InitRegistryCommand;
@@ -24,8 +24,11 @@ impl<'a> ToolkitCommand<'a> for RegistryCommand {
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
-        let (cmd_name, _) = arg_matches.unwrap().subcommand();
-        println!("{}", cmd_name);
+        let (cmd_name, arg_matches) = arg_matches.unwrap().subcommand();
+        if cmd_name.is_empty() {
+            print_commands(self);
+            return Ok(());
+        }
 
         let cmd = self
             .get_subcommands()

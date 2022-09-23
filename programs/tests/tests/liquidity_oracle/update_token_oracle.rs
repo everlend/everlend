@@ -1,5 +1,5 @@
 use crate::utils::*;
-use everlend_liquidity_oracle::state::DistributionArray;
+use everlend_liquidity_oracle::state::{Distribution, DistributionArray};
 use solana_program::clock::Slot;
 use solana_program_test::*;
 use solana_sdk::{signature::Keypair, signer::Signer};
@@ -25,10 +25,10 @@ async fn success() {
     let mut distribution = DistributionArray::default();
     distribution[0] = 100u64;
 
-    let test_token_distribution = TestTokenDistribution::new(token_mint.pubkey(), distribution);
+    let test_token_oracle = TestTokenOracle::new(token_mint.pubkey(), distribution);
     let authority = context.payer.pubkey();
 
-    test_token_distribution
+    test_token_oracle
         .init(&mut context, &test_liquidity_oracle, authority)
         .await
         .unwrap();
@@ -38,7 +38,7 @@ async fn success() {
     distribution[0] = 90u64;
     distribution[1] = 10u64;
 
-    test_token_distribution
+    test_token_oracle
         .update(
             &mut context,
             &test_liquidity_oracle,
@@ -50,7 +50,7 @@ async fn success() {
 
     context.warp_to_slot(WARP_SLOT + 4).unwrap();
 
-    let result_distribution = test_token_distribution
+    let result_distribution = test_token_oracle
         .get_data(
             &mut context,
             &everlend_liquidity_oracle::id(),
@@ -58,6 +58,11 @@ async fn success() {
         )
         .await;
 
-    assert_eq!(distribution, result_distribution.distribution);
-    assert_eq!(WARP_SLOT + 2, result_distribution.updated_at);
+    assert_eq!(
+        result_distribution.liquidity_distribution,
+        Distribution {
+            values: distribution,
+            updated_at: WARP_SLOT + 2
+        }
+    );
 }
