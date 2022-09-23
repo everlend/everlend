@@ -56,6 +56,8 @@ pub fn deposit<'a, 'b>(
         money_market_program,
         money_market_account_info_iter,
         internal_mining_type,
+        collateral_mint.key,
+        authority.key,
     )?;
 
     let collateral_amount = if is_mining {
@@ -142,6 +144,8 @@ pub fn withdraw<'a, 'b>(
         money_market_program,
         money_market_account_info_iter,
         internal_mining_type,
+        collateral_mint.key,
+        authority.key,
     )?;
 
     if is_mining {
@@ -235,6 +239,8 @@ pub fn money_market<'a, 'b>(
     money_market_program: AccountInfo<'a>,
     money_market_account_info_iter: &'b mut Iter<AccountInfo<'a>>,
     internal_mining_type: Option<MiningType>,
+    collateral_token_mint: &Pubkey,
+    depositor_authority: &Pubkey,
 ) -> Result<Box<dyn MoneyMarket<'a> + 'a>, ProgramError> {
     let port_finance_program_id = registry_markets.money_markets[0];
     let larix_program_id = registry_markets.money_markets[1];
@@ -253,6 +259,8 @@ pub fn money_market<'a, 'b>(
             *money_market_program.key,
             money_market_account_info_iter,
             internal_mining_type,
+            collateral_token_mint,
+            depositor_authority
         )?;
         return Ok(Box::new(port));
     }

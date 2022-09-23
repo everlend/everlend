@@ -26,6 +26,7 @@ use solana_program::{
     sysvar::Sysvar,
 };
 use spl_token::state::Account;
+use spl_associated_token_account::get_associated_token_address;
 use std::cmp::min;
 
 use crate::state::{InternalMining, MiningType};
@@ -870,38 +871,46 @@ impl Processor {
                 )?;
             }
             MiningType::Quarry {
-                quarry_mining_program_id: _,
-                quarry: _,
-                rewarder: _,
-                miner_vault: _,
+                rewarder,
             } => {
-                return Err(EverlendError::TemporaryUnavailable.into());
+                assert_account_key(staking_program_id_info, &cpi::quarry::staking_program_id())?;
 
-                // assert_account_key(staking_program_id_info, &quarry_mining_program_id)?;
-                // let miner_info = next_account_info(account_info_iter)?;
-                // let quarry_info = next_account_info(account_info_iter)?;
-                // assert_account_key(quarry_info, &quarry)?;
-                // let rewarder_info = next_account_info(account_info_iter)?;
-                // assert_account_key(rewarder_info, &rewarder)?;
-                // let miner_vault_info = next_account_info(account_info_iter)?;
-                // assert_account_key(miner_vault_info, &miner_vault)?;
-                // let (miner_pubkey, _) = cpi::quarry::find_miner_program_address(
-                //     staking_program_id_info.key,
-                //     quarry_info.key,
-                //     depositor_authority_info.key,
-                // );
-                // assert_account_key(miner_info, &miner_pubkey)?;
-                // cpi::quarry::create_miner(
-                //     staking_program_id_info.key,
-                //     depositor_authority_info.clone(),
-                //     miner_info.clone(),
-                //     quarry_info.clone(),
-                //     rewarder_info.clone(),
-                //     manager_info.clone(),
-                //     collateral_mint_info.clone(),
-                //     miner_vault_info.clone(),
-                //     &[signers_seeds.as_ref()],
-                // )?;
+                let rewarder_info = next_account_info(account_info_iter)?;
+                assert_account_key(rewarder_info, &rewarder)?;
+
+                let quarry_info = next_account_info(account_info_iter)?;
+                let (quarry, _) = cpi::quarry::find_quarry_program_address(
+                    &cpi::quarry::staking_program_id(),
+                    &rewarder,
+                    collateral_mint_info.key,
+                );
+                assert_account_key(quarry_info, &quarry)?;
+
+                let miner_info = next_account_info(account_info_iter)?;
+                let (miner_pubkey, _) = cpi::quarry::find_miner_program_address(
+                    &cpi::quarry::staking_program_id(),
+                    &quarry,
+                    depositor_authority_info.key,
+                );
+                assert_account_key(miner_info, &miner_pubkey)?;
+
+                let miner_vault_info = next_account_info(account_info_iter)?;
+                let miner_vault = get_associated_token_address(&miner_pubkey, collateral_mint_info.key);
+                assert_account_key(miner_vault_info, &miner_vault)?;
+
+                let _spl_token_program = next_account_info(account_info_iter)?;
+
+                cpi::quarry::create_miner(
+                    staking_program_id_info.key,
+                    depositor_authority_info.clone(),
+                    miner_info.clone(),
+                    quarry_info.clone(),
+                    rewarder_info.clone(),
+                    manager_info.clone(),
+                    collateral_mint_info.clone(),
+                    miner_vault_info.clone(),
+                    &[signers_seeds.as_ref()],
+                )?;
             }
             MiningType::None => {}
         }
@@ -1103,23 +1112,34 @@ impl Processor {
                 )?;
             }
             MiningType::Quarry {
-                quarry_mining_program_id,
-                quarry,
                 rewarder,
-                miner_vault: _,
             } => {
-                assert_account_key(staking_program_id_info, &quarry_mining_program_id)?;
+                assert_account_key(staking_program_id_info,&cpi::quarry::staking_program_id())?;
                 let mint_wrapper = next_account_info(account_info_iter)?;
                 let mint_wrapper_program = next_account_info(account_info_iter)?;
                 let minter = next_account_info(account_info_iter)?;
+                // IOU token mint
                 let rewards_token_mint = next_account_info(account_info_iter)?;
                 let rewards_token_account = next_account_info(account_info_iter)?;
+                let (reward_token_account_pubkey, _) = find_transit_program_address(
+                    program_id,
+                    depositor_info.key,
+                    rewards_token_mint.key,
+                    "lm_reward",
+                );
+                assert_account_key(rewards_token_account, &reward_token_account_pubkey)?;
                 let rewards_fee_account = next_account_info(account_info_iter)?;
                 let miner = next_account_info(account_info_iter)?;
-                let quarry_info = next_account_info(account_info_iter)?;
-                assert_account_key(quarry_info, &quarry)?;
                 let quarry_rewarder = next_account_info(account_info_iter)?;
                 assert_account_key(quarry_rewarder, &rewarder)?;
+                let quarry_info = next_account_info(account_info_iter)?;
+                let (quarry, _) = cpi::quarry::find_quarry_program_address(
+                    staking_program_id_info.key,
+                    quarry_rewarder.key,
+                    liquidity_mint_info.key,
+                );
+                assert_account_key(quarry_info, &quarry)?;
+
                 cpi::quarry::claim_rewards(
                     staking_program_id_info.key,
                     mint_wrapper.clone(),
@@ -1132,6 +1152,22 @@ impl Processor {
                     miner.clone(),
                     quarry_info.clone(),
                     quarry_rewarder.clone(),
+                    &[signers_seeds.as_ref()],
+                )?;
+
+                let redeemer_program_id_info = next_account_info(account_info_iter)?;
+                let redeemer_info = next_account_info(account_info_iter)?;
+                let redemption_vault_info = next_account_info(account_info_iter)?;
+
+                cpi::quarry::redeem_all_tokens(
+                    redeemer_program_id_info.key,
+                    redeemer_info.clone(),
+                    rewards_token_mint.clone(),
+                    rewards_token_account.clone(),
+                    redemption_vault_info.clone(),
+                    reward_accounts.reward_transit_info.clone(),
+                    depositor_authority_info.clone(),
+                    &[signers_seeds.as_ref()],
                 )?;
             }
             MiningType::None => {}

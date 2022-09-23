@@ -20,11 +20,11 @@ pub struct SPLLending<'a> {
     reserve_liquidity_oracle: AccountInfo<'a>,
 }
 
-impl<'a> SPLLending<'a> {
+impl<'a, 'b> SPLLending<'a> {
     ///
     pub fn init(
         money_market_program_id: Pubkey,
-        account_info_iter: &mut Iter<AccountInfo<'a>>,
+        account_info_iter: &'b mut Iter<AccountInfo<'a>>,
     ) -> Result<SPLLending<'a>, ProgramError> {
         let reserve_info = next_account_info(account_info_iter)?;
         let reserve_liquidity_supply_info = next_account_info(account_info_iter)?;
