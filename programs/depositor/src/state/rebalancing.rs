@@ -239,6 +239,17 @@ impl Rebalancing {
             .unwrap()
     }
 
+    /// Get next unexecuted refresh rebalancing steps
+    pub fn next_refresh_steps(&self) -> (RebalancingStep, RebalancingStep) {
+        let index = self
+            .steps
+            .iter()
+            .position(|&step| step.executed_at.is_none())
+            .unwrap();
+
+        (self.steps[index], self.steps[index + 1])
+    }
+
     /// Execute next unexecuted rebalancing step
     pub fn execute_step(
         &mut self,

@@ -179,6 +179,10 @@ impl<'a, 'b> WithdrawContext<'a, 'b> {
 
         let step = rebalancing.next_step();
 
+        if step.operation != RebalancingOperation::Withdraw {
+            return Err(EverlendError::InvalidRebalancingOperation.into());
+        }
+
         if !registry_markets.money_markets[usize::from(step.money_market_index)]
             .eq(self.money_market_program.key)
         {

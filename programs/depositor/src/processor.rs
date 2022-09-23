@@ -558,6 +558,10 @@ impl<'a, 'b> Processor {
         {
             let step = rebalancing.next_step();
 
+            if step.operation != RebalancingOperation::Deposit {
+                return Err(EverlendError::InvalidRebalancingOperation.into());
+            }
+
             if registry_markets.money_markets[usize::from(step.money_market_index)]
                 != *money_market_program_info.key
             {
