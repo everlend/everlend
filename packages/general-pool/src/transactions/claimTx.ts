@@ -9,7 +9,7 @@ import { RewardProgram } from '../rewardProgram'
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token'
 
 type ClaimTxParams = {
-  rootAccount: PublicKey
+  rewardsRoot: PublicKey
   rewardPool: PublicKey
   rewardMint: PublicKey
   vault: PublicKey
@@ -27,7 +27,7 @@ export class ClaimTx extends Transaction {
   constructor(options: TransactionCtorFields, params: ClaimTxParams) {
     super(options)
     const { feePayer } = options
-    const { rootAccount, rewardPool, rewardMint, vault, mining, userRewardTokenAccount } =
+    const { rewardsRoot, rewardPool, rewardMint, vault, mining, userRewardTokenAccount } =
       params
 
     const data = ClaimData.serialize()
@@ -35,7 +35,7 @@ export class ClaimTx extends Transaction {
     this.add(
       new TransactionInstruction({
         keys: [
-          { pubkey: rootAccount, isSigner: false, isWritable: false },
+          { pubkey: rewardsRoot, isSigner: false, isWritable: false },
           { pubkey: rewardPool, isSigner: false, isWritable: false },
           { pubkey: rewardMint, isSigner: false, isWritable: false },
           { pubkey: vault, isSigner: false, isWritable: true },

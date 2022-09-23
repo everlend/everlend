@@ -11,7 +11,7 @@ import { Borsh } from '@everlend/common'
 import { RewardProgram } from '../rewardProgram'
 
 type InitializeMiningTxParams = {
-  rootAccount: PublicKey
+  rewardsRoot: PublicKey
   rewardPool: PublicKey
   mining: PublicKey
   user: PublicKey
@@ -27,14 +27,14 @@ export class InitializeMining extends Transaction {
   constructor(options: TransactionCtorFields, params: InitializeMiningTxParams) {
     super(options)
     const { feePayer } = options
-    const { rootAccount, rewardPool, mining, user } = params
+    const { rewardsRoot, rewardPool, mining, user } = params
 
     const data = InitializeMiningData.serialize()
 
     this.add(
       new TransactionInstruction({
         keys: [
-          { pubkey: rootAccount, isSigner: false, isWritable: false },
+          { pubkey: rewardsRoot, isSigner: false, isWritable: false },
           { pubkey: rewardPool, isSigner: false, isWritable: true },
           { pubkey: mining, isSigner: false, isWritable: true },
           { pubkey: user, isSigner: false, isWritable: false },

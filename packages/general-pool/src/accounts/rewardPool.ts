@@ -1,5 +1,5 @@
 import { PublicKey, AccountInfo } from '@solana/web3.js'
-import { RewardProgram } from '../rewardProgram'
+import { RewardProgram, AccountType } from '../rewardProgram'
 import { Account, Borsh, Errors } from '@everlend/common'
 import BN from 'bn.js'
 import { GeneralPoolsProgram } from '../program'
@@ -13,8 +13,8 @@ type RewardVault = {
 }
 
 type Args = {
-  anchorId: Array<BN>
-  rootAccount: PublicKey
+  accountType: AccountType
+  rewardsRoot: PublicKey
   bump: BN
   liquidityMint: PublicKey
   totalShare: BN
@@ -24,8 +24,8 @@ type Args = {
 
 export class RewardPoolData extends Borsh.Data<Args> {
   static readonly SCHEMA = this.struct([
-    ['anchorId', ['u8', 8]],
-    ['rootAccount', 'publicKey'],
+    ['accountType', 'u8'],
+    ['rewardsRoot', 'publicKey'],
     ['bump', 'u8'],
     ['liquidityMint', 'publicKey'],
     ['totalShare', 'u64'],
@@ -33,8 +33,8 @@ export class RewardPoolData extends Borsh.Data<Args> {
     ['depositAuthority', 'publicKey'],
   ])
 
-  anchorId: Array<BN>
-  rootAccount: PublicKey
+  accountType: AccountType
+  rewardsRoot: PublicKey
   bump: BN
   liquidityMint: PublicKey
   totalShare: BN

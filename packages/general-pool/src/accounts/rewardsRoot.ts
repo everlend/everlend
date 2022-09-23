@@ -1,24 +1,23 @@
-import { AccountInfo, PublicKey } from "@solana/web3.js"
+import { AccountInfo, PublicKey } from '@solana/web3.js'
 import { Account, Borsh, Errors } from '@everlend/common'
-import BN from 'bn.js'
-import { RewardProgram } from '../rewardProgram'
+import { AccountType, RewardProgram } from '../rewardProgram'
 
 type Args = {
-  anchorId: Array<BN>
+  accountType: AccountType
   authority: PublicKey
 }
 
 export class RootAccountData extends Borsh.Data<Args> {
   static readonly SCHEMA = this.struct([
-    ['anchorId', ['u8', 8]],
+    ['accountType', 'u8'],
     ['authority', 'publicKey'],
   ])
 
-  anchorId: Array<BN>
+  accountType: AccountType
   authority: PublicKey
 }
 
-export class RootAccount extends Account<RootAccountData> {
+export class RewardsRoot extends Account<RootAccountData> {
   constructor(publicKey: PublicKey, info: AccountInfo<Buffer>) {
     super(publicKey, info)
 

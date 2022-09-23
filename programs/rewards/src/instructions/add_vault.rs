@@ -58,7 +58,7 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
         let mut reward_pool = RewardPool::unpack(&self.reward_pool.data.borrow())?;
 
         let (vault_pubkey, bump) =
-            find_vault_program_address(program_id, &self.reward_pool.key, &self.reward_mint.key);
+            find_vault_program_address(program_id, &self.reward_pool.key, self.reward_mint.key);
 
         {
             let rewards_root = RewardsRoot::unpack(&self.rewards_root.data.borrow())?;

@@ -493,7 +493,7 @@ export const prepareRepayTx = async (
 export const prepareInititalizeMining = async (
   { payerPublicKey }: ActionOptions,
   rewardPool: PublicKey,
-  rootAccount: PublicKey,
+  rewardsRoot: PublicKey,
 ): Promise<ActionResult> => {
   const tx = new Transaction()
 
@@ -503,7 +503,7 @@ export const prepareInititalizeMining = async (
     new InitializeMining(
       { feePayer: payerPublicKey },
       {
-        rootAccount,
+        rewardsRoot,
         rewardPool,
         mining,
         user: payerPublicKey,
@@ -563,7 +563,7 @@ export const prepareTransferDepositTx = async (
 
 export const prepareClaimTx = async (
   { payerPublicKey }: ActionOptions,
-  rootAccount: PublicKey,
+  rewardsRoot: PublicKey,
   rewardPool: PublicKey,
   rewardMint: PublicKey,
   userRewardTokenAccount: PublicKey,
@@ -577,7 +577,7 @@ export const prepareClaimTx = async (
     new ClaimTx(
       { feePayer: payerPublicKey },
       {
-        rootAccount,
+        rewardsRoot,
         rewardPool,
         rewardMint,
         vault,
