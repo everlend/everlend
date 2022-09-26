@@ -330,8 +330,8 @@ pub fn collateral_pool_withdraw_accounts(
         AccountMeta::new_readonly(collateral_pool_market_authority, false),
         AccountMeta::new_readonly(collateral_pool, false),
         AccountMeta::new(*collateral_pool_token_account, false),
-        AccountMeta::new_readonly(collateral_pool_withdraw_authority, false),
         AccountMeta::new_readonly(everlend_collateral_pool::id(), false),
+        AccountMeta::new_readonly(collateral_pool_withdraw_authority, false),
     ]
 }
 
