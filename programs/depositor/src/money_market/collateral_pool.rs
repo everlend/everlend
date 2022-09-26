@@ -64,6 +64,9 @@ impl<'a, 'b> CollateralPool<'a> {
             &collateral_pool.token_account,
         )?;
 
+        let _everlend_collateral_pool_info =
+            AccountLoader::next_with_key(account_info_iter, &everlend_collateral_pool::id())?;
+
         let mut collateral_pool_withdraw_authority: Option<AccountInfo<'a>> = None;
         if is_withdraw_expected {
             let collateral_pool_withdraw_authority_info =
@@ -84,9 +87,6 @@ impl<'a, 'b> CollateralPool<'a> {
             collateral_pool_withdraw_authority =
                 Some(collateral_pool_withdraw_authority_info.clone());
         }
-
-        let _everlend_collateral_pool_info =
-            AccountLoader::next_with_key(account_info_iter, &everlend_collateral_pool::id())?;
 
         Ok(CollateralPool {
             collateral_pool_market: collateral_pool_market_info.clone(),
