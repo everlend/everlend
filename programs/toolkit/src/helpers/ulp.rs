@@ -3,10 +3,12 @@ use crate::Config;
 use everlend_ulp::instruction;
 use everlend_ulp::state::{AccountType, Pool, PoolBorrowAuthority};
 use solana_client::client_error::ClientError;
+use solana_program::instruction::Instruction;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
-use solana_sdk::signature::{Keypair, Signer};
 use solana_sdk::transaction::Transaction;
+
+const BULK_LIMIT: usize = 30;
 
 pub fn fetch_pools(config: &Config, market_pubkey: &Pubkey) -> Vec<(Pubkey, Pool)> {
     get_program_accounts(
@@ -47,63 +49,82 @@ pub fn fetch_pool_authorities(
     .collect()
 }
 
-pub fn delete_pool(
+pub fn bulk_delete_pools(
     config: &Config,
     pool_market: &Pubkey,
-    pool: &Pubkey,
-    token_mint: &Pubkey,
+    pools: &[(Pubkey, Pool)],
 ) -> Result<(), ClientError> {
-    let tx = Transaction::new_with_payer(
-        &[instruction::delete_pool(
-            &everlend_ulp::id(),
-            pool_market,
-            pool,
-            &config.fee_payer.pubkey(),
-            token_mint,
-        )],
-        Some(&config.fee_payer.pubkey()),
-    );
+    let instructions: Vec<Instruction> = pools
+        .iter()
+        .map(|(pool_pubkey, pool)| {
+                instruction::delete_pool(
+                    &everlend_ulp::id(),
+                    pool_market,
+                    pool_pubkey,
+                    &config.fee_payer.pubkey(),
+                    &pool.token_account,
+                    &pool.token_mint,
+                )
+            }
+        ).collect();
+    let chunks = instructions.chunks(BULK_LIMIT);
 
-    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+    for chunk in chunks {
+        let tx = Transaction::new_with_payer(
+            chunk,
+            Some(&config.fee_payer.pubkey()),
+        );
+
+        config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+    }
 
     Ok(())
 }
 
-pub fn delete_pool_borrow_authority(
+pub fn bulk_delete_pool_borrow_authorities(
     config: &Config,
     pool_market: &Pubkey,
     pool: &Pubkey,
-    pool_borrow_authority: &Pubkey,
+    pool_borrow_authorities: &[(Pubkey, PoolBorrowAuthority)],
 ) -> Result<(), ClientError> {
-    let tx = Transaction::new_with_payer(
-        &[instruction::delete_pool_borrow_authority(
-            &everlend_ulp::id(),
-            pool_market,
-            pool,
-            pool_borrow_authority,
-            &config.fee_payer.pubkey(),
-            &config.fee_payer.pubkey(),
-        )],
-        Some(&config.fee_payer.pubkey()),
-    );
+    let instructions: Vec<Instruction> = pool_borrow_authorities.iter().map(
+        |(pool_borrow_authority, _)| {
+            instruction::delete_pool_borrow_authority(
+                &everlend_ulp::id(),
+                pool_market,
+                pool,
+                pool_borrow_authority,
+                &config.fee_payer.pubkey(),
+                &config.fee_payer.pubkey(),
+            )
+        }
+    ).collect();
+    let chunks = instructions.chunks(BULK_LIMIT);
 
-    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+    for chunk in chunks {
+        let tx = Transaction::new_with_payer(
+            chunk,
+            Some(&config.fee_payer.pubkey()),
+        );
+
+        config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+    }
 
     Ok(())
 }
 
-pub fn delete_pool_market(config: &Config, pool_market: &Keypair) -> Result<(), ClientError> {
+pub fn delete_pool_market(config: &Config, pool_market: &Pubkey) -> Result<(), ClientError> {
     let tx = Transaction::new_with_payer(
         &[instruction::delete_pool_market(
             &everlend_ulp::id(),
-            &pool_market.pubkey(),
+            pool_market,
             &config.fee_payer.pubkey(),
         )],
         Some(&config.fee_payer.pubkey()),
     );
 
     config
-        .sign_and_send_and_confirm_transaction(tx, vec![pool_market, config.fee_payer.as_ref()])?;
+        .sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
     Ok(())
 }

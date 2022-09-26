@@ -59,15 +59,13 @@ impl UlpMarket {
 
     pub async fn delete(&self, context: &mut ProgramTestContext) -> BanksClientResult<()> {
         let tx = Transaction::new_signed_with_payer(
-            &[
-                instruction::delete_pool_market(
-                    &everlend_ulp::id(),
-                    &self.keypair.pubkey(),
-                    &self.manager.pubkey(),
-                ),
-            ],
+            &[instruction::delete_pool_market(
+                &everlend_ulp::id(),
+                &self.keypair.pubkey(),
+                &self.manager.pubkey(),
+            )],
             Some(&context.payer.pubkey()),
-            &[&context.payer, &self.keypair, &self.manager],
+            &[&context.payer, &self.manager],
             context.last_blockhash,
         );
 

@@ -583,7 +583,10 @@ impl Processor {
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_info = next_account_info(account_info_iter)?;
         let manager_info = next_account_info(account_info_iter)?;
+        let token_account_info = next_account_info(account_info_iter)?;
+        let pool_market_authority_info = next_account_info(account_info_iter)?;
         let token_mint_info = next_account_info(account_info_iter)?;
+        let _token_program_info = next_account_info(account_info_iter)?;
 
         assert_signer(manager_info)?;
         assert_owned_by(pool_info, program_id)?;
@@ -595,6 +598,19 @@ impl Processor {
         let (pool_pubkey, _) =
             find_pool_program_address(program_id, pool_market_info.key, token_mint_info.key);
         assert_account_key(pool_info, &pool_pubkey)?;
+
+        let (authority_pubkey, bump) = find_program_address(program_id, pool_market_info.key);
+        assert_account_key(pool_market_authority_info, &authority_pubkey)?;
+
+        let signers_seeds = &[&pool_market_info.key.to_bytes()[..32], &[bump]];
+
+        // Close token account
+        cpi::spl_token::close_account(
+            manager_info.clone(),
+            token_account_info.clone(),
+            pool_market_authority_info.clone(),
+            &[signers_seeds],
+        )?;
 
         // Close pool account and return rent
         let from_starting_lamports = manager_info.lamports();

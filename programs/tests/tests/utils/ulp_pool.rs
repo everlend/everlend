@@ -1,6 +1,7 @@
 use super::{
-    get_account, get_liquidity_mint, ulp_pool_borrow_authority::UniversalLiquidityPoolBorrowAuthority,
-    BanksClientResult, LiquidityProvider, UlpMarket, User,
+    get_account, get_liquidity_mint,
+    ulp_pool_borrow_authority::UniversalLiquidityPoolBorrowAuthority, BanksClientResult,
+    LiquidityProvider, UlpMarket, User,
 };
 use everlend_ulp::{find_pool_program_address, instruction, state::Pool};
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
@@ -209,6 +210,7 @@ impl UniversalLiquidityPool {
                 &test_pool_market.keypair.pubkey(),
                 &self.pool_pubkey,
                 &test_pool_market.manager.pubkey(),
+                &self.token_account.pubkey(),
                 &self.token_mint_pubkey,
             )],
             Some(&context.payer.pubkey()),
