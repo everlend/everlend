@@ -259,8 +259,6 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
             )?;
 
             rebalancing.execute_step(RebalancingOperation::RefreshWithdraw, None, clock.slot)?;
-            // Drop value
-            _ = withdraw_step;
         }
 
         {
