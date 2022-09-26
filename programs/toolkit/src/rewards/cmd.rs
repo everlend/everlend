@@ -1,21 +1,18 @@
 use crate::{print_commands, utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 
-use super::{
-    MigrateDepositorCommand, MigrateGeneralPoolCommand, MigrateLiquidityOracleCommand,
-    MigratePoolMarketCommand, MigrateRewardsPoolCommand, MigrateRewardsRootCommand,
-};
+use super::GetPoolCommand;
 
 #[derive(Clone, Copy)]
-pub struct MigrationsCommand;
+pub struct RewardsCommand;
 
-impl<'a> ToolkitCommand<'a> for MigrationsCommand {
+impl<'a> ToolkitCommand<'a> for RewardsCommand {
     fn get_name(&self) -> &'a str {
-        "migrations"
+        "rewards"
     }
 
     fn get_description(&self) -> &'a str {
-        "run migration tools"
+        "Rewards tools"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
@@ -23,14 +20,7 @@ impl<'a> ToolkitCommand<'a> for MigrationsCommand {
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        vec![
-            Box::new(MigrateGeneralPoolCommand),
-            Box::new(MigrateDepositorCommand),
-            Box::new(MigratePoolMarketCommand),
-            Box::new(MigrateLiquidityOracleCommand),
-            Box::new(MigrateRewardsRootCommand),
-            Box::new(MigrateRewardsPoolCommand),
-        ]
+        vec![Box::new(GetPoolCommand)]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

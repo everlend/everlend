@@ -7,6 +7,7 @@ use solana_program::pubkey::Pubkey;
 
 /// Deprecated Reward pool
 #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
+
 pub struct DeprecatedRewardPool {
     /// Anchor id (For Anchor legacy contract compatibility)
     pub anchor_id: [u8; 8],
@@ -27,8 +28,7 @@ pub struct DeprecatedRewardPool {
 
 impl Sealed for DeprecatedRewardPool {}
 impl Pack for DeprecatedRewardPool {
-    /// 8 + 32 + 1 + 32 + 8 + (1 + 32 + 16 + 32) * 5 + 32 = 518
-    const LEN: usize = 8 + 32 + 1 + 32 + 8 + RewardVault::LEN * MAX_REWARDS + 32;
+    const LEN: usize = 8 + (32 + 1 + 32 + 8 + (4 + RewardVault::LEN * MAX_REWARDS) + 32);
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;

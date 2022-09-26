@@ -63,6 +63,7 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
             depositor,
             quarry_mining: _,
             rebalance_executor: _,
+            rewards_root: _,
         } = initialized_accounts;
 
         let registry_account = config.rpc_client.get_account(&registry)?;

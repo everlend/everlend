@@ -3,6 +3,7 @@ payer: devjzv9hVDpQuYmEpiFhP5F7KbJDHZfiVEHqpwTSpbi
 registry: 2f2DoMEhTrsc6cEkwfXGdWEJB49xmjxM9YgCA6yU9ZAM
 general_pool_market: 4yC3cUWXQmoyyybfnENpxo33hiNxUNa1YAmmuxz93WAJ
 income_pool_market: HG5Etzm6faJgBpQzpfCWzMKmSB2hkhjAVsoUjDA9g2Rq
+rewards_root: Hjm8ZVys6828sY9BxzuQhVwdsX1N28dqh3fKqbpGWu25
 mm_pool_markets:
   - DSTA9Cvpud1LMTg4Dm1chjexhMcryw2ZvqsbGEFNZxLJ
   - BSdmnzA57Tu1rVW4b91oNY8R1etsoiinMn3rPeJqqs5W

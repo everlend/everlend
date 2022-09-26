@@ -237,6 +237,8 @@ impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
             );
         }
 
+        // TODO: init rewards root  and add it's address to InitializedAccounts
+
         let initialized_accounts = InitializedAccounts {
             payer: payer_pubkey,
             registry: registry_pubkey,
@@ -249,6 +251,7 @@ impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
             depositor: depositor_pubkey,
             quarry_mining: BTreeMap::new(),
             rebalance_executor,
+            rewards_root: Pubkey::default(), // TODO: change to real one
         };
 
         initialized_accounts.save(accounts_path).unwrap();

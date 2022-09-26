@@ -140,8 +140,7 @@ pub struct InitRewardPoolParams {
 
 impl Sealed for RewardPool {}
 impl Pack for RewardPool {
-    /// 1 + 32 + 1 + 32 + 8 + (1 + 32 + 16 + 32) * 5 + 32 = 518
-    const LEN: usize = 1 + 32 + 1 + 32 + 8 + RewardVault::LEN * MAX_REWARDS + 32;
+    const LEN: usize = 1 + (32 + 1 + 32 + 8 + (4 + RewardVault::LEN * MAX_REWARDS) + 32);
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;
@@ -178,6 +177,6 @@ pub struct RewardVault {
 }
 
 impl RewardVault {
-    /// 1 + 32 + 16 + 32
-    pub const LEN: usize = 81;
+    /// LEN
+    pub const LEN: usize = 1 + 32 + 16 + 32;
 }
