@@ -3,7 +3,7 @@ use everlend_utils::AccountLoader;
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint_deprecated::ProgramResult;
 use solana_program::program_error::ProgramError;
-use solana_program::program_pack::Pack;
+use solana_program::program_pack::{IsInitialized, Pack};
 use solana_program::pubkey::Pubkey;
 use solana_program::system_program;
 
@@ -34,6 +34,12 @@ impl<'a, 'b> MigrateRootContext<'a, 'b> {
 
     /// Process instruction
     pub fn process(&self, _program_id: &Pubkey) -> ProgramResult {
+        // should work only for empty root
+        let rewards_root = RewardsRoot::unpack_unchecked(&self.rewards_root.data.borrow())?;
+        if rewards_root.is_initialized() {
+            return Err(ProgramError::AccountAlreadyInitialized);
+        }
+
         let rewards_root = RewardsRoot::init(*self.payer.key);
 
         RewardsRoot::pack(rewards_root, *self.rewards_root.data.borrow_mut())?;
