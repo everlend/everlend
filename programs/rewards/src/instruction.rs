@@ -120,6 +120,14 @@ pub enum RewardsInstruction {
     /// [R] System program
     /// [R] Rent sysvar
     MigratePool,
+
+    /// Migrates reward root account
+    ///
+    /// Accounts:
+    /// [W] Root account (ex-Config program account)
+    /// [WS] Payer
+    /// [R] System program
+    MigrateRoot,
 }
 
 /// Creates 'InitializePool' instruction.
