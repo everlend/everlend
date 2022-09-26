@@ -206,6 +206,8 @@ impl<'a, 'b> WithdrawContext<'a, 'b> {
             self.money_market_program,
             account_info_iter,
             self.internal_mining,
+            self.collateral_mint.key,
+            self.depositor_authority.key,
         )?;
 
         let collateral_stor: Option<Box<dyn CollateralStorage>> = {

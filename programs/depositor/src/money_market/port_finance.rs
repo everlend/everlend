@@ -1,3 +1,4 @@
+use super::quarry::Quarry;
 use super::{CollateralStorage, MoneyMarket};
 use crate::state::MiningType;
 use everlend_utils::{assert_account_key, cpi::port_finance, AccountLoader, EverlendError};
@@ -17,6 +18,7 @@ pub struct PortFinance<'a> {
     reserve_liquidity_oracle: AccountInfo<'a>,
 
     mining: Option<PortFinanceMining<'a>>,
+    quarry_mining: Option<Quarry<'a>>,
 }
 
 ///
@@ -34,6 +36,8 @@ impl<'a, 'b> PortFinance<'a> {
         money_market_program_id: Pubkey,
         account_info_iter: &'b mut Enumerate<Iter<'_, AccountInfo<'a>>>,
         internal_mining_type: Option<MiningType>,
+        collateral_token_mint: &Pubkey,
+        depositor_authority: &Pubkey,
     ) -> Result<PortFinance<'a>, ProgramError> {
         let reserve_info =
             AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
@@ -53,10 +57,23 @@ impl<'a, 'b> PortFinance<'a> {
             reserve_liquidity_oracle: reserve_liquidity_oracle_info.clone(),
 
             mining: None,
+            quarry_mining: None,
         };
 
         // Parse mining  accounts if presented
         match internal_mining_type {
+            Some(MiningType::Quarry {
+                     rewarder,
+            }) => {
+                let quarry = Quarry::init(
+                    account_info_iter,
+                    depositor_authority,
+                    collateral_token_mint,
+                    &rewarder,
+                )?;
+
+                port_finance.quarry_mining = Some(quarry)
+            }
             Some(MiningType::PortFinance {
                 staking_program_id,
                 staking_account,
@@ -85,7 +102,7 @@ impl<'a, 'b> PortFinance<'a> {
                     staking_pool_info: staking_pool_info.clone(),
                     obligation_info: obligation_info.clone(),
                     collateral_supply_pubkey_info: collateral_supply_pubkey_info.clone(),
-                });
+                })
             }
             _ => {}
         }
@@ -194,14 +211,27 @@ impl<'a> MoneyMarket<'a> for PortFinance<'a> {
         }
 
         // TODO use DepositReserveLiquidityAndObligationCollateral after fix of collateral leak
-        //Check collateral amount by obligation struct
-        self.deposit_collateral_tokens(
-            collateral_transit,
-            authority,
-            clock,
-            collateral_amount,
-            signers_seeds,
-        )?;
+        if self.mining.is_some() {
+            //Check collateral amount by obligation struct
+            self.deposit_collateral_tokens(
+                collateral_transit,
+                authority,
+                clock,
+                collateral_amount,
+                signers_seeds,
+            )?
+        } else if self.quarry_mining.is_some() {
+            let quarry_mining = self.quarry_mining.as_ref().unwrap();
+            quarry_mining.deposit_collateral_tokens(
+                collateral_transit,
+                authority,
+                clock,
+                collateral_amount,
+                signers_seeds,
+            )?
+        } else {
+            return Err(EverlendError::MiningNotInitialized.into());
+        };
 
         Ok(collateral_amount)
     }
@@ -217,13 +247,26 @@ impl<'a> MoneyMarket<'a> for PortFinance<'a> {
         collateral_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
-        self.withdraw_collateral_tokens(
-            collateral_transit.clone(),
-            authority.clone(),
-            clock.clone(),
-            collateral_amount,
-            signers_seeds,
-        )?;
+        if self.mining.is_some() {
+            self.withdraw_collateral_tokens(
+                collateral_transit.clone(),
+                authority.clone(),
+                clock.clone(),
+                collateral_amount,
+                signers_seeds,
+            )?;
+        } else if self.quarry_mining.is_some() {
+            let quarry_mining = self.quarry_mining.as_ref().unwrap();
+            quarry_mining.withdraw_collateral_tokens(
+                collateral_transit.clone(),
+                authority.clone(),
+                clock.clone(),
+                collateral_amount,
+                signers_seeds,
+            )?
+        } else {
+            return Err(EverlendError::MiningNotInitialized.into());
+        };
 
         self.money_market_redeem(
             collateral_mint,

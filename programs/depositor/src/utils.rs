@@ -197,6 +197,8 @@ pub fn money_market<'a, 'b>(
     money_market_program: &AccountInfo<'b>,
     money_market_account_info_iter: &'a mut Enumerate<Iter<'_, AccountInfo<'b>>>,
     internal_mining: &AccountInfo<'b>,
+    collateral_token_mint: &Pubkey,
+    depositor_authority: &Pubkey,
 ) -> Result<(Box<dyn MoneyMarket<'b> + 'b>, bool), ProgramError> {
     let internal_mining_type = if internal_mining.owner == program_id {
         Some(InternalMining::unpack(&internal_mining.data.borrow())?.mining_type)
@@ -232,6 +234,8 @@ pub fn money_market<'a, 'b>(
                 money_market_program.key.clone(),
                 money_market_account_info_iter,
                 internal_mining_type,
+                collateral_token_mint,
+                depositor_authority
             )?;
             return Ok((Box::new(port), is_mining));
         }
