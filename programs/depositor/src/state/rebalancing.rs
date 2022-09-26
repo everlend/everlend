@@ -240,14 +240,18 @@ impl Rebalancing {
     }
 
     /// Get next unexecuted refresh rebalancing steps
-    pub fn next_refresh_steps(&self) -> (RebalancingStep, RebalancingStep) {
+    pub fn next_refresh_steps(&self) -> Result<(RebalancingStep, RebalancingStep), ProgramError> {
         let index = self
             .steps
             .iter()
             .position(|&step| step.executed_at.is_none())
             .unwrap();
+        // If index is last element
+        if index == (self.steps.len() - 1)  {
+            return Err(EverlendError::InvalidRebalancingOperation.into());
+        }
 
-        (self.steps[index], self.steps[index + 1])
+        Ok((self.steps[index], self.steps[index + 1]))
     }
 
     /// Execute next unexecuted rebalancing step

@@ -219,7 +219,7 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
         };
 
         // Check two step operation
-        let (withdraw_step, deposit_step) = rebalancing.next_refresh_steps();
+        let (withdraw_step, deposit_step) = rebalancing.next_refresh_steps()?;
 
         if withdraw_step.money_market_index != deposit_step.money_market_index {
             return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
