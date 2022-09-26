@@ -124,7 +124,7 @@ pub enum RewardsInstruction {
     /// Migrates reward root account
     ///
     /// Accounts:
-    /// [R] Root account (ex-Config program account)
+    /// [W] Root account (ex-Config program account)
     /// [WS] Payer
     /// [R] System program
     MigrateRoot,
