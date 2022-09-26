@@ -1,6 +1,7 @@
 use crate::find_reward_pool_program_address;
 use crate::state::{DeprecatedRewardPool, RewardPool, RewardsRoot};
-use everlend_utils::{assert_account_key, AccountLoader, EverlendError};
+use everlend_utils::cpi::system::realloc_with_rent;
+use everlend_utils::{assert_account_key, AccountLoader};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint_deprecated::ProgramResult;
 use solana_program::program_error::ProgramError;
@@ -51,7 +52,7 @@ impl<'a, 'b> MigratePoolContext<'a, 'b> {
         let deprecated_pool = DeprecatedRewardPool::unpack(&self.reward_pool.data.borrow())?;
         let reward_pool = RewardPool::migrate(&deprecated_pool);
 
-        let (reward_pool_pubkey, bump) = find_reward_pool_program_address(
+        let (reward_pool_pubkey, _) = find_reward_pool_program_address(
             program_id,
             self.rewards_root.key,
             self.liquidity_mint.key,
@@ -64,30 +65,7 @@ impl<'a, 'b> MigratePoolContext<'a, 'b> {
             assert_account_key(self.liquidity_mint, &deprecated_pool.liquidity_mint)?;
         }
 
-        // Close pool account and return rent
-        let deprecated_pool_lamports = self.reward_pool.lamports();
-
-        **self.reward_pool.lamports.borrow_mut() = 0;
-        **self.payer.lamports.borrow_mut() = self
-            .payer
-            .lamports()
-            .checked_add(deprecated_pool_lamports)
-            .ok_or(EverlendError::MathOverflow)?;
-
-        let reward_pool_seeds = &[
-            "reward_pool".as_bytes(),
-            self.rewards_root.key.as_ref(),
-            self.liquidity_mint.key.as_ref(),
-            &[bump],
-        ];
-
-        everlend_utils::cpi::system::create_account::<RewardPool>(
-            program_id,
-            self.payer.clone(),
-            self.reward_pool.clone(),
-            &[reward_pool_seeds],
-            &rent,
-        )?;
+        realloc_with_rent(self.reward_pool, self.payer, &rent, RewardPool::LEN)?;
 
         RewardPool::pack(reward_pool, *self.reward_pool.data.borrow_mut())?;
 

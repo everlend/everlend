@@ -1046,31 +1046,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f107b87b6afc2a64fd13cac55fe06d6c8859f12d4b14cbcdd2c67d0976781be"
 
 [[package]]
-name = "eld-config"
-version = "0.1.0"
-source = "git+ssh://git@github.com/everlend/everlend-next.git?branch=main#7cc02b634e3bb7c630bae1d12480c1840f4891de"
-dependencies = [
- "anchor-lang",
- "anchor-spl",
- "bs58 0.4.0",
- "port-anchor-adaptor",
- "thiserror",
- "uint 0.9.1",
-]
-
-[[package]]
-name = "eld-rewards"
-version = "0.1.0"
-source = "git+ssh://git@github.com/everlend/everlend-next.git?branch=main#7cc02b634e3bb7c630bae1d12480c1840f4891de"
-dependencies = [
- "anchor-lang",
- "anchor-spl",
- "bs58 0.4.0",
- "eld-config",
- "thiserror",
-]
-
-[[package]]
 name = "encode_unicode"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1275,14 +1250,13 @@ dependencies = [
  "bs58 0.2.5",
  "clap",
  "dirs-next",
- "eld-config",
- "eld-rewards",
  "everlend-collateral-pool",
  "everlend-depositor",
  "everlend-general-pool",
  "everlend-income-pools",
  "everlend-liquidity-oracle",
  "everlend-registry",
+ "everlend-rewards",
  "everlend-utils",
  "larix-lending",
  "mpl-token-metadata",
@@ -2458,20 +2432,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4596b6d070b27117e987119b4dac604f3c58cfb0b191112e24771b2faeac1a6"
 
 [[package]]
-name = "port-anchor-adaptor"
-version = "0.3.4"
-source = "git+https://github.com/everlend/port-anchor-adaptor#818b7f988c9ff9c563d4bf698baca6c5762e5f8b"
-dependencies = [
- "anchor-lang",
- "num-derive",
- "num-traits",
- "port-staking-instructions 0.2.0",
- "port-variable-rate-lending-instructions",
- "solana-maths",
- "thiserror",
-]
-
-[[package]]
 name = "port-finance-staking"
 version = "0.1.0"
 source = "git+https://github.com/port-finance/variable-rate-lending#51a957914f3f0149d72baa2823da7c7c7c861e4a"
@@ -2504,23 +2464,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "port-staking-instructions"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58a0376f07714b1c0813b6140c8ee39eaa39a0482545b4c7dc4d894f74a9c7a9"
-dependencies = [
- "arrayref",
- "bytemuck",
- "num-derive",
- "num-traits",
- "solana-maths",
- "solana-program",
- "spl-token 3.2.0",
- "thiserror",
- "uint 0.8.5",
-]
-
-[[package]]
 name = "port-variable-rate-lending-instructions"
 version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2530,7 +2473,7 @@ dependencies = [
  "bytemuck",
  "num-derive",
  "num-traits",
- "port-staking-instructions 0.1.7",
+ "port-staking-instructions",
  "solana-program",
  "spl-token 3.2.0",
  "thiserror",
@@ -3592,20 +3535,6 @@ dependencies = [
  "env_logger",
  "lazy_static",
  "log",
-]
-
-[[package]]
-name = "solana-maths"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a5a56a07f42e0619414cda078b3f838d8df98ec2a4ed145d03c3b2a554556a7"
-dependencies = [
- "arrayref",
- "num-derive",
- "num-traits",
- "solana-program",
- "thiserror",
- "uint 0.8.5",
 ]
 
 [[package]]

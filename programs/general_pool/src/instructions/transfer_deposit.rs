@@ -83,8 +83,7 @@ impl<'a, 'b> TransferDepositContext<'a, 'b> {
         }
 
         let collateral_amount = source_account.amount;
-        let reward_share =
-            Mining::unpack(&mut self.mining_reward_acc.data.borrow().as_ref())?.share;
+        let reward_share = Mining::unpack(&self.mining_reward_acc.data.borrow())?.share;
 
         if collateral_amount != reward_share {
             return Err(EverlendError::RewardAndCollateralMismatch.into());
