@@ -250,6 +250,7 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
                 match step.operation {
                     RebalancingOperation::Deposit => deposit(step.money_market_index.into())?,
                     RebalancingOperation::Withdraw => withdraw(step.money_market_index.into())?,
+                    RebalancingOperation::RefreshWithdraw | RebalancingOperation::RefreshDeposit => todo!(),
                 }
             }
 

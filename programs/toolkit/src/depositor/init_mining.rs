@@ -36,7 +36,7 @@ impl<'a> ToolkitCommand<'a> for InitMiningCommand {
                 .short("t")
                 .value_name("TOKEN")
                 .help("Token"),
-            arg(ARG_SUB_REWARD_MINT, true)
+            arg(ARG_SUB_REWARD_MINT, false)
                 .short("m")
                 .value_name("REWARD_MINT")
                 .help("Sub reward token mint"),

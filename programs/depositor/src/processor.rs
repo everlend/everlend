@@ -1029,7 +1029,7 @@ impl<'a, 'b> Processor {
                 let (quarry, _) = cpi::quarry::find_quarry_program_address(
                     staking_program_id_info.key,
                     quarry_rewarder.key,
-                    liquidity_mint_info.key,
+                    collateral_mint_info.key,
                 );
                 assert_account_key(quarry_info, &quarry)?;
 
