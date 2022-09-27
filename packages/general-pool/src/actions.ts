@@ -18,10 +18,7 @@ import {
   WithdrawalRequestsState,
 } from './accounts'
 import { GeneralPoolsProgram } from './program'
-import {
-  CreateAssociatedTokenAccount,
-  findAssociatedTokenAccount,
-} from '@everlend/common'
+import { CreateAssociatedTokenAccount, findAssociatedTokenAccount } from '@everlend/common'
 import {
   BorrowTx,
   CreatePoolTx,
@@ -141,7 +138,6 @@ export const prepareCreatePoolTx = async (
  * @param actionOptions
  * @param pool the general pool public key for a specific token, e.g. there can be a general pool for USDT or USDC etc.
  * @param amount the amount of tokens in lamports to deposit.
- * @param config const
  * @param rewardPool public key of reward pool
  * @param rewardAccount public key of user reward account
  * @param source the public key which represents user's token ATA (token mint ATA) from which the token amount will be taken.
@@ -155,7 +151,6 @@ export const prepareDepositTx = async (
   { connection, payerPublicKey }: ActionOptions,
   pool: PublicKey,
   amount: BN,
-  config: PublicKey,
   rewardPool: PublicKey,
   rewardAccount: PublicKey,
   source: PublicKey,
@@ -230,7 +225,6 @@ export const prepareDepositTx = async (
         poolMint,
         rewardPool,
         rewardAccount,
-        config,
         poolMarketAuthority,
         amount,
       },
@@ -254,7 +248,6 @@ export const prepareDepositTx = async (
  * @param actionOptions
  * @param pool the general pool public key for a specific token, e.g. there can be a general pool for USDT or USDC etc.
  * @param collateralAmount the amount of collateral tokens in lamports which will be taken from a user.
- * @param config const
  * @param rewardPool public key of reward pool
  * @param rewardAccount public key of user reward account
  * @param source the public key which represents user's collateral token ATA (pool mint ATA) from which the collateral tokens will be taken.
@@ -268,7 +261,6 @@ export const prepareWithdrawalRequestTx = async (
   { connection, payerPublicKey }: ActionOptions,
   pool: PublicKey,
   collateralAmount: BN,
-  config: PublicKey,
   rewardPool: PublicKey,
   rewardAccount: PublicKey,
   source: PublicKey,
@@ -321,7 +313,6 @@ export const prepareWithdrawalRequestTx = async (
         collateralAmount,
         rewardPool,
         rewardAccount,
-        config,
       },
     ),
   )
@@ -493,7 +484,6 @@ export const prepareRepayTx = async (
 export const prepareInititalizeMining = async (
   { payerPublicKey }: ActionOptions,
   rewardPool: PublicKey,
-  rewardsRoot: PublicKey,
 ): Promise<ActionResult> => {
   const tx = new Transaction()
 
@@ -503,7 +493,6 @@ export const prepareInititalizeMining = async (
     new InitializeMining(
       { feePayer: payerPublicKey },
       {
-        rewardsRoot,
         rewardPool,
         mining,
         user: payerPublicKey,
@@ -525,7 +514,6 @@ export const prepareInititalizeMining = async (
  * @param rewardPool public key of reward pool
  * @param rewardAccount public key of user reward account
  * @param destinationRewardAccount public key of destination user reward account
- * @param config const
  *
  * @returns the object with a prepared transfer transaction.
  */
@@ -538,7 +526,6 @@ export const prepareTransferDepositTx = async (
   rewardPool: PublicKey,
   rewardAccount: PublicKey,
   destinationRewardAccount: PublicKey,
-  config: PublicKey,
 ): Promise<ActionResult> => {
   const tx = new Transaction()
 
@@ -553,7 +540,6 @@ export const prepareTransferDepositTx = async (
         rewardPool,
         rewardAccount,
         destinationRewardAccount,
-        config,
       },
     ),
   )
@@ -563,7 +549,6 @@ export const prepareTransferDepositTx = async (
 
 export const prepareClaimTx = async (
   { payerPublicKey }: ActionOptions,
-  rewardsRoot: PublicKey,
   rewardPool: PublicKey,
   rewardMint: PublicKey,
   userRewardTokenAccount: PublicKey,
@@ -577,7 +562,6 @@ export const prepareClaimTx = async (
     new ClaimTx(
       { feePayer: payerPublicKey },
       {
-        rewardsRoot,
         rewardPool,
         rewardMint,
         vault,

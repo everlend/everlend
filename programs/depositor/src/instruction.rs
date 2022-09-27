@@ -152,7 +152,6 @@ pub enum DepositorInstruction {
     /// [R] Token program id
     /// [R] Staking program id
     /// [R] ELD reward program id
-    /// [R] ELD config
     /// [W] Reward pool
     /// Reward fill accounts
     /// [R] Reward mint

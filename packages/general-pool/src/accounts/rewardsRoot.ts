@@ -1,9 +1,9 @@
 import { AccountInfo, PublicKey } from '@solana/web3.js'
 import { Account, Borsh, Errors } from '@everlend/common'
-import { AccountType, RewardProgram } from '../rewardProgram'
+import { RewardsAccountType, RewardProgram } from '../rewardProgram'
 
 type Args = {
-  accountType: AccountType
+  accountType: RewardsAccountType
   authority: PublicKey
 }
 
@@ -13,7 +13,7 @@ export class RootAccountData extends Borsh.Data<Args> {
     ['authority', 'publicKey'],
   ])
 
-  accountType: AccountType
+  accountType: RewardsAccountType
   authority: PublicKey
 }
 

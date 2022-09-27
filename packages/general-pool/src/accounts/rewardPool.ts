@@ -1,5 +1,5 @@
 import { PublicKey, AccountInfo } from '@solana/web3.js'
-import { RewardProgram, AccountType } from '../rewardProgram'
+import { RewardProgram, RewardsAccountType } from '../rewardProgram'
 import { Account, Borsh, Errors } from '@everlend/common'
 import BN from 'bn.js'
 import { GeneralPoolsProgram } from '../program'
@@ -13,7 +13,7 @@ type RewardVault = {
 }
 
 type Args = {
-  accountType: AccountType
+  accountType: RewardsAccountType
   rewardsRoot: PublicKey
   bump: BN
   liquidityMint: PublicKey
@@ -33,7 +33,7 @@ export class RewardPoolData extends Borsh.Data<Args> {
     ['depositAuthority', 'publicKey'],
   ])
 
-  accountType: AccountType
+  accountType: RewardsAccountType
   rewardsRoot: PublicKey
   bump: BN
   liquidityMint: PublicKey

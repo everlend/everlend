@@ -1,7 +1,7 @@
 import { PublicKey } from '@solana/web3.js'
 import { Program } from '@everlend/common'
 
-export enum AccountType {
+export enum RewardsAccountType {
   Uninitialized = 0,
   RewardsRoot = 1,
   RewardPool = 2,

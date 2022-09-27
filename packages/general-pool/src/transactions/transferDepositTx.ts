@@ -23,7 +23,6 @@ type TransferDepositTxParams = {
   rewardPool: PublicKey
   rewardAccount: PublicKey
   destinationRewardAccount: PublicKey
-  config: PublicKey
 }
 
 export class TransferDepositTx extends Transaction {
@@ -38,7 +37,6 @@ export class TransferDepositTx extends Transaction {
       rewardPool,
       rewardAccount,
       destinationRewardAccount,
-      config,
     } = params
 
     const data = TransferDepositTxData.serialize()
@@ -54,7 +52,6 @@ export class TransferDepositTx extends Transaction {
           { pubkey: rewardPool, isSigner: false, isWritable: true },
           { pubkey: rewardAccount, isSigner: false, isWritable: true },
           { pubkey: destinationRewardAccount, isSigner: false, isWritable: true },
-          { pubkey: config, isSigner: false, isWritable: false },
           { pubkey: RewardProgram.PUBKEY, isSigner: false, isWritable: false },
           { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
         ],
