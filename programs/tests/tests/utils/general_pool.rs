@@ -201,7 +201,6 @@ impl TestGeneralPool {
                 &user.pubkey(),
                 &self.mining_reward_pool,
                 &mining_account,
-                &self.rewards_root.pubkey(),
                 amount,
             )],
             Some(&context.payer.pubkey()),
@@ -231,7 +230,6 @@ impl TestGeneralPool {
                 &self.mining_reward_pool,
                 &mining_account,
                 &destination_mining_account,
-                &self.rewards_root.pubkey(),
             )],
             Some(&context.payer.pubkey()),
             &[&context.payer, &user.owner],
@@ -321,7 +319,6 @@ impl TestGeneralPool {
                 &user.pubkey(),
                 &self.mining_reward_pool,
                 &mining_acc,
-                &self.rewards_root.pubkey(),
                 collateral_amount,
             )],
             Some(&context.payer.pubkey()),
@@ -434,7 +431,6 @@ impl TestGeneralPool {
         let tx = Transaction::new_signed_with_payer(
             &[everlend_rewards::instruction::initialize_mining(
                 &everlend_rewards::id(),
-                &self.rewards_root.pubkey(),
                 &self.mining_reward_pool,
                 &mining_account,
                 &user.owner.pubkey(),

@@ -30,7 +30,6 @@ pub struct DepositContext<'a, 'b> {
     user_transfer_authority: &'a AccountInfo<'b>,
     mining_reward_pool: &'a AccountInfo<'b>,
     mining_reward_acc: &'a AccountInfo<'b>,
-    everlend_config: &'a AccountInfo<'b>,
 }
 
 impl<'a, 'b> DepositContext<'a, 'b> {
@@ -57,7 +56,6 @@ impl<'a, 'b> DepositContext<'a, 'b> {
             AccountLoader::next_with_owner(account_info_iter, &everlend_rewards::id())?;
         let mining_reward_acc =
             AccountLoader::next_with_owner(account_info_iter, &everlend_rewards::id())?;
-        let everlend_config = AccountLoader::next_with_owner(account_info_iter, &everlend_rewards::id())?;
         let everlend_rewards = AccountLoader::next_with_key(account_info_iter, &everlend_rewards::id())?;
         let _token_program = AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
 
@@ -74,7 +72,6 @@ impl<'a, 'b> DepositContext<'a, 'b> {
             user_transfer_authority,
             mining_reward_pool,
             mining_reward_acc,
-            everlend_config,
         })
     }
 
@@ -169,7 +166,6 @@ impl<'a, 'b> DepositContext<'a, 'b> {
 
         deposit_mining(
             self.everlend_rewards.key,
-            self.everlend_config.clone(),
             self.mining_reward_pool.clone(),
             self.mining_reward_acc.clone(),
             self.user_transfer_authority.clone(),

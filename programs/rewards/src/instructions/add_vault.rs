@@ -56,18 +56,20 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
     /// Process instruction
     pub fn process(&self, program_id: &Pubkey) -> ProgramResult {
         let mut reward_pool = RewardPool::unpack(&self.reward_pool.data.borrow())?;
+        assert_account_key(self.rewards_root, &reward_pool.rewards_root)?;
 
-        let (vault_pubkey, bump) =
-            find_vault_program_address(program_id, &self.reward_pool.key, self.reward_mint.key);
+        let bump = {
+            let (vault_pubkey, bump) =
+                find_vault_program_address(program_id, &self.reward_pool.key, self.reward_mint.key);
+            assert_account_key(self.vault, &vault_pubkey)?;
+
+            bump
+        };
 
         {
             let rewards_root = RewardsRoot::unpack(&self.rewards_root.data.borrow())?;
-            assert_account_key(self.vault, &vault_pubkey)?;
-            assert_account_key(self.rewards_root, &reward_pool.rewards_root)?;
             assert_account_key(self.payer, &rewards_root.authority)?;
         }
-
-        let rent = Rent::from_account_info(self.rent)?;
 
         let signers_seeds = &[
             b"vault".as_ref(),
@@ -81,7 +83,7 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
             self.payer.clone(),
             self.vault.clone(),
             &[signers_seeds],
-            &rent,
+            &Rent::from_account_info(self.rent)?,
         )?;
         everlend_utils::cpi::spl_token::initialize_account(
             self.vault.clone(),

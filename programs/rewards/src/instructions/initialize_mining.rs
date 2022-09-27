@@ -1,5 +1,5 @@
 use crate::find_mining_program_address;
-use crate::state::{Mining, RewardPool};
+use crate::state::Mining;
 use everlend_utils::{assert_account_key, AccountLoader};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
@@ -12,7 +12,6 @@ use solana_program::sysvar::{Sysvar, SysvarId};
 
 /// Instruction context
 pub struct InitializeMiningContext<'a, 'b> {
-    rewards_root: &'a AccountInfo<'b>,
     reward_pool: &'a AccountInfo<'b>,
     mining: &'a AccountInfo<'b>,
     user: &'a AccountInfo<'b>,
@@ -28,7 +27,6 @@ impl<'a, 'b> InitializeMiningContext<'a, 'b> {
     ) -> Result<InitializeMiningContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter().enumerate();
 
-        let rewards_root = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let reward_pool = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let mining = AccountLoader::next_uninitialized(account_info_iter)?;
         let user = AccountLoader::next_unchecked(account_info_iter)?;
@@ -38,7 +36,6 @@ impl<'a, 'b> InitializeMiningContext<'a, 'b> {
         let rent = AccountLoader::next_with_key(account_info_iter, &Rent::id())?;
 
         Ok(InitializeMiningContext {
-            rewards_root,
             reward_pool,
             mining,
             user,
@@ -49,23 +46,18 @@ impl<'a, 'b> InitializeMiningContext<'a, 'b> {
 
     /// Process instruction
     pub fn process(&self, program_id: &Pubkey) -> ProgramResult {
-        let rent = Rent::from_account_info(self.rent)?;
-
-        let (mining_pubkey, mining_bump) =
-            find_mining_program_address(program_id, self.user.key, self.reward_pool.key);
-
-        {
-            let reward_pool = RewardPool::unpack(&self.reward_pool.data.borrow())?;
-
-            assert_account_key(self.rewards_root, &reward_pool.rewards_root)?;
-            assert_account_key(self.mining, &mining_pubkey)?;
-        }
+        let bump = {
+            let (pubkey, bump) =
+                find_mining_program_address(program_id, self.user.key, self.reward_pool.key);
+            assert_account_key(self.mining, &pubkey)?;
+            bump
+        };
 
         let signers_seeds = &[
             "mining".as_bytes(),
             &self.user.key.to_bytes(),
             &self.reward_pool.key.to_bytes(),
-            &[mining_bump],
+            &[bump],
         ];
 
         everlend_utils::cpi::system::create_account::<Mining>(
@@ -73,10 +65,10 @@ impl<'a, 'b> InitializeMiningContext<'a, 'b> {
             self.payer.clone(),
             self.mining.clone(),
             &[signers_seeds],
-            &rent,
+            &Rent::from_account_info(self.rent)?,
         )?;
 
-        let mining = Mining::initialize(*self.reward_pool.key, mining_bump, *self.user.key);
+        let mining = Mining::initialize(*self.reward_pool.key, bump, *self.user.key);
         Mining::pack(mining, *self.mining.data.borrow_mut())?;
 
         Ok(())

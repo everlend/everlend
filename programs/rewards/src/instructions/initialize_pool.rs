@@ -49,18 +49,19 @@ impl<'a, 'b> InitializePoolContext<'a, 'b> {
 
     /// Process instruction
     pub fn process(&self, program_id: &Pubkey) -> ProgramResult {
-        let rent = Rent::from_account_info(self.rent)?;
-
-        let (reward_pool_pubkey, bump) = find_reward_pool_program_address(
-            program_id,
-            self.rewards_root.key,
-            self.liquidity_mint.key,
-        );
+        let bump = {
+            let (reward_pool_pubkey, bump) = find_reward_pool_program_address(
+                program_id,
+                self.rewards_root.key,
+                self.liquidity_mint.key,
+            );
+            assert_account_key(self.reward_pool, &reward_pool_pubkey)?;
+            bump
+        };
 
         {
             let rewards_root = RewardsRoot::unpack(&self.rewards_root.data.borrow())?;
             assert_account_key(self.payer, &rewards_root.authority)?;
-            assert_account_key(self.reward_pool, &reward_pool_pubkey)?;
         }
 
         let reward_pool_seeds = &[
@@ -75,7 +76,7 @@ impl<'a, 'b> InitializePoolContext<'a, 'b> {
             self.payer.clone(),
             self.reward_pool.clone(),
             &[reward_pool_seeds],
-            &rent,
+            &Rent::from_account_info(self.rent)?,
         )?;
 
         let reward_pool = RewardPool::init(InitRewardPoolParams {

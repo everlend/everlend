@@ -275,7 +275,6 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
                 // TODO fix mocks
                 &Pubkey::new_unique(),
                 &Pubkey::new_unique(),
-                &Pubkey::new_unique(),
                 a,
             )
         };
@@ -292,7 +291,6 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
                 &sol.mint,
                 &sol.general_pool_mint,
                 // TODO fix mocks
-                &Pubkey::new_unique(),
                 &Pubkey::new_unique(),
                 &Pubkey::new_unique(),
                 a,

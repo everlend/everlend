@@ -257,7 +257,6 @@ pub enum LiquidityPoolsInstruction {
     /// [W] Mining reward pool
     /// [W] Mining reward user account
     /// [W] Destination mining reward user account
-    /// [R] Everlend config account
     /// [R] Everlend rewards program account
     /// [R] Token program id
     TransferDeposit,
@@ -423,7 +422,6 @@ pub fn deposit(
     user_transfer_authority: &Pubkey,
     mining_reward_pool: &Pubkey,
     mining_reward_acc: &Pubkey,
-    config: &Pubkey,
     amount: u64,
 ) -> Instruction {
     let (pool_market_authority, _) = find_program_address(program_id, pool_market);
@@ -441,7 +439,6 @@ pub fn deposit(
         AccountMeta::new_readonly(*user_transfer_authority, true),
         AccountMeta::new(*mining_reward_pool, false),
         AccountMeta::new(*mining_reward_acc, false),
-        AccountMeta::new_readonly(*config, false),
         AccountMeta::new_readonly(everlend_rewards::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
     ];
@@ -465,7 +462,6 @@ pub fn transfer_deposit(
     mining_reward_pool: &Pubkey,
     mining_reward_acc: &Pubkey,
     destination_mining_reward_acc: &Pubkey,
-    config: &Pubkey,
 ) -> Instruction {
     let accounts = vec![
         AccountMeta::new_readonly(*pool, false),
@@ -476,7 +472,6 @@ pub fn transfer_deposit(
         AccountMeta::new(*mining_reward_pool, false),
         AccountMeta::new(*mining_reward_acc, false),
         AccountMeta::new(*destination_mining_reward_acc, false),
-        AccountMeta::new_readonly(*config, false),
         AccountMeta::new_readonly(everlend_rewards::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
     ];
@@ -543,7 +538,6 @@ pub fn withdraw_request(
     user_transfer_authority: &Pubkey,
     mining_reward_pool: &Pubkey,
     mining_reward_acc: &Pubkey,
-    config: &Pubkey,
     collateral_amount: u64,
 ) -> Instruction {
     let (withdrawal_requests, _) =
@@ -570,7 +564,6 @@ pub fn withdraw_request(
         AccountMeta::new(*user_transfer_authority, true),
         AccountMeta::new(*mining_reward_pool, false),
         AccountMeta::new(*mining_reward_acc, false),
-        AccountMeta::new_readonly(*config, false),
         AccountMeta::new_readonly(everlend_rewards::id(), false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(sysvar::clock::id(), false),

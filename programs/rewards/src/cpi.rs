@@ -9,7 +9,6 @@ use solana_program::pubkey::Pubkey;
 #[allow(clippy::too_many_arguments)]
 pub fn initialize_mining<'a>(
     program_id: &Pubkey,
-    config: AccountInfo<'a>,
     reward_pool: AccountInfo<'a>,
     mining: AccountInfo<'a>,
     user: AccountInfo<'a>,
@@ -19,7 +18,6 @@ pub fn initialize_mining<'a>(
 ) -> ProgramResult {
     let ix = crate::instruction::initialize_mining(
         program_id,
-        config.key,
         reward_pool.key,
         mining.key,
         user.key,
@@ -29,7 +27,6 @@ pub fn initialize_mining<'a>(
     invoke(
         &ix,
         &[
-            config,
             reward_pool,
             mining,
             user,
@@ -44,7 +41,6 @@ pub fn initialize_mining<'a>(
 #[allow(clippy::too_many_arguments)]
 pub fn deposit_mining<'a>(
     program_id: &Pubkey,
-    config: AccountInfo<'a>,
     reward_pool: AccountInfo<'a>,
     mining: AccountInfo<'a>,
     user: AccountInfo<'a>,
@@ -54,7 +50,6 @@ pub fn deposit_mining<'a>(
 ) -> ProgramResult {
     let ix = crate::instruction::deposit_mining(
         program_id,
-        config.key,
         reward_pool.key,
         mining.key,
         user.key,
@@ -64,7 +59,7 @@ pub fn deposit_mining<'a>(
 
     invoke_signed(
         &ix,
-        &[config, reward_pool, mining, user, deposit_authority],
+        &[reward_pool, mining, user, deposit_authority],
         signers_seeds,
     )
 }
@@ -73,7 +68,6 @@ pub fn deposit_mining<'a>(
 #[allow(clippy::too_many_arguments)]
 pub fn withdraw_mining<'a>(
     program_id: &Pubkey,
-    config: AccountInfo<'a>,
     reward_pool: AccountInfo<'a>,
     mining: AccountInfo<'a>,
     user: AccountInfo<'a>,
@@ -83,7 +77,6 @@ pub fn withdraw_mining<'a>(
 ) -> ProgramResult {
     let ix = crate::instruction::withdraw_mining(
         program_id,
-        config.key,
         reward_pool.key,
         mining.key,
         user.key,
@@ -93,7 +86,7 @@ pub fn withdraw_mining<'a>(
 
     invoke_signed(
         &ix,
-        &[config, reward_pool, mining, user, deposit_authority],
+        &[reward_pool, mining, user, deposit_authority],
         signers_seeds,
     )
 }
@@ -102,7 +95,6 @@ pub fn withdraw_mining<'a>(
 #[allow(clippy::too_many_arguments)]
 pub fn fill_vault<'a>(
     program_id: &Pubkey,
-    config: AccountInfo<'a>,
     reward_pool: AccountInfo<'a>,
     reward_mint: AccountInfo<'a>,
     fee_account: AccountInfo<'a>,
@@ -114,7 +106,6 @@ pub fn fill_vault<'a>(
 ) -> ProgramResult {
     let ix = crate::instruction::fill_vault(
         program_id,
-        config.key,
         reward_pool.key,
         reward_mint.key,
         vault.key,
@@ -127,7 +118,6 @@ pub fn fill_vault<'a>(
     invoke_signed(
         &ix,
         &[
-            config,
             reward_pool,
             reward_mint,
             vault,

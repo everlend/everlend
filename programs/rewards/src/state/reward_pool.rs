@@ -166,7 +166,7 @@ impl IsInitialized for RewardPool {
 /// Reward vault
 #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default, Clone)]
 pub struct RewardVault {
-    /// Bump of
+    /// Bump of vault account
     pub bump: u8,
     /// Reward mint address
     pub reward_mint: Pubkey,

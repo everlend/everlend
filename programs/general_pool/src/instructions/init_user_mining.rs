@@ -22,7 +22,6 @@ pub struct InitUserMiningContext<'a, 'b> {
     manager: &'a AccountInfo<'b>,
     mining_reward_pool: &'a AccountInfo<'b>,
     mining_reward_acc: &'a AccountInfo<'b>,
-    everlend_config: &'a AccountInfo<'b>,
     everlend_rewards_program: &'a AccountInfo<'b>,
     system_program: &'a AccountInfo<'b>,
     rent: &'a AccountInfo<'b>,
@@ -45,7 +44,6 @@ impl<'a, 'b> InitUserMiningContext<'a, 'b> {
         let mining_reward_pool =
             AccountLoader::next_with_owner(account_info_iter, &everlend_rewards::id())?;
         let mining_reward_acc = AccountLoader::next_uninitialized(account_info_iter)?;
-        let everlend_config = AccountLoader::next_with_owner(account_info_iter, &everlend_rewards::id())?;
         let everlend_rewards_program =
             AccountLoader::next_with_key(account_info_iter, &everlend_rewards::id())?;
         let system_program =
@@ -60,7 +58,6 @@ impl<'a, 'b> InitUserMiningContext<'a, 'b> {
             manager,
             mining_reward_pool,
             mining_reward_acc,
-            everlend_config,
             everlend_rewards_program,
             system_program,
             rent,
@@ -99,7 +96,6 @@ impl<'a, 'b> InitUserMiningContext<'a, 'b> {
 
         initialize_mining(
             self.everlend_rewards_program.key,
-            self.everlend_config.clone(),
             self.mining_reward_pool.clone(),
             self.mining_reward_acc.clone(),
             self.user_authority.clone(),
@@ -110,7 +106,6 @@ impl<'a, 'b> InitUserMiningContext<'a, 'b> {
 
         deposit_mining(
             self.everlend_rewards_program.key,
-            self.everlend_config.clone(),
             self.mining_reward_pool.clone(),
             self.mining_reward_acc.clone(),
             self.user_authority.clone(),

@@ -8,7 +8,6 @@ use solana_program::pubkey::Pubkey;
 
 /// Instruction context
 pub struct ClaimContext<'a, 'b> {
-    rewards_root: &'a AccountInfo<'b>,
     reward_pool: &'a AccountInfo<'b>,
     reward_mint: &'a AccountInfo<'b>,
     vault: &'a AccountInfo<'b>,
@@ -25,7 +24,6 @@ impl<'a, 'b> ClaimContext<'a, 'b> {
     ) -> Result<ClaimContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter().enumerate();
 
-        let rewards_root = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let reward_pool = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let reward_mint = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let vault = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
@@ -36,7 +34,6 @@ impl<'a, 'b> ClaimContext<'a, 'b> {
         let _token_program = AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
 
         Ok(ClaimContext {
-            rewards_root,
             reward_pool,
             reward_mint,
             vault,
@@ -59,7 +56,6 @@ impl<'a, 'b> ClaimContext<'a, 'b> {
         ];
 
         {
-            assert_account_key(self.rewards_root, &reward_pool.rewards_root)?;
             assert_account_key(self.user, &mining.owner)?;
             assert_account_key(self.reward_mint, &reward_pool.liquidity_mint)?;
             assert_account_key(self.reward_pool, &mining.reward_pool)?;

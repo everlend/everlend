@@ -37,7 +37,6 @@ pub enum RewardsInstruction {
     /// Fills the reward pool with rewards
     ///
     /// Accounts:
-    /// [R] Root account (ex-Config program account)
     /// [W] Reward pool account
     /// [R] Mint of rewards account
     /// [W] Vault for rewards account
@@ -53,7 +52,6 @@ pub enum RewardsInstruction {
     /// Initializes mining account for the specified user
     ///
     /// Accounts:
-    /// [R] Root account (ex-Config program account)
     /// [W] Reward pool account
     /// [W] Mining
     /// [R] User
@@ -65,7 +63,6 @@ pub enum RewardsInstruction {
     /// Deposits amount of supply to the mining account
     ///
     /// Accounts:
-    /// [R] Root account (ex-Config program account)
     /// [W] Reward pool account
     /// [W] Mining
     /// [R] User
@@ -78,7 +75,6 @@ pub enum RewardsInstruction {
     /// Withdraws amount of supply to the mining account
     ///
     /// Accounts:
-    /// [R] Root account (ex-Config program account)
     /// [W] Reward pool account
     /// [W] Mining
     /// [R] User
@@ -91,7 +87,6 @@ pub enum RewardsInstruction {
     /// Claims amount of rewards
     ///
     /// Accounts:
-    /// [R] Root account (ex-Config program account)
     /// [R] Reward pool account
     /// [R] Mint of rewards account
     /// [W] Vault for rewards account
@@ -105,7 +100,7 @@ pub enum RewardsInstruction {
     ///
     /// Accounts:
     /// [WS] Root account (ex-Config program account)
-    /// [RS] Payer
+    /// [RS] Authority
     /// [R] System program
     /// [R] Rent sysvar
     InitializeRoot,
@@ -155,7 +150,7 @@ pub fn initialize_pool(
 /// Creates 'AddVault' instruction.
 pub fn add_vault(
     program_id: &Pubkey,
-    root_account: &Pubkey,
+    rewards_root: &Pubkey,
     reward_pool: &Pubkey,
     reward_mint: &Pubkey,
     vault: &Pubkey,
@@ -163,7 +158,7 @@ pub fn add_vault(
     payer: &Pubkey,
 ) -> Instruction {
     let accounts = vec![
-        AccountMeta::new_readonly(*root_account, false),
+        AccountMeta::new_readonly(*rewards_root, false),
         AccountMeta::new(*reward_pool, false),
         AccountMeta::new_readonly(*reward_mint, false),
         AccountMeta::new(*vault, false),
@@ -181,7 +176,6 @@ pub fn add_vault(
 #[allow(clippy::too_many_arguments)]
 pub fn fill_vault(
     program_id: &Pubkey,
-    root_account: &Pubkey,
     reward_pool: &Pubkey,
     reward_mint: &Pubkey,
     vault: &Pubkey,
@@ -191,7 +185,6 @@ pub fn fill_vault(
     amount: u64,
 ) -> Instruction {
     let accounts = vec![
-        AccountMeta::new_readonly(*root_account, false),
         AccountMeta::new(*reward_pool, false),
         AccountMeta::new_readonly(*reward_mint, false),
         AccountMeta::new(*vault, false),
@@ -211,14 +204,12 @@ pub fn fill_vault(
 /// Creates 'InitializeMining' instruction.
 pub fn initialize_mining(
     program_id: &Pubkey,
-    root_account: &Pubkey,
     reward_pool: &Pubkey,
     mining: &Pubkey,
     user: &Pubkey,
     payer: &Pubkey,
 ) -> Instruction {
     let accounts = vec![
-        AccountMeta::new_readonly(*root_account, false),
         AccountMeta::new(*reward_pool, false),
         AccountMeta::new(*mining, false),
         AccountMeta::new_readonly(*user, false),
@@ -233,7 +224,6 @@ pub fn initialize_mining(
 /// Creates 'DepositMining' instruction.
 pub fn deposit_mining(
     program_id: &Pubkey,
-    root_account: &Pubkey,
     reward_pool: &Pubkey,
     mining: &Pubkey,
     user: &Pubkey,
@@ -241,7 +231,6 @@ pub fn deposit_mining(
     amount: u64,
 ) -> Instruction {
     let accounts = vec![
-        AccountMeta::new_readonly(*root_account, false),
         AccountMeta::new(*reward_pool, false),
         AccountMeta::new(*mining, false),
         AccountMeta::new_readonly(*user, false),
@@ -258,7 +247,6 @@ pub fn deposit_mining(
 /// Creates 'WithdrawMining' instruction.
 pub fn withdraw_mining(
     program_id: &Pubkey,
-    root_account: &Pubkey,
     reward_pool: &Pubkey,
     mining: &Pubkey,
     user: &Pubkey,
@@ -266,7 +254,6 @@ pub fn withdraw_mining(
     amount: u64,
 ) -> Instruction {
     let accounts = vec![
-        AccountMeta::new_readonly(*root_account, false),
         AccountMeta::new(*reward_pool, false),
         AccountMeta::new(*mining, false),
         AccountMeta::new_readonly(*user, false),
@@ -284,7 +271,6 @@ pub fn withdraw_mining(
 #[allow(clippy::too_many_arguments)]
 pub fn claim(
     program_id: &Pubkey,
-    root_account: &Pubkey,
     reward_pool: &Pubkey,
     reward_mint: &Pubkey,
     vault: &Pubkey,
@@ -293,7 +279,6 @@ pub fn claim(
     user_reward_token: &Pubkey,
 ) -> Instruction {
     let accounts = vec![
-        AccountMeta::new_readonly(*root_account, false),
         AccountMeta::new_readonly(*reward_pool, false),
         AccountMeta::new_readonly(*reward_mint, false),
         AccountMeta::new(*vault, false),
@@ -307,10 +292,10 @@ pub fn claim(
 }
 
 /// Creates 'InitializeRoot' instruction.
-pub fn initialize_root(program_id: &Pubkey, root_account: &Pubkey, payer: &Pubkey) -> Instruction {
+pub fn initialize_root(program_id: &Pubkey, rewards_root: &Pubkey, authority: &Pubkey) -> Instruction {
     let accounts = vec![
-        AccountMeta::new(*root_account, true),
-        AccountMeta::new_readonly(*payer, true),
+        AccountMeta::new(*rewards_root, true),
+        AccountMeta::new_readonly(*authority, true),
         AccountMeta::new_readonly(system_program::id(), false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];

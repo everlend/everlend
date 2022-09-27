@@ -220,7 +220,6 @@ pub fn deposit(
     pool_mint: &Pubkey,
     mining_reward_pool: &Pubkey,
     mining_reward_acc: &Pubkey,
-    anchor_config: &Pubkey,
     amount: u64,
 ) -> Result<(), ClientError> {
     let tx = Transaction::new_with_payer(
@@ -235,7 +234,6 @@ pub fn deposit(
             &config.fee_payer.pubkey(),
             mining_reward_pool,
             mining_reward_acc,
-            anchor_config,
             amount,
         )],
         Some(&config.fee_payer.pubkey()),
@@ -258,7 +256,6 @@ pub fn withdraw_request(
     pool_mint: &Pubkey,
     mining_reward_pool: &Pubkey,
     mining_reward_acc: &Pubkey,
-    anchor_config: &Pubkey,
     amount: u64,
 ) -> Result<(), ClientError> {
     let payer_pubkey = config.fee_payer.pubkey();
@@ -281,7 +278,6 @@ pub fn withdraw_request(
             &config.fee_payer.pubkey(),
             mining_reward_pool,
             mining_reward_acc,
-            anchor_config,
             amount,
         )],
         Some(&config.fee_payer.pubkey()),

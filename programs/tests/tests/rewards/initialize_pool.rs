@@ -30,7 +30,7 @@ async fn success() {
     );
     assert_eq!(
         reward_pool.deposit_authority,
-        test_reward_pool.pool.pubkey()
+        test_reward_pool.deposit_authority.pubkey()
     );
     assert_eq!(
         reward_pool.liquidity_mint,
