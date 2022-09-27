@@ -1276,6 +1276,7 @@ dependencies = [
  "everlend-income-pools",
  "everlend-liquidity-oracle",
  "everlend-registry",
+ "everlend-ulp",
  "everlend-utils",
  "larix-lending",
  "mpl-token-metadata",

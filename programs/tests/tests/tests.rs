@@ -19,6 +19,8 @@ mod ulp {
     mod repay;
     mod update_pool_borrow_authority;
     mod withdraw;
+    mod delete_pool;
+    mod delete_pool_market;
 }
 
 mod collateral_pool {

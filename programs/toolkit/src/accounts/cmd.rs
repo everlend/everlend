@@ -5,7 +5,7 @@ use clap::{Arg, ArgMatches};
 use super::{
     AddReserveLiquidityCommand, CreateAccountsCommand, CreateTokenAccountsCommand, GetTokenCommand,
     InfoCommand, InfoReserveLiquidityCommand, InitQuarryMiningAccountsCommand,
-    SaveLarixAccountsCommand, SaveQuarryAccountsCommand,
+    SaveLarixAccountsCommand, SaveQuarryAccountsCommand, DeleteUPLAccountsCommand,
 };
 
 #[derive(Clone, Copy)]
@@ -35,6 +35,7 @@ impl<'a> ToolkitCommand<'a> for AccountsCommand {
             Box::new(InitQuarryMiningAccountsCommand),
             Box::new(SaveLarixAccountsCommand),
             Box::new(SaveQuarryAccountsCommand),
+            Box::new(DeleteUPLAccountsCommand),
         ]
     }
 
