@@ -2,7 +2,6 @@
 
 use borsh::BorshDeserialize;
 use everlend_general_pool::{find_withdrawal_requests_program_address, state::WithdrawalRequests};
-use everlend_income_pools::utils::IncomePoolAccounts;
 use everlend_liquidity_oracle::{
     find_token_oracle_program_address,
     state::{DistributionArray, TokenOracle},
@@ -11,7 +10,7 @@ use everlend_registry::state::{Registry, RegistryMarkets};
 use everlend_utils::{
     assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
     cpi::{self},
-    find_program_address, EverlendError,
+    find_program_address, AccountLoader, EverlendError,
 };
 use num_traits::Zero;
 use solana_program::program_error::ProgramError;
@@ -29,12 +28,14 @@ use spl_token::state::Account;
 use spl_associated_token_account::get_associated_token_address;
 use std::cmp::min;
 
+use crate::instructions::{RefreshMMIncomesContext, WithdrawContext};
 use crate::state::{InternalMining, MiningType};
-use crate::utils::{deposit, parse_fill_reward_accounts, withdraw, FillRewardAccounts};
+use crate::utils::{deposit, money_market, parse_fill_reward_accounts, FillRewardAccounts};
 use crate::{
     find_internal_mining_program_address, find_rebalancing_program_address,
     find_transit_program_address,
     instruction::DepositorInstruction,
+    money_market::{CollateralPool, CollateralStorage},
     state::{
         Depositor, InitDepositorParams, InitRebalancingParams, Rebalancing, RebalancingOperation,
     },
@@ -43,7 +44,7 @@ use crate::{
 /// Program state handler.
 pub struct Processor {}
 
-impl Processor {
+impl<'a, 'b> Processor {
     /// Process Init instruction
     pub fn init(
         program_id: &Pubkey,
@@ -448,27 +449,27 @@ impl Processor {
 
     /// Process Deposit instruction
     pub fn deposit(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
-        let account_info_iter = &mut accounts.iter();
+        let account_info_iter = &mut accounts.iter().enumerate();
+        // TODO check
+        let registry_info = AccountLoader::next_unchecked(account_info_iter)?;
 
-        let registry_info = next_account_info(account_info_iter)?;
+        let depositor_info = AccountLoader::next_unchecked(account_info_iter)?;
+        let depositor_authority_info = AccountLoader::next_unchecked(account_info_iter)?;
+        let rebalancing_info = AccountLoader::next_unchecked(account_info_iter)?;
 
-        let depositor_info = next_account_info(account_info_iter)?;
-        let depositor_authority_info = next_account_info(account_info_iter)?;
-        let rebalancing_info = next_account_info(account_info_iter)?;
+        let liquidity_transit_info = AccountLoader::next_unchecked(account_info_iter)?;
+        let liquidity_mint_info = AccountLoader::next_unchecked(account_info_iter)?;
+        let collateral_transit_info = AccountLoader::next_unchecked(account_info_iter)?;
+        let collateral_mint_info = AccountLoader::next_unchecked(account_info_iter)?;
 
-        let liquidity_transit_info = next_account_info(account_info_iter)?;
-        let liquidity_mint_info = next_account_info(account_info_iter)?;
-        let collateral_transit_info = next_account_info(account_info_iter)?;
-        let collateral_mint_info = next_account_info(account_info_iter)?;
+        let executor_info = AccountLoader::next_unchecked(account_info_iter)?;
 
-        let executor_info = next_account_info(account_info_iter)?;
-
-        let clock_info = next_account_info(account_info_iter)?;
+        let clock_info = AccountLoader::next_unchecked(account_info_iter)?;
         let clock = Clock::from_account_info(clock_info)?;
-        let _token_program_info = next_account_info(account_info_iter)?;
+        let _token_program_info = AccountLoader::next_unchecked(account_info_iter)?;
 
-        let money_market_program_info = next_account_info(account_info_iter)?;
-        let internal_mining_info = next_account_info(account_info_iter)?;
+        let money_market_program_info = AccountLoader::next_unchecked(account_info_iter)?;
+        let internal_mining_info = AccountLoader::next_unchecked(account_info_iter)?;
 
         // Check programs
         assert_owned_by(registry_info, &everlend_registry::id())?;
@@ -523,14 +524,6 @@ impl Processor {
         assert_account_key(depositor_authority_info, &depositor_authority_pubkey)?;
         let signers_seeds = &[&depositor_info.key.to_bytes()[..32], &[bump_seed]];
 
-        let step = rebalancing.next_step();
-
-        if registry_markets.money_markets[usize::from(step.money_market_index)]
-            != *money_market_program_info.key
-        {
-            return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
-        }
-
         let (internal_mining_pubkey, _) = find_internal_mining_program_address(
             program_id,
             liquidity_mint_info.key,
@@ -539,31 +532,68 @@ impl Processor {
         );
         assert_account_key(internal_mining_info, &internal_mining_pubkey)?;
 
-        msg!("Deposit");
-        let collateral_amount = if step.liquidity_amount.eq(&0) {
-            0
-        } else {
-            deposit(
-                program_id,
-                &registry_markets,
-                collateral_transit_info.clone(),
-                collateral_mint_info.clone(),
-                liquidity_transit_info.clone(),
-                depositor_authority_info.clone(),
-                clock_info.clone(),
-                money_market_program_info.clone(),
-                internal_mining_info.clone(),
-                account_info_iter,
-                step.liquidity_amount,
-                &[signers_seeds],
-            )?
+        // let money_market =
+        let (money_market, is_mining) = money_market(
+            &registry_markets,
+            program_id,
+            money_market_program_info,
+            account_info_iter,
+            internal_mining_info,
+            collateral_mint_info.key,
+            depositor_authority_info.key,
+        )?;
+
+        let collateral_stor: Option<Box<dyn CollateralStorage>> = {
+            if !is_mining {
+                let coll_pool = CollateralPool::init(
+                    &registry_markets,
+                    collateral_mint_info,
+                    depositor_authority_info,
+                    account_info_iter,
+                    false,
+                )?;
+                Some(Box::new(coll_pool))
+            } else {
+                None
+            }
         };
 
-        rebalancing.execute_step(
-            RebalancingOperation::Deposit,
-            Some(collateral_amount),
-            clock.slot,
-        )?;
+        {
+            let step = rebalancing.next_step();
+
+            if step.operation != RebalancingOperation::Deposit {
+                return Err(EverlendError::InvalidRebalancingOperation.into());
+            }
+
+            if registry_markets.money_markets[usize::from(step.money_market_index)]
+                != *money_market_program_info.key
+            {
+                return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
+            }
+            msg!("Deposit");
+            let collateral_amount = if step.liquidity_amount.eq(&0) {
+                0
+            } else {
+                deposit(
+                    collateral_transit_info,
+                    collateral_mint_info,
+                    liquidity_transit_info,
+                    depositor_authority_info,
+                    clock_info,
+                    &money_market,
+                    is_mining,
+                    collateral_stor,
+                    step.liquidity_amount,
+                    &[signers_seeds],
+                )?
+            };
+
+            rebalancing.execute_step(
+                RebalancingOperation::Deposit,
+                Some(collateral_amount),
+                clock.slot,
+            )?;
+        }
 
         Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
 
@@ -571,148 +601,11 @@ impl Processor {
     }
 
     /// Process Withdraw instruction
-    pub fn withdraw(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
-        let account_info_iter = &mut accounts.iter();
-
-        let registry_info = next_account_info(account_info_iter)?;
-
-        let depositor_info = next_account_info(account_info_iter)?;
-        let depositor_authority_info = next_account_info(account_info_iter)?;
-        let rebalancing_info = next_account_info(account_info_iter)?;
-
-        let income_pool_market_info = next_account_info(account_info_iter)?;
-        let income_pool_info = next_account_info(account_info_iter)?;
-        let income_pool_token_account_info = next_account_info(account_info_iter)?;
-        let income_pool_accounts = IncomePoolAccounts {
-            pool_market: income_pool_market_info.clone(),
-            pool: income_pool_info.clone(),
-            token_account: income_pool_token_account_info.clone(),
-        };
-
-        let collateral_transit_info = next_account_info(account_info_iter)?;
-        let collateral_mint_info = next_account_info(account_info_iter)?;
-        let liquidity_transit_info = next_account_info(account_info_iter)?;
-        let liquidity_reserve_transit_info = next_account_info(account_info_iter)?;
-        let liquidity_mint_info = next_account_info(account_info_iter)?;
-
-        let executor_info = next_account_info(account_info_iter)?;
-
-        let clock_info = next_account_info(account_info_iter)?;
-        let clock = Clock::from_account_info(clock_info)?;
-        let _token_program_info = next_account_info(account_info_iter)?;
-        let _everlend_income_pools_info = next_account_info(account_info_iter)?;
-
-        let money_market_program_info = next_account_info(account_info_iter)?;
-
-        let internal_mining_info = next_account_info(account_info_iter)?;
-
-        assert_owned_by(registry_info, &everlend_registry::id())?;
-        assert_owned_by(depositor_info, program_id)?;
-        assert_owned_by(rebalancing_info, program_id)?;
-
-        let depositor = Depositor::unpack(&depositor_info.data.borrow())?;
-
-        // Check executor
-        assert_signer(executor_info)?;
-        assert_account_key(executor_info, &depositor.rebalance_executor)?;
-
-        assert_account_key(registry_info, &depositor.registry)?;
-        let registry_markets = RegistryMarkets::unpack_from_slice(&registry_info.data.borrow())?;
-
-        // Check rebalancing
-        let (rebalancing_pubkey, _) = find_rebalancing_program_address(
-            program_id,
-            depositor_info.key,
-            liquidity_mint_info.key,
-        );
-        assert_account_key(rebalancing_info, &rebalancing_pubkey)?;
-
-        let mut rebalancing = Rebalancing::unpack(&rebalancing_info.data.borrow())?;
-        assert_account_key(depositor_info, &rebalancing.depositor)?;
-        assert_account_key(liquidity_mint_info, &rebalancing.mint)?;
-
-        if rebalancing.is_completed() {
-            return Err(EverlendError::RebalancingIsCompleted.into());
-        }
-
-        // Check transit: liquidity
-        let (liquidity_transit_pubkey, _) = find_transit_program_address(
-            program_id,
-            depositor_info.key,
-            liquidity_mint_info.key,
-            "",
-        );
-        assert_account_key(liquidity_transit_info, &liquidity_transit_pubkey)?;
-
-        // Check transit: liquidity reserve
-        let (liquidity_reserve_transit_pubkey, _) = find_transit_program_address(
-            program_id,
-            depositor_info.key,
-            liquidity_mint_info.key,
-            "reserve",
-        );
-        assert_account_key(
-            liquidity_reserve_transit_info,
-            &liquidity_reserve_transit_pubkey,
-        )?;
-
-        // Check transit: collateral
-        let (collateral_transit_pubkey, _) = find_transit_program_address(
-            program_id,
-            depositor_info.key,
-            collateral_mint_info.key,
-            "",
-        );
-        assert_account_key(collateral_transit_info, &collateral_transit_pubkey)?;
-
-        // Create depositor authority account
-        let (depositor_authority_pubkey, bump_seed) =
-            find_program_address(program_id, depositor_info.key);
-        assert_account_key(depositor_authority_info, &depositor_authority_pubkey)?;
-        let signers_seeds = &[&depositor_info.key.to_bytes()[..32], &[bump_seed]];
-
-        let step = rebalancing.next_step();
-
-        if registry_markets.money_markets[usize::from(step.money_market_index)]
-            != *money_market_program_info.key
-        {
-            return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
-        }
-
-        // Check internal mining account
-        let (internal_mining_pubkey, _) = find_internal_mining_program_address(
-            program_id,
-            liquidity_mint_info.key,
-            collateral_mint_info.key,
-            depositor_info.key,
-        );
-        assert_account_key(internal_mining_info, &internal_mining_pubkey)?;
-
-        msg!("Withdraw");
-        withdraw(
-            program_id,
-            &registry_markets,
-            income_pool_accounts,
-            collateral_transit_info.clone(),
-            collateral_mint_info.clone(),
-            liquidity_transit_info.clone(),
-            liquidity_reserve_transit_info.clone(),
-            depositor_authority_info.clone(),
-            clock_info.clone(),
-            money_market_program_info.clone(),
-            internal_mining_info.clone(),
-            account_info_iter,
-            step.collateral_amount.unwrap(),
-            step.liquidity_amount,
-            &[signers_seeds],
-        )?;
-
-        rebalancing.execute_step(RebalancingOperation::Withdraw, None, clock.slot)?;
-
-        Rebalancing::pack(rebalancing, *rebalancing_info.data.borrow_mut())?;
-
-        Ok(())
-    }
+    // pub fn withdraw(
+    //     program_id: &Pubkey,
+    //     account_info_iter: &'a mut Enumerate<Iter<'a, AccountInfo<'b>>>,
+    // ) -> ProgramResult {
+    // }
 
     /// Process MigrateDepositor instruction
     pub fn migrate_depositor(_program_id: &Pubkey, _accounts: &[AccountInfo]) -> ProgramResult {
@@ -1245,8 +1138,10 @@ impl Processor {
             }
 
             DepositorInstruction::Withdraw => {
+                let account_info_iter = &mut accounts.iter().enumerate();
                 msg!("DepositorInstruction: Withdraw");
-                Self::withdraw(program_id, accounts)
+                WithdrawContext::new(program_id, account_info_iter)?
+                    .process(program_id, account_info_iter)
             }
 
             DepositorInstruction::MigrateDepositor => {
@@ -1262,6 +1157,13 @@ impl Processor {
             DepositorInstruction::ClaimMiningReward { with_subrewards } => {
                 msg!("DepositorInstruction: ClaimMiningReward");
                 Self::claim_mining_reward(program_id, accounts, with_subrewards)
+            }
+
+            DepositorInstruction::RefreshMMIncomes => {
+                let account_info_iter = &mut accounts.iter().enumerate();
+                msg!("DepositorInstruction: RefreshMMIncomes");
+                RefreshMMIncomesContext::new(program_id, account_info_iter)?
+                    .process(program_id, account_info_iter)
             }
         }
     }

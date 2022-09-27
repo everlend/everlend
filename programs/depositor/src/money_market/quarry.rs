@@ -1,12 +1,12 @@
 use super::{CollateralStorage};
-use everlend_utils::{assert_account_key, cpi::quarry};
+use everlend_utils::{AccountLoader, cpi::quarry};
 use solana_program::{
-    account_info::{next_account_info, AccountInfo},
+    account_info::AccountInfo,
     program_error::ProgramError,
     pubkey::Pubkey,
 };
 use spl_associated_token_account::get_associated_token_address;
-use std::slice::Iter;
+use std::{slice::Iter, iter::Enumerate};
 
 ///
 #[derive(Clone)]
@@ -21,36 +21,41 @@ pub struct Quarry<'a> {
 impl<'a, 'b> Quarry<'a> {
     ///
     pub fn init(
-        account_info_iter: &'b mut Iter<AccountInfo<'a>>,
+        account_info_iter: &'b mut Enumerate<Iter<'_, AccountInfo<'a>>>,
         depositor_authority_pubkey: &Pubkey,
         token_mint: &Pubkey,
         rewarder: &Pubkey,
     ) -> Result<Quarry<'a>, ProgramError> {
-        let quarry_mining_program_id_info = next_account_info(account_info_iter)?;
-        assert_account_key(quarry_mining_program_id_info, &quarry::staking_program_id())?;
+        let quarry_mining_program_id_info = AccountLoader::next_with_key(account_info_iter, &quarry::staking_program_id())?;
+        let rewarder_info = AccountLoader::next_with_key(account_info_iter, rewarder)?;
 
-        let rewarder_info = next_account_info(account_info_iter)?;
-        assert_account_key(rewarder_info, rewarder)?;
 
-        let quarry_info = next_account_info(account_info_iter)?;
-        let (quarry, _) = quarry::find_quarry_program_address(
-            quarry_mining_program_id_info.key,
-            rewarder_info.key,
-            token_mint,
-        );
-        assert_account_key(quarry_info, &quarry)?;
+        let quarry_info = {
+            let (quarry, _) = quarry::find_quarry_program_address(
+                quarry_mining_program_id_info.key,
+                rewarder_info.key,
+                token_mint,
+            );
 
-        let miner_info = next_account_info(account_info_iter)?;
-        let (miner_pubkey, _) = quarry::find_miner_program_address(
-            quarry_mining_program_id_info.key,
-            &quarry,
-            depositor_authority_pubkey,
-        );
-        assert_account_key(miner_info, &miner_pubkey)?;
+            AccountLoader::next_with_key(account_info_iter, &quarry)?
+        };
 
-        let miner_vault_info = next_account_info(account_info_iter)?;
-        let miner_vault = get_associated_token_address(&miner_pubkey, token_mint);
-        assert_account_key(miner_vault_info, &miner_vault)?;
+
+        let miner_info =
+            {
+                let (miner_pubkey, _) = quarry::find_miner_program_address(
+                    quarry_mining_program_id_info.key,
+                    quarry_info.key,
+                    depositor_authority_pubkey,
+                );
+
+                AccountLoader::next_with_key(account_info_iter, &miner_pubkey)?
+            };
+
+        let miner_vault_info = {
+            let miner_vault = get_associated_token_address(miner_info.key, token_mint);
+            AccountLoader::next_with_key(account_info_iter, &miner_vault)?
+        };
 
         Ok(Quarry {
             quarry_mining_program_id: *quarry_mining_program_id_info.key,

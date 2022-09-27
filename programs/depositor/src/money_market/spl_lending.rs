@@ -1,14 +1,10 @@
 use super::MoneyMarket;
-use everlend_utils::cpi::spl_token_lending;
-use everlend_utils::EverlendError;
+use everlend_utils::{cpi::spl_token_lending, AccountLoader, EverlendError};
 use solana_program::{
-    account_info::{next_account_info, AccountInfo},
-    program_error::ProgramError,
-    program_pack::Pack,
-    pubkey::Pubkey,
+    account_info::AccountInfo, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,
 };
 use spl_token::state::Account;
-use std::slice::Iter;
+use std::{iter::Enumerate, slice::Iter};
 
 ///
 pub struct SPLLending<'a> {
@@ -24,13 +20,16 @@ impl<'a, 'b> SPLLending<'a> {
     ///
     pub fn init(
         money_market_program_id: Pubkey,
-        account_info_iter: &'b mut Iter<AccountInfo<'a>>,
+        account_info_iter: &'b mut Enumerate<Iter<'_, AccountInfo<'a>>>,
     ) -> Result<SPLLending<'a>, ProgramError> {
-        let reserve_info = next_account_info(account_info_iter)?;
-        let reserve_liquidity_supply_info = next_account_info(account_info_iter)?;
-        let lending_market_info = next_account_info(account_info_iter)?;
-        let lending_market_authority_info = next_account_info(account_info_iter)?;
-        let reserve_liquidity_oracle_info = next_account_info(account_info_iter)?;
+        let reserve_info =
+            AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
+        let reserve_liquidity_supply_info =
+            AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let lending_market_info =
+            AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
+        let lending_market_authority_info = AccountLoader::next_unchecked(account_info_iter)?;
+        let reserve_liquidity_oracle_info = AccountLoader::next_unchecked(account_info_iter)?;
 
         Ok(SPLLending {
             money_market_program_id,

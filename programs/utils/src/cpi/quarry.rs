@@ -1,5 +1,4 @@
 use anchor_lang::InstructionData;
-use quarry_mine::id;
 use quarry_mine::instruction::{ClaimRewardsV2, CreateMinerV2, StakeTokens, WithdrawTokens};
 use quarry_redeemer::instruction::{RedeemAllTokens};
 use solana_program::account_info::AccountInfo;

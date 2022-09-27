@@ -1,15 +1,12 @@
 use super::quarry::Quarry;
 use super::{CollateralStorage, MoneyMarket};
 use crate::state::MiningType;
-use everlend_utils::{assert_account_key, cpi::port_finance, EverlendError};
+use everlend_utils::{assert_account_key, cpi::port_finance, AccountLoader, EverlendError};
 use solana_program::{
-    account_info::{next_account_info, AccountInfo},
-    program_error::ProgramError,
-    program_pack::Pack,
-    pubkey::Pubkey,
+    account_info::AccountInfo, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,
 };
 use spl_token::state::Account;
-use std::slice::Iter;
+use std::{iter::Enumerate, slice::Iter};
 
 ///
 pub struct PortFinance<'a> {
@@ -37,16 +34,19 @@ impl<'a, 'b> PortFinance<'a> {
     ///
     pub fn init(
         money_market_program_id: Pubkey,
-        account_info_iter: &'b mut Iter<AccountInfo<'a>>,
+        account_info_iter: &'b mut Enumerate<Iter<'_, AccountInfo<'a>>>,
         internal_mining_type: Option<MiningType>,
         collateral_token_mint: &Pubkey,
         depositor_authority: &Pubkey,
     ) -> Result<PortFinance<'a>, ProgramError> {
-        let reserve_info = next_account_info(account_info_iter)?;
-        let reserve_liquidity_supply_info = next_account_info(account_info_iter)?;
-        let lending_market_info = next_account_info(account_info_iter)?;
-        let lending_market_authority_info = next_account_info(account_info_iter)?;
-        let reserve_liquidity_oracle_info = next_account_info(account_info_iter)?;
+        let reserve_info =
+            AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
+        let reserve_liquidity_supply_info =
+            AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let lending_market_info =
+            AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
+        let lending_market_authority_info = AccountLoader::next_unchecked(account_info_iter)?;
+        let reserve_liquidity_oracle_info = AccountLoader::next_unchecked(account_info_iter)?;
 
         let mut port_finance = PortFinance {
             money_market_program_id,
@@ -80,18 +80,21 @@ impl<'a, 'b> PortFinance<'a> {
                 staking_pool,
                 obligation,
             }) => {
-                let staking_program_id_info = next_account_info(account_info_iter)?;
-                let staking_account_info = next_account_info(account_info_iter)?;
-                let staking_pool_info = next_account_info(account_info_iter)?;
+                let staking_program_id_info = AccountLoader::next_unchecked(account_info_iter)?;
+                let staking_account_info =
+                    AccountLoader::next_with_owner(account_info_iter, staking_program_id_info.key)?;
+                let staking_pool_info =
+                    AccountLoader::next_with_owner(account_info_iter, staking_program_id_info.key)?;
 
                 assert_account_key(staking_program_id_info, &staking_program_id)?;
                 assert_account_key(staking_account_info, &staking_account)?;
                 assert_account_key(staking_pool_info, &staking_pool)?;
 
-                let obligation_info = next_account_info(account_info_iter)?;
+                let obligation_info = AccountLoader::next_unchecked(account_info_iter)?;
                 assert_account_key(obligation_info, &obligation)?;
 
-                let collateral_supply_pubkey_info = next_account_info(account_info_iter)?;
+                let collateral_supply_pubkey_info =
+                    AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
 
                 port_finance.mining = Some(PortFinanceMining {
                     staking_program_id_info: staking_program_id_info.clone(),

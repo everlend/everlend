@@ -151,8 +151,8 @@ impl TestPool {
                 AccountMeta::new_readonly(collateral_pool_market_authority, false),
                 AccountMeta::new_readonly(collateral_pool, false),
                 AccountMeta::new(self.token_account.pubkey(), false),
-                AccountMeta::new_readonly(collateral_pool_withdraw_authority, false),
                 AccountMeta::new_readonly(everlend_collateral_pool::id(), false),
+                AccountMeta::new_readonly(collateral_pool_withdraw_authority, false),
             ]
     }
 

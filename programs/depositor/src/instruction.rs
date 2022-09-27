@@ -215,6 +215,11 @@ pub enum DepositorInstruction {
         /// Manual setup of prev distribution array
         distribution_array: DistributionArray,
     },
+
+    /// Refresh incomes for MM
+    ///
+    /// Accounts:
+    RefreshMMIncomes,
 }
 
 /// Creates 'Init' instruction.
@@ -497,6 +502,81 @@ pub fn withdraw(
     accounts.extend(collateral_storage_accounts);
 
     Instruction::new_with_borsh(*program_id, &DepositorInstruction::Withdraw, accounts)
+}
+
+/// Creates 'RefreshMMIncomes' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn refresh_mm_incomes(
+    program_id: &Pubkey,
+    registry: &Pubkey,
+    depositor: &Pubkey,
+    income_pool_market: &Pubkey,
+    income_pool_token_account: &Pubkey,
+    collateral_mint: &Pubkey,
+    liquidity_mint: &Pubkey,
+    rebalance_executor: &Pubkey,
+    money_market_program_id: &Pubkey,
+    money_market_accounts: Vec<AccountMeta>,
+    collateral_storage_accounts: Vec<AccountMeta>,
+) -> Instruction {
+    let (depositor_authority, _) = find_program_address(program_id, depositor);
+    let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
+
+    // Income pool
+    let (income_pool, _) = everlend_income_pools::find_pool_program_address(
+        &everlend_income_pools::id(),
+        income_pool_market,
+        liquidity_mint,
+    );
+
+    let (collateral_transit, _) =
+        find_transit_program_address(program_id, depositor, collateral_mint, "");
+    let (liquidity_transit, _) =
+        find_transit_program_address(program_id, depositor, liquidity_mint, "");
+
+    let (liquidity_reserve_transit, _) =
+        find_transit_program_address(program_id, depositor, liquidity_mint, "reserve");
+
+    let (internal_mining, _internal_mining_bump_seed) = crate::find_internal_mining_program_address(
+        program_id,
+        liquidity_mint,
+        collateral_mint,
+        depositor,
+    );
+
+    let mut accounts = vec![
+        AccountMeta::new_readonly(*registry, false),
+        AccountMeta::new_readonly(*depositor, false),
+        AccountMeta::new_readonly(depositor_authority, false),
+        AccountMeta::new(rebalancing, false),
+        // Income pool
+        AccountMeta::new_readonly(*income_pool_market, false),
+        AccountMeta::new_readonly(income_pool, false),
+        AccountMeta::new(*income_pool_token_account, false),
+        // Common
+        AccountMeta::new(collateral_transit, false),
+        AccountMeta::new(*collateral_mint, false),
+        AccountMeta::new(liquidity_transit, false),
+        AccountMeta::new(liquidity_reserve_transit, false),
+        AccountMeta::new_readonly(*liquidity_mint, false),
+        AccountMeta::new_readonly(*rebalance_executor, true),
+        // Programs
+        AccountMeta::new_readonly(sysvar::clock::id(), false),
+        AccountMeta::new_readonly(spl_token::id(), false),
+        AccountMeta::new_readonly(everlend_income_pools::id(), false),
+        // Money market
+        AccountMeta::new_readonly(*money_market_program_id, false),
+        AccountMeta::new_readonly(internal_mining, false),
+    ];
+
+    accounts.extend(money_market_accounts);
+    accounts.extend(collateral_storage_accounts);
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &DepositorInstruction::RefreshMMIncomes,
+        accounts,
+    )
 }
 
 /// Creates 'MigrateDepositor' instruction.

@@ -1,13 +1,10 @@
 use crate::money_market::MoneyMarket;
-use solana_program::account_info::{next_account_info, AccountInfo};
-use solana_program::program_error::ProgramError;
-use solana_program::pubkey::Pubkey;
-
-use everlend_utils::cpi::tulip;
-use everlend_utils::EverlendError;
-use solana_program::program_pack::Pack;
+use everlend_utils::{cpi::tulip, AccountLoader, EverlendError};
+use solana_program::{
+    account_info::AccountInfo, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,
+};
 use spl_token::state::Account;
-use std::slice::Iter;
+use std::{iter::Enumerate, slice::Iter};
 
 ///
 pub struct Tulip<'a> {
@@ -23,13 +20,16 @@ impl<'a, 'b> Tulip<'a> {
     ///
     pub fn init(
         money_market_program_id: Pubkey,
-        account_info_iter: &'b mut Iter<AccountInfo<'a>>,
+        account_info_iter: &'b mut Enumerate<Iter<'_, AccountInfo<'a>>>,
     ) -> Result<Tulip<'a>, ProgramError> {
-        let reserve_info = next_account_info(account_info_iter)?;
-        let reserve_liquidity_supply_info = next_account_info(account_info_iter)?;
-        let lending_market_info = next_account_info(account_info_iter)?;
-        let lending_market_authority_info = next_account_info(account_info_iter)?;
-        let reserve_liquidity_oracle_info = next_account_info(account_info_iter)?;
+        let reserve_info =
+            AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
+        let reserve_liquidity_supply_info =
+            AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let lending_market_info =
+            AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
+        let lending_market_authority_info = AccountLoader::next_unchecked(account_info_iter)?;
+        let reserve_liquidity_oracle_info = AccountLoader::next_unchecked(account_info_iter)?;
 
         Ok(Tulip {
             money_market_program_id,

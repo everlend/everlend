@@ -1,12 +1,11 @@
 use crate::money_market::MoneyMarket;
 use everlend_utils::cpi::francium;
-use everlend_utils::EverlendError;
-use solana_program::account_info::{next_account_info, AccountInfo};
-use solana_program::program_error::ProgramError;
-use solana_program::program_pack::Pack;
-use solana_program::pubkey::Pubkey;
+use everlend_utils::{AccountLoader, EverlendError};
+use solana_program::{
+    account_info::AccountInfo, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,
+};
 use spl_token::state::Account;
-use std::slice::Iter;
+use std::{iter::Enumerate, slice::Iter};
 
 ///
 pub struct Francium<'a> {
@@ -21,12 +20,15 @@ impl<'a, 'b> Francium<'a> {
     ///
     pub fn init(
         money_market_program_id: Pubkey,
-        account_info_iter: &'b mut Iter<AccountInfo<'a>>,
+        account_info_iter: &'b mut Enumerate<Iter<'_, AccountInfo<'a>>>,
     ) -> Result<Francium<'a>, ProgramError> {
-        let reserve_info = next_account_info(account_info_iter)?;
-        let reserve_liquidity_supply_info = next_account_info(account_info_iter)?;
-        let lending_market_info = next_account_info(account_info_iter)?;
-        let lending_market_authority_info = next_account_info(account_info_iter)?;
+        let reserve_info =
+            AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
+        let reserve_liquidity_supply_info =
+            AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let lending_market_info =
+            AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
+        let lending_market_authority_info = AccountLoader::next_unchecked(account_info_iter)?;
 
         Ok(Francium {
             money_market_program_id,
@@ -50,10 +52,7 @@ impl<'a> MoneyMarket<'a> for Francium<'a> {
         amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<u64, ProgramError> {
-        francium::refresh_reserve(
-            &self.money_market_program_id,
-            self.reserve.clone(),
-        )?;
+        francium::refresh_reserve(&self.money_market_program_id, self.reserve.clone())?;
 
         francium::deposit(
             &self.money_market_program_id,
@@ -87,10 +86,7 @@ impl<'a> MoneyMarket<'a> for Francium<'a> {
         amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
-        francium::refresh_reserve(
-            &self.money_market_program_id,
-            self.reserve.clone(),
-        )?;
+        francium::refresh_reserve(&self.money_market_program_id, self.reserve.clone())?;
 
         francium::redeem(
             &self.money_market_program_id,

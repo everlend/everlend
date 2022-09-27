@@ -17,6 +17,10 @@ pub enum RebalancingOperation {
     Withdraw,
     /// Deposit
     Deposit,
+    /// Refresh withdraw
+    RefreshWithdraw,
+    /// Refresh deposit
+    RefreshDeposit,
 }
 
 impl Default for RebalancingOperation {
