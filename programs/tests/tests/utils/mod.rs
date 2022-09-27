@@ -28,9 +28,6 @@ pub mod larix;
 pub mod liquidity_oracle;
 pub mod money_market;
 pub mod registry;
-pub mod ulp_pool;
-pub mod ulp_pool_borrow_authority;
-pub mod ulp_pool_market;
 pub mod users;
 
 pub use collateral_pool::*;
@@ -46,9 +43,6 @@ pub use income_pool_market::*;
 pub use liquidity_oracle::*;
 pub use money_market::*;
 pub use registry::*;
-pub use ulp_pool::*;
-pub use ulp_pool_borrow_authority::*;
-pub use ulp_pool_market::*;
 pub use users::*;
 
 use self::larix::{add_larix, TestLarix};
@@ -71,11 +65,6 @@ pub fn program_test() -> ProgramTest {
         "everlend_collateral_pool",
         everlend_collateral_pool::id(),
         processor!(everlend_collateral_pool::processor::Processor::process_instruction),
-    );
-    program.add_program(
-        "everlend_ulp",
-        everlend_ulp::id(),
-        processor!(everlend_ulp::processor::Processor::process_instruction),
     );
     program.add_program(
         "everlend_general_pool",

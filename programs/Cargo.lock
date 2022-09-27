@@ -1158,7 +1158,6 @@ dependencies = [
  "everlend-income-pools",
  "everlend-liquidity-oracle",
  "everlend-registry",
- "everlend-ulp",
  "everlend-utils",
  "num-derive",
  "num-traits",
@@ -1248,7 +1247,6 @@ dependencies = [
  "everlend-income-pools",
  "everlend-liquidity-oracle",
  "everlend-registry",
- "everlend-ulp",
  "everlend-utils",
  "larix-lending",
  "solana-program",
@@ -1276,7 +1274,6 @@ dependencies = [
  "everlend-income-pools",
  "everlend-liquidity-oracle",
  "everlend-registry",
- "everlend-ulp",
  "everlend-utils",
  "larix-lending",
  "mpl-token-metadata",
@@ -1306,21 +1303,6 @@ dependencies = [
  "spl-token-lending",
  "tokio",
  "url",
-]
-
-[[package]]
-name = "everlend-ulp"
-version = "0.1.0"
-dependencies = [
- "borsh 0.9.3",
- "everlend-utils",
- "num-derive",
- "num-traits",
- "solana-program",
- "solana-program-test",
- "solana-sdk",
- "spl-token 3.2.0",
- "thiserror",
 ]
 
 [[package]]
