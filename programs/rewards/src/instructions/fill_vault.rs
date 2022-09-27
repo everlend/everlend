@@ -31,7 +31,8 @@ impl<'a, 'b> FillVaultContext<'a, 'b> {
         let vault = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let fee_account = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let authority = AccountLoader::next_signer(account_info_iter)?;
-        let source_token_account = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let source_token_account =
+            AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let _token_program = AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
 
         Ok(FillVaultContext {

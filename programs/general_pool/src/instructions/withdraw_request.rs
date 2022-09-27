@@ -7,9 +7,9 @@ use crate::{
     },
     utils::total_pool_amount,
 };
+use everlend_rewards::cpi::withdraw_mining;
 use everlend_utils::{
-    assert_account_key, assert_owned_by, assert_non_zero_amount, cpi, AccountLoader,
-    EverlendError,
+    assert_account_key, assert_non_zero_amount, assert_owned_by, cpi, AccountLoader, EverlendError,
 };
 use solana_program::{
     account_info::AccountInfo,
@@ -23,7 +23,6 @@ use solana_program::{
     sysvar::{Sysvar, SysvarId},
 };
 use spl_token::state::{Account, Mint};
-use everlend_rewards::cpi::withdraw_mining;
 
 /// Instruction context
 pub struct WithdrawRequestContext<'a, 'b> {

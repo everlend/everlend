@@ -1,3 +1,4 @@
+use everlend_rewards::cpi::deposit_mining;
 use everlend_utils::{
     assert_account_key, assert_non_zero_amount,
     cpi::{self},
@@ -8,7 +9,6 @@ use solana_program::{
     program_pack::Pack, pubkey::Pubkey,
 };
 use spl_token::state::Mint;
-use everlend_rewards::cpi::deposit_mining;
 
 use crate::{
     find_pool_config_program_address, find_pool_program_address,
@@ -56,7 +56,8 @@ impl<'a, 'b> DepositContext<'a, 'b> {
             AccountLoader::next_with_owner(account_info_iter, &everlend_rewards::id())?;
         let mining_reward_acc =
             AccountLoader::next_with_owner(account_info_iter, &everlend_rewards::id())?;
-        let everlend_rewards = AccountLoader::next_with_key(account_info_iter, &everlend_rewards::id())?;
+        let everlend_rewards =
+            AccountLoader::next_with_key(account_info_iter, &everlend_rewards::id())?;
         let _token_program = AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
 
         Ok(DepositContext {

@@ -60,7 +60,7 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
 
         let bump = {
             let (vault_pubkey, bump) =
-                find_vault_program_address(program_id, &self.reward_pool.key, self.reward_mint.key);
+                find_vault_program_address(program_id, self.reward_pool.key, self.reward_mint.key);
             assert_account_key(self.vault, &vault_pubkey)?;
 
             bump

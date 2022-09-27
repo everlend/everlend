@@ -1,4 +1,4 @@
-use crate::utils::{get_liquidity_mint, BanksClientResult, transfer};
+use crate::utils::{get_liquidity_mint, transfer, BanksClientResult};
 use solana_program::pubkey::Pubkey;
 use solana_program_test::ProgramTestContext;
 use solana_sdk::signature::{Keypair, Signer};
@@ -40,7 +40,9 @@ impl TestRewards {
     }
 
     pub async fn initialize_pool(&self, context: &mut ProgramTestContext) -> BanksClientResult<()> {
-        transfer(context, &self.root_authority.pubkey(), 10000000).await.unwrap();
+        transfer(context, &self.root_authority.pubkey(), 10000000)
+            .await
+            .unwrap();
         // Initialize mining pool
         let tx = Transaction::new_signed_with_payer(
             &[

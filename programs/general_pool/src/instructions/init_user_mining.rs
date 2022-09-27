@@ -2,16 +2,13 @@ use crate::{
     find_pool_program_address,
     state::{Pool, PoolMarket},
 };
-use everlend_utils::{
-    assert_account_key,
-    AccountLoader,
-};
+use everlend_rewards::cpi::{deposit_mining, initialize_mining};
+use everlend_utils::{assert_account_key, AccountLoader};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
     program_pack::Pack, pubkey::Pubkey, rent::Rent, system_program, sysvar::SysvarId,
 };
 use spl_token::state::Account;
-use everlend_rewards::cpi::{deposit_mining, initialize_mining};
 
 /// Instruction context
 pub struct InitUserMiningContext<'a, 'b> {

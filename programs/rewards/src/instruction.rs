@@ -292,7 +292,11 @@ pub fn claim(
 }
 
 /// Creates 'InitializeRoot' instruction.
-pub fn initialize_root(program_id: &Pubkey, rewards_root: &Pubkey, authority: &Pubkey) -> Instruction {
+pub fn initialize_root(
+    program_id: &Pubkey,
+    rewards_root: &Pubkey,
+    authority: &Pubkey,
+) -> Instruction {
     let accounts = vec![
         AccountMeta::new(*rewards_root, true),
         AccountMeta::new_readonly(*authority, true),

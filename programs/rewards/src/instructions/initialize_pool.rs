@@ -28,7 +28,7 @@ impl<'a, 'b> InitializePoolContext<'a, 'b> {
     ) -> Result<InitializePoolContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter().enumerate();
 
-        let rewards_root = AccountLoader::next_with_owner(account_info_iter, &program_id)?;
+        let rewards_root = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let reward_pool = AccountLoader::next_uninitialized(account_info_iter)?;
         let liquidity_mint = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let deposit_authority = AccountLoader::next_unchecked(account_info_iter)?;

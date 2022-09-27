@@ -26,14 +26,7 @@ pub fn initialize_mining<'a>(
 
     invoke(
         &ix,
-        &[
-            reward_pool,
-            mining,
-            user,
-            payer,
-            system_program,
-            rent,
-        ],
+        &[reward_pool, mining, user, payer, system_program, rent],
     )
 }
 

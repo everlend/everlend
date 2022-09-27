@@ -1,11 +1,17 @@
 use crate::accounts_config::CollateralPoolAccounts;
 use crate::accounts_config::TokenAccounts;
-use crate::helpers::{create_collateral_market, create_collateral_pool, create_general_pool, create_general_pool_market, create_income_pool, create_income_pool_market, create_pool_borrow_authority, create_pool_withdraw_authority, create_token_oracle, create_transit, init_depositor, init_liquidity_oracle, init_registry, update_registry, update_registry_markets, PoolPubkeys, init_rewards_root};
+use crate::helpers::{
+    create_collateral_market, create_collateral_pool, create_general_pool,
+    create_general_pool_market, create_income_pool, create_income_pool_market,
+    create_pool_borrow_authority, create_pool_withdraw_authority, create_token_oracle,
+    create_transit, init_depositor, init_liquidity_oracle, init_registry, init_rewards_root,
+    update_registry, update_registry_markets, PoolPubkeys,
+};
 use crate::utils::{
     arg_multiple, arg_pubkey, get_asset_maps, spl_create_associated_token_account,
     spl_token_transfer, REFRESH_INCOME_INTERVAL,
 };
-use crate::{Config, InitializedAccounts, ToolkitCommand, ARG_ACCOUNTS, arg_keypair};
+use crate::{arg_keypair, Config, InitializedAccounts, ToolkitCommand, ARG_ACCOUNTS};
 use clap::{Arg, ArgMatches};
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
@@ -234,10 +240,7 @@ impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
             );
         }
 
-        let rewards_root = init_rewards_root(
-            config,
-            rewards_root_keypair
-        )?;
+        let rewards_root = init_rewards_root(config, rewards_root_keypair)?;
 
         let initialized_accounts = InitializedAccounts {
             payer: payer_pubkey,

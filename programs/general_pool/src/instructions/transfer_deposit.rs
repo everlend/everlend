@@ -1,11 +1,14 @@
+use everlend_rewards::cpi::{deposit_mining, withdraw_mining};
 use everlend_rewards::state::Mining;
 use everlend_utils::{
     assert_account_key,
     cpi::{self},
     AccountLoader, EverlendError,
 };
-use everlend_rewards::cpi::{deposit_mining, withdraw_mining};
-use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey};
+use solana_program::{
+    account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
+    program_pack::Pack, pubkey::Pubkey,
+};
 use spl_token::state::Account;
 
 use crate::{find_pool_program_address, find_user_mining_address, state::Pool};
@@ -44,7 +47,8 @@ impl<'a, 'b> TransferDepositContext<'a, 'b> {
             AccountLoader::next_with_owner(account_info_iter, &everlend_rewards::id())?;
         let destination_mining_reward_acc =
             AccountLoader::next_with_owner(account_info_iter, &everlend_rewards::id())?;
-        let everlend_rewards = AccountLoader::next_with_key(account_info_iter, &everlend_rewards::id())?;
+        let everlend_rewards =
+            AccountLoader::next_with_key(account_info_iter, &everlend_rewards::id())?;
         let _token_program = AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
 
         Ok(TransferDepositContext {
