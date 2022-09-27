@@ -38,10 +38,11 @@ impl<'a> ToolkitCommand<'a> for InitQuarryMiningAccountsCommand {
         let default_accounts = config.get_default_accounts();
         let mut initialized_accounts = config.get_initialized_accounts();
         let quarry_mining = initialized_accounts.quarry_mining.get_mut(&token).unwrap();
-        let miner_vault = Keypair::new();
-        create_miner(config, &miner_vault)?;
-        quarry_mining.miner_vault = miner_vault.pubkey();
-        println!("miner vault {}", miner_vault.pubkey());
+
+        let miner_vault = create_miner(config)?;
+        quarry_mining.miner_vault = miner_vault;
+        println!("miner vault {}", miner_vault);
+
         let token_source = Keypair::new();
         init_token_account(config, &token_source, &default_accounts.quarry.token_mint)?;
         quarry_mining.token_source = token_source.pubkey();

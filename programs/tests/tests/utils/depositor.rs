@@ -12,6 +12,7 @@ use everlend_utils::integrations::{self, MoneyMarketPubkeys};
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{
+    compute_budget::ComputeBudgetInstruction,
     signature::{Keypair, Signer},
     transaction::Transaction,
 };
@@ -223,6 +224,51 @@ impl TestDepositor {
 
         let tx = Transaction::new_signed_with_payer(
             &[everlend_depositor::instruction::withdraw(
+                &everlend_depositor::id(),
+                &registry.keypair.pubkey(),
+                &self.depositor.pubkey(),
+                &income_pool_market.keypair.pubkey(),
+                &income_pool.token_account.pubkey(),
+                &collateral_mint,
+                &liquidity_mint,
+                &context.payer.pubkey(),
+                money_market_program_id,
+                withdraw_accounts,
+                collateral_storage_withdraw_accounts,
+            )],
+            Some(&context.payer.pubkey()),
+            &[&context.payer],
+            context.last_blockhash,
+        );
+
+        context.banks_client.process_transaction(tx).await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn refresh_mm_incomes(
+        &self,
+        context: &mut ProgramTestContext,
+        registry: &TestRegistry,
+        income_pool_market: &TestIncomePoolMarket,
+        income_pool: &TestIncomePool,
+        mm_pool_market: &TestPoolMarket,
+        mm_pool: &TestPool,
+        money_market_program_id: &Pubkey,
+        money_market_pubkeys: &MoneyMarketPubkeys,
+    ) -> BanksClientResult<()> {
+        let collateral_mint = mm_pool.token_mint_pubkey;
+        let liquidity_mint = get_liquidity_mint().1;
+
+        let withdraw_accounts =
+            integrations::withdraw_accounts(money_market_program_id, money_market_pubkeys);
+        let collateral_storage_withdraw_accounts = mm_pool.withdraw_accounts(mm_pool_market, self);
+
+        let bump_budget = ComputeBudgetInstruction::request_units(400_000u32, 0);
+
+        let tx = Transaction::new_signed_with_payer(
+            &[
+                bump_budget,
+                everlend_depositor::instruction::refresh_mm_incomes(
                 &everlend_depositor::id(),
                 &registry.keypair.pubkey(),
                 &self.depositor.pubkey(),

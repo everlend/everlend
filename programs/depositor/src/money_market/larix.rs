@@ -1,14 +1,11 @@
 use super::{CollateralStorage, MoneyMarket};
 use crate::state::MiningType;
-use everlend_utils::{assert_account_key, cpi::larix, EverlendError};
+use everlend_utils::{cpi::larix, AccountLoader, EverlendError};
 use solana_program::{
-    account_info::{next_account_info, AccountInfo},
-    program_error::ProgramError,
-    program_pack::Pack,
-    pubkey::Pubkey,
+    account_info::AccountInfo, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,
 };
 use spl_token::state::Account;
-use std::slice::Iter;
+use std::{iter::Enumerate, slice::Iter};
 
 ///
 pub struct Larix<'a> {
@@ -32,14 +29,17 @@ impl<'a, 'b> Larix<'a> {
     ///
     pub fn init(
         money_market_program_id: Pubkey,
-        account_info_iter: &'b mut Iter<AccountInfo<'a>>,
+        account_info_iter: &'b mut Enumerate<Iter<'_, AccountInfo<'a>>>,
         internal_mining_type: Option<MiningType>,
     ) -> Result<Larix<'a>, ProgramError> {
-        let reserve_info = next_account_info(account_info_iter)?;
-        let reserve_liquidity_supply_info = next_account_info(account_info_iter)?;
-        let lending_market_info = next_account_info(account_info_iter)?;
-        let lending_market_authority_info = next_account_info(account_info_iter)?;
-        let reserve_liquidity_oracle_info = next_account_info(account_info_iter)?;
+        let reserve_info =
+            AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
+        let reserve_liquidity_supply_info =
+            AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let lending_market_info =
+            AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
+        let lending_market_authority_info = AccountLoader::next_unchecked(account_info_iter)?;
+        let reserve_liquidity_oracle_info = AccountLoader::next_unchecked(account_info_iter)?;
 
         let mut larix = Larix {
             money_market_program_id,
@@ -55,9 +55,9 @@ impl<'a, 'b> Larix<'a> {
         // Parse mining  accounts if presented
         match internal_mining_type {
             Some(MiningType::Larix { mining_account, .. }) => {
-                let reserve_bonus_info_info = next_account_info(account_info_iter)?;
-                let mining_info = next_account_info(account_info_iter)?;
-                assert_account_key(mining_info, &mining_account)?;
+                let reserve_bonus_info_info =
+                    AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+                let mining_info = AccountLoader::next_with_key(account_info_iter, &mining_account)?;
 
                 larix.mining = Some(LarixMining {
                     mining: mining_info.clone(),

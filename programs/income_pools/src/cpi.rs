@@ -8,10 +8,10 @@ use crate::utils::IncomePoolAccounts;
 
 /// Income pools deposit tokens
 #[allow(clippy::too_many_arguments)]
-pub fn deposit<'a>(
-    income_pool_accounts: IncomePoolAccounts<'a>,
-    source: AccountInfo<'a>,
-    user_transfer_authority: AccountInfo<'a>,
+pub fn deposit<'a, 'b>(
+    income_pool_accounts: IncomePoolAccounts<'a, 'b>,
+    source: AccountInfo<'b>,
+    user_transfer_authority: AccountInfo<'b>,
     amount: u64,
     signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
@@ -28,10 +28,10 @@ pub fn deposit<'a>(
     invoke_signed(
         &ix,
         &[
-            income_pool_accounts.pool_market,
-            income_pool_accounts.pool,
+            income_pool_accounts.pool_market.clone(),
+            income_pool_accounts.pool.clone(),
             source,
-            income_pool_accounts.token_account,
+            income_pool_accounts.token_account.clone(),
             user_transfer_authority,
         ],
         signers_seeds,
