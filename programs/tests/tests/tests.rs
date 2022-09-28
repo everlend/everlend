@@ -9,18 +9,6 @@ mod depositor {
     mod withdraw;
 }
 
-mod ulp {
-    mod borrow;
-    mod create_pool;
-    mod create_pool_borrow_authority;
-    mod delete_pool_borrow_authority;
-    mod deposit;
-    mod init_pool_market;
-    mod repay;
-    mod update_pool_borrow_authority;
-    mod withdraw;
-}
-
 mod collateral_pool {
     mod borrow;
     mod create_pool;
@@ -51,10 +39,10 @@ mod general_pool {
 }
 
 mod liquidity_oracle {
-    mod create_token_distribution;
+    mod create_token_oracle;
     mod init_liquidity_oracle;
     mod update_liquidity_oracle;
-    mod update_token_distribution;
+    mod update_token_oracle;
 }
 
 mod income_pools {

@@ -4,9 +4,7 @@ use crate::{
 };
 use everlend_general_pool::{find_withdrawal_requests_program_address, state::WithdrawalRequests};
 
-use everlend_liquidity_oracle::{
-    find_token_distribution_program_address, state::TokenDistribution,
-};
+use everlend_liquidity_oracle::{find_token_oracle_program_address, state::TokenOracle};
 use everlend_registry::state::{Registry, RegistryMarkets};
 use everlend_utils::{assert_account_key, cpi, find_program_address, AccountLoader, EverlendError};
 use num_traits::Zero;
@@ -34,7 +32,7 @@ pub struct StartRebalancingContext<'a, 'b> {
     withdrawal_requests: &'a AccountInfo<'b>,
     liquidity_transit: &'a AccountInfo<'b>,
     liquidity_oracle: &'a AccountInfo<'b>,
-    token_distribution: &'a AccountInfo<'b>,
+    token_oracle: &'a AccountInfo<'b>,
     executor: &'a AccountInfo<'b>,
     rent: &'a AccountInfo<'b>,
     clock: &'a AccountInfo<'b>,
@@ -71,7 +69,7 @@ impl<'a, 'b> StartRebalancingContext<'a, 'b> {
         // TODO: we can do it optional for refresh income case in the future
         let liquidity_oracle =
             AccountLoader::next_with_owner(account_info_iter, &everlend_liquidity_oracle::id())?;
-        let token_distribution =
+        let token_oracle =
             AccountLoader::next_with_owner(account_info_iter, &everlend_liquidity_oracle::id())?;
         let executor = AccountLoader::next_signer(account_info_iter)?;
 
@@ -100,7 +98,7 @@ impl<'a, 'b> StartRebalancingContext<'a, 'b> {
             withdrawal_requests,
             liquidity_transit,
             liquidity_oracle,
-            token_distribution,
+            token_oracle,
             executor,
             rent,
             clock,
@@ -114,7 +112,6 @@ impl<'a, 'b> StartRebalancingContext<'a, 'b> {
         _account_info_iter: &'a mut Enumerate<Iter<'a, AccountInfo<'b>>>,
         refresh_income: bool,
     ) -> ProgramResult {
-
         {
             // Get depositor state
             let depositor = Depositor::unpack(&self.depositor.data.borrow())?;
@@ -183,16 +180,13 @@ impl<'a, 'b> StartRebalancingContext<'a, 'b> {
 
         {
             // Check token distribution
-            let (token_distribution_pubkey, _) = find_token_distribution_program_address(
+            let (token_oracle_pubkey, _) = find_token_oracle_program_address(
                 &everlend_liquidity_oracle::id(),
                 self.liquidity_oracle.key,
                 self.mint.key,
             );
-            assert_account_key(self.token_distribution, &token_distribution_pubkey)?;
+            assert_account_key(self.token_oracle, &token_oracle_pubkey)?;
         }
-
-        let new_token_distribution =
-            TokenDistribution::unpack(&self.token_distribution.data.borrow())?;
 
         {
             // Check general pool
@@ -296,11 +290,11 @@ impl<'a, 'b> StartRebalancingContext<'a, 'b> {
             }
         }
 
+        let clock = Clock::from_account_info(self.clock)?;
+
         // Compute rebalancing steps
         msg!("Computing");
         if refresh_income {
-            let clock = Clock::from_account_info(self.clock)?;
-
             rebalancing.compute_with_refresh_income(
                 &registry_markets.money_markets,
                 registry.refresh_income_interval,
@@ -308,10 +302,14 @@ impl<'a, 'b> StartRebalancingContext<'a, 'b> {
                 amount_to_distribute,
             )?;
         } else {
+            // Compute rebalancing steps
+            let token_oracle = TokenOracle::unpack(&self.token_oracle.data.borrow())?;
+
             rebalancing.compute(
                 &registry_markets.money_markets,
-                new_token_distribution,
+                token_oracle,
                 amount_to_distribute,
+                clock.slot,
             )?;
         }
 

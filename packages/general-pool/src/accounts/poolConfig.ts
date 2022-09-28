@@ -2,6 +2,7 @@ import { AccountType, GeneralPoolsProgram } from '../program'
 import { AccountInfo, Connection, PublicKey } from '@solana/web3.js'
 import { Buffer } from 'buffer'
 import { Account, Borsh, Errors } from '@everlend/common'
+import BN from 'bn.js'
 
 type Args = {
   accountType: AccountType
@@ -17,12 +18,12 @@ export class PoolConfigData extends Borsh.Data<Args> {
   ])
 
   accountType: AccountType
-  deposit_minimum: number
-  withdraw_minimum: number
+  deposit_minimum: BN
+  withdraw_minimum: BN
 }
 
 export class PoolConfig extends Account<PoolConfigData> {
-  static readonly LEN = 17;
+  static readonly LEN = 17
 
   constructor(key: PublicKey, info: AccountInfo<Buffer>) {
     super(key, info)
@@ -35,10 +36,7 @@ export class PoolConfig extends Account<PoolConfigData> {
   }
 
   static getPDA(pool: PublicKey) {
-    return GeneralPoolsProgram.findProgramAddress([
-      Buffer.from('config'),
-      pool.toBuffer(),
-    ])
+    return GeneralPoolsProgram.findProgramAddress([Buffer.from('config'), pool.toBuffer()])
   }
 
   /**
@@ -47,10 +45,7 @@ export class PoolConfig extends Account<PoolConfigData> {
    * @param connection the JSON RPC connection instance.
    * @param pools public keys of pools to load configs for
    */
-  static async findMany(
-    connection: Connection,
-    pools: PublicKey[],
-  ) {
+  static async findMany(connection: Connection, pools: PublicKey[]) {
     const poolConfigs: PublicKey[] = []
     for (const pool of pools) {
       const poolConfig = await PoolConfig.getPDA(pool)
@@ -58,16 +53,21 @@ export class PoolConfig extends Account<PoolConfigData> {
     }
 
     const poolConfigAccounts = await connection.getMultipleAccountsInfo(poolConfigs)
-    return poolConfigAccounts.map((account, idx) => {
-      if (account == null) {
-        return
-      }
+    return poolConfigAccounts
+      .map((account, idx) => {
+        if (account == null) {
+          return
+        }
 
-      try {
-          return new PoolConfig(poolConfigs[idx], account)
-      } catch (err) {
+        try {
+          return {
+            ...new PoolConfig(poolConfigs[idx], account),
+            poolPubKey: pools[idx],
+          }
+        } catch (err) {
           console.error(new Error(`cannot deserialize pool config for ${pools[idx].toString()}`))
-      }
-    }).filter(Boolean)
+        }
+      })
+      .filter(Boolean)
   }
 }

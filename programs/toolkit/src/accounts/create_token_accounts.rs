@@ -1,7 +1,7 @@
 use crate::accounts_config::{CollateralPoolAccounts, TokenAccounts};
 use crate::helpers::{
     create_collateral_pool, create_general_pool, create_income_pool, create_pool_borrow_authority,
-    create_token_distribution, create_transit, PoolPubkeys,
+    create_token_oracle, create_transit, PoolPubkeys,
 };
 use crate::utils::{arg_multiple, get_asset_maps, spl_create_associated_token_account};
 use crate::{Config, ToolkitCommand};
@@ -59,7 +59,7 @@ impl<'a> ToolkitCommand<'a> for CreateTokenAccountsCommand {
                 .get(key)
                 .unwrap()
                 .iter()
-                .zip(initialiazed_accounts.mm_pool_markets.iter())
+                .zip(initialiazed_accounts.collateral_pool_markets.iter())
                 .filter_map(|(collateral_mint, mm_pool_market_pubkey)| {
                     collateral_mint.map(|coll_mint| (coll_mint, *mm_pool_market_pubkey))
                 })
@@ -100,7 +100,7 @@ impl<'a> ToolkitCommand<'a> for CreateTokenAccountsCommand {
                 })
                 .collect::<Result<Vec<PoolPubkeys>, ClientError>>()?;
 
-            create_token_distribution(
+            create_token_oracle(
                 config,
                 &initialiazed_accounts.liquidity_oracle,
                 mint,
@@ -176,7 +176,7 @@ impl<'a> ToolkitCommand<'a> for CreateTokenAccountsCommand {
         }
 
         initialiazed_accounts
-            .save(&format!("accounts.{}.yaml", config.network))
+            .save(config.accounts_path.as_str())
             .unwrap();
 
         Ok(())

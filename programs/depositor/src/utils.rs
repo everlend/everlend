@@ -38,7 +38,7 @@ pub fn deposit<'a, 'b>(
 ) -> Result<u64, ProgramError> {
     let collateral_amount = if is_mining {
         msg!("Deposit to Money market and deposit Mining");
-        let collateral_amount = money_market.money_market_deposit_and_deposit_mining(
+        money_market.money_market_deposit_and_deposit_mining(
             collateral_mint.clone(),
             liquidity_transit.clone(),
             collateral_transit.clone(),
@@ -46,9 +46,7 @@ pub fn deposit<'a, 'b>(
             clock.clone(),
             liquidity_amount,
             signers_seeds,
-        )?;
-
-        collateral_amount
+        )?
     } else {
         msg!("Deposit to Money market");
         let collateral_amount = money_market.money_market_deposit(
@@ -61,9 +59,8 @@ pub fn deposit<'a, 'b>(
             signers_seeds,
         )?;
 
-        // TODO check collateral_amount
         if collateral_amount == 0 {
-            return Ok(collateral_amount);
+            return Err(EverlendError::CollateralLeak.into());
         }
 
         msg!("Deposit into collateral pool");
@@ -196,6 +193,8 @@ pub fn money_market<'a, 'b>(
     money_market_program: &AccountInfo<'b>,
     money_market_account_info_iter: &'a mut Enumerate<Iter<'_, AccountInfo<'b>>>,
     internal_mining: &AccountInfo<'b>,
+    collateral_token_mint: &Pubkey,
+    depositor_authority: &Pubkey,
 ) -> Result<(Box<dyn MoneyMarket<'b> + 'b>, bool), ProgramError> {
     let internal_mining_type = if internal_mining.owner == program_id {
         Some(InternalMining::unpack(&internal_mining.data.borrow())?.mining_type)
@@ -231,6 +230,8 @@ pub fn money_market<'a, 'b>(
                 money_market_program.key.clone(),
                 money_market_account_info_iter,
                 internal_mining_type,
+                collateral_token_mint,
+                depositor_authority,
             )?;
             return Ok((Box::new(port), is_mining));
         }
@@ -325,8 +326,8 @@ pub fn collateral_pool_withdraw_accounts(
         AccountMeta::new_readonly(collateral_pool_market_authority, false),
         AccountMeta::new_readonly(collateral_pool, false),
         AccountMeta::new(*collateral_pool_token_account, false),
-        AccountMeta::new_readonly(collateral_pool_withdraw_authority, false),
         AccountMeta::new_readonly(everlend_collateral_pool::id(), false),
+        AccountMeta::new_readonly(collateral_pool_withdraw_authority, false),
     ]
 }
 

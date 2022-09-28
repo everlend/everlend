@@ -79,7 +79,6 @@ pub fn save_mining_accounts(
     config: &Config,
     token: &String,
     money_market: MoneyMarket,
-    network: &String,
 ) -> Result<()> {
     let mut initialized_accounts = config.get_initialized_accounts();
     let internal_mining_account = get_internal_mining_account(config, token, money_market);
@@ -90,7 +89,7 @@ pub fn save_mining_accounts(
         .mining_accounts[money_market as usize]
         .internal_mining_account = internal_mining_account;
     initialized_accounts
-        .save(&format!("accounts.{}.yaml", network))
+        .save(config.accounts_path.as_str())
         .unwrap();
     Ok(())
 }

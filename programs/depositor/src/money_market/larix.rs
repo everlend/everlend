@@ -1,6 +1,6 @@
 use super::{CollateralStorage, MoneyMarket};
 use crate::state::MiningType;
-use everlend_utils::{assert_account_key, cpi::larix, AccountLoader};
+use everlend_utils::{cpi::larix, AccountLoader, EverlendError};
 use solana_program::{
     account_info::AccountInfo, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,
 };
@@ -55,10 +55,9 @@ impl<'a, 'b> Larix<'a> {
         // Parse mining  accounts if presented
         match internal_mining_type {
             Some(MiningType::Larix { mining_account, .. }) => {
-                // TODO add checks
-                let reserve_bonus_info_info = AccountLoader::next_unchecked(account_info_iter)?;
-                let mining_info = AccountLoader::next_unchecked(account_info_iter)?;
-                assert_account_key(mining_info, &mining_account)?;
+                let reserve_bonus_info_info =
+                    AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+                let mining_info = AccountLoader::next_with_key(account_info_iter, &mining_account)?;
 
                 larix.mining = Some(LarixMining {
                     mining: mining_info.clone(),
@@ -164,10 +163,8 @@ impl<'a> MoneyMarket<'a> for Larix<'a> {
         let collateral_amount =
             Account::unpack_unchecked(&collateral_transit.data.borrow())?.amount;
 
-        // TODO check collateral_amount
         if collateral_amount == 0 {
-            // return Ok(collateral_amount);
-            return Ok(0);
+            return Err(EverlendError::CollateralLeak.into());
         }
 
         self.deposit_collateral_tokens(

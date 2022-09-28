@@ -91,7 +91,7 @@ impl<'a> ToolkitCommand<'a> for InitMiningCommand {
             _ => MoneyMarket::PortFinance,
         };
 
-        save_mining_accounts(config, &token, money_market, &config.network)?;
+        save_mining_accounts(config, &token, money_market)?;
 
         Ok(())
     }

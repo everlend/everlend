@@ -6,6 +6,7 @@ mod collateral_pool;
 mod francium;
 mod larix;
 mod port_finance;
+mod quarry;
 mod solend;
 mod spl_lending;
 mod tulip;

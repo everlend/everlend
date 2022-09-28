@@ -12,6 +12,7 @@ use solana_program::{
     program_pack::Pack, pubkey::Pubkey, rent::Rent, system_program, sysvar::clock, sysvar::Sysvar,
     sysvar::SysvarId,
 };
+use spl_associated_token_account::get_associated_token_address;
 use std::{iter::Enumerate, slice::Iter};
 
 /// Instruction context
@@ -198,39 +199,50 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                     self.rent.clone(),
                 )?;
             }
-            MiningType::Quarry {
-                quarry_mining_program_id: _,
-                quarry: _,
-                rewarder: _,
-                miner_vault: _,
-            } => {
-                return Err(EverlendError::TemporaryUnavailable.into());
+            MiningType::Quarry { rewarder } => {
+                assert_account_key(staking_program_id_info, &cpi::quarry::staking_program_id())?;
 
-                // assert_account_key(staking_program_id_info, &quarry_mining_program_id)?;
-                // let miner_info = next_account_info(account_info_iter)?;
-                // let quarry_info = next_account_info(account_info_iter)?;
-                // assert_account_key(quarry_info, &quarry)?;
-                // let rewarder_info = next_account_info(account_info_iter)?;
-                // assert_account_key(rewarder_info, &rewarder)?;
-                // let miner_vault_info = next_account_info(account_info_iter)?;
-                // assert_account_key(miner_vault_info, &miner_vault)?;
-                // let (miner_pubkey, _) = cpi::quarry::find_miner_program_address(
-                //     staking_program_id_info.key,
-                //     quarry_info.key,
-                //     self.depositor_authority.key,
-                // );
-                // assert_account_key(miner_info, &miner_pubkey)?;
-                // cpi::quarry::create_miner(
-                //     staking_program_id_info.key,
-                //     self.depositor_authority.clone(),
-                //     miner_info.clone(),
-                //     quarry_info.clone(),
-                //     rewarder_info.clone(),
-                //     self.manager.clone(),
-                //     self.collateral_mint.clone(),
-                //     miner_vault_info.clone(),
-                //     &[signers_seeds.as_ref()],
-                // )?;
+                let rewarder_info = AccountLoader::next_with_key(account_info_iter, &rewarder)?;
+
+                let quarry_info = {
+                    let (quarry, _) = cpi::quarry::find_quarry_program_address(
+                        &cpi::quarry::staking_program_id(),
+                        &rewarder,
+                        self.collateral_mint.key,
+                    );
+
+                    AccountLoader::next_with_key(account_info_iter, &quarry)
+                }?;
+
+                let miner_info = {
+                    let (miner_pubkey, _) = cpi::quarry::find_miner_program_address(
+                        &cpi::quarry::staking_program_id(),
+                        quarry_info.key,
+                        self.depositor_authority.key,
+                    );
+                    AccountLoader::next_with_key(account_info_iter, &miner_pubkey)
+                }?;
+
+                let miner_vault_info = {
+                    let miner_vault =
+                        get_associated_token_address(miner_info.key, self.collateral_mint.key);
+                    AccountLoader::next_with_key(account_info_iter, &miner_vault)
+                }?;
+
+                let _spl_token_program =
+                    AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
+
+                cpi::quarry::create_miner(
+                    staking_program_id_info.key,
+                    self.depositor_authority.clone(),
+                    miner_info.clone(),
+                    quarry_info.clone(),
+                    rewarder_info.clone(),
+                    self.manager.clone(),
+                    self.collateral_mint.clone(),
+                    miner_vault_info.clone(),
+                    &[signers_seeds.as_ref()],
+                )?;
             }
             MiningType::None => {}
         }

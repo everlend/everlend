@@ -179,6 +179,10 @@ impl<'a, 'b> WithdrawContext<'a, 'b> {
 
         let step = rebalancing.next_step();
 
+        if step.operation != RebalancingOperation::Withdraw {
+            return Err(EverlendError::InvalidRebalancingOperation.into());
+        }
+
         if !registry_markets.money_markets[usize::from(step.money_market_index)]
             .eq(self.money_market_program.key)
         {
@@ -202,6 +206,8 @@ impl<'a, 'b> WithdrawContext<'a, 'b> {
             self.money_market_program,
             account_info_iter,
             self.internal_mining,
+            self.collateral_mint.key,
+            self.depositor_authority.key,
         )?;
 
         let collateral_stor: Option<Box<dyn CollateralStorage>> = {

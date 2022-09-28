@@ -201,6 +201,8 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
             self.money_market_program,
             account_info_iter,
             self.internal_mining,
+            self.collateral_mint.key,
+            self.depositor_authority.key,
         )?;
 
         let collateral_stor: Option<Box<dyn CollateralStorage>> = {
@@ -218,15 +220,27 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
             }
         };
 
+        // Check two step operation
+        let (withdraw_step, deposit_step) = rebalancing.next_refresh_steps()?;
+
+        if withdraw_step.money_market_index != deposit_step.money_market_index {
+            return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
+        };
+
+        // For both steps money_market is equal so check one of them
+        if !registry_markets.money_markets[usize::from(withdraw_step.money_market_index)]
+            .eq(self.money_market_program.key)
         {
-            let step = rebalancing.next_step();
+            return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
+        }
 
-            if !registry_markets.money_markets[usize::from(step.money_market_index)]
-                .eq(self.money_market_program.key)
-            {
-                return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
-            }
+        if withdraw_step.operation != RebalancingOperation::RefreshWithdraw
+            || deposit_step.operation != RebalancingOperation::RefreshDeposit
+        {
+            return Err(EverlendError::InvalidRebalancingOperation.into());
+        }
 
+        {
             msg!("Refresh Withdraw");
             withdraw(
                 self.income_pool_accounts,
@@ -239,8 +253,8 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
                 &money_market,
                 is_mining,
                 &collateral_stor,
-                step.collateral_amount.unwrap(),
-                step.liquidity_amount,
+                withdraw_step.collateral_amount.unwrap(),
+                withdraw_step.liquidity_amount,
                 &[signers_seeds],
             )?;
 
@@ -248,16 +262,8 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
         }
 
         {
-            let step = rebalancing.next_step();
-
-            if !registry_markets.money_markets[usize::from(step.money_market_index)]
-                .eq(self.money_market_program.key)
-            {
-                return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
-            }
-
             msg!("Refresh Deposit");
-            let collateral_amount = if step.liquidity_amount.eq(&0) {
+            let collateral_amount = if deposit_step.liquidity_amount.eq(&0) {
                 0
             } else {
                 deposit(
@@ -269,7 +275,7 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
                     &money_market,
                     is_mining,
                     collateral_stor,
-                    step.liquidity_amount,
+                    deposit_step.liquidity_amount,
                     &[signers_seeds],
                 )?
             };

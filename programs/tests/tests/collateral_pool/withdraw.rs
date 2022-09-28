@@ -253,3 +253,25 @@ async fn fail_with_invalid_pool_argument() {
         )
     );
 }
+
+#[tokio::test]
+async fn fail_with_zero_amount() {
+    let (mut context, test_pool_market, test_pool, withdraw_authority, user) = setup().await;
+
+    test_pool
+        .deposit(&mut context, &test_pool_market, &user, DEPOSIT_AMOUNT)
+        .await
+        .unwrap();
+
+    assert_eq!(
+        test_pool
+            .withdraw(&mut context, &test_pool_market, &withdraw_authority, None, &user, 0)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::ZeroAmount as u32)
+        )
+    )
+}

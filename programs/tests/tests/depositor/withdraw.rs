@@ -139,15 +139,14 @@ async fn setup() -> (
     let mut distribution = DistributionArray::default();
     distribution[0] = 500_000_000u64; // 50%
 
-    let test_token_distribution =
-        TestTokenDistribution::new(general_pool.token_mint_pubkey, distribution);
+    let test_token_oracle = TestTokenOracle::new(general_pool.token_mint_pubkey, distribution);
 
-    test_token_distribution
+    test_token_oracle
         .init(&mut env.context, &test_liquidity_oracle, payer_pubkey)
         .await
         .unwrap();
 
-    test_token_distribution
+    test_token_oracle
         .update(
             &mut env.context,
             &test_liquidity_oracle,
@@ -266,6 +265,7 @@ async fn setup() -> (
             &general_pool,
             &test_liquidity_oracle,
             false,
+            DistributionArray::default(),
         )
         .await
         .unwrap();
@@ -300,7 +300,7 @@ async fn setup() -> (
     // 8.1 Decrease distribution & restart rebalancing
 
     distribution[0] = 0u64; // Decrease to 0%
-    test_token_distribution
+    test_token_oracle
         .update(
             &mut env.context,
             &test_liquidity_oracle,
@@ -318,6 +318,7 @@ async fn setup() -> (
             &general_pool,
             &test_liquidity_oracle,
             false,
+            DistributionArray::default(),
         )
         .await
         .unwrap();

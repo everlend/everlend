@@ -3,7 +3,7 @@ use crate::accounts_config::TokenAccounts;
 use crate::helpers::{
     create_collateral_market, create_collateral_pool, create_general_pool,
     create_general_pool_market, create_income_pool, create_income_pool_market,
-    create_pool_borrow_authority, create_pool_withdraw_authority, create_token_distribution,
+    create_pool_borrow_authority, create_pool_withdraw_authority, create_token_oracle,
     create_transit, init_depositor, init_liquidity_oracle, init_registry, update_registry,
     update_registry_markets, PoolPubkeys,
 };
@@ -92,6 +92,7 @@ impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
             create_collateral_market(config, None)?,
             create_collateral_market(config, None)?,
             create_collateral_market(config, None)?,
+            create_collateral_market(config, None)?,
         ];
 
         let mut collateral_pool_markets = DistributionPubkeys::default();
@@ -170,7 +171,7 @@ impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
                 )
                 .collect::<Result<Vec<PoolPubkeys>, ClientError>>()?;
 
-            create_token_distribution(config, &liquidity_oracle_pubkey, mint, &distribution)?;
+            create_token_oracle(config, &liquidity_oracle_pubkey, mint, &distribution)?;
 
             // Transit accounts
             let liquidity_transit_pubkey = create_transit(config, &depositor_pubkey, mint, None)?;
@@ -241,7 +242,6 @@ impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
             registry: registry_pubkey,
             general_pool_market: general_pool_market_pubkey,
             income_pool_market: income_pool_market_pubkey,
-            mm_pool_markets: Vec::new(),
             collateral_pool_markets: mm_collateral_pool_markets,
             token_accounts,
             liquidity_oracle: liquidity_oracle_pubkey,

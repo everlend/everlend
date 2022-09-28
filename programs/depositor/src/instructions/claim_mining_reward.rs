@@ -1,5 +1,5 @@
 use crate::{
-    find_internal_mining_program_address,
+    find_internal_mining_program_address, find_transit_program_address,
     state::{Depositor, InternalMining, MiningType},
     utils::{parse_fill_reward_accounts, FillRewardAccounts},
 };
@@ -236,24 +236,50 @@ impl<'a, 'b> ClaimMiningRewardsContext<'a, 'b> {
                     &[signers_seeds.as_ref()],
                 )?;
             }
-            MiningType::Quarry {
-                quarry_mining_program_id,
-                quarry,
-                rewarder,
-                miner_vault: _,
-            } => {
-                assert_account_key(self.staking_program_id, &quarry_mining_program_id)?;
-                // TODO add checks
+            MiningType::Quarry { rewarder } => {
+                assert_account_key(self.staking_program_id, &quarry::staking_program_id())?;
                 let mint_wrapper = AccountLoader::next_unchecked(account_info_iter)?;
                 let mint_wrapper_program = AccountLoader::next_unchecked(account_info_iter)?;
                 let minter = AccountLoader::next_unchecked(account_info_iter)?;
+                // IOU token mint
                 let rewards_token_mint = AccountLoader::next_unchecked(account_info_iter)?;
-                let rewards_token_account = AccountLoader::next_unchecked(account_info_iter)?;
-                let rewards_fee_account = AccountLoader::next_unchecked(account_info_iter)?;
+
+                let rewards_token_account = {
+                    let (reward_token_account_pubkey, _) = find_transit_program_address(
+                        program_id,
+                        self.depositor.key,
+                        rewards_token_mint.key,
+                        "lm_reward",
+                    );
+
+                    AccountLoader::next_with_key(account_info_iter, &reward_token_account_pubkey)
+                }?;
+
+                let rewards_fee_account =
+                    AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+                //TODO change order of accounts
                 let miner = AccountLoader::next_unchecked(account_info_iter)?;
 
-                let quarry_info = AccountLoader::next_with_key(account_info_iter, &quarry)?;
                 let quarry_rewarder = AccountLoader::next_with_key(account_info_iter, &rewarder)?;
+
+                let quarry_info = {
+                    let (quarry, _) = quarry::find_quarry_program_address(
+                        self.staking_program_id.key,
+                        quarry_rewarder.key,
+                        self.liquidity_mint.key,
+                    );
+
+                    AccountLoader::next_with_key(account_info_iter, &quarry)
+                }?;
+
+                {
+                    let (miner_pubkey, _) = quarry::find_miner_program_address(
+                        &quarry::staking_program_id(),
+                        quarry_info.key,
+                        self.depositor_authority.key,
+                    );
+                    assert_account_key(miner, &miner_pubkey)?
+                }
 
                 quarry::claim_rewards(
                     self.staking_program_id.key,
@@ -267,6 +293,23 @@ impl<'a, 'b> ClaimMiningRewardsContext<'a, 'b> {
                     miner.clone(),
                     quarry_info.clone(),
                     quarry_rewarder.clone(),
+                    &[signers_seeds.as_ref()],
+                )?;
+
+                let redeemer_program_id_info = AccountLoader::next_unchecked(account_info_iter)?;
+                let redeemer_info = AccountLoader::next_unchecked(account_info_iter)?;
+                let redemption_vault_info =
+                    AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+
+                quarry::redeem_all_tokens(
+                    redeemer_program_id_info.key,
+                    redeemer_info.clone(),
+                    rewards_token_mint.clone(),
+                    rewards_token_account.clone(),
+                    redemption_vault_info.clone(),
+                    reward_accounts.reward_transit_info.clone(),
+                    self.depositor_authority.clone(),
+                    &[signers_seeds.as_ref()],
                 )?;
             }
             MiningType::None => {}
