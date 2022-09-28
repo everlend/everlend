@@ -256,7 +256,7 @@ token_accounts:
     port_finance_obligation_account: "11111111111111111111111111111111"
     mining_accounts:
       - staking_account: "11111111111111111111111111111111"
-        internal_mining_account: "11111111111111111111111111111111"
+        internal_mining_account: HESwn3aria7cXuULsfmRY3qBkUfaqiJxnWTDFhjb4MB
       - staking_account: AqBd8auQY3w89pLj1eWvanuBNGUtKJgJBMteB9GF6wx6
         internal_mining_account: 3dKpggMTFmLFzeLqabFak7WVtzJ5AtSZkJ2soWavEz1a
       - staking_account: "11111111111111111111111111111111"
@@ -578,6 +578,13 @@ quarry_mining:
     token_mint: "11111111111111111111111111111111"
     rewards_token_mint: "11111111111111111111111111111111"
     miner_vault: 7FZHiP1kwoASQqrn4ajoo66V1Q8RNZdw8CTBs8JgN6Hf
+    token_source: "11111111111111111111111111111111"
+    rewards_token_account: "11111111111111111111111111111111"
+    fee_token_account: "11111111111111111111111111111111"
+  SRM:
+    token_mint: "11111111111111111111111111111111"
+    rewards_token_mint: "11111111111111111111111111111111"
+    miner_vault: 2yo2TczX7Cdot1wdMGbCApcJxcpvPCe3h8yB2rVwGWuL
     token_source: "11111111111111111111111111111111"
     rewards_token_account: "11111111111111111111111111111111"
     fee_token_account: "11111111111111111111111111111111"
