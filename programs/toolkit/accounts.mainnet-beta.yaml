@@ -3,10 +3,6 @@ payer: prodbH9DakpzQniou4aNRXerkyc5RHQyUgW5Ukx8jfe
 registry: ConfKWfzvWyAkkF7K1dX6sBm8KgivM1ULddvonbJmAVW
 general_pool_market: DzGDoJHdzUANM7P7V25t5nxqbvzRcHDmdhY51V6WNiXC
 income_pool_market: 8uH7QWCjmXBt2jjwVwsRMrnWUdYYe1yJCT97uUcvhxnL
-mm_pool_markets:
-  - FpdTMvB1YBR33QUNUhzPkFn6MkEqvLoYt7DdRWV1SPSB
-  - 5a4wzW2jxba6XK78eRSqkML25c1qNazKwjPNhddRQhuH
-  - 89TUywSqef4h24cXQPB33H1oxfLeoPQiSor6qbepozyG
 collateral_pool_markets:
   - ByuvjxqcjGSAnyQXtta4SD4xuvLdmUEVaMTLNpyVbofG
   - 7JNs7sSzq6HSVSfZuuhBqusowZzqKpBceaetuLYKPLqr

@@ -56,7 +56,6 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
             registry,
             general_pool_market,
             income_pool_market,
-            mm_pool_markets: _,
             collateral_pool_markets,
             token_accounts,
             liquidity_oracle,
@@ -250,7 +249,8 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
                 match step.operation {
                     RebalancingOperation::Deposit => deposit(step.money_market_index.into())?,
                     RebalancingOperation::Withdraw => withdraw(step.money_market_index.into())?,
-                    RebalancingOperation::RefreshWithdraw | RebalancingOperation::RefreshDeposit => todo!(),
+                    RebalancingOperation::RefreshWithdraw => todo!(),
+                    RebalancingOperation::RefreshDeposit => todo!(),
                 }
             }
 

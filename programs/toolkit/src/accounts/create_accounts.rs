@@ -242,7 +242,6 @@ impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
             registry: registry_pubkey,
             general_pool_market: general_pool_market_pubkey,
             income_pool_market: income_pool_market_pubkey,
-            mm_pool_markets: Vec::new(),
             collateral_pool_markets: mm_collateral_pool_markets,
             token_accounts,
             liquidity_oracle: liquidity_oracle_pubkey,
