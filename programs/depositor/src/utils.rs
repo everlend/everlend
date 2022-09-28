@@ -30,7 +30,7 @@ pub fn deposit<'a, 'b>(
     liquidity_transit: &'a AccountInfo<'b>,
     authority: &'a AccountInfo<'b>,
     clock: &'a AccountInfo<'b>,
-    money_market: &Box<dyn MoneyMarket<'b> + 'b>,
+    money_market: &Box<dyn MoneyMarket<'b> + 'a>,
     is_mining: bool,
     collateral_storage: Option<Box<dyn CollateralStorage<'b> + 'b>>,
     liquidity_amount: u64,
@@ -92,7 +92,7 @@ pub fn withdraw<'a, 'b>(
     liquidity_reserve_transit: &'a AccountInfo<'b>,
     authority: &'a AccountInfo<'b>,
     clock: &'a AccountInfo<'b>,
-    money_market: &Box<dyn MoneyMarket<'b> + 'b>,
+    money_market: &Box<dyn MoneyMarket<'b> + 'a>,
     is_mining: bool,
     collateral_storage: &Option<Box<dyn CollateralStorage<'b> + 'b>>,
     collateral_amount: u64,
@@ -187,15 +187,15 @@ pub fn withdraw<'a, 'b>(
 }
 
 /// Money market
-pub fn money_market<'a, 'b>(
+pub fn money_market<'b, 'a>(
     registry_markets: &RegistryMarkets,
     program_id: &Pubkey,
     money_market_program: &AccountInfo<'b>,
-    money_market_account_info_iter: &'a mut Enumerate<Iter<'_, AccountInfo<'b>>>,
+    money_market_account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
     internal_mining: &AccountInfo<'b>,
     collateral_token_mint: &Pubkey,
     depositor_authority: &Pubkey,
-) -> Result<(Box<dyn MoneyMarket<'b> + 'b>, bool), ProgramError> {
+) -> Result<(Box<dyn MoneyMarket<'b> + 'a>, bool), ProgramError> {
     let internal_mining_type = if internal_mining.owner == program_id {
         Some(InternalMining::unpack(&internal_mining.data.borrow())?.mining_type)
     } else {

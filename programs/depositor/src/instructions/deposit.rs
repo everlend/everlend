@@ -82,7 +82,7 @@ impl<'a, 'b> DepositContext<'a, 'b> {
     pub fn process(
         &self,
         program_id: &Pubkey,
-        account_info_iter: &'a mut Enumerate<Iter<'a, AccountInfo<'b>>>,
+        account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
     ) -> ProgramResult {
         {
             let depositor = Depositor::unpack(&self.depositor.data.borrow())?;

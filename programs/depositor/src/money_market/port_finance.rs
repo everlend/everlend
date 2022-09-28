@@ -9,36 +9,36 @@ use spl_token::state::Account;
 use std::{iter::Enumerate, slice::Iter};
 
 ///
-pub struct PortFinance<'a> {
+pub struct PortFinance<'a, 'b> {
     money_market_program_id: Pubkey,
-    reserve: AccountInfo<'a>,
-    reserve_liquidity_supply: AccountInfo<'a>,
-    lending_market: AccountInfo<'a>,
-    lending_market_authority: AccountInfo<'a>,
-    reserve_liquidity_oracle: AccountInfo<'a>,
+    reserve: &'a AccountInfo<'b>,
+    reserve_liquidity_supply: &'a AccountInfo<'b>,
+    lending_market: &'a AccountInfo<'b>,
+    lending_market_authority: &'a AccountInfo<'b>,
+    reserve_liquidity_oracle: &'a AccountInfo<'b>,
 
-    mining: Option<PortFinanceMining<'a>>,
-    quarry_mining: Option<Quarry<'a>>,
+    mining: Option<PortFinanceMining<'a, 'b>>,
+    quarry_mining: Option<Quarry<'b>>,
 }
 
 ///
-struct PortFinanceMining<'a> {
-    staking_program_id_info: AccountInfo<'a>,
-    staking_account_info: AccountInfo<'a>,
-    staking_pool_info: AccountInfo<'a>,
-    obligation_info: AccountInfo<'a>,
-    collateral_supply_pubkey_info: AccountInfo<'a>,
+struct PortFinanceMining<'a, 'b> {
+    staking_program_id_info: &'a AccountInfo<'b>,
+    staking_account_info: &'a AccountInfo<'b>,
+    staking_pool_info: &'a AccountInfo<'b>,
+    obligation_info: &'a AccountInfo<'b>,
+    collateral_supply_pubkey_info: &'a AccountInfo<'b>,
 }
 
-impl<'a, 'b> PortFinance<'a> {
+impl<'a, 'b> PortFinance<'a, 'b> {
     ///
     pub fn init(
         money_market_program_id: Pubkey,
-        account_info_iter: &'b mut Enumerate<Iter<'_, AccountInfo<'a>>>,
+        account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
         internal_mining_type: Option<MiningType>,
         collateral_token_mint: &Pubkey,
         depositor_authority: &Pubkey,
-    ) -> Result<PortFinance<'a>, ProgramError> {
+    ) -> Result<PortFinance<'a, 'b>, ProgramError> {
         let reserve_info =
             AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
         let reserve_liquidity_supply_info =
@@ -50,11 +50,11 @@ impl<'a, 'b> PortFinance<'a> {
 
         let mut port_finance = PortFinance {
             money_market_program_id,
-            reserve: reserve_info.clone(),
-            reserve_liquidity_supply: reserve_liquidity_supply_info.clone(),
-            lending_market: lending_market_info.clone(),
-            lending_market_authority: lending_market_authority_info.clone(),
-            reserve_liquidity_oracle: reserve_liquidity_oracle_info.clone(),
+            reserve: reserve_info,
+            reserve_liquidity_supply: reserve_liquidity_supply_info,
+            lending_market: lending_market_info,
+            lending_market_authority: lending_market_authority_info,
+            reserve_liquidity_oracle: reserve_liquidity_oracle_info,
 
             mining: None,
             quarry_mining: None,
@@ -95,11 +95,11 @@ impl<'a, 'b> PortFinance<'a> {
                     AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
 
                 port_finance.mining = Some(PortFinanceMining {
-                    staking_program_id_info: staking_program_id_info.clone(),
-                    staking_account_info: staking_account_info.clone(),
-                    staking_pool_info: staking_pool_info.clone(),
-                    obligation_info: obligation_info.clone(),
-                    collateral_supply_pubkey_info: collateral_supply_pubkey_info.clone(),
+                    staking_program_id_info,
+                    staking_account_info,
+                    staking_pool_info,
+                    obligation_info,
+                    collateral_supply_pubkey_info,
                 })
             }
             _ => {}
@@ -109,14 +109,14 @@ impl<'a, 'b> PortFinance<'a> {
     }
 }
 
-impl<'a> MoneyMarket<'a> for PortFinance<'a> {
+impl<'a, 'b> MoneyMarket<'b> for PortFinance<'a, 'b> {
     fn money_market_deposit(
         &self,
-        collateral_mint: AccountInfo<'a>,
-        source_liquidity: AccountInfo<'a>,
-        destination_collateral: AccountInfo<'a>,
-        authority: AccountInfo<'a>,
-        clock: AccountInfo<'a>,
+        collateral_mint: AccountInfo<'b>,
+        source_liquidity: AccountInfo<'b>,
+        destination_collateral: AccountInfo<'b>,
+        authority: AccountInfo<'b>,
+        clock: AccountInfo<'b>,
         liquidity_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<u64, ProgramError> {
@@ -150,11 +150,11 @@ impl<'a> MoneyMarket<'a> for PortFinance<'a> {
 
     fn money_market_redeem(
         &self,
-        collateral_mint: AccountInfo<'a>,
-        source_collateral: AccountInfo<'a>,
-        destination_liquidity: AccountInfo<'a>,
-        authority: AccountInfo<'a>,
-        clock: AccountInfo<'a>,
+        collateral_mint: AccountInfo<'b>,
+        source_collateral: AccountInfo<'b>,
+        destination_liquidity: AccountInfo<'b>,
+        authority: AccountInfo<'b>,
+        clock: AccountInfo<'b>,
         collateral_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
@@ -183,11 +183,11 @@ impl<'a> MoneyMarket<'a> for PortFinance<'a> {
     ///
     fn money_market_deposit_and_deposit_mining(
         &self,
-        collateral_mint: AccountInfo<'a>,
-        source_liquidity: AccountInfo<'a>,
-        collateral_transit: AccountInfo<'a>,
-        authority: AccountInfo<'a>,
-        clock: AccountInfo<'a>,
+        collateral_mint: AccountInfo<'b>,
+        source_liquidity: AccountInfo<'b>,
+        collateral_transit: AccountInfo<'b>,
+        authority: AccountInfo<'b>,
+        clock: AccountInfo<'b>,
         liquidity_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<u64, ProgramError> {
@@ -237,11 +237,11 @@ impl<'a> MoneyMarket<'a> for PortFinance<'a> {
     ///
     fn money_market_redeem_and_withdraw_mining(
         &self,
-        collateral_mint: AccountInfo<'a>,
-        collateral_transit: AccountInfo<'a>,
-        liquidity_destination: AccountInfo<'a>,
-        authority: AccountInfo<'a>,
-        clock: AccountInfo<'a>,
+        collateral_mint: AccountInfo<'b>,
+        collateral_transit: AccountInfo<'b>,
+        liquidity_destination: AccountInfo<'b>,
+        authority: AccountInfo<'b>,
+        clock: AccountInfo<'b>,
         collateral_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
@@ -278,12 +278,12 @@ impl<'a> MoneyMarket<'a> for PortFinance<'a> {
     }
 }
 
-impl<'a> CollateralStorage<'a> for PortFinance<'a> {
+impl<'a, 'b> CollateralStorage<'b> for PortFinance<'a, 'b> {
     fn deposit_collateral_tokens(
         &self,
-        collateral_transit: AccountInfo<'a>,
-        authority: AccountInfo<'a>,
-        clock: AccountInfo<'a>,
+        collateral_transit: AccountInfo<'b>,
+        authority: AccountInfo<'b>,
+        clock: AccountInfo<'b>,
         collateral_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
@@ -322,9 +322,9 @@ impl<'a> CollateralStorage<'a> for PortFinance<'a> {
 
     fn withdraw_collateral_tokens(
         &self,
-        collateral_transit: AccountInfo<'a>,
-        authority: AccountInfo<'a>,
-        clock: AccountInfo<'a>,
+        collateral_transit: AccountInfo<'b>,
+        authority: AccountInfo<'b>,
+        clock: AccountInfo<'b>,
         collateral_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
