@@ -18,7 +18,7 @@ pub struct PortFinance<'a, 'b> {
     reserve_liquidity_oracle: &'a AccountInfo<'b>,
 
     mining: Option<PortFinanceMining<'a, 'b>>,
-    quarry_mining: Option<Quarry<'b>>,
+    quarry_mining: Option<Quarry<'a, 'b>>,
 }
 
 ///
