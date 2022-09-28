@@ -266,7 +266,7 @@ impl<'a, 'b> ClaimMiningRewardsContext<'a, 'b> {
                     let (quarry, _) = quarry::find_quarry_program_address(
                         self.staking_program_id.key,
                         quarry_rewarder.key,
-                        self.liquidity_mint.key,
+                        self.collateral_mint.key,
                     );
 
                     AccountLoader::next_with_key(account_info_iter, &quarry)
