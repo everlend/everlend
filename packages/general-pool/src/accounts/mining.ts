@@ -7,7 +7,7 @@ import { RewardPool } from './rewardPool'
 
 const PRECISION = 1_000_000_000_000_000_0
 
-type RewardIndex = {
+type IRewardIndex = {
   rewardMint: PublicKey
   indexWithPrecision: BN
   rewards: BN
@@ -19,18 +19,47 @@ type Args = {
   bump: BN
   share: BN
   owner: PublicKey
-  indexes: Array<RewardIndex>
+  indexes: Array<IRewardIndex>
+}
+
+const map = <T>(type: any, fields: any) => {
+  const entries = type.map((v, i) => {
+    return [v, { kind: 'struct', fields: fields[i] }]
+  })
+
+  return new Map<any, any>(entries)
+}
+
+export class RewardIndex extends Borsh.Data<RewardIndex> {
+  static readonly SCHEMA = this.struct([
+    ['rewardMint', 'publicKey'],
+    ['indexWithPrecision', 'u128'],
+    ['rewards', 'u128'],
+  ])
+  rewardMint: PublicKey
+  indexWithPrecision: BN
+  rewards: BN
 }
 
 export class MiningData extends Borsh.Data<Args> {
-  static readonly SCHEMA = this.struct([
-    ['anchorId', ['u8', 8]],
-    ['rewardPool', 'publicKey'],
-    ['bump', 'u8'],
-    ['share', 'u64'],
-    ['owner', 'publicKey'],
-    ['indexes', ['RewardIndex']],
-  ])
+  static readonly SCHEMA = map(
+    [RewardIndex, this],
+    [
+      [
+        ['rewardMint', 'publicKey'],
+        ['indexWithPrecision', 'u128'],
+        ['rewards', 'u64'],
+      ],
+      [
+        ['anchorId', ['u8', 8]],
+        ['rewardPool', 'publicKey'],
+        ['bump', 'u8'],
+        ['share', 'u64'],
+        ['owner', 'publicKey'],
+        ['indexes', [RewardIndex]],
+      ],
+    ],
+  )
 
   anchorId: Array<BN>
   rewardPool: PublicKey
@@ -45,31 +74,31 @@ export class MiningData extends Borsh.Data<Args> {
    * @param rewardMint Reward mint
    * @param rewardPool Reward pool
    */
-  getUserClaimAmount(rewardMint: PublicKey, rewardPool: RewardPool) {
-    const share = this.share
-
-    for (const vault of rewardPool.data) {
-      const rewardIndex = this.indexes.find((i) => i.rewardMint == vault.rewardMint)
-      const rewardIndexI = this.indexes.indexOf(rewardIndex)
-
-      if (vault.indexWithPrecision > rewardIndex) {
-        const rewards =
-          ((vault.indexWithPrecision - rewardIndex.indexWithPrecision) * share) / PRECISION
-
-        if (rewards > 0) {
-          this.indexes[rewardIndexI].rewards = rewardIndex.rewards + rewards
-        }
-
-        this.indexes[rewardIndexI].indexWithPrecision = vault.indexWithPrecision
-      }
-
-      vault.indexWithPrecision
-    }
-
-    const index = this.indexes.find((i) => i.rewardMint == rewardMint)
-
-    return index.rewards
-  }
+  // getUserClaimAmount(rewardMint: PublicKey, rewardPool: RewardPool) {
+  //   const share = this.share
+  //
+  //   for (const vault of rewardPool.data.vaults) {
+  //     const rewardIndex = this.indexes.find((i) => i.rewardMint == vault.rewardMint)
+  //     const rewardIndexI = this.indexes.indexOf(rewardIndex)
+  //
+  //     if (vault.indexWithPrecision.toNumber() > rewardIndex) {
+  //       const rewards =
+  //         ((vault.indexWithPrecision - rewardIndex.indexWithPrecision) * share) / PRECISION
+  //
+  //       if (rewards > 0) {
+  //         this.indexes[rewardIndexI].rewards = rewardIndex.rewards.toNumber() + rewards
+  //       }
+  //
+  //       this.indexes[rewardIndexI].indexWithPrecision = vault.indexWithPrecision
+  //     }
+  //
+  //     vault.indexWithPrecision
+  //   }
+  //
+  //   const index = this.indexes.find((i) => i.rewardMint == rewardMint)
+  //
+  //   return index.rewards
+  // }
 }
 
 export class Mining extends Account<MiningData> {
