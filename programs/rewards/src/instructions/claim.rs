@@ -57,7 +57,6 @@ impl<'a, 'b> ClaimContext<'a, 'b> {
 
         {
             assert_account_key(self.user, &mining.owner)?;
-            assert_account_key(self.reward_mint, &reward_pool.liquidity_mint)?;
             assert_account_key(self.reward_pool, &mining.reward_pool)?;
             assert_account_key(
                 self.reward_pool,

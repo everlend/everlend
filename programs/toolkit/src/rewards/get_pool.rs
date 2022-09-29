@@ -1,5 +1,6 @@
 use crate::utils::arg_pubkey;
 use crate::{Config, ToolkitCommand};
+use anchor_lang::prelude::Pubkey;
 use clap::{Arg, ArgMatches};
 use everlend_rewards::state::RewardPool;
 use solana_clap_utils::input_parsers::pubkey_of;
@@ -38,7 +39,24 @@ impl<'a> ToolkitCommand<'a> for GetPoolCommand {
         );
 
         let account: RewardPool = config.get_account_unpack(&reward_pool_pubkey)?;
+        println!("{:#?}", reward_pool_pubkey);
         println!("{:#?}", account);
+
+        account.vaults.iter().for_each(|v| {
+            let vault_seeds = &[
+                b"vault".as_ref(),
+                &reward_pool_pubkey.to_bytes()[..32],
+                &v.reward_mint.to_bytes()[..32],
+                &[v.bump],
+            ];
+
+            let pkey =
+                Pubkey::create_program_address(vault_seeds, &everlend_rewards::id()).unwrap();
+
+            let a = config.rpc_client.get_account(&pkey).unwrap();
+            println!("Vault {}: Reward mint: {}", pkey, v.reward_mint);
+            println!("{:#?}", a);
+        });
 
         Ok(())
     }
