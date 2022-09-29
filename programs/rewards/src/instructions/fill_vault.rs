@@ -62,7 +62,6 @@ impl<'a, 'b> FillVaultContext<'a, 'b> {
                 &[vault.bump],
             ];
             assert_account_key(self.fee_account, &vault.fee_account)?;
-            assert_account_key(self.reward_mint, &reward_pool.liquidity_mint)?;
             assert_account_key(
                 self.vault,
                 &Pubkey::create_program_address(vault_seeds, program_id)?,
