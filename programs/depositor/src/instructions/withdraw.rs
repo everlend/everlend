@@ -1,9 +1,8 @@
 use crate::{
     find_internal_mining_program_address, find_rebalancing_program_address,
     find_transit_program_address,
-    money_market::{CollateralPool, CollateralStorage},
     state::{Depositor, Rebalancing, RebalancingOperation},
-    utils::{money_market, withdraw},
+    utils::{collateral_storage, money_market, withdraw},
 };
 use everlend_income_pools::utils::IncomePoolAccounts;
 use everlend_registry::state::RegistryMarkets;
@@ -210,20 +209,14 @@ impl<'a, 'b> WithdrawContext<'a, 'b> {
             self.depositor_authority.key,
         )?;
 
-        let collateral_stor: Option<Box<dyn CollateralStorage>> = {
-            if !is_mining {
-                let coll_pool = CollateralPool::init(
-                    &registry_markets,
-                    self.collateral_mint,
-                    self.depositor_authority,
-                    account_info_iter,
-                    true,
-                )?;
-                Some(Box::new(coll_pool))
-            } else {
-                None
-            }
-        };
+        let collateral_stor = collateral_storage(
+            &registry_markets,
+            self.collateral_mint,
+            self.depositor_authority,
+            account_info_iter,
+            true,
+            is_mining,
+        )?;
 
         let clock = Clock::from_account_info(self.clock)?;
 

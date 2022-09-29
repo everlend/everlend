@@ -1,7 +1,9 @@
 //! Utils
 
-use crate::money_market::{CollateralStorage, Francium, MoneyMarket, Tulip};
-use crate::money_market::{Larix, PortFinance, SPLLending, Solend};
+use crate::money_market::{
+    CollateralPool, CollateralStorage, Francium, Larix, MoneyMarket, PortFinance, SPLLending,
+    Solend, Tulip,
+};
 use crate::{
     find_transit_program_address,
     state::{InternalMining, MiningType},
@@ -32,7 +34,7 @@ pub fn deposit<'a, 'b>(
     clock: &'a AccountInfo<'b>,
     money_market: &Box<dyn MoneyMarket<'b> + 'a>,
     is_mining: bool,
-    collateral_storage: Option<Box<dyn CollateralStorage<'b> + 'b>>,
+    collateral_storage: Option<Box<dyn CollateralStorage<'b> + 'a>>,
     liquidity_amount: u64,
     signers_seeds: &[&[&[u8]]],
 ) -> Result<u64, ProgramError> {
@@ -94,7 +96,7 @@ pub fn withdraw<'a, 'b>(
     clock: &'a AccountInfo<'b>,
     money_market: &Box<dyn MoneyMarket<'b> + 'a>,
     is_mining: bool,
-    collateral_storage: &Option<Box<dyn CollateralStorage<'b> + 'b>>,
+    collateral_storage: &Option<Box<dyn CollateralStorage<'b> + 'a>>,
     collateral_amount: u64,
     expected_liquidity_amount: u64,
     signers_seeds: &[&[&[u8]]],
@@ -187,7 +189,7 @@ pub fn withdraw<'a, 'b>(
 }
 
 /// Money market
-pub fn money_market<'b, 'a>(
+pub fn money_market<'a, 'b>(
     registry_markets: &RegistryMarkets,
     program_id: &Pubkey,
     money_market_program: &AccountInfo<'b>,
@@ -272,6 +274,29 @@ pub fn money_market<'b, 'a>(
     }
 }
 
+/// Money market
+pub fn collateral_storage<'a, 'b>(
+    registry_markets: &RegistryMarkets,
+    collateral_mint: &AccountInfo<'b>,
+    depositor_authority: &AccountInfo<'b>,
+    account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
+    if_withdraw_expected: bool,
+    is_mining: bool,
+) -> Result<Option<Box<dyn CollateralStorage<'b> + 'a>>, ProgramError> {
+    if is_mining {
+        return Ok(None);
+    };
+
+    let coll_pool = CollateralPool::init(
+        registry_markets,
+        collateral_mint,
+        depositor_authority,
+        account_info_iter,
+        if_withdraw_expected,
+    )?;
+
+    Ok(Some(Box::new(coll_pool)))
+}
 /// Collateral pool deposit account
 #[allow(clippy::too_many_arguments)]
 pub fn collateral_pool_deposit_accounts(

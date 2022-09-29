@@ -1,9 +1,8 @@
 use crate::{
     find_internal_mining_program_address, find_rebalancing_program_address,
     find_transit_program_address,
-    money_market::{CollateralPool, CollateralStorage},
     state::{Depositor, Rebalancing, RebalancingOperation},
-    utils::{deposit, money_market},
+    utils::{collateral_storage, deposit, money_market},
 };
 use everlend_registry::state::RegistryMarkets;
 use everlend_utils::{assert_account_key, find_program_address, AccountLoader, EverlendError};
@@ -162,20 +161,14 @@ impl<'a, 'b> DepositContext<'a, 'b> {
             self.depositor_authority.key,
         )?;
 
-        let collateral_stor: Option<Box<dyn CollateralStorage>> = {
-            if !is_mining {
-                let coll_pool = CollateralPool::init(
-                    &registry_markets,
-                    self.collateral_mint,
-                    self.depositor_authority,
-                    account_info_iter,
-                    false,
-                )?;
-                Some(Box::new(coll_pool))
-            } else {
-                None
-            }
-        };
+        let collateral_stor = collateral_storage(
+            &registry_markets,
+            self.collateral_mint,
+            self.depositor_authority,
+            account_info_iter,
+            false,
+            is_mining,
+        )?;
 
         {
             let step = rebalancing.next_step();
