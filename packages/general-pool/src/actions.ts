@@ -33,6 +33,8 @@ import {
 import { Buffer } from 'buffer'
 import { InitializeMining } from './transactions/initializeMiningTx'
 import { ClaimTx } from './transactions'
+import { FillVaultTx } from './transactions/fillVault'
+import { RewardProgram } from './rewardProgram'
 
 /** The type is returned by actions, e.g. [[prepareDepositTx]] or [[prepareWithdrawalRequestTx]]. */
 export type ActionResult = {
@@ -163,7 +165,10 @@ export const prepareDepositTx = async (
   const poolMarketAuthority = await GeneralPoolsProgram.findProgramAddress([poolMarket.toBuffer()])
 
   const tx = new Transaction()
-  const poolConfig = await GeneralPoolsProgram.findProgramAddress([Buffer.from('config'), pool.toBuffer()])
+  const poolConfig = await GeneralPoolsProgram.findProgramAddress([
+    Buffer.from('config'),
+    pool.toBuffer(),
+  ])
 
   // Wrapping SOL
   let closeTokenAccountIx: TransactionInstruction
@@ -281,7 +286,10 @@ export const prepareWithdrawalRequestTx = async (
 
   const tx = new Transaction()
 
-  const poolConfig = await GeneralPoolsProgram.findProgramAddress([Buffer.from('config'), pool.toBuffer()])
+  const poolConfig = await GeneralPoolsProgram.findProgramAddress([
+    Buffer.from('config'),
+    pool.toBuffer(),
+  ])
 
   // Create destination account for token mint if doesn't exist
   destination = destination ?? (await findAssociatedTokenAccount(payerPublicKey, tokenMint))
@@ -556,7 +564,10 @@ export const prepareClaimTx = async (
   const tx = new Transaction()
 
   const mining = await Mining.getPDA(payerPublicKey, rewardPool)
-  const vault = await RewardPool.getVaultPDA(rewardMint, rewardPool)
+  const [vault] = await PublicKey.findProgramAddress(
+    [Buffer.from('vault'), rewardPool.toBuffer(), rewardMint.toBuffer()],
+    RewardProgram.PUBKEY,
+  )
 
   tx.add(
     new ClaimTx(
@@ -567,6 +578,48 @@ export const prepareClaimTx = async (
         vault,
         mining,
         userRewardTokenAccount,
+      },
+    ),
+  )
+
+  return { tx }
+}
+
+/**
+ * Fill lm-rewards for picked token (ONLY DEVNET)
+ * @param actionOptions
+ *
+ * @param rewardPool
+ * @param rewardMint
+ * @param vault
+ * @param feeAccount
+ * @param authority
+ * @param from
+ * @param amount
+ */
+export const prepareFillVault = async (
+  { payerPublicKey }: ActionOptions,
+  rewardPool: PublicKey,
+  rewardMint: PublicKey,
+  vault: PublicKey,
+  feeAccount: PublicKey,
+  authority: PublicKey,
+  from: PublicKey,
+  amount: BN,
+): Promise<ActionResult> => {
+  const tx = new Transaction()
+
+  tx.add(
+    new FillVaultTx(
+      { feePayer: payerPublicKey },
+      {
+        rewardPool,
+        rewardMint,
+        vault,
+        feeAccount,
+        authority,
+        from,
+        amount,
       },
     ),
   )
