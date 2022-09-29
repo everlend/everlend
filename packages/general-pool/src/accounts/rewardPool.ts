@@ -5,7 +5,7 @@ import BN from 'bn.js'
 import { GeneralPoolsProgram } from '../program'
 import { Buffer } from 'buffer'
 
-type RewardVault = {
+interface IRewardVault {
   bump: BN
   rewardMint: PublicKey
   indexWithPrecision: BN
@@ -18,20 +18,53 @@ type Args = {
   bump: BN
   liquidityMint: PublicKey
   totalShare: BN
-  vaults: Array<RewardVault>
+  vaults: Array<IRewardVault>
   depositAuthority: PublicKey
 }
 
-export class RewardPoolData extends Borsh.Data<Args> {
+export class RewardVault extends Borsh.Data<IRewardVault> {
   static readonly SCHEMA = this.struct([
-    ['accountType', 'u8'],
-    ['rewardsRoot', 'publicKey'],
     ['bump', 'u8'],
-    ['liquidityMint', 'publicKey'],
-    ['totalShare', 'u64'],
-    ['vaults', ['RewardVault']],
-    ['depositAuthority', 'publicKey'],
+    ['rewardMint', 'publicKey'],
+    ['indexWithPrecision', 'u128'],
+    ['feeAccount', 'publicKey'],
   ])
+
+  bump: BN
+  rewardMint: PublicKey
+  indexWithPrecision: BN
+  feeAccount: PublicKey
+}
+
+const map = <T>(type: any, fields: any) => {
+  const entries = type.map((v, i) => {
+    return [v, { kind: 'struct', fields: fields[i] }]
+  })
+
+  return new Map<any, any>(entries)
+}
+
+export class RewardPoolData extends Borsh.Data<Args> {
+  static readonly SCHEMA = map(
+    [RewardVault, this],
+    [
+      [
+        ['bump', 'u8'],
+        ['rewardMint', 'publicKey'],
+        ['indexWithPrecision', 'u128'],
+        ['feeAccount', 'publicKey'],
+      ],
+      [
+        ['accountType', 'u8'],
+        ['rewardsRoot', 'publicKey'],
+        ['bump', 'u8'],
+        ['liquidityMint', 'publicKey'],
+        ['totalShare', 'u64'],
+        ['vaults', [RewardVault]],
+        ['depositAuthority', 'publicKey'],
+      ],
+    ],
+  )
 
   accountType: RewardsAccountType
   rewardsRoot: PublicKey
@@ -50,7 +83,7 @@ export class RewardPool extends Account<RewardPoolData> {
       throw Errors.ERROR_INVALID_OWNER()
     }
 
-    this.data = RewardPool.deserialize(this.info.data)
+    this.data = RewardPoolData.deserialize(this.info.data)
   }
 
   static getVaultPDA(rewardMint: PublicKey, rewardPool: PublicKey) {
