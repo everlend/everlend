@@ -79,8 +79,6 @@ impl<'a, 'b> StartRebalancingContext<'a, 'b> {
         let _system_program =
             AccountLoader::next_with_key(account_info_iter, &system_program::id())?;
         let _token_program = AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
-        let _liquidity_oracle_program =
-            AccountLoader::next_with_key(account_info_iter, &everlend_liquidity_oracle::id())?;
         let _general_pool_program =
             AccountLoader::next_with_key(account_info_iter, &everlend_general_pool::id())?;
 

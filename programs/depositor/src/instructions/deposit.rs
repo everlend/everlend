@@ -23,7 +23,6 @@ pub struct DepositContext<'a, 'b> {
     collateral_mint: &'a AccountInfo<'b>,
 
     liquidity_transit: &'a AccountInfo<'b>,
-    // liquidity_reserve_transit: &'a AccountInfo<'b>,
     liquidity_mint: &'a AccountInfo<'b>,
 
     clock: &'a AccountInfo<'b>,

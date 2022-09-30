@@ -7,7 +7,7 @@ use everlend_registry::state::Registry;
 use everlend_utils::{assert_account_key, AccountLoader, EverlendError};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
-    program_pack::Pack, pubkey::Pubkey, system_program,
+    program_pack::Pack, pubkey::Pubkey,
 };
 use std::{iter::Enumerate, slice::Iter};
 
@@ -31,9 +31,6 @@ impl<'a, 'b> SetRebalancingContext<'a, 'b> {
         let rebalancing = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let liquidity_mint = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let manager = AccountLoader::next_signer(account_info_iter)?;
-
-        let _system_program =
-            AccountLoader::next_with_key(account_info_iter, &system_program::id())?;
 
         Ok(SetRebalancingContext {
             registry,

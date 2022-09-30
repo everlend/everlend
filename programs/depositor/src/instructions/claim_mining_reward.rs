@@ -74,8 +74,8 @@ impl<'a, 'b> ClaimMiningRewardsContext<'a, 'b> {
     ) -> ProgramResult {
         {
             let depositor = Depositor::unpack(&self.depositor.data.borrow())?;
-            assert_account_key(self.executor, &depositor.rebalance_executor)?;
-        }
+            assert_account_key(self.executor, &depositor.rebalance_executor)
+        }?;
 
         {
             let (internal_mining_pubkey, _) = find_internal_mining_program_address(
@@ -84,8 +84,8 @@ impl<'a, 'b> ClaimMiningRewardsContext<'a, 'b> {
                 self.collateral_mint.key,
                 self.depositor.key,
             );
-            assert_account_key(self.internal_mining, &internal_mining_pubkey)?;
-        }
+            assert_account_key(self.internal_mining, &internal_mining_pubkey)
+        }?;
 
         let internal_mining_type =
             InternalMining::unpack(&self.internal_mining.data.borrow())?.mining_type;
