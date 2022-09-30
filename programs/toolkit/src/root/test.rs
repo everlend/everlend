@@ -56,7 +56,6 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
             registry,
             general_pool_market,
             income_pool_market,
-            mm_pool_markets: _,
             collateral_pool_markets,
             token_accounts,
             liquidity_oracle,

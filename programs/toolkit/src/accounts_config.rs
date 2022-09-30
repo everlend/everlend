@@ -245,9 +245,6 @@ pub struct InitializedAccounts {
     pub income_pool_market: Pubkey,
 
     #[serde_as(as = "Vec<DisplayFromStr>")]
-    pub mm_pool_markets: Vec<Pubkey>,
-
-    #[serde_as(as = "Vec<DisplayFromStr>")]
     pub collateral_pool_markets: Vec<Pubkey>,
 
     pub token_accounts: BTreeMap<String, TokenAccounts>,

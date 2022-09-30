@@ -13,7 +13,6 @@ solana-program-test = "1.9.13"
 spl-token = { version = "3.1", features = [ "no-entrypoint" ] }
 spl-token-lending = { git = "https://github.com/everlend/solana-program-library", features = [ "no-entrypoint" ] }
 larix-lending = { git = "https://github.com/everlend/larix-lending", features = [ "no-entrypoint" ] }
-everlend-ulp = { path = "../ulp", features = [ "no-entrypoint" ] }
 everlend-collateral-pool = { path = "../collateral_pool", features = [ "no-entrypoint" ] }
 everlend-income-pools = { path = "../income_pools", features = [ "no-entrypoint" ] }
 everlend-depositor = { path = "../depositor", features = [ "no-entrypoint" ] }

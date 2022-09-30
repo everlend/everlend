@@ -2,7 +2,6 @@
 members = [
   "utils",
   "depositor",
-  "ulp",
   "liquidity_oracle",
   "general_pool",
   "income_pools",
