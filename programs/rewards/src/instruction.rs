@@ -139,7 +139,7 @@ pub fn initialize_pool(
         AccountMeta::new(*reward_pool, false),
         AccountMeta::new_readonly(*liquidity_mint, false),
         AccountMeta::new_readonly(*authority, false),
-        AccountMeta::new_readonly(*payer, true),
+        AccountMeta::new(*payer, true),
         AccountMeta::new_readonly(system_program::id(), false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
@@ -163,7 +163,7 @@ pub fn add_vault(
         AccountMeta::new_readonly(*reward_mint, false),
         AccountMeta::new(*vault, false),
         AccountMeta::new_readonly(*fee_account, false),
-        AccountMeta::new_readonly(*payer, true),
+        AccountMeta::new(*payer, true),
         AccountMeta::new_readonly(spl_token::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
@@ -213,7 +213,7 @@ pub fn initialize_mining(
         AccountMeta::new(*reward_pool, false),
         AccountMeta::new(*mining, false),
         AccountMeta::new_readonly(*user, false),
-        AccountMeta::new_readonly(*payer, true),
+        AccountMeta::new(*payer, true),
         AccountMeta::new_readonly(system_program::id(), false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
@@ -299,7 +299,7 @@ pub fn initialize_root(
 ) -> Instruction {
     let accounts = vec![
         AccountMeta::new(*rewards_root, true),
-        AccountMeta::new_readonly(*authority, true),
+        AccountMeta::new(*authority, true),
         AccountMeta::new_readonly(system_program::id(), false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];

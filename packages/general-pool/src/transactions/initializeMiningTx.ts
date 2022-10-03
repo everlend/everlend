@@ -36,7 +36,7 @@ export class InitializeMining extends Transaction {
           { pubkey: rewardPool, isSigner: false, isWritable: true },
           { pubkey: mining, isSigner: false, isWritable: true },
           { pubkey: user, isSigner: false, isWritable: false },
-          { pubkey: feePayer, isSigner: true, isWritable: false },
+          { pubkey: feePayer, isSigner: true, isWritable: true },
           {
             pubkey: SystemProgram.programId,
             isSigner: false,
