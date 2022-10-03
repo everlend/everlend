@@ -15,7 +15,7 @@ pub enum RewardsInstruction {
     /// [W] Reward pool account
     /// [R] Liquidity mint account
     /// [R] Deposit authority
-    /// [RS] Payer
+    /// [WS] Payer
     /// [R] System program
     /// [R] Rent sysvar
     InitializePool,
@@ -28,7 +28,7 @@ pub enum RewardsInstruction {
     /// [R] Reward mint account
     /// [W] Vault account
     /// [R] Fee account
-    /// [RS] Payer
+    /// [WS] Payer
     /// [R] Token program
     /// [R] System program
     /// [R] Rent sysvar
@@ -55,7 +55,7 @@ pub enum RewardsInstruction {
     /// [W] Reward pool account
     /// [W] Mining
     /// [R] User
-    /// [RS] Payer
+    /// [WS] Payer
     /// [R] System program
     /// [R] Rent sysvar
     InitializeMining,
@@ -100,7 +100,7 @@ pub enum RewardsInstruction {
     ///
     /// Accounts:
     /// [WS] Root account (ex-Config program account)
-    /// [RS] Authority
+    /// [WS] Authority
     /// [R] System program
     /// [R] Rent sysvar
     InitializeRoot,
