@@ -30,8 +30,8 @@ pub enum LiquidityOracleInstruction {
     /// Accounts:
     /// [R]  Liquidity oracle - off-chain created account.
     /// [R]  Token mint account
-    /// [RW] Token oracle - token distribution account.
-    /// [RS] Authority - liquidity oracle authority to update state.
+    /// [W] Token oracle - token distribution account.
+    /// [WS] Authority - liquidity oracle authority to update state.
     /// [R]  Clock sysvar.
     /// [R]  Rent sysvar
     /// [R]  System program id
@@ -42,7 +42,7 @@ pub enum LiquidityOracleInstruction {
     /// Accounts:
     /// [R] Liquidity oracle - off-chain created account.
     /// [R]  Token mint account
-    /// [RW] TokenOracle - to update state
+    /// [W] TokenOracle - to update state
     /// [RS] Authority - liquidity oracle authority.
     /// [R] Clock sysvar.
     UpdateLiquidityDistribution { value: DistributionArray },
@@ -63,7 +63,7 @@ pub enum LiquidityOracleInstruction {
     /// [R] Liquidity oracle - off-chain created account.
     /// [R]  Token mint account
     /// [W] TokenOracle - to update state
-    /// [RS] Authority - liquidity oracle authority.
+    /// [WS] Authority - liquidity oracle authority.
     /// [R]  Rent sysvar
     /// [R]  System program id
     Migrate,
@@ -122,7 +122,7 @@ pub fn create_token_oracle(
         AccountMeta::new_readonly(*liquidity_oracle, false),
         AccountMeta::new_readonly(*token_mint, false),
         AccountMeta::new(token_oracle, false),
-        AccountMeta::new_readonly(*authority, true),
+        AccountMeta::new(*authority, true),
         AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),

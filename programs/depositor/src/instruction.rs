@@ -35,7 +35,7 @@ pub enum DepositorInstruction {
     /// [R] Depositor authority
     /// [W] Transit account
     /// [R] Token mint
-    /// [S] From account
+    /// [WS] From account
     /// [R] Rent sysvar
     /// [R] System program
     /// [R] Token program id
@@ -61,7 +61,7 @@ pub enum DepositorInstruction {
     /// [W] Liquidity transit account
     /// [R] Liquidity oracle
     /// [R] Token distribution
-    /// [S] Rebalance executor account
+    /// [WS] Rebalance executor account
     /// [R] Rent sysvar
     /// [R] Clock sysvar
     /// [R] System program
@@ -127,7 +127,7 @@ pub enum DepositorInstruction {
     /// [R] Depositor
     /// [R] Depositor authority
     /// [R] Registry
-    /// [S] Manager
+    /// [WS] Manager
     /// [R] Rent sysvar
     /// [R] System program
     /// For larix mining:
@@ -303,7 +303,7 @@ pub fn create_transit(
         AccountMeta::new_readonly(*mint, false),
 
         // Any account
-        AccountMeta::new_readonly(*signer, true),
+        AccountMeta::new(*signer, true),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
@@ -370,7 +370,7 @@ pub fn start_rebalancing(
         AccountMeta::new(liquidity_transit, false),
         AccountMeta::new_readonly(*liquidity_oracle, false),
         AccountMeta::new_readonly(token_oracle, false),
-        AccountMeta::new_readonly(*rebalance_executor, true),
+        AccountMeta::new(*rebalance_executor, true),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
@@ -684,7 +684,7 @@ pub fn init_mining_account(
         AccountMeta::new_readonly(pubkeys.depositor, false),
         AccountMeta::new_readonly(depositor_authority, false),
         AccountMeta::new_readonly(pubkeys.registry, false),
-        AccountMeta::new_readonly(pubkeys.manager, true),
+        AccountMeta::new(pubkeys.manager, true),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
     ];
