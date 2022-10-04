@@ -1,9 +1,8 @@
-use anchor_lang::AccountDeserialize;
-use eld_rewards::state::Mining;
-use everlend_utils::cpi::rewards::withdraw_mining;
+use everlend_rewards::cpi::{deposit_mining, withdraw_mining};
+use everlend_rewards::state::Mining;
 use everlend_utils::{
     assert_account_key,
-    cpi::{self, rewards::deposit_mining},
+    cpi::{self},
     AccountLoader, EverlendError,
 };
 use solana_program::{
@@ -24,7 +23,6 @@ pub struct TransferDepositContext<'a, 'b> {
     mining_reward_pool: &'a AccountInfo<'b>,
     mining_reward_acc: &'a AccountInfo<'b>,
     destination_mining_reward_acc: &'a AccountInfo<'b>,
-    everlend_config: &'a AccountInfo<'b>,
     everlend_rewards: &'a AccountInfo<'b>,
 }
 
@@ -44,13 +42,13 @@ impl<'a, 'b> TransferDepositContext<'a, 'b> {
 
         // mining accounts
         let mining_reward_pool =
-            AccountLoader::next_with_owner(account_info_iter, &eld_rewards::id())?;
+            AccountLoader::next_with_owner(account_info_iter, &everlend_rewards::id())?;
         let mining_reward_acc =
-            AccountLoader::next_with_owner(account_info_iter, &eld_rewards::id())?;
+            AccountLoader::next_with_owner(account_info_iter, &everlend_rewards::id())?;
         let destination_mining_reward_acc =
-            AccountLoader::next_with_owner(account_info_iter, &eld_rewards::id())?;
-        let everlend_config = AccountLoader::next_with_owner(account_info_iter, &eld_config::id())?;
-        let everlend_rewards = AccountLoader::next_with_key(account_info_iter, &eld_rewards::id())?;
+            AccountLoader::next_with_owner(account_info_iter, &everlend_rewards::id())?;
+        let everlend_rewards =
+            AccountLoader::next_with_key(account_info_iter, &everlend_rewards::id())?;
         let _token_program = AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
 
         Ok(TransferDepositContext {
@@ -63,7 +61,6 @@ impl<'a, 'b> TransferDepositContext<'a, 'b> {
             mining_reward_acc,
             destination_mining_reward_acc,
             everlend_rewards,
-            everlend_config,
         })
     }
 
@@ -87,8 +84,7 @@ impl<'a, 'b> TransferDepositContext<'a, 'b> {
         }
 
         let collateral_amount = source_account.amount;
-        let reward_share =
-            Mining::try_deserialize(&mut self.mining_reward_acc.data.borrow().as_ref())?.share;
+        let reward_share = Mining::unpack(&self.mining_reward_acc.data.borrow())?.share;
 
         if collateral_amount != reward_share {
             return Err(EverlendError::RewardAndCollateralMismatch.into());
@@ -126,7 +122,6 @@ impl<'a, 'b> TransferDepositContext<'a, 'b> {
 
         withdraw_mining(
             self.everlend_rewards.key,
-            self.everlend_config.clone(),
             self.mining_reward_pool.clone(),
             self.mining_reward_acc.clone(),
             self.user_authority.clone(),
@@ -137,7 +132,6 @@ impl<'a, 'b> TransferDepositContext<'a, 'b> {
 
         deposit_mining(
             self.everlend_rewards.key,
-            self.everlend_config.clone(),
             self.mining_reward_pool.clone(),
             self.destination_mining_reward_acc.clone(),
             self.destination_user_authority.clone(),

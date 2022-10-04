@@ -9,6 +9,7 @@ use clap::{
 use migrations::MigrationsCommand;
 use regex::Regex;
 use registry::RegistryCommand;
+use rewards::RewardsCommand;
 use root::{
     CreateTokenCommand, TestLarixMiningRawCommand, TestQuarryMiningRawCommand, UpdateManagerCommand,
 };
@@ -38,6 +39,7 @@ mod liquidity_oracle;
 mod migrations;
 mod multisig;
 mod registry;
+mod rewards;
 mod root;
 mod utils;
 
@@ -104,6 +106,7 @@ fn init() -> anyhow::Result<()> {
         Box::new(UpdateManagerCommand),
         Box::new(MultisigCommand),
         Box::new(CreateTokenCommand),
+        Box::new(RewardsCommand),
     ];
 
     let subcommands: Vec<App> = commands

@@ -7,9 +7,9 @@ use crate::{
     },
     utils::total_pool_amount,
 };
+use everlend_rewards::cpi::withdraw_mining;
 use everlend_utils::{
-    assert_account_key, assert_owned_by, assert_non_zero_amount, cpi, cpi::rewards::withdraw_mining,
-    AccountLoader, EverlendError,
+    assert_account_key, assert_non_zero_amount, assert_owned_by, cpi, AccountLoader, EverlendError,
 };
 use solana_program::{
     account_info::AccountInfo,
@@ -39,7 +39,6 @@ pub struct WithdrawRequestContext<'a, 'b> {
     user_transfer_authority: &'a AccountInfo<'b>,
     mining_reward_pool: &'a AccountInfo<'b>,
     mining_reward_acc: &'a AccountInfo<'b>,
-    everlend_config: &'a AccountInfo<'b>,
     everlend_rewards_program: &'a AccountInfo<'b>,
     rent: &'a AccountInfo<'b>,
     clock: &'a AccountInfo<'b>,
@@ -66,12 +65,11 @@ impl<'a, 'b> WithdrawRequestContext<'a, 'b> {
             AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let user_transfer_authority = AccountLoader::next_signer(account_info_iter)?;
         let mining_reward_pool =
-            AccountLoader::next_with_owner(account_info_iter, &eld_rewards::id())?;
+            AccountLoader::next_with_owner(account_info_iter, &everlend_rewards::id())?;
         let mining_reward_acc =
-            AccountLoader::next_with_owner(account_info_iter, &eld_rewards::id())?;
-        let everlend_config = AccountLoader::next_with_owner(account_info_iter, &eld_config::id())?;
+            AccountLoader::next_with_owner(account_info_iter, &everlend_rewards::id())?;
         let everlend_rewards_program =
-            AccountLoader::next_with_key(account_info_iter, &eld_rewards::id())?;
+            AccountLoader::next_with_key(account_info_iter, &everlend_rewards::id())?;
         let rent = AccountLoader::next_with_key(account_info_iter, &Rent::id())?;
         let clock = AccountLoader::next_with_key(account_info_iter, &Clock::id())?;
         let _system_program =
@@ -92,7 +90,6 @@ impl<'a, 'b> WithdrawRequestContext<'a, 'b> {
             user_transfer_authority,
             mining_reward_pool,
             mining_reward_acc,
-            everlend_config,
             everlend_rewards_program,
             rent,
             clock,
@@ -224,7 +221,6 @@ impl<'a, 'b> WithdrawRequestContext<'a, 'b> {
 
         withdraw_mining(
             self.everlend_rewards_program.key,
-            self.everlend_config.clone(),
             self.mining_reward_pool.clone(),
             self.mining_reward_acc.clone(),
             self.user_transfer_authority.clone(),

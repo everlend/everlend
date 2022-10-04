@@ -5,9 +5,9 @@ import {
   TransactionCtorFields,
   TransactionInstruction,
 } from '@solana/web3.js'
-import BN from 'bn.js'
 import { Borsh } from '@everlend/common'
 import { GeneralPoolsProgram } from '../program'
+import { RewardProgram } from '../rewardProgram'
 
 export class TransferDepositTxData extends Borsh.Data {
   static readonly SCHEMA = this.struct([['instruction', 'u8']])
@@ -23,8 +23,6 @@ type TransferDepositTxParams = {
   rewardPool: PublicKey
   rewardAccount: PublicKey
   destinationRewardAccount: PublicKey
-  config: PublicKey
-  rewardProgramId: PublicKey
 }
 
 export class TransferDepositTx extends Transaction {
@@ -39,8 +37,6 @@ export class TransferDepositTx extends Transaction {
       rewardPool,
       rewardAccount,
       destinationRewardAccount,
-      config,
-      rewardProgramId,
     } = params
 
     const data = TransferDepositTxData.serialize()
@@ -56,8 +52,7 @@ export class TransferDepositTx extends Transaction {
           { pubkey: rewardPool, isSigner: false, isWritable: true },
           { pubkey: rewardAccount, isSigner: false, isWritable: true },
           { pubkey: destinationRewardAccount, isSigner: false, isWritable: true },
-          { pubkey: config, isSigner: false, isWritable: false },
-          { pubkey: rewardProgramId, isSigner: false, isWritable: false },
+          { pubkey: RewardProgram.PUBKEY, isSigner: false, isWritable: false },
           { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
         ],
         programId: GeneralPoolsProgram.PUBKEY,
