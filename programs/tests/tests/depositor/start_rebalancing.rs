@@ -1072,3 +1072,49 @@ async fn rebalancing_percent_ratio() {
     let collateral_amount = percent_ratio(amount, prev_amount, collateral_amount).unwrap();
     assert_eq!(collateral_amount, 4366677184);
 }
+
+#[tokio::test]
+async fn collateral_leak_test() {
+    let mut p = DistributionPubkeys::default();
+    p[0] = Keypair::new().pubkey();
+    p[1] = Keypair::new().pubkey();
+    p[2] = Keypair::new().pubkey();
+
+    let mut d: DistributionArray = DistributionArray::default();
+    d[0] = 500_000_000;
+    d[1] = 500_000_000;
+
+    let mut oracle = TokenOracle::default();
+    oracle.liquidity_distribution.values = d;
+
+    let mut r = Rebalancing::default();
+
+    let amount_to_distribute = 100_000_000;
+    let current_slot = 1;
+
+    oracle.liquidity_distribution.updated_at = current_slot;
+    oracle.reserve_rates.updated_at = current_slot;
+    r.compute(&p, oracle.clone(), amount_to_distribute, current_slot)
+        .unwrap();
+
+    assert_eq!(r.distributed_liquidity, 100_000_000);
+
+    let mut reserve_rates: DistributionArray = DistributionArray::default();
+    reserve_rates[0] = 1_000_000;
+
+    d[0] = 500_000_100;
+    d[1] = 499_999_900;
+
+    let current_slot = 2;
+    oracle
+        .update_liquidity_distribution(current_slot, d)
+        .unwrap();
+    oracle
+        .update_reserve_rates(current_slot, reserve_rates)
+        .unwrap();
+
+    r.compute(&p, oracle.clone(), amount_to_distribute, current_slot)
+        .unwrap();
+
+    assert_eq!(r.distributed_liquidity, 999_999_90);
+}
