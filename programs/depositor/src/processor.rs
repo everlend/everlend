@@ -877,8 +877,6 @@ impl<'a, 'b> Processor {
         let token_program_info = next_account_info(account_info_iter)?;
         let staking_program_id_info = next_account_info(account_info_iter)?;
         let eld_reward_program_id = next_account_info(account_info_iter)?;
-        // TODO add check of eld_config
-        let eld_config_info = next_account_info(account_info_iter)?;
 
         // Get reward_pool struct and check liquidity_mint
         let reward_pool_info = next_account_info(account_info_iter)?;
@@ -1104,9 +1102,8 @@ impl<'a, 'b> Processor {
             let reward_transit_account =
                 Account::unpack(&reward_accounts.reward_transit_info.data.borrow())?;
 
-            cpi::rewards::fill_vault(
+            everlend_rewards::cpi::fill_vault(
                 eld_reward_program_id.key,
-                eld_config_info.clone(),
                 reward_pool_info.clone(),
                 reward_accounts.reward_mint_info.clone(),
                 reward_accounts.fee_account_info.clone(),
