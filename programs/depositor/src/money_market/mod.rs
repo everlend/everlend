@@ -10,6 +10,7 @@ mod quarry;
 mod solend;
 mod spl_lending;
 mod tulip;
+mod mango;
 
 pub use collateral_pool::*;
 pub use francium::*;
@@ -18,6 +19,7 @@ pub use port_finance::*;
 pub use solend::*;
 pub use spl_lending::*;
 pub use tulip::*;
+pub use mango::*;
 
 ///
 pub trait CollateralStorage<'a> {

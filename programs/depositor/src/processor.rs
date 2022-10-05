@@ -805,6 +805,31 @@ impl<'a, 'b> Processor {
                     &[signers_seeds.as_ref()],
                 )?;
             }
+            MiningType::Mango {
+                staking_program_id,
+                mango_group,
+            } => {
+                assert_account_key(staking_program_id_info, &staking_program_id)?;
+
+                let mango_group_info = next_account_info(account_info_iter)?;
+                assert_owned_by(mango_group_info, &staking_program_id)?;
+
+                let mango_account_info = next_account_info(account_info_iter)?;
+                let (mango_account, _) = cpi::mango::find_account_program_address(
+                    &staking_program_id,
+                    &mango_group,
+                    depositor_authority_info.key,
+                );
+                assert_account_key(mango_account_info, &mango_account)?;
+
+                cpi::mango::create_mango_account(
+                    staking_program_id_info.key,
+                    mango_group_info.clone(),
+                    mango_account_info.clone(),
+                    depositor_authority_info.clone(),
+                    &[signers_seeds.as_ref()],
+                )?;
+            }
             MiningType::None => {}
         }
 
@@ -1062,6 +1087,9 @@ impl<'a, 'b> Processor {
                     depositor_authority_info.clone(),
                     &[signers_seeds.as_ref()],
                 )?;
+            }
+            MiningType::Mango { .. } => {
+                return Err(EverlendError::ClaimUnavailable.into())
             }
             MiningType::None => {}
         };

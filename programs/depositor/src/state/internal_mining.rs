@@ -44,6 +44,15 @@ pub enum MiningType {
         #[allow(dead_code)]
         rewarder: Pubkey,
     },
+    ///
+    Mango {
+        ///
+        #[allow(dead_code)]
+        staking_program_id: Pubkey,
+        ///
+        #[allow(dead_code)]
+        mango_group: Pubkey,
+    }
 }
 
 /// InternalMining

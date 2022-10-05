@@ -114,6 +114,23 @@ pub struct FranciumAccounts {
 
 #[serde_as]
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
+pub struct MangoAccounts {
+    #[serde_as(as = "DisplayFromStr")]
+    pub program_id: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub mango_group: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub mango_cache: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub root_bank: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub node_bank: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub vault: Pubkey,
+}
+
+#[serde_as]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
 pub struct DefaultAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub sol_mint: Pubkey,
@@ -154,6 +171,8 @@ pub struct DefaultAccounts {
     pub tulip: TulipAccounts,
 
     pub francium: FranciumAccounts,
+
+    pub mango: MangoAccounts,
 
     #[serde_as(as = "DisplayFromStr")]
     pub multisig_program_id: Pubkey,

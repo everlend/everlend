@@ -1,6 +1,6 @@
 //! Utils
 
-use crate::money_market::{CollateralStorage, Francium, MoneyMarket, Tulip};
+use crate::money_market::{CollateralStorage, Francium, Mango, MoneyMarket, Tulip};
 use crate::money_market::{Larix, PortFinance, SPLLending, Solend};
 use crate::{
     find_transit_program_address,
@@ -271,6 +271,16 @@ pub fn money_market<'a, 'b>(
                 money_market_account_info_iter,
             )?;
             return Ok((Box::new(francium), is_mining));
+        }
+        // Mango
+        5 => {
+            let mango = Mango::init(
+                money_market_program.key.clone(),
+                money_market_account_info_iter,
+                internal_mining_type,
+                depositor_authority,
+            )?;
+            return Ok((Box::new(mango), is_mining))
         }
         _ => Err(EverlendError::IncorrectInstructionProgramId.into()),
     }

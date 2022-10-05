@@ -9,3 +9,4 @@ pub mod spl_token_lending;
 pub mod system;
 pub mod tulip;
 pub mod francium;
+pub mod mango;

@@ -98,6 +98,14 @@ pub enum EverlendError {
     #[error("Mining not initialized")]
     MiningNotInitialized,
 
+    /// Mining is required
+    #[error("Mining is required")]
+    MiningIsRequired,
+
+    /// The claim is unavailable
+    #[error("The claim is unavailable")]
+    ClaimUnavailable,
+
     /// Reserve threshold exceeded
     #[error("Reserve threshold exceeded")]
     ReserveThreshold,
