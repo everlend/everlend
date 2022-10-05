@@ -967,10 +967,17 @@ async fn rebalancing_check_steps() {
             steps: vec![(1, RebalancingOperation::Deposit, 5000, None)],
         },
         TestCase {
+            distribution: (490_000_000, 490_000_000),
+            steps: vec![
+                (0, RebalancingOperation::Withdraw, 100, Some(100)),
+                (1, RebalancingOperation::Withdraw, 100, Some(100)),
+            ],
+        },
+        TestCase {
             distribution: (1000_000_000, 0),
             steps: vec![
-                (1, RebalancingOperation::Withdraw, 5000, Some(5000)),
-                (0, RebalancingOperation::Deposit, 5001, None),
+                (1, RebalancingOperation::Withdraw, 4900, Some(4900)),
+                (0, RebalancingOperation::Deposit, 5101, None),
             ],
         },
         TestCase {
@@ -995,7 +1002,7 @@ async fn rebalancing_check_steps() {
         r.compute(&p, oracle.clone(), distr_amount, current_slot)
             .unwrap();
 
-        println!("{:?}", r.steps);
+        println!("{} {}", r.amount_to_distribute, r.distributed_liquidity);
 
         for (idx, s) in r.clone().steps.iter().enumerate() {
             let mm_index = elem.steps[idx].0;
