@@ -1,12 +1,12 @@
-use std::iter::Enumerate;
-use std::slice::Iter;
+use crate::money_market::{CollateralStorage, MoneyMarket};
+use crate::state::MiningType;
+use everlend_utils::cpi::mango;
+use everlend_utils::{AccountLoader, EverlendError};
 use solana_program::account_info::AccountInfo;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
-use everlend_utils::{AccountLoader, EverlendError};
-use everlend_utils::cpi::mango;
-use crate::money_market::{CollateralStorage, MoneyMarket};
-use crate::state::MiningType;
+use std::iter::Enumerate;
+use std::slice::Iter;
 
 ///
 pub struct Mango<'a> {
@@ -16,7 +16,7 @@ pub struct Mango<'a> {
     root_bank: AccountInfo<'a>,
     node_bank: AccountInfo<'a>,
     vault: AccountInfo<'a>,
-    mining: Option<MangoMining<'a>>
+    mining: Option<MangoMining<'a>>,
 }
 
 struct MangoMining<'a> {
@@ -31,10 +31,14 @@ impl<'a, 'b> Mango<'a> {
         internal_mining_type: Option<MiningType>,
         depositor_authority_pubkey: &Pubkey,
     ) -> Result<Mango<'a>, ProgramError> {
-        let mango_group = AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
-        let mango_cache = AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
-        let root_bank = AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
-        let node_bank = AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
+        let mango_group =
+            AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
+        let mango_cache =
+            AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
+        let root_bank =
+            AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
+        let node_bank =
+            AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
         let vault = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
 
         let mut mango = Mango {
@@ -48,23 +52,23 @@ impl<'a, 'b> Mango<'a> {
         };
 
         match internal_mining_type {
-            Some(
-                MiningType::Mango {
-                    staking_program_id, mango_group
-                }
-            ) => {
+            Some(MiningType::Mango {
+                staking_program_id,
+                mango_group,
+            }) => {
                 let mango_account = {
-                    let (mango_account_pubkey, _) =
-                        mango::find_account_program_address(&staking_program_id, &mango_group, depositor_authority_pubkey);
+                    let (mango_account_pubkey, _) = mango::find_account_program_address(
+                        &staking_program_id,
+                        &mango_group,
+                        depositor_authority_pubkey,
+                    );
 
                     AccountLoader::next_with_key(account_info_iter, &mango_account_pubkey)?
                 };
 
-                mango.mining = Some(
-                    MangoMining {
-                        mango_account: mango_account.clone()
-                    }
-                )
+                mango.mining = Some(MangoMining {
+                    mango_account: mango_account.clone(),
+                })
             }
             _ => {}
         }
@@ -82,7 +86,7 @@ impl<'a> MoneyMarket<'a> for Mango<'a> {
         _authority: AccountInfo<'a>,
         _clock: AccountInfo<'a>,
         _liquidity_amount: u64,
-        _signers_seeds: &[&[&[u8]]]
+        _signers_seeds: &[&[&[u8]]],
     ) -> Result<u64, ProgramError> {
         return Err(EverlendError::MiningIsRequired.into());
     }
@@ -95,7 +99,7 @@ impl<'a> MoneyMarket<'a> for Mango<'a> {
         _authority: AccountInfo<'a>,
         _clock: AccountInfo<'a>,
         _collateral_amount: u64,
-        _signers_seeds: &[&[&[u8]]]
+        _signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
         return Err(EverlendError::MiningIsRequired.into());
     }
@@ -108,14 +112,14 @@ impl<'a> MoneyMarket<'a> for Mango<'a> {
         authority: AccountInfo<'a>,
         clock: AccountInfo<'a>,
         liquidity_amount: u64,
-        signers_seeds: &[&[&[u8]]]
+        signers_seeds: &[&[&[u8]]],
     ) -> Result<u64, ProgramError> {
         self.deposit_collateral_tokens(
             source_liquidity,
             authority,
             clock,
             liquidity_amount,
-            signers_seeds
+            signers_seeds,
         )?;
 
         Ok(liquidity_amount)
@@ -129,14 +133,14 @@ impl<'a> MoneyMarket<'a> for Mango<'a> {
         authority: AccountInfo<'a>,
         clock: AccountInfo<'a>,
         collateral_amount: u64,
-        signers_seeds: &[&[&[u8]]]
+        signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
         self.withdraw_collateral_tokens(
             liquidity_destination,
             authority,
             clock,
             collateral_amount,
-            signers_seeds
+            signers_seeds,
         )
     }
 }
@@ -148,7 +152,7 @@ impl<'a> CollateralStorage<'a> for Mango<'a> {
         authority: AccountInfo<'a>,
         _clock: AccountInfo<'a>,
         collateral_amount: u64,
-        signers_seeds: &[&[&[u8]]]
+        signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
         mango::deposit(
             &self.money_market_program_id,
@@ -161,7 +165,7 @@ impl<'a> CollateralStorage<'a> for Mango<'a> {
             self.vault.clone(),
             collateral_transit,
             collateral_amount,
-            signers_seeds
+            signers_seeds,
         )
     }
 
@@ -171,7 +175,7 @@ impl<'a> CollateralStorage<'a> for Mango<'a> {
         authority: AccountInfo<'a>,
         _clock: AccountInfo<'a>,
         collateral_amount: u64,
-        signers_seeds: &[&[&[u8]]]
+        signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
         mango::withdraw(
             &self.money_market_program_id,

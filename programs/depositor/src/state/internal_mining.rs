@@ -52,7 +52,7 @@ pub enum MiningType {
         ///
         #[allow(dead_code)]
         mango_group: Pubkey,
-    }
+    },
 }
 
 /// InternalMining

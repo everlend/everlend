@@ -1,11 +1,11 @@
-use solana_program::pubkey::Pubkey;
-use solana_sdk::signature::Keypair;
+use crate::liquidity_mining::LiquidityMiner;
+use crate::utils::get_asset_maps;
+use crate::Config;
 use everlend_depositor::instruction::InitMiningAccountsPubkeys;
 use everlend_depositor::state::MiningType;
 use everlend_utils::integrations::MoneyMarket;
-use crate::Config;
-use crate::liquidity_mining::LiquidityMiner;
-use crate::utils::get_asset_maps;
+use solana_program::pubkey::Pubkey;
+use solana_sdk::signature::Keypair;
 
 pub struct MangoLiquidityMiner {}
 
@@ -25,7 +25,7 @@ impl LiquidityMiner for MangoLiquidityMiner {
         _config: &Config,
         _token: &String,
         _mining_account: &Keypair,
-        _sub_reward_token_mint: Option<Pubkey>
+        _sub_reward_token_mint: Option<Pubkey>,
     ) -> anyhow::Result<()> {
         Ok(())
     }
@@ -54,13 +54,13 @@ impl LiquidityMiner for MangoLiquidityMiner {
         config: &Config,
         _token: &String,
         _mining_pubkey: Pubkey,
-        _sub_reward_token_mint: Option<Pubkey>
+        _sub_reward_token_mint: Option<Pubkey>,
     ) -> MiningType {
         let default_accounts = config.get_default_accounts();
 
         MiningType::Mango {
             staking_program_id: default_accounts.mango.program_id,
-            mango_group: default_accounts.mango.mango_group
+            mango_group: default_accounts.mango.mango_group,
         }
     }
 }

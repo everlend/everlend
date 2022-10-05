@@ -5,21 +5,21 @@ use solana_program::{account_info::AccountInfo, program_error::ProgramError};
 mod collateral_pool;
 mod francium;
 mod larix;
+mod mango;
 mod port_finance;
 mod quarry;
 mod solend;
 mod spl_lending;
 mod tulip;
-mod mango;
 
 pub use collateral_pool::*;
 pub use francium::*;
 pub use larix::*;
+pub use mango::*;
 pub use port_finance::*;
 pub use solend::*;
 pub use spl_lending::*;
 pub use tulip::*;
-pub use mango::*;
 
 ///
 pub trait CollateralStorage<'a> {

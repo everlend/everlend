@@ -280,7 +280,7 @@ pub fn money_market<'a, 'b>(
                 internal_mining_type,
                 depositor_authority,
             )?;
-            return Ok((Box::new(mango), is_mining))
+            return Ok((Box::new(mango), is_mining));
         }
         _ => Err(EverlendError::IncorrectInstructionProgramId.into()),
     }

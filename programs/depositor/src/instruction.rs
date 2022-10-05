@@ -723,7 +723,7 @@ pub fn init_mining_account(
         }
         MiningType::Mango {
             staking_program_id,
-            mango_group
+            mango_group,
         } => {
             let (mango_account, _) = mango::find_account_program_address(
                 &staking_program_id,
@@ -734,7 +734,7 @@ pub fn init_mining_account(
             accounts.push(AccountMeta::new_readonly(staking_program_id, false));
             accounts.push(AccountMeta::new(mango_group, false));
             accounts.push(AccountMeta::new(mango_account, false));
-        },
+        }
         MiningType::None => {}
     }
 
