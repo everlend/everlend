@@ -91,22 +91,26 @@ impl Rebalancing {
             let new_amount = math::share_floor(amount_to_distribute, new_percent)?;
             let amount = math::abs_diff(new_amount, prev_amount)?;
 
-            match new_amount.cmp(&prev_amount) {
+            let liquidity_in_market = match new_amount.cmp(&prev_amount) {
                 // Deposit
                 Ordering::Greater => {
                     // Сheck collateral leak (only if it's set for market)
                     let collateral_percent = token_oracle.reserve_rates.values[index];
                     let expected_collateral = math::share_floor(amount, collateral_percent)?;
                     if collateral_percent > 0 && expected_collateral == 0 {
-                        continue;
-                    }
+                        // Do nothing and preserve old amount
+                        prev_amount
+                    } else {
+                        // Deposit new liquidity
+                        self.add_step(RebalancingStep::new(
+                            index as u8,
+                            RebalancingOperation::Deposit,
+                            amount,
+                            None, // Will be calculated at the deposit stage
+                        ));
 
-                    self.add_step(RebalancingStep::new(
-                        index as u8,
-                        RebalancingOperation::Deposit,
-                        amount,
-                        None, // Will be calculated at the deposit stage
-                    ));
+                        new_amount
+                    }
                 }
 
                 // Withdraw
@@ -120,13 +124,15 @@ impl Rebalancing {
                         amount,
                         Some(collateral_amount),
                     ));
+
+                    new_amount
                 }
-                Ordering::Equal => {}
+                Ordering::Equal => new_amount,
             };
 
             // Update distributed_liquidity
             distributed_liquidity = distributed_liquidity
-                .checked_add(new_amount)
+                .checked_add(liquidity_in_market)
                 .ok_or(EverlendError::MathOverflow)?;
         }
 
@@ -247,7 +253,7 @@ impl Rebalancing {
             .position(|&step| step.executed_at.is_none())
             .unwrap();
         // If index is last element
-        if index == (self.steps.len() - 1)  {
+        if index == (self.steps.len() - 1) {
             return Err(EverlendError::InvalidRebalancingOperation.into());
         }
 
