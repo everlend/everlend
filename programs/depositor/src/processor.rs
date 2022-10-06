@@ -24,8 +24,8 @@ use solana_program::{
     rent::Rent,
     sysvar::Sysvar,
 };
-use spl_token::state::Account;
 use spl_associated_token_account::get_associated_token_address;
+use spl_token::state::Account;
 use std::cmp::min;
 
 use crate::instructions::{RefreshMMIncomesContext, WithdrawContext};
@@ -247,6 +247,8 @@ impl<'a, 'b> Processor {
             return Err(EverlendError::IncompleteRebalancing.into());
         }
 
+        let general_pool_state =
+            everlend_general_pool::state::Pool::unpack(&general_pool_info.data.borrow())?;
         {
             // Check token oracle
             let (token_oracle_pubkey, _) = find_token_oracle_program_address(
@@ -264,19 +266,19 @@ impl<'a, 'b> Processor {
             );
             assert_account_key(general_pool_info, &general_pool_pubkey)?;
 
-            let general_pool =
-                everlend_general_pool::state::Pool::unpack(&general_pool_info.data.borrow())?;
-
             // Check general pool accounts
-            assert_account_key(general_pool_market_info, &general_pool.pool_market)?;
-            assert_account_key(general_pool_token_account_info, &general_pool.token_account)?;
-            assert_account_key(mint_info, &general_pool.token_mint)?;
+            assert_account_key(general_pool_market_info, &general_pool_state.pool_market)?;
+            assert_account_key(
+                general_pool_token_account_info,
+                &general_pool_state.token_account,
+            )?;
+            assert_account_key(mint_info, &general_pool_state.token_mint)?;
 
             // Check withdrawal requests
             let (withdrawal_requests_pubkey, _) = find_withdrawal_requests_program_address(
                 &everlend_general_pool::id(),
                 general_pool_market_info.key,
-                &general_pool.token_mint,
+                &general_pool_state.token_mint,
             );
             assert_account_key(withdrawal_requests_info, &withdrawal_requests_pubkey)?;
 
@@ -355,6 +357,15 @@ impl<'a, 'b> Processor {
             }
         }
 
+        if amount_to_distribute > general_pool_state.total_amount_borrowed {
+            msg!(
+                "total_amount_borrowed: {}",
+                general_pool_state.total_amount_borrowed
+            );
+
+            return Err(EverlendError::RebalanceLiquidityCheckFailed.into());
+        }
+
         msg!("Computing");
         if refresh_income {
             rebalancing.compute_with_refresh_income(
@@ -430,11 +441,6 @@ impl<'a, 'b> Processor {
         // Check rebalancing accounts
         assert_account_key(depositor_info, &rebalancing.depositor)?;
         assert_account_key(liquidity_mint_info, &rebalancing.mint)?;
-
-        // Check rebalancing is not completed
-        if rebalancing.is_completed() {
-            return Err(EverlendError::RebalancingIsCompleted.into());
-        }
 
         rebalancing.set(
             amount_to_distribute,
@@ -763,9 +769,7 @@ impl<'a, 'b> Processor {
                     rent_info.clone(),
                 )?;
             }
-            MiningType::Quarry {
-                rewarder,
-            } => {
+            MiningType::Quarry { rewarder } => {
                 assert_account_key(staking_program_id_info, &cpi::quarry::staking_program_id())?;
 
                 let rewarder_info = next_account_info(account_info_iter)?;
@@ -788,7 +792,8 @@ impl<'a, 'b> Processor {
                 assert_account_key(miner_info, &miner_pubkey)?;
 
                 let miner_vault_info = next_account_info(account_info_iter)?;
-                let miner_vault = get_associated_token_address(&miner_pubkey, collateral_mint_info.key);
+                let miner_vault =
+                    get_associated_token_address(&miner_pubkey, collateral_mint_info.key);
                 assert_account_key(miner_vault_info, &miner_vault)?;
 
                 let _spl_token_program = next_account_info(account_info_iter)?;
@@ -1002,10 +1007,8 @@ impl<'a, 'b> Processor {
                     &[signers_seeds.as_ref()],
                 )?;
             }
-            MiningType::Quarry {
-                rewarder,
-            } => {
-                assert_account_key(staking_program_id_info,&cpi::quarry::staking_program_id())?;
+            MiningType::Quarry { rewarder } => {
+                assert_account_key(staking_program_id_info, &cpi::quarry::staking_program_id())?;
                 let mint_wrapper = next_account_info(account_info_iter)?;
                 let mint_wrapper_program = next_account_info(account_info_iter)?;
                 let minter = next_account_info(account_info_iter)?;

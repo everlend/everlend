@@ -144,6 +144,14 @@ impl Rebalancing {
         self.amount_to_distribute = amount_to_distribute;
         self.distributed_liquidity = distributed_liquidity;
 
+        if self.distributed_liquidity > self.amount_to_distribute {
+            msg!(
+                "compute: distributed_liquidity {}",
+                self.distributed_liquidity
+            );
+            return Err(EverlendError::RebalanceLiquidityCheckFailed.into());
+        }
+
         Ok(())
     }
 
@@ -210,6 +218,15 @@ impl Rebalancing {
         self.income_refreshed_at = income_refreshed_at;
         self.amount_to_distribute = amount_to_distribute;
         self.distributed_liquidity = distributed_liquidity;
+
+        if self.distributed_liquidity > self.amount_to_distribute {
+            msg!(
+                "compute_with_refresh_income: distributed_liquidity {}",
+                self.distributed_liquidity
+            );
+
+            return Err(EverlendError::RebalanceLiquidityCheckFailed.into());
+        }
 
         Ok(())
     }

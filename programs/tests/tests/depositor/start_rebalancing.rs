@@ -1125,3 +1125,79 @@ async fn collateral_leak_test() {
 
     assert_eq!(r.distributed_liquidity, 999_999_90);
 }
+
+#[tokio::test]
+async fn rebalancing_check_steps2() {
+    let mut d: DistributionArray = DistributionArray::default();
+    let mut p = DistributionPubkeys::default();
+    p[0] = Keypair::new().pubkey();
+    p[1] = Keypair::new().pubkey();
+
+    let mut oracle = TokenOracle::default();
+    let mut r = Rebalancing::default();
+
+    struct TestCase {
+        distr_amount: u64,
+        distribution: (u64, u64),
+        steps: Vec<(u8, RebalancingOperation, u64, Option<u64>)>,
+    }
+
+    for (i, elem) in vec![
+        TestCase {
+            distr_amount: 595340257,
+            distribution: (400000000, 600000000),
+            steps: vec![
+                (0, RebalancingOperation::Deposit, 238136102, None),
+                (1, RebalancingOperation::Deposit, 357204154, None),
+            ],
+        },
+        TestCase {
+            distr_amount: 595340257 - 13027, // 595 327 230 - withdrawal request
+            distribution: (399865669, 599798503),
+            steps: vec![
+                (0, RebalancingOperation::Withdraw, 85181, Some(85181)),
+                (1, RebalancingOperation::Withdraw, 127773, Some(127773)),
+            ],
+        },
+        TestCase {
+            distr_amount: 595340257 - 13027, // 595 327 230 - withdrawal request
+            distribution: (400000000, 600000000),
+            steps: vec![
+                (0, RebalancingOperation::Deposit, 79971, None),
+                (1, RebalancingOperation::Deposit, 119957, None),
+            ],
+        },
+    ]
+    .iter()
+    .enumerate()
+    {
+        d[0] = elem.distribution.0;
+        d[1] = elem.distribution.1;
+
+        let current_slot = 1;
+        oracle.reserve_rates.updated_at = current_slot;
+        oracle
+            .update_liquidity_distribution(i as u64 + 1, d)
+            .unwrap();
+
+        r.compute(&p, oracle.clone(), elem.distr_amount, current_slot)
+            .unwrap();
+
+        println!("{} {}", r.amount_to_distribute, r.distributed_liquidity);
+
+        for (idx, s) in r.clone().steps.iter().enumerate() {
+            let mm_index = elem.steps[idx].0;
+            let operation = elem.steps[idx].1;
+            let liquidity_amount = elem.steps[idx].2;
+            let collateral_amount = elem.steps[idx].3;
+
+            assert_eq!(s.money_market_index, mm_index);
+            assert_eq!(s.operation, operation);
+            assert_eq!(s.liquidity_amount, liquidity_amount);
+            assert_eq!(s.collateral_amount, collateral_amount);
+
+            r.execute_step(s.operation, Some(liquidity_amount), (i + 2) as u64)
+                .unwrap();
+        }
+    }
+}
