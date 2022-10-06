@@ -3,9 +3,10 @@ use crate::{
     state::{Depositor, InternalMining, MiningType},
     utils::{parse_fill_reward_accounts, FillRewardAccounts},
 };
+use everlend_rewards::cpi::fill_vault;
 use everlend_utils::{
     assert_account_key,
-    cpi::{larix, port_finance, quarry, rewards},
+    cpi::{larix, port_finance, quarry},
     find_program_address, AccountLoader,
 };
 use solana_program::{
@@ -25,7 +26,6 @@ pub struct ClaimMiningRewardsContext<'a, 'b> {
     internal_mining: &'a AccountInfo<'b>,
     staking_program_id: &'a AccountInfo<'b>,
     eld_reward_program_id: &'a AccountInfo<'b>,
-    eld_config: &'a AccountInfo<'b>,
     reward_pool: &'a AccountInfo<'b>,
 }
 
@@ -46,10 +46,10 @@ impl<'a, 'b> ClaimMiningRewardsContext<'a, 'b> {
         let staking_program_id = AccountLoader::next_unchecked(account_info_iter)?;
 
         let eld_reward_program_id =
-            AccountLoader::next_with_key(account_info_iter, &eld_rewards::id())?;
-        let eld_config = AccountLoader::next_with_owner(account_info_iter, &eld_config::id())?;
+            AccountLoader::next_with_key(account_info_iter, &everlend_rewards::id())?;
 
-        let reward_pool = AccountLoader::next_with_owner(account_info_iter, &eld_rewards::id())?;
+        let reward_pool =
+            AccountLoader::next_with_owner(account_info_iter, &everlend_rewards::id())?;
 
         Ok(ClaimMiningRewardsContext {
             depositor,
@@ -60,7 +60,6 @@ impl<'a, 'b> ClaimMiningRewardsContext<'a, 'b> {
             internal_mining,
             staking_program_id,
             eld_reward_program_id,
-            eld_config,
             reward_pool,
         })
     }
@@ -325,9 +324,8 @@ impl<'a, 'b> ClaimMiningRewardsContext<'a, 'b> {
             let reward_transit_account =
                 Account::unpack(&reward_accounts.reward_transit_info.data.borrow())?;
 
-            rewards::fill_vault(
+            fill_vault(
                 self.eld_reward_program_id.key,
-                self.eld_config.clone(),
                 self.reward_pool.clone(),
                 reward_accounts.reward_mint_info.clone(),
                 reward_accounts.fee_account_info.clone(),

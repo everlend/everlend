@@ -28,6 +28,7 @@ pub mod larix;
 pub mod liquidity_oracle;
 pub mod money_market;
 pub mod registry;
+pub mod rewards;
 pub mod users;
 
 pub use collateral_pool::*;
@@ -43,6 +44,7 @@ pub use income_pool_market::*;
 pub use liquidity_oracle::*;
 pub use money_market::*;
 pub use registry::*;
+pub use rewards::*;
 pub use users::*;
 
 use self::larix::{add_larix, TestLarix};
@@ -92,18 +94,16 @@ pub fn program_test() -> ProgramTest {
         processor!(everlend_registry::processor::process_instruction),
     );
     program.add_program(
+        "everlend_rewards",
+        everlend_rewards::id(),
+        processor!(everlend_rewards::processor::process_instruction),
+    );
+    program.add_program(
         "spl_token_lending",
         spl_token_lending::id(),
         processor!(spl_token_lending::processor::process_instruction),
     );
 
-    // Eld-next (remember to rebuild and upgrade the .so files)
-    program.prefer_bpf(true);
-
-    program.add_program("eld_config", eld_config::id(), None);
-    program.add_program("eld_rewards", eld_rewards::id(), None);
-
-    program.prefer_bpf(false);
     program
 }
 

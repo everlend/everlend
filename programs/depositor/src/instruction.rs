@@ -169,7 +169,6 @@ pub enum DepositorInstruction {
     /// [R] Token program id
     /// [R] Staking program id
     /// [R] ELD reward program id
-    /// [R] ELD config
     /// [W] Reward pool
     /// Reward fill accounts
     /// [R] Reward mint
@@ -231,7 +230,6 @@ pub enum DepositorInstruction {
         /// Manual setup of prev distribution array
         distribution_array: DistributionArray,
     },
-
 
     /// Refresh incomes for MM
     /// Withdraw funds from MM pool and deposit back to charge rewards.
@@ -298,10 +296,8 @@ pub fn create_transit(
     let accounts = vec![
         AccountMeta::new_readonly(*depositor, false),
         AccountMeta::new_readonly(depositor_authority, false),
-
         AccountMeta::new(transit, false),
         AccountMeta::new_readonly(*mint, false),
-
         // Any account
         AccountMeta::new(*signer, true),
         AccountMeta::new_readonly(sysvar::rent::id(), false),

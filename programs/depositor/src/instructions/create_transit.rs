@@ -1,5 +1,5 @@
 use crate::{find_transit_program_address, state::Depositor};
-use everlend_utils::{assert_account_key, find_program_address, cpi, AccountLoader};
+use everlend_utils::{assert_account_key, cpi, find_program_address, AccountLoader};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
     program_pack::Pack, pubkey::Pubkey, rent::Rent, system_program, sysvar::Sysvar,

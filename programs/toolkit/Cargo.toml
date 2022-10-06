@@ -41,10 +41,9 @@ everlend-collateral-pool = { path = "../collateral_pool", features = [ "no-entry
 everlend-income-pools = { path = "../income_pools", features = [ "no-entrypoint" ] }
 everlend-depositor = { path = "../depositor", features = [ "no-entrypoint" ] }
 everlend-liquidity-oracle = { path = "../liquidity_oracle", features = [ "no-entrypoint" ] }
+everlend-rewards = { path = "../rewards", features = [ "no-entrypoint" ] }
 everlend-utils = { path = "../utils" }
 port-variable-rate-lending-instructions = "0.2.9"
 serum-multisig = { git = "https://github.com/everlend/multisig", features = [ "no-entrypoint" ] }
 solend-program = { git = "https://github.com/everlend/solend-program", features = [ "no-entrypoint" ], branch = "mainnet" }
-eld-rewards = { git = "ssh://git@github.com/everlend/everlend-next.git", branch = "main",  features = [ "no-entrypoint" ] }
-eld-config = { git = "ssh://git@github.com/everlend/everlend-next.git", branch = "main",  features = [ "no-entrypoint" ] }
 mpl-token-metadata = { version = "1.3.3", features = [ "no-entrypoint" ] }
