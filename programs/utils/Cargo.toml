@@ -21,8 +21,6 @@ quarry-mine = { version = "5.0.2", features = ["no-entrypoint"] }
 quarry-redeemer = { version = "5.0.2", features = ["no-entrypoint"] }
 borsh = "0.9.0"
 solend-program = { git = "https://github.com/everlend/solend-program", features = [ "no-entrypoint" ], branch = "mainnet" }
-eld-rewards = { git = "ssh://git@github.com/everlend/everlend-next.git", branch = "main",  features = [ "no-entrypoint" ] }
-eld-config = { git = "ssh://git@github.com/everlend/everlend-next.git", branch = "main",  features = [ "no-entrypoint" ] }
 mpl-token-metadata = { version = "1.3.3", features = [ "no-entrypoint" ] }
 
 [dev-dependencies]

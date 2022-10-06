@@ -6,7 +6,7 @@ use everlend_general_pool::{
         AccountType, Pool, PoolMarket, SetPoolConfigParams, WithdrawalRequest, WithdrawalRequests,
     },
 };
-use everlend_utils::instructions::{config::initialize, rewards::initialize_pool};
+use everlend_rewards::instruction::{initialize_pool, initialize_root};
 use solana_client::client_error::ClientError;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_sdk::{
@@ -128,27 +128,27 @@ pub fn create_general_pool(
     )?;
 
     // Initialize mining pool
-    let anchor_config = Keypair::new();
+    let rewards_root = Keypair::new();
     //TODO save into accounts file
     let (mining_reward_pool, _) = Pubkey::find_program_address(
         &[
             b"reward_pool".as_ref(),
-            &anchor_config.pubkey().to_bytes(),
+            &rewards_root.pubkey().to_bytes(),
             &token_mint.to_bytes(),
         ],
-        &eld_rewards::id(),
+        &everlend_rewards::id(),
     );
 
     let tx = Transaction::new_with_payer(
         &[
-            initialize(
-                &eld_config::id(),
-                &anchor_config.pubkey(),
+            initialize_root(
+                &everlend_rewards::id(),
+                &rewards_root.pubkey(),
                 &config.fee_payer.pubkey(),
             ),
             initialize_pool(
-                &eld_rewards::id(),
-                &anchor_config.pubkey(),
+                &everlend_rewards::id(),
+                &rewards_root.pubkey(),
                 &mining_reward_pool,
                 token_mint,
                 &pool_pubkey,
@@ -160,7 +160,7 @@ pub fn create_general_pool(
 
     config.sign_and_send_and_confirm_transaction(
         tx,
-        vec![config.fee_payer.as_ref(), &anchor_config],
+        vec![config.fee_payer.as_ref(), &rewards_root],
     )?;
 
     Ok((pool_pubkey, token_account.pubkey(), pool_mint.pubkey()))
@@ -220,7 +220,6 @@ pub fn deposit(
     pool_mint: &Pubkey,
     mining_reward_pool: &Pubkey,
     mining_reward_acc: &Pubkey,
-    anchor_config: &Pubkey,
     amount: u64,
 ) -> Result<(), ClientError> {
     let tx = Transaction::new_with_payer(
@@ -235,7 +234,6 @@ pub fn deposit(
             &config.fee_payer.pubkey(),
             mining_reward_pool,
             mining_reward_acc,
-            anchor_config,
             amount,
         )],
         Some(&config.fee_payer.pubkey()),
@@ -258,7 +256,6 @@ pub fn withdraw_request(
     pool_mint: &Pubkey,
     mining_reward_pool: &Pubkey,
     mining_reward_acc: &Pubkey,
-    anchor_config: &Pubkey,
     amount: u64,
 ) -> Result<(), ClientError> {
     let payer_pubkey = config.fee_payer.pubkey();
@@ -281,7 +278,6 @@ pub fn withdraw_request(
             &config.fee_payer.pubkey(),
             mining_reward_pool,
             mining_reward_acc,
-            anchor_config,
             amount,
         )],
         Some(&config.fee_payer.pubkey()),
