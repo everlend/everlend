@@ -247,8 +247,6 @@ impl<'a, 'b> Processor {
             return Err(EverlendError::IncompleteRebalancing.into());
         }
 
-        let general_pool_state =
-            everlend_general_pool::state::Pool::unpack(&general_pool_info.data.borrow())?;
         {
             // Check token oracle
             let (token_oracle_pubkey, _) = find_token_oracle_program_address(
@@ -267,18 +265,17 @@ impl<'a, 'b> Processor {
             assert_account_key(general_pool_info, &general_pool_pubkey)?;
 
             // Check general pool accounts
-            assert_account_key(general_pool_market_info, &general_pool_state.pool_market)?;
-            assert_account_key(
-                general_pool_token_account_info,
-                &general_pool_state.token_account,
-            )?;
-            assert_account_key(mint_info, &general_pool_state.token_mint)?;
+            let general_pool =
+                everlend_general_pool::state::Pool::unpack(&general_pool_info.data.borrow())?;
+            assert_account_key(general_pool_market_info, &general_pool.pool_market)?;
+            assert_account_key(general_pool_token_account_info, &general_pool.token_account)?;
+            assert_account_key(mint_info, &general_pool.token_mint)?;
 
             // Check withdrawal requests
             let (withdrawal_requests_pubkey, _) = find_withdrawal_requests_program_address(
                 &everlend_general_pool::id(),
                 general_pool_market_info.key,
-                &general_pool_state.token_mint,
+                &general_pool.token_mint,
             );
             assert_account_key(withdrawal_requests_info, &withdrawal_requests_pubkey)?;
 
@@ -357,6 +354,8 @@ impl<'a, 'b> Processor {
             }
         }
 
+        let general_pool_state =
+            everlend_general_pool::state::Pool::unpack(&general_pool_info.data.borrow())?;
         if amount_to_distribute > general_pool_state.total_amount_borrowed {
             msg!(
                 "total_amount_borrowed: {}",

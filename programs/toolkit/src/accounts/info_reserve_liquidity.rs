@@ -27,7 +27,7 @@ impl<'a> ToolkitCommand<'a> for InfoReserveLiquidityCommand {
 
         let (mint_map, _) = get_asset_maps(default_accounts);
 
-        for (_, mint) in mint_map.iter() {
+        for (token, mint) in mint_map.iter() {
             let (liquidity_reserve_transit_pubkey, _) =
                 everlend_depositor::find_transit_program_address(
                     &everlend_depositor::id(),
@@ -42,8 +42,8 @@ impl<'a> ToolkitCommand<'a> for InfoReserveLiquidityCommand {
                 )?;
 
             println!(
-                "{:?}: {:?}",
-                liquidity_reserve_transit_pubkey, liquidity_reserve_transit.amount
+                "{} - {:?}: {:?}",
+                token, liquidity_reserve_transit_pubkey, liquidity_reserve_transit.amount
             );
         }
 
