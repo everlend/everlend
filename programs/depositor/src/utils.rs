@@ -1,7 +1,7 @@
 //! Utils
 
 use crate::money_market::{CollateralStorage, Francium, MoneyMarket, Tulip};
-use crate::money_market::{Larix, PortFinance, SPLLending, Solend};
+use crate::money_market::{Larix, PortFinance, SPLLending, Solend, Jet};
 use crate::{
     find_transit_program_address,
     state::{InternalMining, MiningType},
@@ -271,6 +271,14 @@ pub fn money_market<'a, 'b>(
                 money_market_account_info_iter,
             )?;
             return Ok((Box::new(francium), is_mining));
+        }
+        //Jet
+        5 => {
+            let jet = Jet::init(
+                money_market_program.key.clone(),
+                money_market_account_info_iter,
+            )?;
+            return Ok((Box::new(jet), is_mining));
         }
         _ => Err(EverlendError::IncorrectInstructionProgramId.into()),
     }
