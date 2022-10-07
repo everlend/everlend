@@ -14,6 +14,7 @@ use solana_program::{
     pubkey::Pubkey,
 };
 use std::cmp::Ordering;
+pub use deprecated::DeprecatedRebalancing;
 
 /// Rebalancing
 #[repr(C)]
@@ -315,7 +316,7 @@ impl Pack for Rebalancing {
         + 32
         + 32
         + 8
-        + 8
+        + (8 * TOTAL_DISTRIBUTIONS)
         + (8 * TOTAL_DISTRIBUTIONS)
         + Distribution::LEN
         + (4 + TOTAL_REBALANCING_STEP * RebalancingStep::LEN)
@@ -339,6 +340,76 @@ impl Pack for Rebalancing {
 impl IsInitialized for Rebalancing {
     fn is_initialized(&self) -> bool {
         self.account_type == AccountType::Rebalancing
+    }
+}
+
+mod deprecated {
+    use super::*;
+
+    /// Rebalancing
+    #[repr(C)]
+    #[derive(Debug, Clone, PartialEq, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
+    pub struct DeprecatedRebalancing {
+        /// Account type - Rebalancing
+        pub account_type: AccountType,
+
+        /// Depositor
+        pub depositor: Pubkey,
+
+        /// Mint
+        pub mint: Pubkey,
+
+        /// Amount to distribute
+        pub amount_to_distribute: u64,
+
+        /// Sum of distributed liquidity into MMs including roundings
+        pub distributed_liquidity: u64,
+
+        /// Received collateral in each market
+        pub received_collateral: DistributionArray,
+
+        /// Current token distribution from liquidity oracle
+        pub liquidity_distribution: Distribution,
+
+        /// Rebalancing steps
+        pub steps: Vec<RebalancingStep>,
+
+        /// Income refreshed mark to avoid frequent refresh
+        pub income_refreshed_at: Slot,
+    }
+
+    impl Sealed for DeprecatedRebalancing {}
+    impl Pack for DeprecatedRebalancing {
+        // 1 + 32 + 32 + 8 + 8 + (8 * 10) + 89 + (4 + 8 * 28) + 8 = 486
+        const LEN: usize = 1
+            + 32
+            + 32
+            + 8
+            + 8
+            + (8 * TOTAL_DISTRIBUTIONS)
+            + Distribution::LEN
+            + (4 + TOTAL_REBALANCING_STEP * RebalancingStep::LEN)
+            + 8;
+
+        fn pack_into_slice(&self, dst: &mut [u8]) {
+            let mut slice = dst;
+            self.serialize(&mut slice).unwrap()
+        }
+
+        fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
+            let mut src_mut = src;
+            Self::deserialize(&mut src_mut).map_err(|err| {
+                msg!("Failed to deserialize");
+                msg!(&err.to_string());
+                ProgramError::InvalidAccountData
+            })
+        }
+    }
+
+    impl IsInitialized for DeprecatedRebalancing {
+        fn is_initialized(&self) -> bool {
+            self.account_type == AccountType::Rebalancing
+        }
     }
 }
 

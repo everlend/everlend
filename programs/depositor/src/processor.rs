@@ -9,7 +9,8 @@ use everlend_liquidity_oracle::{
 use everlend_registry::state::{Registry, RegistryMarkets};
 use everlend_utils::{
     assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
-    cpi::{self},
+    cpi::{self, system::realloc_with_rent},
+    math,
     find_program_address, AccountLoader, EverlendError,
 };
 use num_traits::Zero;
@@ -36,7 +37,7 @@ use crate::{
     instruction::DepositorInstruction,
     money_market::{CollateralPool, CollateralStorage},
     state::{
-        Depositor, InitDepositorParams, InitRebalancingParams, Rebalancing, RebalancingOperation,
+        Depositor, InitDepositorParams, InitRebalancingParams, Rebalancing, DeprecatedRebalancing, RebalancingOperation,
     },
 };
 use crate::{
@@ -598,16 +599,73 @@ impl<'a, 'b> Processor {
         Ok(())
     }
 
-    /// Process Withdraw instruction
-    // pub fn withdraw(
-    //     program_id: &Pubkey,
-    //     account_info_iter: &'a mut Enumerate<Iter<'a, AccountInfo<'b>>>,
-    // ) -> ProgramResult {
-    // }
 
     /// Process MigrateDepositor instruction
-    pub fn migrate_depositor(_program_id: &Pubkey, _accounts: &[AccountInfo]) -> ProgramResult {
-        Err(EverlendError::TemporaryUnavailable.into())
+    pub fn migrate_depositor(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+
+        let depositor_info = next_account_info(account_info_iter)?;
+        let registry_info = next_account_info(account_info_iter)?;
+        let manager_info = next_account_info(account_info_iter)?;
+        let rebalancing_info = next_account_info(account_info_iter)?;
+        let liquidity_mint_info = next_account_info(account_info_iter)?;
+        let rent_info = next_account_info(account_info_iter)?;
+        let _system_program_info = next_account_info(account_info_iter)?;
+
+        assert_owned_by(depositor_info, program_id)?;
+        assert_owned_by(registry_info, &everlend_registry::id())?;
+        assert_signer(manager_info)?;
+        assert_owned_by(rebalancing_info, program_id)?;
+
+        // Get registry state
+        let registry = Registry::deserialize(&mut registry_info.data.borrow().as_ref())?;
+        assert_account_key(manager_info, &registry.manager)?;
+
+        // Check rebalancing
+        let (rebalancing_pubkey, _) = find_rebalancing_program_address(
+            program_id,
+            depositor_info.key,
+            liquidity_mint_info.key,
+        );
+        assert_account_key(rebalancing_info, &rebalancing_pubkey)?;
+
+        let depr_rebalancing = DeprecatedRebalancing::unpack(&rebalancing_info.data.borrow())?;
+        assert_account_key(depositor_info, &depr_rebalancing.depositor)?;
+        assert_account_key(liquidity_mint_info, &depr_rebalancing.mint)?;
+
+        // Realloc
+        let rent = &Rent::from_account_info(rent_info)?;
+        realloc_with_rent(&rebalancing_info, manager_info, rent, Rebalancing::LEN)?;
+
+        let mut distributed_liquidity = DistributionArray::default();
+
+        // Compute distributed_liquidity
+        for (index, _) in depr_rebalancing.liquidity_distribution.values
+            .iter()
+            .enumerate()
+        {
+            let percent = depr_rebalancing.liquidity_distribution.values[index];
+            let distributed_amount = math::share_floor(depr_rebalancing.amount_to_distribute, percent)?;
+            distributed_liquidity[index] = distributed_amount
+        }
+
+        // depr_rebalancing
+        Rebalancing::pack(
+            Rebalancing {
+                account_type: depr_rebalancing.account_type,
+                depositor: depr_rebalancing.depositor,
+                mint: depr_rebalancing.mint,
+                amount_to_distribute: depr_rebalancing.amount_to_distribute,
+                distributed_liquidity,
+                received_collateral: depr_rebalancing.received_collateral,
+                liquidity_distribution: depr_rebalancing.liquidity_distribution,
+                steps: depr_rebalancing.steps,
+                income_refreshed_at: depr_rebalancing.income_refreshed_at,
+            },
+            *rebalancing_info.data.borrow_mut(),
+        )?;
+
+        Ok(())
     }
 
     /// Process InitMiningAccount instruction
