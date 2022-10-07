@@ -392,3 +392,28 @@ pub fn parse_fill_reward_accounts<'a>(
         fee_account_info: fee_account_info.clone(),
     })
 }
+
+/// POX
+pub fn calculate_amount_to_distribute(
+    total_distributed_liquidity: u64,
+    liquidity_transit: u64,
+    general_pool_amount: u64,
+    withdrawal_requests: u64,
+) -> Result<(u64, u64), ProgramError> {
+    let available_liquidity = total_distributed_liquidity
+        .checked_add(liquidity_transit)
+        .ok_or(EverlendError::MathOverflow)?;
+
+    msg!("available_liquidity: {}", available_liquidity);
+
+    // Calculate liquidity to distribute
+    let amount_to_distribute = general_pool_amount
+        .checked_add(available_liquidity)
+        .ok_or(EverlendError::MathOverflow)?
+        .checked_sub(withdrawal_requests)
+        .ok_or(EverlendError::MathOverflow)?;
+
+    msg!("amount_to_distribute: {}", amount_to_distribute);
+
+    Ok((available_liquidity, amount_to_distribute))
+}

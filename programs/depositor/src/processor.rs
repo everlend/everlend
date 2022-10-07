@@ -29,7 +29,6 @@ use spl_token::state::Account;
 use std::cmp::min;
 
 use crate::instructions::{RefreshMMIncomesContext, WithdrawContext};
-use crate::state::{InternalMining, MiningType};
 use crate::utils::{deposit, money_market, parse_fill_reward_accounts, FillRewardAccounts};
 use crate::{
     find_internal_mining_program_address, find_rebalancing_program_address,
@@ -39,6 +38,10 @@ use crate::{
     state::{
         Depositor, InitDepositorParams, InitRebalancingParams, Rebalancing, RebalancingOperation,
     },
+};
+use crate::{
+    state::{InternalMining, MiningType},
+    utils::calculate_amount_to_distribute,
 };
 
 /// Program state handler.
@@ -247,6 +250,8 @@ impl<'a, 'b> Processor {
             return Err(EverlendError::IncompleteRebalancing.into());
         }
 
+        let general_pool_state =
+            everlend_general_pool::state::Pool::unpack(&general_pool_info.data.borrow())?;
         {
             // Check token oracle
             let (token_oracle_pubkey, _) = find_token_oracle_program_address(
@@ -265,17 +270,18 @@ impl<'a, 'b> Processor {
             assert_account_key(general_pool_info, &general_pool_pubkey)?;
 
             // Check general pool accounts
-            let general_pool =
-                everlend_general_pool::state::Pool::unpack(&general_pool_info.data.borrow())?;
-            assert_account_key(general_pool_market_info, &general_pool.pool_market)?;
-            assert_account_key(general_pool_token_account_info, &general_pool.token_account)?;
-            assert_account_key(mint_info, &general_pool.token_mint)?;
+            assert_account_key(general_pool_market_info, &general_pool_state.pool_market)?;
+            assert_account_key(
+                general_pool_token_account_info,
+                &general_pool_state.token_account,
+            )?;
+            assert_account_key(mint_info, &general_pool_state.token_mint)?;
 
             // Check withdrawal requests
             let (withdrawal_requests_pubkey, _) = find_withdrawal_requests_program_address(
                 &everlend_general_pool::id(),
                 general_pool_market_info.key,
-                &general_pool.token_mint,
+                &general_pool_state.token_mint,
             );
             assert_account_key(withdrawal_requests_info, &withdrawal_requests_pubkey)?;
 
@@ -290,22 +296,17 @@ impl<'a, 'b> Processor {
         let withdrawal_requests =
             WithdrawalRequests::unpack(&withdrawal_requests_info.data.borrow())?;
 
-        let available_liquidity = rebalancing
-            .distributed_liquidity
-            .checked_add(liquidity_transit.amount)
-            .ok_or(EverlendError::MathOverflow)?;
+        let (available_liquidity, amount_to_distribute) = calculate_amount_to_distribute(
+            rebalancing.total_distributed_liquidity(),
+            liquidity_transit.amount,
+            general_pool.amount,
+            withdrawal_requests.liquidity_supply,
+        )?;
 
-        msg!("available_liquidity: {}", available_liquidity);
-
-        // Calculate liquidity to distribute
-        let amount_to_distribute = general_pool
-            .amount
-            .checked_add(available_liquidity)
-            .ok_or(EverlendError::MathOverflow)?
-            .checked_sub(withdrawal_requests.liquidity_supply)
-            .ok_or(EverlendError::MathOverflow)?;
-
-        msg!("amount_to_distribute: {}", amount_to_distribute);
+        // Additional check for maths
+        if available_liquidity != general_pool_state.total_amount_borrowed {
+            return Err(EverlendError::RebalanceLiquidityCheckFailed.into());
+        }
 
         {
             let (depositor_authority_pubkey, bump_seed) =
@@ -354,17 +355,6 @@ impl<'a, 'b> Processor {
             }
         }
 
-        let general_pool_state =
-            everlend_general_pool::state::Pool::unpack(&general_pool_info.data.borrow())?;
-        if amount_to_distribute > general_pool_state.total_amount_borrowed {
-            msg!(
-                "total_amount_borrowed: {}",
-                general_pool_state.total_amount_borrowed
-            );
-
-            return Err(EverlendError::RebalanceLiquidityCheckFailed.into());
-        }
-
         msg!("Computing");
         if refresh_income {
             rebalancing.compute_with_refresh_income(
@@ -395,7 +385,7 @@ impl<'a, 'b> Processor {
         program_id: &Pubkey,
         accounts: &[AccountInfo],
         amount_to_distribute: u64,
-        distributed_liquidity: u64,
+        distributed_liquidity: DistributionArray,
         distribution_array: DistributionArray,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
