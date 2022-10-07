@@ -7,12 +7,7 @@ use everlend_liquidity_oracle::{
     state::{DistributionArray, TokenOracle},
 };
 use everlend_registry::state::{Registry, RegistryMarkets};
-use everlend_utils::{
-    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
-    cpi::{self, system::realloc_with_rent},
-    math,
-    find_program_address, AccountLoader, EverlendError,
-};
+use everlend_utils::{assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized, cpi::{self, system::realloc_with_rent}, math, find_program_address, AccountLoader, EverlendError, abs_diff};
 use num_traits::Zero;
 use solana_program::program_error::ProgramError;
 use solana_program::{
@@ -28,6 +23,7 @@ use solana_program::{
 use spl_associated_token_account::get_associated_token_address;
 use spl_token::state::Account;
 use std::cmp::min;
+use std::cmp::Ordering;
 
 use crate::instructions::{RefreshMMIncomesContext, WithdrawContext};
 use crate::utils::{deposit, money_market, parse_fill_reward_accounts, FillRewardAccounts};
@@ -601,13 +597,16 @@ impl<'a, 'b> Processor {
 
 
     /// Process MigrateDepositor instruction
-    pub fn migrate_depositor(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+    pub fn migrate_depositor(program_id: &Pubkey, accounts: &[AccountInfo], amount_to_distribute: u64) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
 
         let depositor_info = next_account_info(account_info_iter)?;
+        let depositor_authority_info = next_account_info(account_info_iter)?;
         let registry_info = next_account_info(account_info_iter)?;
         let manager_info = next_account_info(account_info_iter)?;
         let rebalancing_info = next_account_info(account_info_iter)?;
+        let liquidity_transit_info = next_account_info(account_info_iter)?;
+        let liquidity_reserve_info = next_account_info(account_info_iter)?;
         let liquidity_mint_info = next_account_info(account_info_iter)?;
         let rent_info = next_account_info(account_info_iter)?;
         let _system_program_info = next_account_info(account_info_iter)?;
@@ -617,9 +616,38 @@ impl<'a, 'b> Processor {
         assert_signer(manager_info)?;
         assert_owned_by(rebalancing_info, program_id)?;
 
+        // Create depositor authority account
+        let (depositor_authority_pubkey, bump_seed) =
+            find_program_address(program_id, depositor_info.key);
+        assert_account_key(depositor_authority_info, &depositor_authority_pubkey)?;
+        let signers_seeds = &[&depositor_info.key.to_bytes()[..32], &[bump_seed]];
+
+        {
+            // Check transit: liquidity reserve
+            let (liquidity_reserve_transit_pubkey, _) = find_transit_program_address(
+                program_id,
+                depositor_info.key,
+                liquidity_mint_info.key,
+                "reserve",
+            );
+            assert_account_key(
+                liquidity_reserve_info,
+                &liquidity_reserve_transit_pubkey,
+            )?;
+        }
+
         // Get registry state
         let registry = Registry::deserialize(&mut registry_info.data.borrow().as_ref())?;
         assert_account_key(manager_info, &registry.manager)?;
+
+        // Check transit: liquidity
+        let (liquidity_transit_pubkey, _) = find_transit_program_address(
+            program_id,
+            depositor_info.key,
+            liquidity_mint_info.key,
+            "",
+        );
+        assert_account_key(liquidity_transit_info, &liquidity_transit_pubkey)?;
 
         // Check rebalancing
         let (rebalancing_pubkey, _) = find_rebalancing_program_address(
@@ -633,6 +661,12 @@ impl<'a, 'b> Processor {
         assert_account_key(depositor_info, &depr_rebalancing.depositor)?;
         assert_account_key(liquidity_mint_info, &depr_rebalancing.mint)?;
 
+        // Check depr rebalancing is completed
+        if !depr_rebalancing.is_completed() {
+            return Err(EverlendError::IncompleteRebalancing.into());
+        }
+
+
         // Realloc
         let rent = &Rent::from_account_info(rent_info)?;
         realloc_with_rent(&rebalancing_info, manager_info, rent, Rebalancing::LEN)?;
@@ -645,9 +679,62 @@ impl<'a, 'b> Processor {
             .enumerate()
         {
             let percent = depr_rebalancing.liquidity_distribution.values[index];
-            let distributed_amount = math::share_floor(depr_rebalancing.amount_to_distribute, percent)?;
+            // Use fixed value
+            let distributed_amount = math::share_floor(amount_to_distribute, percent)?;
             distributed_liquidity[index] = distributed_amount
         }
+
+        let transit_amount =
+            Account::unpack_unchecked(&liquidity_transit_info.data.borrow())?.amount;
+        let total_distributed_liquidity = distributed_liquidity.iter().sum();
+        msg!("Amount to distribute {} Total distributed liquidity {} Transit amount: {}",amount_to_distribute, total_distributed_liquidity,transit_amount);
+
+        let diff = abs_diff(amount_to_distribute, total_distributed_liquidity)?;
+
+        match amount_to_distribute.cmp(&total_distributed_liquidity) {
+            Ordering::Greater => {
+                if diff > transit_amount {
+                    //Fill
+                    msg!("Transit need be filled be {}",diff);
+                    cpi::spl_token::transfer(
+                        liquidity_reserve_info.clone(),
+                        liquidity_transit_info.clone(),
+                        depositor_authority_info.clone(),
+                        diff - transit_amount,
+                        &[signers_seeds],
+                    )?;
+                } else {
+                    //Flash
+                    msg!("Transit need be flashed be {}", diff);
+                    cpi::spl_token::transfer(
+                        liquidity_transit_info.clone(),
+                        liquidity_reserve_info.clone(),
+                        depositor_authority_info.clone(),
+                        transit_amount - diff,
+                        &[signers_seeds],
+                    )?;
+                };
+            }
+            // Withdraw
+            Ordering::Less => {
+                msg!("amount_to_distribute less than total_distributed_liquidity {}", diff);
+                return Err(EverlendError::InvalidRebalancingAmount.into());
+            }
+            Ordering::Equal => {
+                    if transit_amount > 0 {
+                        msg!("Transit need be flashed be {}", transit_amount);
+                        //Flash
+                        cpi::spl_token::transfer(
+                            liquidity_transit_info.clone(),
+                                    liquidity_reserve_info.clone(),
+                            depositor_authority_info.clone(),
+                            transit_amount,
+                            &[signers_seeds],
+                        )?;
+                    }
+            }
+        };
+
 
         // depr_rebalancing
         Rebalancing::pack(
@@ -1194,9 +1281,9 @@ impl<'a, 'b> Processor {
                     .process(program_id, account_info_iter)
             }
 
-            DepositorInstruction::MigrateDepositor => {
+            DepositorInstruction::MigrateDepositor{amount_to_distribute} => {
                 msg!("DepositorInstruction: MigrateDepositor");
-                Self::migrate_depositor(program_id, accounts)
+                Self::migrate_depositor(program_id, accounts, amount_to_distribute)
             }
 
             DepositorInstruction::InitMiningAccount { mining_type } => {

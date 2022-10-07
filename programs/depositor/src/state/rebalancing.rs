@@ -406,6 +406,18 @@ mod deprecated {
         }
     }
 
+    impl DeprecatedRebalancing {
+        /// Check all steps are executed
+        pub fn is_completed(&self) -> bool {
+            if self.steps.is_empty() {
+                return true;
+            }
+
+            self.steps.iter().all(|&step| step.executed_at.is_some())
+        }
+    }
+
+
     impl IsInitialized for DeprecatedRebalancing {
         fn is_initialized(&self) -> bool {
             self.account_type == AccountType::Rebalancing

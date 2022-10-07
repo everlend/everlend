@@ -195,7 +195,10 @@ pub enum DepositorInstruction {
     /// Accounts:
     /// [W] Depositor
     /// [S] Manager
-    MigrateDepositor,
+    MigrateDepositor{
+        /// Amount to distribute
+        amount_to_distribute: u64,
+    },
 
     /// Set current rebalancing
     ///
@@ -587,12 +590,23 @@ pub fn migrate_depositor(
     manager: &Pubkey,
     rebalancing: &Pubkey,
     liquidity_mint: &Pubkey,
+    amount_to_distribute: u64,
 ) -> Instruction {
+    let (liquidity_transit, _) =
+        find_transit_program_address(program_id, depositor, liquidity_mint, "");
+    let (liquidity_reserve_transit, _) =
+        find_transit_program_address(program_id, depositor, liquidity_mint, "reserve");
+
+    let (depositor_authority, _) = find_program_address(program_id, depositor);
+
     let accounts = vec![
         AccountMeta::new_readonly(*depositor, false),
+        AccountMeta::new_readonly(depositor_authority, false),
         AccountMeta::new_readonly(*registry, false),
         AccountMeta::new(*manager, true),
         AccountMeta::new(*rebalancing, false),
+        AccountMeta::new(liquidity_transit, false),
+        AccountMeta::new(liquidity_reserve_transit, false),
         AccountMeta::new_readonly(*liquidity_mint, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
@@ -600,7 +614,7 @@ pub fn migrate_depositor(
 
     Instruction::new_with_borsh(
         *program_id,
-        &DepositorInstruction::MigrateDepositor,
+        &DepositorInstruction::MigrateDepositor{amount_to_distribute},
         accounts,
     )
 }
