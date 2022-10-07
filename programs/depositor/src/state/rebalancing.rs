@@ -135,6 +135,7 @@ impl Rebalancing {
         self.steps
             .sort_by(|a, b| a.operation.partial_cmp(&b.operation).unwrap());
 
+        self.liquidity_distribution = token_oracle.liquidity_distribution;
         self.amount_to_distribute = amount_to_distribute;
 
         Ok(())

@@ -393,7 +393,7 @@ pub fn parse_fill_reward_accounts<'a>(
     })
 }
 
-/// POX
+/// Calculates available liquidity and amount to distribute
 pub fn calculate_amount_to_distribute(
     total_distributed_liquidity: u64,
     liquidity_transit: u64,
