@@ -27,7 +27,7 @@ impl<'a> ToolkitCommand<'a> for ResetRebalancingCommand {
         vec![
             arg_pubkey(ARG_REBALANCING, true).help("Rebalancing pubkey"),
             arg_amount(ARG_AMOUNT, true).help("Amount to distribute"),
-            arg_amount(ARG_DISTRIBUTED_LIQUIDITY, true).help("Distributed liduidity"),
+            arg_multiple(ARG_DISTRIBUTED_LIQUIDITY, true).help("Distributed liduidity"),
             arg_multiple(ARG_DISTRIBUTION, true)
                 .value_name("DISTRIBUTION")
                 .short("d")
@@ -43,12 +43,14 @@ impl<'a> ToolkitCommand<'a> for ResetRebalancingCommand {
         let arg_matches = arg_matches.unwrap();
         let rebalancing_pubkey = pubkey_of(arg_matches, ARG_REBALANCING).unwrap();
         let amount_to_distribute = value_of::<u64>(arg_matches, ARG_AMOUNT).unwrap();
-        let distributed_liquidity =
-            value_of::<u64>(arg_matches, ARG_DISTRIBUTED_LIQUIDITY).unwrap();
+        let liquidity: Vec<u64> = values_of::<u64>(arg_matches, ARG_DISTRIBUTED_LIQUIDITY).unwrap();
         let distribution: Vec<u64> = values_of::<u64>(arg_matches, ARG_DISTRIBUTION).unwrap();
         let initialiazed_accounts = config.get_initialized_accounts();
 
         let rebalancing = config.get_account_unpack::<Rebalancing>(&rebalancing_pubkey)?;
+        let mut distributed_liquidity = DistributionArray::default();
+        distributed_liquidity.copy_from_slice(liquidity.as_slice());
+
         let mut distribution_array = DistributionArray::default();
         distribution_array.copy_from_slice(distribution.as_slice());
 
