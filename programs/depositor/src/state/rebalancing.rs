@@ -286,7 +286,7 @@ impl Rebalancing {
         self.steps.push(rebalancing_step);
     }
 
-    /// Check all steps are executed
+    /// Get sum of distributed liquidity in MMs
     pub fn total_distributed_liquidity(&self) -> u64 {
         self.distributed_liquidity.iter().sum()
     }
