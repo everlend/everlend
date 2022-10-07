@@ -1,4 +1,5 @@
-import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID, NATIVE_MINT, Token } from '@solana/spl-token'
+import BN from 'bn.js'
+import { Buffer } from 'buffer'
 import {
   Connection,
   Keypair,
@@ -7,18 +8,18 @@ import {
   Transaction,
   TransactionInstruction,
 } from '@solana/web3.js'
-import BN from 'bn.js'
+import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID, NATIVE_MINT, Token } from '@solana/spl-token'
+import { CreateAssociatedTokenAccount, findAssociatedTokenAccount } from '@everlend/common'
+import { GeneralPoolsProgram } from './program'
+import { RewardProgram } from './rewardProgram'
 import {
   Mining,
   Pool,
   PoolBorrowAuthority,
   PoolMarket,
-  RewardPool,
   UserWithdrawalRequest,
   WithdrawalRequestsState,
 } from './accounts'
-import { GeneralPoolsProgram } from './program'
-import { CreateAssociatedTokenAccount, findAssociatedTokenAccount } from '@everlend/common'
 import {
   BorrowTx,
   CreatePoolTx,
@@ -29,12 +30,10 @@ import {
   WithdrawalTx,
   UnwrapParams,
   TransferDepositTx,
+  InitializeMining,
+  ClaimTx,
+  FillVaultTx,
 } from './transactions'
-import { Buffer } from 'buffer'
-import { InitializeMining } from './transactions/initializeMiningTx'
-import { ClaimTx } from './transactions'
-import { FillVaultTx } from './transactions/fillVault'
-import { RewardProgram } from './rewardProgram'
 
 /** The type is returned by actions, e.g. [[prepareDepositTx]] or [[prepareWithdrawalRequestTx]]. */
 export type ActionResult = {
@@ -489,13 +488,23 @@ export const prepareRepayTx = async (
   return { tx }
 }
 
-export const prepareInititalizeMining = async (
+/**
+ * Creates a transaction object for initializing a mining account.
+ *
+ * @param actionOptions
+ * @param user the public key of a user that will be an owner of an initialized mining account.
+ * @param rewardPool the public key of a reward pool.
+ *
+ * @returns the object with a prepared initialize mining transaction.
+ */
+export const prepareInitializeMining = async (
   { payerPublicKey }: ActionOptions,
+  user: PublicKey,
   rewardPool: PublicKey,
 ): Promise<ActionResult> => {
   const tx = new Transaction()
 
-  const mining = await Mining.getPDA(payerPublicKey, rewardPool)
+  const mining = await Mining.getPDA(user, rewardPool)
 
   tx.add(
     new InitializeMining(
@@ -503,7 +512,7 @@ export const prepareInititalizeMining = async (
       {
         rewardPool,
         mining,
-        user: payerPublicKey,
+        user,
       },
     ),
   )
