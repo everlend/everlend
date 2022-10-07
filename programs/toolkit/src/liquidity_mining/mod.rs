@@ -11,6 +11,7 @@ use solana_sdk::{signature::Keypair, signer::Signer, transaction::Transaction};
 
 pub mod larix_liquidity_miner;
 pub mod larix_raw_test;
+pub mod mango_liquidity_miner;
 pub mod port_liquidity_miner;
 pub mod quarry_liquidity_miner;
 pub mod quarry_raw_test;

@@ -59,6 +59,13 @@ francium:
   lending_market: 4XNif294wbrxj6tJ8K5Rg7SuaEACnu9s2L27i28MQB6E
   reserve_liquidity_supply: GiJwrxQW5NQWWAva4rnDMXwHxfrhyUzwMX5to1pmCCgF
   reserve_sol: EnZC8MB6QLTxwN1LNqCXYC7XMpvXqitnYQPf5y5AcQRn
+mango:
+  program_id: mv3ekLzLbnVPNxjSKvqBpU3ZeZXPQdEC3bp5MDEBG68
+  mango_group: 98pjRuQjK3qA6gXts96PqZT4Ze5QmnCmt3QYjhbUSPue
+  mango_cache: EBDRoayCDDUvDgCimta45ajQeXbexv7aKqJubruqpyvu
+  root_bank: 7jH1uLmiB2zbHNe6juZZYjQCrvquakTwd3yMaQpeP8rR
+  node_bank: 2bqJYcA1A8gw4qJFjyE2G4akiUunpd9rP6QzfnxHqSqr
+  vault: AVn3JRGhifPCxjxZsU3tQuo4U4dTHizHzBDGW983tx47
 sol_collateral:
   - 8ezDtNNhX91t1NbSLe8xV2PcCEfoQjEm2qDVGjt3rjhg
   - ArWoXQYvvERzuoeGTpyyvf7pNNVEPB3x7kQg5W6zQdaB

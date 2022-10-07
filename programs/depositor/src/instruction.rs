@@ -9,7 +9,7 @@ use solana_program::{
 use spl_associated_token_account::get_associated_token_address;
 use everlend_general_pool::find_withdrawal_requests_program_address;
 use everlend_liquidity_oracle::{find_token_oracle_program_address, state::DistributionArray};
-use everlend_utils::cpi::quarry;
+use everlend_utils::cpi::{mango, quarry};
 use everlend_utils::find_program_address;
 
 use crate::{find_rebalancing_program_address, find_transit_program_address, state::MiningType};
@@ -720,6 +720,20 @@ pub fn init_mining_account(
             accounts.push(AccountMeta::new_readonly(miner_vault, false));
 
             accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
+        }
+        MiningType::Mango {
+            staking_program_id,
+            mango_group,
+        } => {
+            let (mango_account, _) = mango::find_account_program_address(
+                &staking_program_id,
+                &mango_group,
+                &depositor_authority,
+            );
+
+            accounts.push(AccountMeta::new_readonly(staking_program_id, false));
+            accounts.push(AccountMeta::new(mango_group, false));
+            accounts.push(AccountMeta::new(mango_account, false));
         }
         MiningType::None => {}
     }

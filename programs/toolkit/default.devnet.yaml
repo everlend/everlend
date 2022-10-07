@@ -52,6 +52,13 @@ tulip:
   reserve_liquidity_oracle: rekSA4si7yyWMmr9U1kDjk9yYTBnPBSrArnE491drGk
   reserve_liquidity_supply: HaswPBzu8wCBMvsnVPyj3zcV2x7tgz5WHay7dUHfqyFP
   reserve_sol: Zb3AcFwZ3HDSdpPHYWGqTnEE1yFQR4LyE6jjLTvSTQw
+mango:
+  program_id: 4skJ85cdxQAFVKbcGgfun8iZPL7BadVYXG3kGEGkufqA
+  mango_group: 5vQp48Wx55Ft1PUAx8qWbsioNaLeXWVkyCq2XpQSv34M
+  mango_cache: Ge5isD68ThYorC6CoL4xdSK9eShEg2KXrnwABSzyFP4j
+  root_bank: HCwTWCLZDeveaW7V41i5aJ2Fuq7D51iS6WDUS4occA5a
+  node_bank: 2trzMWmfbhMFu1bCKZ1axDybMPPa7SXAR1Q4JYzybuPb
+  vault: J8Tf2JZ4JB471NSxuFe51XhjVJbnFV5dsPytQtF6xShT
 multisig_program_id: 3ktyhEXgbiUyDG7RXCzzXWzjXJpThpqqePhJb85eVqFa
 sol_collateral:
   - Hk4Rp3kaPssB6hnjah3Mrqpt5CAXWGoqFT5dVsWA3TaM
