@@ -142,7 +142,7 @@ pub fn reset_rebalancing(
     depositor_pubkey: &Pubkey,
     token_mint: &Pubkey,
     amount_to_distribute: u64,
-    distributed_liquidity: u64,
+    distributed_liquidity: DistributionArray,
     distribution_array: DistributionArray,
 ) -> Result<(Pubkey, Rebalancing), ClientError> {
     let tx = Transaction::new_with_payer(
