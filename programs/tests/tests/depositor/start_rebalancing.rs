@@ -1136,7 +1136,7 @@ async fn collateral_leak_test() {
 }
 
 #[tokio::test]
-async fn rebalancing_check_steps2() {
+async fn collateral_leak_test2() {
     let mut d: DistributionArray = DistributionArray::default();
     let mut p = DistributionPubkeys::default();
     p[0] = Keypair::new().pubkey();

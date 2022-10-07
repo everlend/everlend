@@ -303,6 +303,9 @@ impl<'a, 'b> Processor {
             withdrawal_requests.liquidity_supply,
         )?;
 
+        msg!("available_liquidity: {}", available_liquidity);
+        msg!("amount_to_distribute: {}", amount_to_distribute);
+
         // Additional check for maths
         if available_liquidity != general_pool_state.total_amount_borrowed {
             return Err(EverlendError::RebalanceLiquidityCheckFailed.into());

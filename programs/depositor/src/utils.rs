@@ -404,16 +404,12 @@ pub fn calculate_amount_to_distribute(
         .checked_add(liquidity_transit)
         .ok_or(EverlendError::MathOverflow)?;
 
-    msg!("available_liquidity: {}", available_liquidity);
-
     // Calculate liquidity to distribute
     let amount_to_distribute = general_pool_amount
         .checked_add(available_liquidity)
         .ok_or(EverlendError::MathOverflow)?
         .checked_sub(withdrawal_requests)
         .ok_or(EverlendError::MathOverflow)?;
-
-    msg!("amount_to_distribute: {}", amount_to_distribute);
 
     Ok((available_liquidity, amount_to_distribute))
 }
