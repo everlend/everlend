@@ -610,6 +610,7 @@ pub fn migrate_depositor(
         AccountMeta::new_readonly(*liquidity_mint, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
+        AccountMeta::new_readonly(spl_token::id(), false),
     ];
 
     Instruction::new_with_borsh(

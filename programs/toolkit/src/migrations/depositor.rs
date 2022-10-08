@@ -32,7 +32,7 @@ impl<'a> ToolkitCommand<'a> for MigrateDepositorCommand {
         let arg_matches = arg_matches.unwrap();
         let acc = config.get_initialized_accounts();
         let amount_to_distribute = value_of::<u64>(arg_matches, ARG_AMOUNT).unwrap();
-        let token_mint_pubkey = pubkey_of(arg_matches, ARG_REBALANCING).unwrap();
+        let token_mint_pubkey = pubkey_of(arg_matches, ARG_TOKEN_MINT).unwrap();
 
         migrate_depositor(config, &acc.depositor, &acc.registry, &token_mint_pubkey, amount_to_distribute)?;
 

@@ -312,6 +312,7 @@ pub struct InitRebalancingParams {
 
 impl Sealed for Rebalancing {}
 impl Pack for Rebalancing {
+    // 557
     const LEN: usize = 1
         + 32
         + 32
@@ -380,7 +381,7 @@ mod deprecated {
 
     impl Sealed for DeprecatedRebalancing {}
     impl Pack for DeprecatedRebalancing {
-        // 1 + 32 + 32 + 8 + 8 + (8 * 10) + 89 + (4 + 8 * 28) + 8 = 486
+        // 1 + 32 + 32 + 8 + 8 + (8 * 10) + 88 + (4 + 8 * 28) + 8 = 485
         const LEN: usize = 1
             + 32
             + 32

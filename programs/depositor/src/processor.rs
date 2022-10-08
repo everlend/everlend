@@ -721,7 +721,7 @@ impl<'a, 'b> Processor {
                 return Err(EverlendError::InvalidRebalancingAmount.into());
             }
             Ordering::Equal => {
-                    if transit_amount > 0 {
+                    if transit_amount > 0  && total_distributed_liquidity > 0 {
                         msg!("Transit need be flashed be {}", transit_amount);
                         //Flash
                         cpi::spl_token::transfer(
@@ -742,7 +742,7 @@ impl<'a, 'b> Processor {
                 account_type: depr_rebalancing.account_type,
                 depositor: depr_rebalancing.depositor,
                 mint: depr_rebalancing.mint,
-                amount_to_distribute: depr_rebalancing.amount_to_distribute,
+                amount_to_distribute,
                 distributed_liquidity,
                 received_collateral: depr_rebalancing.received_collateral,
                 liquidity_distribution: depr_rebalancing.liquidity_distribution,
