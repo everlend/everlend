@@ -5,7 +5,7 @@ use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, msg, 
 
 use crate::instruction::DepositorInstruction;
 use crate::instructions::{
-    ClaimMiningRewardsContext, CreateTransitContext, DepositContext, InitContext,
+    ClaimMiningRewardContext, CreateTransitContext, DepositContext, InitContext,
     InitMiningAccountContext, MigrateDepositorContext, RefreshMMIncomesContext,
     SetRebalancingContext, StartRebalancingContext, WithdrawContext,
 };
@@ -95,7 +95,7 @@ impl<'a, 'b> Processor {
 
             DepositorInstruction::ClaimMiningReward { with_subrewards } => {
                 msg!("DepositorInstruction: ClaimMiningReward");
-                ClaimMiningRewardsContext::new(program_id, account_info_iter)?.process(
+                ClaimMiningRewardContext::new(program_id, account_info_iter)?.process(
                     program_id,
                     account_info_iter,
                     with_subrewards,

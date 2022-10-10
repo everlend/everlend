@@ -17,7 +17,7 @@ use spl_token::state::Account;
 use std::{iter::Enumerate, slice::Iter};
 
 /// Instruction context
-pub struct ClaimMiningRewardsContext<'a, 'b> {
+pub struct ClaimMiningRewardContext<'a, 'b> {
     depositor: &'a AccountInfo<'b>,
     depositor_authority: &'a AccountInfo<'b>,
     executor: &'a AccountInfo<'b>,
@@ -29,12 +29,12 @@ pub struct ClaimMiningRewardsContext<'a, 'b> {
     reward_pool: &'a AccountInfo<'b>,
 }
 
-impl<'a, 'b> ClaimMiningRewardsContext<'a, 'b> {
+impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
     /// New ClaimMiningReward instruction context
     pub fn new(
         program_id: &Pubkey,
         account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
-    ) -> Result<ClaimMiningRewardsContext<'a, 'b>, ProgramError> {
+    ) -> Result<ClaimMiningRewardContext<'a, 'b>, ProgramError> {
         let depositor = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let depositor_authority = AccountLoader::next_unchecked(account_info_iter)?; //depositor PDA signer
         let executor = AccountLoader::next_signer(account_info_iter)?;
@@ -51,7 +51,7 @@ impl<'a, 'b> ClaimMiningRewardsContext<'a, 'b> {
         let reward_pool =
             AccountLoader::next_with_owner(account_info_iter, &everlend_rewards::id())?;
 
-        Ok(ClaimMiningRewardsContext {
+        Ok(ClaimMiningRewardContext {
             depositor,
             depositor_authority,
             executor,

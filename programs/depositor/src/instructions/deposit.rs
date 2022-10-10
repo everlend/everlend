@@ -172,6 +172,10 @@ impl<'a, 'b> DepositContext<'a, 'b> {
         {
             let step = rebalancing.next_step();
 
+            if step.operation != RebalancingOperation::Deposit {
+                return Err(EverlendError::InvalidRebalancingOperation.into());
+            }
+
             if registry_markets.money_markets[usize::from(step.money_market_index)]
                 != *self.money_market_program.key
             {
