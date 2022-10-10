@@ -1,5 +1,5 @@
 use super::{
-    CancelWithdrawRequestCommand, InitMiningCommand, InitPoolMarketCommand, SetPoolConfigCommand,
+    CancelWithdrawRequestCommand, InitPoolMarketCommand, SetPoolConfigCommand,
 };
 use crate::{print_commands, utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
@@ -22,7 +22,6 @@ impl<'a> ToolkitCommand<'a> for GeneralPoolCommand {
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
         vec![
-            Box::new(InitMiningCommand),
             Box::new(CancelWithdrawRequestCommand),
             Box::new(SetPoolConfigCommand),
             Box::new(InitPoolMarketCommand),

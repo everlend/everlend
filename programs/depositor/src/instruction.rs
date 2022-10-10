@@ -715,7 +715,7 @@ pub fn init_mining_account(
             let (quarry, _) = quarry::find_quarry_program_address(
                 &quarry::staking_program_id(),
                 &rewarder,
-                &pubkeys.liquidity_mint,
+                &pubkeys.collateral_mint,
             );
             let (miner_pubkey, _) = quarry::find_miner_program_address(
                 &quarry::staking_program_id(),
