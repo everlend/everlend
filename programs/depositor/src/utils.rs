@@ -235,7 +235,7 @@ pub fn money_market<'a, 'b>(
                 money_market_account_info_iter,
                 internal_mining_type,
                 collateral_token_mint,
-                depositor_authority
+                depositor_authority,
             )?;
             return Ok((Box::new(port), is_mining));
         }
@@ -391,4 +391,25 @@ pub fn parse_fill_reward_accounts<'a>(
         vault_info: vault_info.clone(),
         fee_account_info: fee_account_info.clone(),
     })
+}
+
+/// Calculates available liquidity and amount to distribute
+pub fn calculate_amount_to_distribute(
+    total_distributed_liquidity: u64,
+    liquidity_transit: u64,
+    general_pool_amount: u64,
+    withdrawal_requests: u64,
+) -> Result<(u64, u64), ProgramError> {
+    let available_liquidity = total_distributed_liquidity
+        .checked_add(liquidity_transit)
+        .ok_or(EverlendError::MathOverflow)?;
+
+    // Calculate liquidity to distribute
+    let amount_to_distribute = general_pool_amount
+        .checked_add(available_liquidity)
+        .ok_or(EverlendError::MathOverflow)?
+        .checked_sub(withdrawal_requests)
+        .ok_or(EverlendError::MathOverflow)?;
+
+    Ok((available_liquidity, amount_to_distribute))
 }

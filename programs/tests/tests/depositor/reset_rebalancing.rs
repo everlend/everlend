@@ -239,7 +239,7 @@ async fn success() {
             &env.registry,
             &general_pool.token_mint_pubkey,
             100,
-            100,
+            DistributionArray::default(),
             DistributionArray::default(),
         )
         .await

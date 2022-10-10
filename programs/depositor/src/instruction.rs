@@ -1,16 +1,16 @@
 //! Instruction types
 
 use borsh::{BorshDeserialize, BorshSerialize};
+use everlend_general_pool::find_withdrawal_requests_program_address;
+use everlend_liquidity_oracle::{find_token_oracle_program_address, state::DistributionArray};
+use everlend_utils::cpi::quarry;
+use everlend_utils::find_program_address;
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
     system_program, sysvar,
 };
 use spl_associated_token_account::get_associated_token_address;
-use everlend_general_pool::find_withdrawal_requests_program_address;
-use everlend_liquidity_oracle::{find_token_oracle_program_address, state::DistributionArray};
-use everlend_utils::cpi::quarry;
-use everlend_utils::find_program_address;
 
 use crate::{find_rebalancing_program_address, find_transit_program_address, state::MiningType};
 
@@ -195,7 +195,10 @@ pub enum DepositorInstruction {
     /// Accounts:
     /// [W] Depositor
     /// [S] Manager
-    MigrateDepositor,
+    MigrateDepositor{
+        /// Amount to distribute
+        amount_to_distribute: u64,
+    },
 
     /// Set current rebalancing
     ///
@@ -210,7 +213,7 @@ pub enum DepositorInstruction {
         /// Manual setup of amount to distribute
         amount_to_distribute: u64,
         /// Manual setup of prev distributed liquidity
-        distributed_liquidity: u64,
+        distributed_liquidity: DistributionArray,
         /// Manual setup of prev distribution array
         distribution_array: DistributionArray,
     },
@@ -354,7 +357,7 @@ pub fn reset_rebalancing(
     liquidity_mint: &Pubkey,
     manager: &Pubkey,
     amount_to_distribute: u64,
-    distributed_liquidity: u64,
+    distributed_liquidity: DistributionArray,
     distribution_array: DistributionArray,
 ) -> Instruction {
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
@@ -587,20 +590,32 @@ pub fn migrate_depositor(
     manager: &Pubkey,
     rebalancing: &Pubkey,
     liquidity_mint: &Pubkey,
+    amount_to_distribute: u64,
 ) -> Instruction {
+    let (liquidity_transit, _) =
+        find_transit_program_address(program_id, depositor, liquidity_mint, "");
+    let (liquidity_reserve_transit, _) =
+        find_transit_program_address(program_id, depositor, liquidity_mint, "reserve");
+
+    let (depositor_authority, _) = find_program_address(program_id, depositor);
+
     let accounts = vec![
         AccountMeta::new_readonly(*depositor, false),
+        AccountMeta::new_readonly(depositor_authority, false),
         AccountMeta::new_readonly(*registry, false),
         AccountMeta::new(*manager, true),
         AccountMeta::new(*rebalancing, false),
+        AccountMeta::new(liquidity_transit, false),
+        AccountMeta::new(liquidity_reserve_transit, false),
         AccountMeta::new_readonly(*liquidity_mint, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
+        AccountMeta::new_readonly(spl_token::id(), false),
     ];
 
     Instruction::new_with_borsh(
         *program_id,
-        &DepositorInstruction::MigrateDepositor,
+        &DepositorInstruction::MigrateDepositor{amount_to_distribute},
         accounts,
     )
 }
@@ -696,10 +711,7 @@ pub fn init_mining_account(
             accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
             accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
         }
-        MiningType::Quarry {
-            rewarder,
-        } => {
-
+        MiningType::Quarry { rewarder } => {
             let (quarry, _) = quarry::find_quarry_program_address(
                 &quarry::staking_program_id(),
                 &rewarder,
@@ -713,7 +725,10 @@ pub fn init_mining_account(
 
             let miner_vault = get_associated_token_address(&miner_pubkey, &pubkeys.collateral_mint);
 
-            accounts.push(AccountMeta::new_readonly(quarry::staking_program_id(), false));
+            accounts.push(AccountMeta::new_readonly(
+                quarry::staking_program_id(),
+                false,
+            ));
             accounts.push(AccountMeta::new_readonly(rewarder, false));
             accounts.push(AccountMeta::new(quarry, false));
             accounts.push(AccountMeta::new(miner_pubkey, false));
