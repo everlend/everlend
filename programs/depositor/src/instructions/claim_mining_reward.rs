@@ -3,7 +3,7 @@ use crate::{
     state::{Depositor, InternalMining, MiningType},
     utils::{parse_fill_reward_accounts, FillRewardAccounts},
 };
-use everlend_rewards::cpi::fill_vault;
+use everlend_rewards::{cpi::fill_vault, state::RewardPool};
 use everlend_utils::{
     assert_account_key,
     cpi::{larix, port_finance, quarry},
@@ -25,7 +25,7 @@ pub struct ClaimMiningRewardContext<'a, 'b> {
     collateral_mint: &'a AccountInfo<'b>,
     internal_mining: &'a AccountInfo<'b>,
     staking_program_id: &'a AccountInfo<'b>,
-    eld_reward_program_id: &'a AccountInfo<'b>,
+    rewards_program_id: &'a AccountInfo<'b>,
     reward_pool: &'a AccountInfo<'b>,
 }
 
@@ -45,7 +45,7 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
         let _token_program = AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
         let staking_program_id = AccountLoader::next_unchecked(account_info_iter)?;
 
-        let eld_reward_program_id =
+        let rewards_program_id =
             AccountLoader::next_with_key(account_info_iter, &everlend_rewards::id())?;
 
         let reward_pool =
@@ -59,7 +59,7 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
             collateral_mint,
             internal_mining,
             staking_program_id,
-            eld_reward_program_id,
+            rewards_program_id,
             reward_pool,
         })
     }
@@ -89,15 +89,16 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
         let internal_mining_type =
             InternalMining::unpack(&self.internal_mining.data.borrow())?.mining_type;
 
-        // TODO fix unpack and check liquidity mint
-        // let reward_pool = RewardPool::try_from_slice(&self.reward_pool.data.borrow()[8..])?;
-        // assert_account_key(self.liquidity_mint, &reward_pool.liquidity_mint)?;
+        {
+            let reward_pool = RewardPool::unpack(&self.reward_pool.data.borrow())?;
+            assert_account_key(self.liquidity_mint, &reward_pool.liquidity_mint)?;
+        }
 
         let reward_accounts = parse_fill_reward_accounts(
             program_id,
             self.depositor.key,
             self.reward_pool.key,
-            self.eld_reward_program_id.key,
+            self.rewards_program_id.key,
             account_info_iter,
             true,
         )?;
@@ -127,7 +128,7 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
                         program_id,
                         self.depositor.key,
                         self.reward_pool.key,
-                        self.eld_reward_program_id.key,
+                        self.rewards_program_id.key,
                         account_info_iter,
                         //Larix has manual distribution of subreward
                         false,
@@ -187,7 +188,7 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
                         program_id,
                         self.depositor.key,
                         self.reward_pool.key,
-                        self.eld_reward_program_id.key,
+                        self.rewards_program_id.key,
                         account_info_iter,
                         true,
                     )?;
@@ -325,7 +326,7 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
                 Account::unpack(&reward_accounts.reward_transit_info.data.borrow())?;
 
             fill_vault(
-                self.eld_reward_program_id.key,
+                self.rewards_program_id.key,
                 self.reward_pool.clone(),
                 reward_accounts.reward_mint_info.clone(),
                 reward_accounts.fee_account_info.clone(),

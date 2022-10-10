@@ -22,6 +22,7 @@ pub struct InitMiningAccountContext<'a, 'b> {
     collateral_mint: &'a AccountInfo<'b>,
     depositor: &'a AccountInfo<'b>,
     depositor_authority: &'a AccountInfo<'b>,
+    staking_program_id: &'a AccountInfo<'b>,
     registry: &'a AccountInfo<'b>,
     manager: &'a AccountInfo<'b>,
     rent: &'a AccountInfo<'b>,
@@ -45,12 +46,15 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
         let _system_program =
             AccountLoader::next_with_key(account_info_iter, &system_program::id())?;
 
+        let staking_program_id = AccountLoader::next_unchecked(account_info_iter)?;
+
         Ok(InitMiningAccountContext {
             internal_mining,
             liquidity_mint,
             collateral_mint,
             depositor,
             depositor_authority,
+            staking_program_id,
             registry,
             manager,
             rent,
@@ -119,8 +123,6 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
             InternalMining::unpack(&self.internal_mining.data.borrow())?;
         }
 
-        let staking_program_id_info = AccountLoader::next_unchecked(account_info_iter)?;
-
         match mining_type {
             MiningType::Larix {
                 mining_account,
@@ -128,7 +130,7 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
             } => {
                 let mining_account_info =
                     AccountLoader::next_with_key(account_info_iter, &mining_account)?;
-                assert_owned_by(mining_account_info, staking_program_id_info.key)?;
+                assert_owned_by(mining_account_info, self.staking_program_id.key)?;
 
                 let lending_market_info = AccountLoader::next_unchecked(account_info_iter)?;
                 if let Some(additional_reward_token_account) = additional_reward_token_account {
@@ -150,7 +152,7 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                 }
 
                 cpi::larix::init_mining(
-                    staking_program_id_info.key,
+                    self.staking_program_id.key,
                     mining_account_info.clone(),
                     self.depositor_authority.clone(),
                     lending_market_info.clone(),
@@ -163,13 +165,13 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                 staking_pool,
                 obligation,
             } => {
-                assert_account_key(staking_program_id_info, &staking_program_id)?;
+                assert_account_key(self.staking_program_id, &staking_program_id)?;
                 let staking_pool_info =
                     AccountLoader::next_with_key(account_info_iter, &staking_pool)?;
                 let staking_account_info =
                     AccountLoader::next_with_key(account_info_iter, &staking_account)?;
 
-                assert_owned_by(staking_account_info, staking_program_id_info.key)?;
+                assert_owned_by(staking_account_info, self.staking_program_id.key)?;
 
                 let money_market_program_id_info =
                     AccountLoader::next_unchecked(account_info_iter)?;
@@ -192,7 +194,7 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                 )?;
 
                 cpi::port_finance::create_stake_account(
-                    staking_program_id_info.key,
+                    self.staking_program_id.key,
                     staking_account_info.clone(),
                     staking_pool_info.clone(),
                     self.depositor_authority.clone(),
@@ -200,7 +202,7 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                 )?;
             }
             MiningType::Quarry { rewarder } => {
-                assert_account_key(staking_program_id_info, &cpi::quarry::staking_program_id())?;
+                assert_account_key(self.staking_program_id, &cpi::quarry::staking_program_id())?;
 
                 let rewarder_info = AccountLoader::next_with_key(account_info_iter, &rewarder)?;
 
@@ -233,7 +235,7 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                     AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
 
                 cpi::quarry::create_miner(
-                    staking_program_id_info.key,
+                    self.staking_program_id.key,
                     self.depositor_authority.clone(),
                     miner_info.clone(),
                     quarry_info.clone(),
