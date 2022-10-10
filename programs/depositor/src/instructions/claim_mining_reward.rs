@@ -257,8 +257,6 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
 
                 let rewards_fee_account =
                     AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
-                //TODO change order of accounts
-                let miner = AccountLoader::next_unchecked(account_info_iter)?;
 
                 let quarry_rewarder = AccountLoader::next_with_key(account_info_iter, &rewarder)?;
 
@@ -272,14 +270,15 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
                     AccountLoader::next_with_key(account_info_iter, &quarry)
                 }?;
 
-                {
+                let miner = {
                     let (miner_pubkey, _) = quarry::find_miner_program_address(
                         &quarry::staking_program_id(),
                         quarry_info.key,
                         self.depositor_authority.key,
                     );
-                    assert_account_key(miner, &miner_pubkey)?
-                }
+
+                    AccountLoader::next_with_key(account_info_iter, &miner_pubkey)
+                }?;
 
                 quarry::claim_rewards(
                     self.staking_program_id.key,
