@@ -50,28 +50,22 @@ impl<'a, 'b> SetRebalancingContext<'a, 'b> {
         distributed_liquidity: DistributionArray,
         distribution_array: DistributionArray,
     ) -> ProgramResult {
-        {
-            // Get depositor state
-            let depositor = Depositor::unpack(&self.depositor.data.borrow())?;
-            // Check registry
-            assert_account_key(self.registry, &depositor.registry)?;
-        }
+        // Get depositor state
+        let depositor = Depositor::unpack(&self.depositor.data.borrow())?;
+        // Check registry
+        assert_account_key(self.registry, &depositor.registry)?;
 
-        {
-            let registry = Registry::unpack(&self.registry.data.borrow())?;
-            // Check manager
-            assert_account_key(self.manager, &registry.manager)?;
-        }
+        let registry = Registry::unpack(&self.registry.data.borrow())?;
+        // Check manager
+        assert_account_key(self.manager, &registry.manager)?;
 
-        {
-            // Check rebalancing
-            let (rebalancing_pubkey, _) = find_rebalancing_program_address(
-                program_id,
-                self.depositor.key,
-                self.liquidity_mint.key,
-            );
-            assert_account_key(self.rebalancing, &rebalancing_pubkey)?;
-        }
+        // Check rebalancing
+        let (rebalancing_pubkey, _) = find_rebalancing_program_address(
+            program_id,
+            self.depositor.key,
+            self.liquidity_mint.key,
+        );
+        assert_account_key(self.rebalancing, &rebalancing_pubkey)?;
 
         let mut rebalancing = Rebalancing::unpack(&self.rebalancing.data.borrow())?;
         // Check rebalancing accounts

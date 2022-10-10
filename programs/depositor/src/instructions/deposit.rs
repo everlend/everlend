@@ -182,22 +182,18 @@ impl<'a, 'b> DepositContext<'a, 'b> {
                 return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
             }
             msg!("Deposit");
-            let collateral_amount = if step.liquidity_amount.eq(&0) {
-                0
-            } else {
-                deposit(
-                    self.collateral_transit,
-                    self.collateral_mint,
-                    self.liquidity_transit,
-                    self.depositor_authority,
-                    self.clock,
-                    &money_market,
-                    is_mining,
-                    collateral_stor,
-                    step.liquidity_amount,
-                    &[signers_seeds],
-                )?
-            };
+            let collateral_amount = deposit(
+                self.collateral_transit,
+                self.collateral_mint,
+                self.liquidity_transit,
+                self.depositor_authority,
+                self.clock,
+                &money_market,
+                is_mining,
+                collateral_stor,
+                step.liquidity_amount,
+                &[signers_seeds],
+            )?;
 
             let clock = Clock::from_account_info(self.clock)?;
 

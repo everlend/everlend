@@ -15,6 +15,7 @@ use everlend_utils::{
     abs_diff, assert_account_key, cpi, find_program_address, integrations, AccountLoader,
     EverlendError,
 };
+use num_traits::Zero;
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, instruction::AccountMeta, msg,
     program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,
@@ -38,6 +39,10 @@ pub fn deposit<'a, 'b>(
     liquidity_amount: u64,
     signers_seeds: &[&[&[u8]]],
 ) -> Result<u64, ProgramError> {
+    if liquidity_amount.is_zero() {
+        return Ok(0);
+    }
+
     let collateral_amount = if is_mining {
         msg!("Deposit to Money market and deposit Mining");
         money_market.money_market_deposit_and_deposit_mining(
@@ -396,17 +401,15 @@ pub fn parse_fill_reward_accounts<'a, 'b>(
     let vault_info = AccountLoader::next_unchecked(account_info_iter)?;
     let fee_account_info = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
 
-    {
-        let (vault, _) = Pubkey::find_program_address(
-            &[
-                b"vault".as_ref(),
-                &reward_pool_id.to_bytes(),
-                &reward_mint_info.key.to_bytes(),
-            ],
-            eld_reward_program_id,
-        );
-        assert_account_key(vault_info, &vault)?;
-    }
+    let (vault, _) = Pubkey::find_program_address(
+        &[
+            b"vault".as_ref(),
+            &reward_pool_id.to_bytes(),
+            &reward_mint_info.key.to_bytes(),
+        ],
+        eld_reward_program_id,
+    );
+    assert_account_key(vault_info, &vault)?;
 
     Ok(FillRewardAccounts {
         reward_mint_info: reward_mint_info.clone(),

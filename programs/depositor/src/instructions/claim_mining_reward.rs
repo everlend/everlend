@@ -73,8 +73,8 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
     ) -> ProgramResult {
         {
             let depositor = Depositor::unpack(&self.depositor.data.borrow())?;
-            assert_account_key(self.executor, &depositor.rebalance_executor)
-        }?;
+            assert_account_key(self.executor, &depositor.rebalance_executor)?;
+        }
 
         {
             let (internal_mining_pubkey, _) = find_internal_mining_program_address(
@@ -251,8 +251,8 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
                         "lm_reward",
                     );
 
-                    AccountLoader::next_with_key(account_info_iter, &reward_token_account_pubkey)
-                }?;
+                    AccountLoader::next_with_key(account_info_iter, &reward_token_account_pubkey)?
+                };
 
                 let rewards_fee_account =
                     AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;

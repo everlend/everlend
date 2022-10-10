@@ -255,22 +255,19 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
 
         {
             msg!("Refresh Deposit");
-            let collateral_amount = if deposit_step.liquidity_amount.eq(&0) {
-                0
-            } else {
-                deposit(
-                    self.collateral_transit,
-                    self.collateral_mint,
-                    self.liquidity_transit,
-                    self.depositor_authority,
-                    self.clock,
-                    &money_market,
-                    is_mining,
-                    collateral_stor,
-                    deposit_step.liquidity_amount,
-                    &[signers_seeds],
-                )?
-            };
+            let collateral_amount = deposit(
+                self.collateral_transit,
+                self.collateral_mint,
+                self.liquidity_transit,
+                self.depositor_authority,
+                self.clock,
+                &money_market,
+                is_mining,
+                collateral_stor,
+                deposit_step.liquidity_amount,
+                &[signers_seeds],
+            )?;
+
             rebalancing.execute_step(
                 RebalancingOperation::RefreshDeposit,
                 Some(collateral_amount),
