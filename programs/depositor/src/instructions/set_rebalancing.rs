@@ -4,7 +4,7 @@ use crate::{
 };
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::state::Registry;
-use everlend_utils::{assert_account_key, AccountLoader, EverlendError};
+use everlend_utils::{assert_account_key, AccountLoader};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
     program_pack::Pack, pubkey::Pubkey,
@@ -47,7 +47,7 @@ impl<'a, 'b> SetRebalancingContext<'a, 'b> {
         program_id: &Pubkey,
         _account_info_iter: &'a mut Enumerate<Iter<'a, AccountInfo<'b>>>,
         amount_to_distribute: u64,
-        distributed_liquidity: u64,
+        distributed_liquidity: DistributionArray,
         distribution_array: DistributionArray,
     ) -> ProgramResult {
         {
@@ -77,11 +77,6 @@ impl<'a, 'b> SetRebalancingContext<'a, 'b> {
         // Check rebalancing accounts
         assert_account_key(self.depositor, &rebalancing.depositor)?;
         assert_account_key(self.liquidity_mint, &rebalancing.mint)?;
-
-        // Check rebalancing is not completed
-        if rebalancing.is_completed() {
-            return Err(EverlendError::RebalancingIsCompleted.into());
-        }
 
         rebalancing.set(
             amount_to_distribute,

@@ -226,7 +226,7 @@ pub enum DepositorInstruction {
         /// Manual setup of amount to distribute
         amount_to_distribute: u64,
         /// Manual setup of prev distributed liquidity
-        distributed_liquidity: u64,
+        distributed_liquidity: DistributionArray,
         /// Manual setup of prev distribution array
         distribution_array: DistributionArray,
     },
@@ -390,7 +390,7 @@ pub fn reset_rebalancing(
     liquidity_mint: &Pubkey,
     manager: &Pubkey,
     amount_to_distribute: u64,
-    distributed_liquidity: u64,
+    distributed_liquidity: DistributionArray,
     distribution_array: DistributionArray,
 ) -> Instruction {
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
@@ -617,21 +617,14 @@ pub fn refresh_mm_incomes(
 #[allow(clippy::too_many_arguments)]
 pub fn migrate_depositor(
     program_id: &Pubkey,
-    depositor: &Pubkey,
-    registry: &Pubkey,
-    manager: &Pubkey,
-    rebalancing: &Pubkey,
-    liquidity_mint: &Pubkey,
+    _depositor: &Pubkey,
+    _registry: &Pubkey,
+    _manager: &Pubkey,
+    _rebalancing: &Pubkey,
+    _liquidity_mint: &Pubkey,
+    _amount_to_distribute: u64,
 ) -> Instruction {
-    let accounts = vec![
-        AccountMeta::new_readonly(*depositor, false),
-        AccountMeta::new_readonly(*registry, false),
-        AccountMeta::new_readonly(*manager, true),
-        AccountMeta::new(*rebalancing, false),
-        AccountMeta::new_readonly(*liquidity_mint, false),
-        AccountMeta::new_readonly(sysvar::rent::id(), false),
-        AccountMeta::new_readonly(system_program::id(), false),
-    ];
+    let accounts = vec![];
 
     Instruction::new_with_borsh(
         *program_id,

@@ -1,6 +1,7 @@
 use crate::{
     find_rebalancing_program_address, find_transit_program_address,
     state::{Depositor, InitRebalancingParams, Rebalancing},
+    utils::calculate_amount_to_distribute,
 };
 use everlend_general_pool::{find_withdrawal_requests_program_address, state::WithdrawalRequests};
 
@@ -176,6 +177,9 @@ impl<'a, 'b> StartRebalancingContext<'a, 'b> {
             return Err(EverlendError::IncompleteRebalancing.into());
         }
 
+        let general_pool_state =
+            everlend_general_pool::state::Pool::unpack(&self.general_pool.data.borrow())?;
+
         {
             // Check token distribution
             let (token_oracle_pubkey, _) = find_token_oracle_program_address(
@@ -197,19 +201,19 @@ impl<'a, 'b> StartRebalancingContext<'a, 'b> {
         }
 
         {
-            let general_pool =
-                everlend_general_pool::state::Pool::unpack(&self.general_pool.data.borrow())?;
-
             // Check general pool accounts
-            assert_account_key(self.general_pool_market, &general_pool.pool_market)?;
-            assert_account_key(self.general_pool_token_account, &general_pool.token_account)?;
-            assert_account_key(self.mint, &general_pool.token_mint)?;
+            assert_account_key(self.general_pool_market, &general_pool_state.pool_market)?;
+            assert_account_key(
+                self.general_pool_token_account,
+                &general_pool_state.token_account,
+            )?;
+            assert_account_key(self.mint, &general_pool_state.token_mint)?;
 
             // Check withdrawal requests
             let (withdrawal_requests_pubkey, _) = find_withdrawal_requests_program_address(
                 &everlend_general_pool::id(),
                 self.general_pool_market.key,
-                &general_pool.token_mint,
+                &general_pool_state.token_mint,
             );
             assert_account_key(self.withdrawal_requests, &withdrawal_requests_pubkey)?;
         }
@@ -226,22 +230,23 @@ impl<'a, 'b> StartRebalancingContext<'a, 'b> {
         let withdrawal_requests =
             WithdrawalRequests::unpack(&self.withdrawal_requests.data.borrow())?;
 
-        let available_liquidity = rebalancing
-            .distributed_liquidity
-            .checked_add(liquidity_transit.amount)
-            .ok_or(EverlendError::MathOverflow)?;
+        let (available_liquidity, amount_to_distribute) = calculate_amount_to_distribute(
+            rebalancing.total_distributed_liquidity(),
+            liquidity_transit.amount,
+            general_pool.amount,
+            withdrawal_requests.liquidity_supply,
+        )?;
 
-        msg!("available_liquidity: {}", available_liquidity);
+        msg!(
+            "available_liquidity: {} amount_to_distribute: {}",
+            available_liquidity,
+            amount_to_distribute
+        );
 
-        // Calculate liquidity to distribute
-        let amount_to_distribute = general_pool
-            .amount
-            .checked_add(available_liquidity)
-            .ok_or(EverlendError::MathOverflow)?
-            .checked_sub(withdrawal_requests.liquidity_supply)
-            .ok_or(EverlendError::MathOverflow)?;
-
-        msg!("amount_to_distribute: {}", amount_to_distribute);
+        // Additional check for maths
+        if available_liquidity != general_pool_state.total_amount_borrowed {
+            return Err(EverlendError::RebalanceLiquidityCheckFailed.into());
+        }
 
         let (depositor_authority_pubkey, bump_seed) =
             find_program_address(program_id, self.depositor.key);
