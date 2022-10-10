@@ -4,19 +4,19 @@ use crate::helpers::{
     create_collateral_market, create_collateral_pool, create_general_pool,
     create_general_pool_market, create_income_pool, create_income_pool_market,
     create_pool_borrow_authority, create_pool_withdraw_authority, create_token_oracle,
-    create_transit, init_depositor, init_liquidity_oracle, init_registry, update_registry,
-    update_registry_markets, PoolPubkeys,
+    create_transit, init_depositor, init_liquidity_oracle, init_registry, init_rewards_root,
+    update_registry, update_registry_markets, PoolPubkeys,
 };
 use crate::utils::{
     arg_multiple, arg_pubkey, get_asset_maps, spl_create_associated_token_account,
     spl_token_transfer, REFRESH_INCOME_INTERVAL,
 };
-use crate::{Config, InitializedAccounts, ToolkitCommand, ARG_ACCOUNTS};
+use crate::{arg_keypair, Config, InitializedAccounts, ToolkitCommand, ARG_ACCOUNTS};
 use clap::{Arg, ArgMatches};
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
 use everlend_registry::state::DistributionPubkeys;
-use solana_clap_utils::input_parsers::pubkey_of;
+use solana_clap_utils::input_parsers::{keypair_of, pubkey_of};
 use solana_client::client_error::ClientError;
 use solana_program::pubkey::Pubkey;
 use spl_associated_token_account::get_associated_token_address;
@@ -24,6 +24,7 @@ use std::collections::BTreeMap;
 
 const ARG_MINTS: &str = "mints";
 const ARG_REBALANCE_EXECUTOR: &str = "rebalance-executor";
+const ARG_REWARDS_ROOT: &str = "rewards-root";
 
 #[derive(Clone, Copy)]
 pub struct CreateAccountsCommand;
@@ -41,6 +42,7 @@ impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
         vec![
             arg_multiple(ARG_MINTS, true).short("m"),
             arg_pubkey(ARG_REBALANCE_EXECUTOR, true).help("Rebalance executor pubkey"),
+            arg_keypair(ARG_REWARDS_ROOT, true).help("Rewards root keypair"),
         ]
     }
 
@@ -54,6 +56,7 @@ impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
         let required_mints: Vec<_> = arg_matches.values_of(ARG_MINTS).unwrap().collect();
         let accounts_path = arg_matches.value_of(ARG_ACCOUNTS).unwrap();
         let rebalance_executor = pubkey_of(arg_matches, ARG_REBALANCE_EXECUTOR).unwrap();
+        let rewards_root_keypair = keypair_of(arg_matches, ARG_REWARDS_ROOT).unwrap();
 
         let payer_pubkey = config.fee_payer.pubkey();
         println!("Fee payer: {}", payer_pubkey);
@@ -237,6 +240,8 @@ impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
             );
         }
 
+        let rewards_root = init_rewards_root(config, rewards_root_keypair)?;
+
         let initialized_accounts = InitializedAccounts {
             payer: payer_pubkey,
             registry: registry_pubkey,
@@ -248,6 +253,7 @@ impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
             depositor: depositor_pubkey,
             quarry_mining: BTreeMap::new(),
             rebalance_executor,
+            rewards_root,
         };
 
         initialized_accounts.save(accounts_path).unwrap();

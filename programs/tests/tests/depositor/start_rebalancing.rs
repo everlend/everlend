@@ -1,6 +1,7 @@
 use crate::utils::*;
 use everlend_depositor::find_transit_program_address;
 use everlend_depositor::state::{Rebalancing, RebalancingOperation};
+use everlend_depositor::utils::calculate_amount_to_distribute;
 use everlend_liquidity_oracle::state::{DistributionArray, TokenOracle};
 use everlend_registry::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
 use everlend_registry::state::DistributionPubkeys;
@@ -302,7 +303,7 @@ async fn success() {
         .get_rebalancing_data(&mut context, &general_pool.token_mint_pubkey)
         .await;
 
-    assert_eq!(data.distributed_liquidity, deposit_amount / 2); // 50% distrubution
+    assert_eq!(data.total_distributed_liquidity(), deposit_amount / 2); // 50% distrubution
     assert_eq!(data.amount_to_distribute, deposit_amount);
 }
 
@@ -348,7 +349,7 @@ async fn success_with_reserve_rates() {
         .get_rebalancing_data(&mut context, &general_pool.token_mint_pubkey)
         .await;
 
-    assert_eq!(data.distributed_liquidity, 0); // because of collateral ratio
+    assert_eq!(data.total_distributed_liquidity(), 0); // because of collateral ratio
     assert_eq!(data.amount_to_distribute, deposit_amount);
 }
 
@@ -930,14 +931,14 @@ async fn rebalancing_math_round() {
             .unwrap();
         r.compute(&p, oracle.clone(), distr_amount, current_slot)
             .unwrap();
-        println!("{}", r.distributed_liquidity);
-        assert_eq!(distr_amount >= r.distributed_liquidity, true);
+        println!("{}", r.total_distributed_liquidity());
+        assert_eq!(distr_amount >= r.total_distributed_liquidity(), true);
 
         r.compute_with_refresh_income(&p, 0, i as u64 + 1, distr_amount)
             .unwrap();
-        println!("{}", r.distributed_liquidity);
+        println!("{}", r.total_distributed_liquidity());
         println!("{:?}", r.steps);
-        assert_eq!(distr_amount >= r.distributed_liquidity, true);
+        assert_eq!(distr_amount >= r.total_distributed_liquidity(), true);
     }
 }
 
@@ -967,10 +968,17 @@ async fn rebalancing_check_steps() {
             steps: vec![(1, RebalancingOperation::Deposit, 5000, None)],
         },
         TestCase {
+            distribution: (490_000_000, 490_000_000),
+            steps: vec![
+                (0, RebalancingOperation::Withdraw, 100, Some(100)),
+                (1, RebalancingOperation::Withdraw, 100, Some(100)),
+            ],
+        },
+        TestCase {
             distribution: (1000_000_000, 0),
             steps: vec![
-                (1, RebalancingOperation::Withdraw, 5000, Some(5000)),
-                (0, RebalancingOperation::Deposit, 5001, None),
+                (1, RebalancingOperation::Withdraw, 4900, Some(4900)),
+                (0, RebalancingOperation::Deposit, 5101, None),
             ],
         },
         TestCase {
@@ -995,7 +1003,11 @@ async fn rebalancing_check_steps() {
         r.compute(&p, oracle.clone(), distr_amount, current_slot)
             .unwrap();
 
-        println!("{:?}", r.steps);
+        println!(
+            "{} {}",
+            r.amount_to_distribute,
+            r.total_distributed_liquidity()
+        );
 
         for (idx, s) in r.clone().steps.iter().enumerate() {
             let mm_index = elem.steps[idx].0;
@@ -1032,9 +1044,13 @@ async fn rebalancing_check_steps_math() {
     received_collateral[0] = 5218140718;
     received_collateral[1] = 12821948839;
 
+    let mut distributed_liquidity = [0; 10];
+    distributed_liquidity[0] = 12821948839;
+    distributed_liquidity[1] = 12821948839;
+
     let mut r = Rebalancing::default();
     r.amount_to_distribute = 25643897678;
-    r.distributed_liquidity = 25643897678;
+    r.distributed_liquidity = distributed_liquidity;
     r.received_collateral = received_collateral;
     r.liquidity_distribution = oracle.liquidity_distribution.clone();
 
@@ -1071,4 +1087,148 @@ async fn rebalancing_percent_ratio() {
 
     let collateral_amount = percent_ratio(amount, prev_amount, collateral_amount).unwrap();
     assert_eq!(collateral_amount, 4366677184);
+}
+
+#[tokio::test]
+async fn collateral_leak_test() {
+    let mut p = DistributionPubkeys::default();
+    p[0] = Keypair::new().pubkey();
+    p[1] = Keypair::new().pubkey();
+    p[2] = Keypair::new().pubkey();
+
+    let mut d: DistributionArray = DistributionArray::default();
+    d[0] = 500_000_000;
+    d[1] = 500_000_000;
+
+    let mut oracle = TokenOracle::default();
+    oracle.liquidity_distribution.values = d;
+
+    let mut r = Rebalancing::default();
+
+    let amount_to_distribute = 100_000_000;
+    let current_slot = 1;
+
+    oracle.liquidity_distribution.updated_at = current_slot;
+    oracle.reserve_rates.updated_at = current_slot;
+    r.compute(&p, oracle.clone(), amount_to_distribute, current_slot)
+        .unwrap();
+
+    assert_eq!(r.total_distributed_liquidity(), 100_000_000);
+
+    let mut reserve_rates: DistributionArray = DistributionArray::default();
+    reserve_rates[0] = 1_000_000;
+
+    d[0] = 500_000_100;
+    d[1] = 499_999_900;
+
+    let current_slot = 2;
+    oracle
+        .update_liquidity_distribution(current_slot, d)
+        .unwrap();
+    oracle
+        .update_reserve_rates(current_slot, reserve_rates)
+        .unwrap();
+
+    r.compute(&p, oracle.clone(), amount_to_distribute, current_slot)
+        .unwrap();
+
+    assert_eq!(r.total_distributed_liquidity(), 999_999_90);
+}
+
+#[tokio::test]
+async fn collateral_leak_test2() {
+    let mut d: DistributionArray = DistributionArray::default();
+    let mut p = DistributionPubkeys::default();
+    p[0] = Keypair::new().pubkey();
+    p[1] = Keypair::new().pubkey();
+
+    let mut oracle = TokenOracle::default();
+    let mut rates = DistributionArray::default();
+    let mut r = Rebalancing::default();
+
+    struct TestCase {
+        transit_amount: u64,
+        distribution: (u64, u64),
+        distributed_liquidity: u64,
+        rates: (u64, u64),
+        steps: Vec<(u8, RebalancingOperation, u64, Option<u64>)>,
+    }
+
+    let initial_liquidity = 595545109;
+
+    for (i, elem) in vec![
+        TestCase {
+            transit_amount: initial_liquidity,
+            distribution: (599999999, 400000001),
+            rates: (1000000000, 1000000000),
+            steps: vec![
+                (0, RebalancingOperation::Deposit, 357327064, None),
+                (1, RebalancingOperation::Deposit, 238218044, None),
+            ],
+            distributed_liquidity: 595545108,
+        },
+        TestCase {
+            transit_amount: 1,
+            distribution: (600000000, 400000000),
+            rates: (1000000, 1000000000),
+            steps: vec![(1, RebalancingOperation::Withdraw, 1, Some(1))],
+            distributed_liquidity: 595545107,
+        },
+        TestCase {
+            transit_amount: 2,
+            distribution: (600000000, 400000000),
+            rates: (1000000, 1000000),
+            steps: vec![],
+            distributed_liquidity: 595545107,
+        },
+    ]
+    .iter()
+    .enumerate()
+    {
+        d[0] = elem.distribution.0;
+        d[1] = elem.distribution.1;
+
+        rates[0] = elem.rates.0;
+        rates[1] = elem.rates.1;
+
+        let current_slot = 1;
+        oracle.update_reserve_rates(current_slot, rates).unwrap();
+        oracle
+            .update_liquidity_distribution(i as u64 + 1, d)
+            .unwrap();
+
+        let (_, amount_to_distribute) = calculate_amount_to_distribute(
+            r.total_distributed_liquidity(),
+            elem.transit_amount,
+            0,
+            0,
+        )
+        .unwrap();
+
+        r.compute(&p, oracle.clone(), amount_to_distribute, current_slot)
+            .unwrap();
+
+        println!(
+            "amount_to_distribute: {} distributed_liquidity:{} \n\n",
+            r.amount_to_distribute,
+            r.total_distributed_liquidity()
+        );
+
+        assert_eq!(r.total_distributed_liquidity(), elem.distributed_liquidity);
+
+        for (idx, s) in r.clone().steps.iter().enumerate() {
+            let mm_index = elem.steps[idx].0;
+            let operation = elem.steps[idx].1;
+            let liquidity_amount = elem.steps[idx].2;
+            let collateral_amount = elem.steps[idx].3;
+
+            assert_eq!(s.money_market_index, mm_index);
+            assert_eq!(s.operation, operation);
+            assert_eq!(s.liquidity_amount, liquidity_amount);
+            assert_eq!(s.collateral_amount, collateral_amount);
+
+            r.execute_step(s.operation, Some(liquidity_amount), (i + 2) as u64)
+                .unwrap();
+        }
+    }
 }

@@ -1,6 +1,6 @@
 use super::{
-    CreateDepositorCommand, CreateDepositorTransitAccountCommand, GetRebalancingAccountCommand,
-    ResetRebalancingCommand, InitMiningCommand,
+    CreateDepositorCommand, CreateDepositorTransitAccountCommand, DumpAccountsCommand,
+    GetRebalancingAccountCommand, ResetRebalancingCommand, InitMiningCommand,
 };
 use crate::{print_commands, utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
@@ -28,6 +28,7 @@ impl<'a> ToolkitCommand<'a> for DepositorCommand {
             Box::new(ResetRebalancingCommand),
             Box::new(GetRebalancingAccountCommand),
             Box::new(InitMiningCommand),
+            Box::new(DumpAccountsCommand),
         ]
     }
 
