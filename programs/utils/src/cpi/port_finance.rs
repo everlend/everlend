@@ -360,7 +360,7 @@ pub fn claim_reward<'a>(
     staking_pool_authority: AccountInfo<'a>,
     reward_token_pool: AccountInfo<'a>,
     reward_destination: AccountInfo<'a>,
-    sub_reward_info: Option<(&AccountInfo<'a>, AccountInfo<'a>)>,
+    sub_reward_info: Option<(&AccountInfo<'a>, &AccountInfo<'a>)>,
     // sub_reward_token_pool: Option<AccountInfo<'a>>,
     // sub_reward_destination: Option<AccountInfo<'a>>,
     clock: AccountInfo<'a>,

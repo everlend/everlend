@@ -363,40 +363,46 @@ pub fn collateral_pool_withdraw_accounts(
 
 /// ELD Fill reward accounts for token container
 #[derive(Clone)]
-pub struct FillRewardAccounts<'a> {
+pub struct FillRewardAccounts<'a, 'b> {
     /// Rewards mint tokne
-    pub reward_mint_info: AccountInfo<'a>,
+    pub reward_mint_info: &'a AccountInfo<'b>,
     /// Reward transit account
-    pub reward_transit_info: AccountInfo<'a>,
+    pub reward_transit_info: &'a AccountInfo<'b>,
     /// Reward vault
-    pub vault_info: AccountInfo<'a>,
+    pub vault_info: &'a AccountInfo<'b>,
     /// Reward fee account
-    pub fee_account_info: AccountInfo<'a>,
+    pub fee_account_info: &'a AccountInfo<'b>,
+}
+
+impl<'a, 'b> FillRewardAccounts<'a, 'b> {
+    ///
+    // Check rewards destination account only if needed
+    pub fn check_transit_reward_destination(
+        &self,
+        program_id: &Pubkey,
+        depositor_id: &Pubkey,
+    ) -> Result<(), ProgramError> {
+        let (reward_token_account, _) = find_transit_program_address(
+            program_id,
+            depositor_id,
+            self.reward_mint_info.key,
+            "lm_reward",
+        );
+        assert_account_key(self.reward_transit_info, &reward_token_account)?;
+
+        Ok(())
+    }
 }
 
 /// Collateral pool deposit account
 #[allow(clippy::too_many_arguments)]
 pub fn parse_fill_reward_accounts<'a, 'b>(
-    program_id: &Pubkey,
-    depositor_id: &Pubkey,
     reward_pool_id: &Pubkey,
     eld_reward_program_id: &Pubkey,
     account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
-    check_transit_reward_destination: bool,
-) -> Result<FillRewardAccounts<'b>, ProgramError> {
+) -> Result<FillRewardAccounts<'a, 'b>, ProgramError> {
     let reward_mint_info = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
     let reward_transit_info = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
-
-    // Check rewards destination account only if needed
-    if check_transit_reward_destination {
-        let (reward_token_account, _) = find_transit_program_address(
-            program_id,
-            depositor_id,
-            reward_mint_info.key,
-            "lm_reward",
-        );
-        assert_account_key(reward_transit_info, &reward_token_account)?;
-    }
 
     let vault_info = AccountLoader::next_unchecked(account_info_iter)?;
     let fee_account_info = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
@@ -412,10 +418,10 @@ pub fn parse_fill_reward_accounts<'a, 'b>(
     assert_account_key(vault_info, &vault)?;
 
     Ok(FillRewardAccounts {
-        reward_mint_info: reward_mint_info.clone(),
-        reward_transit_info: reward_transit_info.clone(),
-        vault_info: vault_info.clone(),
-        fee_account_info: fee_account_info.clone(),
+        reward_mint_info,
+        reward_transit_info,
+        vault_info,
+        fee_account_info,
     })
 }
 

@@ -1,17 +1,14 @@
+use crate::claimer::{LarixClaimer, PortFinanceClaimer, RewardClaimer};
 use crate::{
     find_internal_mining_program_address, find_transit_program_address,
     state::{Depositor, InternalMining, MiningType},
     utils::{parse_fill_reward_accounts, FillRewardAccounts},
 };
 use everlend_rewards::{cpi::fill_vault, state::RewardPool};
-use everlend_utils::{
-    assert_account_key,
-    cpi::{larix, port_finance, quarry},
-    find_program_address, AccountLoader,
-};
+use everlend_utils::{assert_account_key, cpi::quarry, find_program_address, AccountLoader};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
-    program_pack::Pack, pubkey::Pubkey, sysvar::clock,
+    program_pack::Pack, pubkey::Pubkey,
 };
 use spl_token::state::Account;
 use std::{iter::Enumerate, slice::Iter};
@@ -95,13 +92,12 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
         }
 
         let reward_accounts = parse_fill_reward_accounts(
-            program_id,
-            self.depositor.key,
             self.reward_pool.key,
             self.rewards_program_id.key,
             account_info_iter,
-            true,
         )?;
+
+        reward_accounts.check_transit_reward_destination(program_id, self.depositor.key)?;
 
         let mut fill_sub_rewards_accounts: Option<FillRewardAccounts> = None;
 
@@ -113,126 +109,55 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
             &[&self.depositor.key.to_bytes()[..32], &[bump_seed]]
         };
 
+        // Parse and check additional reward token account
+        if with_subrewards {
+            let sub_reward_accounts = parse_fill_reward_accounts(
+                self.reward_pool.key,
+                self.rewards_program_id.key,
+                account_info_iter,
+            )?;
+
+            fill_sub_rewards_accounts = Some(sub_reward_accounts);
+        };
+
         match internal_mining_type {
-            MiningType::Larix {
-                mining_account,
-                additional_reward_token_account,
-            } => {
-                if with_subrewards != additional_reward_token_account.is_some() {
-                    return Err(ProgramError::InvalidArgument);
-                };
+            MiningType::Larix { .. } => {
+                //Larix has manual distribution of subreward so we dont need this check
+                // fill_sub_rewards_accounts.check_transit_reward_destination()?;
 
-                // Parse and check additional reward token account
-                if with_subrewards {
-                    let sub_reward_accounts = parse_fill_reward_accounts(
-                        program_id,
-                        self.depositor.key,
-                        self.reward_pool.key,
-                        self.rewards_program_id.key,
-                        account_info_iter,
-                        //Larix has manual distribution of subreward
-                        false,
-                    )?;
-
-                    // Assert additional reward token account
-                    assert_account_key(
-                        &sub_reward_accounts.reward_transit_info,
-                        &additional_reward_token_account.unwrap(),
-                    )?;
-
-                    fill_sub_rewards_accounts = Some(sub_reward_accounts);
-                };
-
-                let mining_account_info =
-                    AccountLoader::next_with_key(account_info_iter, &mining_account)?;
-
-                let mine_supply_info = AccountLoader::next_unchecked(account_info_iter)?;
-                let lending_market_info = AccountLoader::next_unchecked(account_info_iter)?;
-                let lending_market_authority_info =
-                    AccountLoader::next_unchecked(account_info_iter)?;
-                let reserve_info = AccountLoader::next_unchecked(account_info_iter)?;
-                let reserve_liquidity_oracle = AccountLoader::next_unchecked(account_info_iter)?;
-
-                larix::refresh_mine(
+                let claimer = LarixClaimer::init(
                     self.staking_program_id.key,
-                    mining_account_info.clone(),
-                    reserve_info.clone(),
+                    internal_mining_type,
+                    with_subrewards,
+                    fill_sub_rewards_accounts.clone(),
+                    account_info_iter,
                 )?;
 
-                larix::refresh_reserve(
+                claimer.claim_reward(
                     self.staking_program_id.key,
-                    reserve_info.clone(),
-                    reserve_liquidity_oracle.clone(),
-                )?;
-
-                larix::claim_mine(
-                    self.staking_program_id.key,
-                    mining_account_info.clone(),
-                    mine_supply_info.clone(),
                     reward_accounts.reward_transit_info.clone(),
                     self.depositor_authority.clone(),
-                    lending_market_info.clone(),
-                    lending_market_authority_info.clone(),
-                    reserve_info.clone(),
                     &[signers_seeds.as_ref()],
                 )?;
             }
-            MiningType::PortFinance {
-                staking_account,
-                staking_pool,
-                staking_program_id,
-                ..
-            } => {
+            MiningType::PortFinance { .. } => {
                 if with_subrewards {
-                    let sub_reward_accounts = parse_fill_reward_accounts(
-                        program_id,
-                        self.depositor.key,
-                        self.reward_pool.key,
-                        self.rewards_program_id.key,
-                        account_info_iter,
-                        true,
-                    )?;
-                    fill_sub_rewards_accounts = Some(sub_reward_accounts.clone());
-                }
-                assert_account_key(self.staking_program_id, &staking_program_id)?;
-
-                let stake_account_info =
-                    AccountLoader::next_with_key(account_info_iter, &staking_account)?;
-                let staking_pool_info =
-                    AccountLoader::next_with_key(account_info_iter, &staking_pool)?;
-                let staking_pool_authority_info = AccountLoader::next_unchecked(account_info_iter)?;
-
-                let reward_token_pool = AccountLoader::next_unchecked(account_info_iter)?;
-
-                let clock = AccountLoader::next_with_key(account_info_iter, &clock::id())?;
-
-                // let sub_reward_token_pool_option :Option<AccountInfo>;
-                // let sub_reward_destination_option :Option<AccountInfo>;
-                let sub_reward = if with_subrewards {
-                    let sub_reward_token_pool = AccountLoader::next_unchecked(account_info_iter)?;
-
-                    // Make local copy
-                    let sub_reward_destination = fill_sub_rewards_accounts.unwrap().clone();
-                    fill_sub_rewards_accounts = Some(sub_reward_destination.clone());
-
-                    Some((
-                        sub_reward_token_pool,
-                        sub_reward_destination.reward_transit_info,
-                    ))
-                } else {
-                    None
+                    reward_accounts
+                        .check_transit_reward_destination(program_id, self.depositor.key)?;
                 };
 
-                port_finance::claim_reward(
+                let claimer = PortFinanceClaimer::init(
                     self.staking_program_id.key,
-                    self.depositor_authority.clone(),
-                    stake_account_info.clone(),
-                    staking_pool_info.clone(),
-                    staking_pool_authority_info.clone(),
-                    reward_token_pool.clone(),
+                    internal_mining_type,
+                    with_subrewards,
+                    fill_sub_rewards_accounts.clone(),
+                    account_info_iter,
+                )?;
+
+                claimer.claim_reward(
+                    self.staking_program_id.key,
                     reward_accounts.reward_transit_info.clone(),
-                    sub_reward,
-                    clock.clone(),
+                    self.depositor_authority.clone(),
                     &[signers_seeds.as_ref()],
                 )?;
             }

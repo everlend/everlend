@@ -37,15 +37,18 @@ impl<'a, 'b> InitContext<'a, 'b> {
         _account_info_iter: &'a mut Enumerate<Iter<'a, AccountInfo<'b>>>,
         rebalance_executor: Pubkey,
     ) -> ProgramResult {
-        let rent = &Rent::from_account_info(self.rent)?;
+        {
+            let rent = &Rent::from_account_info(self.rent)?;
+            assert_rent_exempt(rent, self.depositor)?;
+        }
 
-        assert_rent_exempt(rent, self.depositor)?;
+        {
+            // Get depositor state
+            let depositor = Depositor::unpack_unchecked(&self.depositor.data.borrow())?;
+            assert_uninitialized(&depositor)?;
+        }
 
-        // Get depositor state
-        let mut depositor = Depositor::unpack_unchecked(&self.depositor.data.borrow())?;
-        assert_uninitialized(&depositor)?;
-
-        depositor.init(InitDepositorParams {
+        let depositor = Depositor::init(InitDepositorParams {
             registry: *self.registry.key,
             rebalance_executor,
         });

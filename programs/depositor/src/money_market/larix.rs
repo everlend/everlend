@@ -21,6 +21,7 @@ pub struct Larix<'a, 'b> {
 
 ///
 struct LarixMining<'a, 'b> {
+    /// Mining storage collateral token account
     reserve_bonus: &'a AccountInfo<'b>,
     mining: &'a AccountInfo<'b>,
 }
