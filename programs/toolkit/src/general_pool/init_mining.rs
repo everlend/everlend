@@ -1,6 +1,7 @@
 use crate::liquidity_mining::larix_liquidity_miner::LarixLiquidityMiner;
 use crate::liquidity_mining::port_liquidity_miner::PortLiquidityMiner;
 use crate::liquidity_mining::quarry_liquidity_miner::QuarryLiquidityMiner;
+use crate::liquidity_mining::solend_liquidity_miner::SolendLiquidityMiner;
 use crate::liquidity_mining::{execute_init_mining_accounts, save_mining_accounts, LiquidityMiner};
 use crate::utils::arg;
 use crate::{Config, ToolkitCommand};
@@ -59,6 +60,7 @@ impl<'a> ToolkitCommand<'a> for InitMiningCommand {
             StakingMoneyMarket::PortFinance => Some(Box::new(PortLiquidityMiner {})),
             StakingMoneyMarket::Larix => Some(Box::new(LarixLiquidityMiner {})),
             StakingMoneyMarket::Quarry => Some(Box::new(QuarryLiquidityMiner {})),
+            StakingMoneyMarket::Solend => Some(Box::new(SolendLiquidityMiner {})),
             _ => None,
         };
 

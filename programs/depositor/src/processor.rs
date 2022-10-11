@@ -24,8 +24,8 @@ use solana_program::{
     rent::Rent,
     sysvar::Sysvar,
 };
-use spl_token::state::Account;
 use spl_associated_token_account::get_associated_token_address;
+use spl_token::state::Account;
 use std::cmp::min;
 
 use crate::instructions::{RefreshMMIncomesContext, WithdrawContext};
@@ -763,9 +763,7 @@ impl<'a, 'b> Processor {
                     rent_info.clone(),
                 )?;
             }
-            MiningType::Quarry {
-                rewarder,
-            } => {
+            MiningType::Quarry { rewarder } => {
                 assert_account_key(staking_program_id_info, &cpi::quarry::staking_program_id())?;
 
                 let rewarder_info = next_account_info(account_info_iter)?;
@@ -788,7 +786,8 @@ impl<'a, 'b> Processor {
                 assert_account_key(miner_info, &miner_pubkey)?;
 
                 let miner_vault_info = next_account_info(account_info_iter)?;
-                let miner_vault = get_associated_token_address(&miner_pubkey, collateral_mint_info.key);
+                let miner_vault =
+                    get_associated_token_address(&miner_pubkey, collateral_mint_info.key);
                 assert_account_key(miner_vault_info, &miner_vault)?;
 
                 let _spl_token_program = next_account_info(account_info_iter)?;
@@ -802,6 +801,25 @@ impl<'a, 'b> Processor {
                     manager_info.clone(),
                     collateral_mint_info.clone(),
                     miner_vault_info.clone(),
+                    &[signers_seeds.as_ref()],
+                )?;
+            }
+            MiningType::Solend { obligation } => {
+                let money_market_program_id_info = next_account_info(account_info_iter)?;
+                let obligation_info = next_account_info(account_info_iter)?;
+                assert_account_key(obligation_info, &obligation)?;
+
+                let lending_market_info = next_account_info(account_info_iter)?;
+                let clock_info = next_account_info(account_info_iter)?;
+                let _spl_token_program = next_account_info(account_info_iter)?;
+
+                cpi::solend::init_obligation(
+                    money_market_program_id_info.key,
+                    obligation_info.clone(),
+                    lending_market_info.clone(),
+                    depositor_authority_info.clone(),
+                    clock_info.clone(),
+                    rent_info.clone(),
                     &[signers_seeds.as_ref()],
                 )?;
             }
@@ -821,6 +839,7 @@ impl<'a, 'b> Processor {
         program_id: &Pubkey,
         accounts: &[AccountInfo],
         with_subrewards: bool,
+        additional_data: &[u8],
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
 
@@ -1002,10 +1021,8 @@ impl<'a, 'b> Processor {
                     &[signers_seeds.as_ref()],
                 )?;
             }
-            MiningType::Quarry {
-                rewarder,
-            } => {
-                assert_account_key(staking_program_id_info,&cpi::quarry::staking_program_id())?;
+            MiningType::Quarry { rewarder } => {
+                assert_account_key(staking_program_id_info, &cpi::quarry::staking_program_id())?;
                 let mint_wrapper = next_account_info(account_info_iter)?;
                 let mint_wrapper_program = next_account_info(account_info_iter)?;
                 let minter = next_account_info(account_info_iter)?;
@@ -1058,6 +1075,31 @@ impl<'a, 'b> Processor {
                     redemption_vault_info.clone(),
                     reward_accounts.reward_transit_info.clone(),
                     depositor_authority_info.clone(),
+                    &[signers_seeds.as_ref()],
+                )?;
+            }
+            MiningType::Solend { .. } => {
+                let distributor_info = next_account_info(account_info_iter)?;
+                let claim_status_info = next_account_info(account_info_iter)?;
+
+                let source_info = next_account_info(account_info_iter)?;
+                let source_pubkey = cpi::solend::get_rewards_token_account_pubkey(
+                    distributor_info.key,
+                    distributor_info.clone(),
+                )?;
+                assert_account_key(source_info, &source_pubkey)?;
+
+                let data = cpi::solend::ClaimData::try_from_slice(additional_data)?;
+
+                cpi::solend::claim_rewards(
+                    staking_program_id_info.key,
+                    distributor_info.clone(),
+                    claim_status_info.clone(),
+                    source_info.clone(),
+                    reward_accounts.reward_transit_info.clone(),
+                    depositor_authority_info.clone(),
+                    executor_info.clone(),
+                    data,
                     &[signers_seeds.as_ref()],
                 )?;
             }
@@ -1151,9 +1193,12 @@ impl<'a, 'b> Processor {
                 Self::init_mining_account(program_id, accounts, mining_type)
             }
 
-            DepositorInstruction::ClaimMiningReward { with_subrewards } => {
+            DepositorInstruction::ClaimMiningReward {
+                with_subrewards,
+                additional_data,
+            } => {
                 msg!("DepositorInstruction: ClaimMiningReward");
-                Self::claim_mining_reward(program_id, accounts, with_subrewards)
+                Self::claim_mining_reward(program_id, accounts, with_subrewards, &additional_data)
             }
 
             DepositorInstruction::RefreshMMIncomes => {

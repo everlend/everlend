@@ -12,6 +12,7 @@ solana-program = "1.9.13"
 anchor-lang = "0.24.2"
 spl-math = { version = "0.1.0", features = [ "no-entrypoint" ] }
 spl-token = { version = "3.1", features = [ "no-entrypoint" ] }
+spl-associated-token-account = { version = "1.0.3", features = [ "no-entrypoint" ] }
 spl-token-lending = { git = "https://github.com/everlend/solana-program-library", features = [ "no-entrypoint" ] }
 port-variable-rate-lending-instructions = "0.2.9"
 larix-lending = { git = "https://github.com/everlend/larix-lending", features = [ "no-entrypoint" ] }

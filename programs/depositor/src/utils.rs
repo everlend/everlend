@@ -235,7 +235,7 @@ pub fn money_market<'a, 'b>(
                 money_market_account_info_iter,
                 internal_mining_type,
                 collateral_token_mint,
-                depositor_authority
+                depositor_authority,
             )?;
             return Ok((Box::new(port), is_mining));
         }
@@ -253,6 +253,7 @@ pub fn money_market<'a, 'b>(
             let solend = Solend::init(
                 money_market_program.key.clone(),
                 money_market_account_info_iter,
+                internal_mining_type,
             )?;
             return Ok((Box::new(solend), is_mining));
         }
