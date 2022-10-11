@@ -302,6 +302,7 @@ pub fn collateral_storage<'a, 'b>(
 
     Ok(Some(Box::new(coll_pool)))
 }
+
 /// Collateral pool deposit account
 #[allow(clippy::too_many_arguments)]
 pub fn collateral_pool_deposit_accounts(

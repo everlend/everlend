@@ -1,11 +1,11 @@
-use crate::claimer::{LarixClaimer, PortFinanceClaimer, RewardClaimer};
+use crate::claimer::{LarixClaimer, PortFinanceClaimer, QuarryClaimer, RewardClaimer};
 use crate::{
-    find_internal_mining_program_address, find_transit_program_address,
+    find_internal_mining_program_address,
     state::{Depositor, InternalMining, MiningType},
     utils::{parse_fill_reward_accounts, FillRewardAccounts},
 };
 use everlend_rewards::{cpi::fill_vault, state::RewardPool};
-use everlend_utils::{assert_account_key, cpi::quarry, find_program_address, AccountLoader};
+use everlend_utils::{assert_account_key, find_program_address, AccountLoader, EverlendError};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
     program_pack::Pack, pubkey::Pubkey,
@@ -120,124 +120,61 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
             fill_sub_rewards_accounts = Some(sub_reward_accounts);
         };
 
-        match internal_mining_type {
-            MiningType::Larix { .. } => {
-                //Larix has manual distribution of subreward so we dont need this check
-                // fill_sub_rewards_accounts.check_transit_reward_destination()?;
+        let claimer: Box<dyn RewardClaimer<'b> + 'a> = {
+            match internal_mining_type {
+                MiningType::Larix { .. } => {
+                    //Larix has manual distribution of subreward so we dont need this check
+                    // fill_sub_rewards_accounts.check_transit_reward_destination()?;
 
-                let claimer = LarixClaimer::init(
-                    self.staking_program_id.key,
-                    internal_mining_type,
-                    with_subrewards,
-                    fill_sub_rewards_accounts.clone(),
-                    account_info_iter,
-                )?;
+                    let larix = LarixClaimer::init(
+                        self.staking_program_id.key,
+                        internal_mining_type,
+                        with_subrewards,
+                        fill_sub_rewards_accounts.clone(),
+                        account_info_iter,
+                    )?;
 
-                claimer.claim_reward(
-                    self.staking_program_id.key,
-                    reward_accounts.reward_transit_info.clone(),
-                    self.depositor_authority.clone(),
-                    &[signers_seeds.as_ref()],
-                )?;
-            }
-            MiningType::PortFinance { .. } => {
-                if with_subrewards {
-                    reward_accounts
-                        .check_transit_reward_destination(program_id, self.depositor.key)?;
-                };
+                    Box::new(larix)
+                }
+                MiningType::PortFinance { .. } => {
+                    if with_subrewards {
+                        reward_accounts
+                            .check_transit_reward_destination(program_id, self.depositor.key)?;
+                    };
 
-                let claimer = PortFinanceClaimer::init(
-                    self.staking_program_id.key,
-                    internal_mining_type,
-                    with_subrewards,
-                    fill_sub_rewards_accounts.clone(),
-                    account_info_iter,
-                )?;
+                    let port_finance = PortFinanceClaimer::init(
+                        self.staking_program_id.key,
+                        internal_mining_type,
+                        with_subrewards,
+                        fill_sub_rewards_accounts.clone(),
+                        account_info_iter,
+                    )?;
 
-                claimer.claim_reward(
-                    self.staking_program_id.key,
-                    reward_accounts.reward_transit_info.clone(),
-                    self.depositor_authority.clone(),
-                    &[signers_seeds.as_ref()],
-                )?;
-            }
-            MiningType::Quarry { rewarder } => {
-                assert_account_key(self.staking_program_id, &quarry::staking_program_id())?;
-                let mint_wrapper = AccountLoader::next_unchecked(account_info_iter)?;
-                let mint_wrapper_program = AccountLoader::next_unchecked(account_info_iter)?;
-                let minter = AccountLoader::next_unchecked(account_info_iter)?;
-                // IOU token mint
-                let rewards_token_mint = AccountLoader::next_unchecked(account_info_iter)?;
-
-                let rewards_token_account = {
-                    let (reward_token_account_pubkey, _) = find_transit_program_address(
+                    Box::new(port_finance)
+                }
+                MiningType::Quarry { .. } => {
+                    let quarry = QuarryClaimer::init(
                         program_id,
                         self.depositor.key,
-                        rewards_token_mint.key,
-                        "lm_reward",
-                    );
-
-                    AccountLoader::next_with_key(account_info_iter, &reward_token_account_pubkey)?
-                };
-
-                let rewards_fee_account =
-                    AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
-
-                let quarry_rewarder = AccountLoader::next_with_key(account_info_iter, &rewarder)?;
-
-                let quarry_info = {
-                    let (quarry, _) = quarry::find_quarry_program_address(
-                        self.staking_program_id.key,
-                        quarry_rewarder.key,
-                        self.collateral_mint.key,
-                    );
-
-                    AccountLoader::next_with_key(account_info_iter, &quarry)
-                }?;
-
-                let miner = {
-                    let (miner_pubkey, _) = quarry::find_miner_program_address(
-                        &quarry::staking_program_id(),
-                        quarry_info.key,
                         self.depositor_authority.key,
-                    );
+                        self.collateral_mint.key,
+                        self.staking_program_id.key,
+                        internal_mining_type,
+                        account_info_iter,
+                    )?;
 
-                    AccountLoader::next_with_key(account_info_iter, &miner_pubkey)
-                }?;
-
-                quarry::claim_rewards(
-                    self.staking_program_id.key,
-                    mint_wrapper.clone(),
-                    mint_wrapper_program.clone(),
-                    minter.clone(),
-                    rewards_token_mint.clone(),
-                    rewards_token_account.clone(),
-                    rewards_fee_account.clone(),
-                    self.depositor_authority.clone(),
-                    miner.clone(),
-                    quarry_info.clone(),
-                    quarry_rewarder.clone(),
-                    &[signers_seeds.as_ref()],
-                )?;
-
-                let redeemer_program_id_info = AccountLoader::next_unchecked(account_info_iter)?;
-                let redeemer_info = AccountLoader::next_unchecked(account_info_iter)?;
-                let redemption_vault_info =
-                    AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
-
-                quarry::redeem_all_tokens(
-                    redeemer_program_id_info.key,
-                    redeemer_info.clone(),
-                    rewards_token_mint.clone(),
-                    rewards_token_account.clone(),
-                    redemption_vault_info.clone(),
-                    reward_accounts.reward_transit_info.clone(),
-                    self.depositor_authority.clone(),
-                    &[signers_seeds.as_ref()],
-                )?;
+                    Box::new(quarry)
+                }
+                _ => return Err(EverlendError::MiningNotInitialized.into()),
             }
-            MiningType::None => {}
         };
+
+        claimer.claim_reward(
+            self.staking_program_id.key,
+            reward_accounts.reward_transit_info.clone(),
+            self.depositor_authority.clone(),
+            &[signers_seeds.as_ref()],
+        )?;
 
         let mut fill_itr = vec![reward_accounts];
 
