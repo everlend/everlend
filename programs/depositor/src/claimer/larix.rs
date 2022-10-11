@@ -36,11 +36,13 @@ impl<'a, 'b> LarixClaimer<'a, 'b> {
                     return Err(ProgramError::InvalidArgument);
                 };
 
-                // Assert additional reward token account
-                assert_account_key(
-                    &fill_sub_rewards_accounts.unwrap().reward_transit_info,
-                    &additional_reward_token_account.unwrap(),
-                )?;
+                if with_subrewards {
+                    // Assert additional reward token account
+                    assert_account_key(
+                        &fill_sub_rewards_accounts.unwrap().reward_transit_info,
+                        &additional_reward_token_account.unwrap(),
+                    )?;
+                };
 
                 mining_account
             }
