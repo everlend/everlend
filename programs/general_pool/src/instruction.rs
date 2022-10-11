@@ -23,7 +23,7 @@ pub enum LiquidityPoolsInstruction {
     ///
     /// Accounts:
     /// [W] Pool market - uninitialized
-    /// [S] Market manager
+    /// [WS] Market manager
     /// [R] Registry
     /// [R] Rent sysvar
     InitPoolMarket,
@@ -272,7 +272,7 @@ pub fn init_pool_market(
 ) -> Instruction {
     let accounts = vec![
         AccountMeta::new(*pool_market, false),
-        AccountMeta::new_readonly(*manager, true),
+        AccountMeta::new(*manager, true),
         AccountMeta::new_readonly(*registry, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];

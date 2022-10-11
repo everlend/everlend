@@ -3,6 +3,7 @@
 use super::{AccountType, RebalancingStep, TOTAL_REBALANCING_STEP};
 use crate::state::RebalancingOperation;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+pub use deprecated::DeprecatedRebalancing;
 use everlend_liquidity_oracle::state::{Distribution, DistributionArray, TokenOracle};
 use everlend_registry::state::{DistributionPubkeys, TOTAL_DISTRIBUTIONS};
 use everlend_utils::{math, EverlendError};
@@ -14,7 +15,6 @@ use solana_program::{
     pubkey::Pubkey,
 };
 use std::cmp::Ordering;
-pub use deprecated::DeprecatedRebalancing;
 
 /// Rebalancing
 #[repr(C)]
@@ -417,7 +417,6 @@ mod deprecated {
             self.steps.iter().all(|&step| step.executed_at.is_some())
         }
     }
-
 
     impl IsInitialized for DeprecatedRebalancing {
         fn is_initialized(&self) -> bool {
