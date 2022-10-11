@@ -153,6 +153,11 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
                     Box::new(port_finance)
                 }
                 MiningType::Quarry { .. } => {
+                    // Quarry doesn't have subreward tokens
+                    if with_subrewards {
+                        return Err(ProgramError::InvalidArgument)
+                    }
+
                     let quarry = QuarryClaimer::init(
                         program_id,
                         self.depositor.key,
