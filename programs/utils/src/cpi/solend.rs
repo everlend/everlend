@@ -406,7 +406,7 @@ pub fn claim_rewards<'a>(
             AccountMeta::new_readonly(spl_token::id(), false),
         ],
         data: Claim {
-            instruction: Default::default(),
+            instruction: [62, 198, 214, 193, 213, 159, 108, 210],
             bump: claim_data.bump,
             index: claim_data.index,
             amount: claim_data.amount,

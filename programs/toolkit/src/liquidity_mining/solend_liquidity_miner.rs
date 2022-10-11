@@ -1,4 +1,3 @@
-use crate::helpers::create_transit;
 use crate::liquidity_mining::{execute_account_creation, LiquidityMiner};
 use crate::utils::{get_asset_maps, spl_create_associated_token_account};
 use crate::Config;
@@ -44,16 +43,6 @@ fn save_new_obligation_account(
 }
 
 fn save_new_mining_account(config: &Config, token: &String, miner_vault: Pubkey) -> Result<()> {
-    write_keypair_file(
-        mining_account,
-        &format!(
-            ".keypairs/{}_solend_mining_{}.json",
-            token,
-            mining_account.pubkey()
-        ),
-    )
-    .unwrap();
-
     let mut initialized_accounts = config.get_initialized_accounts();
 
     initialized_accounts
@@ -61,7 +50,7 @@ fn save_new_mining_account(config: &Config, token: &String, miner_vault: Pubkey)
         .get_mut(token)
         .unwrap()
         .mining_accounts[MoneyMarket::Solend as usize]
-        .staking_account = mining_account.pubkey();
+        .staking_account = miner_vault;
 
     initialized_accounts
         .save(config.accounts_path.as_str())
@@ -109,7 +98,7 @@ impl LiquidityMiner for SolendLiquidityMiner {
         let (depositor_authority, _) =
             find_program_address(&everlend_depositor::id(), &initialized_accounts.depositor);
 
-        let (_, collateral_mint_map) = get_asset_maps(default_accounts.clone());
+        let (_, collateral_mint_map) = get_asset_maps(default_accounts);
         let collateral_mint =
             collateral_mint_map.get(token).unwrap()[MoneyMarket::Solend as usize].unwrap();
 
