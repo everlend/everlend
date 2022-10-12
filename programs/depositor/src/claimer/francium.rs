@@ -1,6 +1,5 @@
 use crate::claimer::RewardClaimer;
 use crate::state::MiningType;
-use borsh::BorshDeserialize;
 use everlend_utils::cpi::francium;
 use everlend_utils::{AccountLoader, EverlendError};
 use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
@@ -28,7 +27,7 @@ impl<'a, 'b> FranciumClaimer<'a, 'b> {
         internal_mining_type: MiningType,
         fill_sub_rewards_accounts: Option<FillRewardAccounts<'a, 'b>>,
         account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
-    ) -> Result<SolendClaimer<'a, 'b>, ProgramError> {
+    ) -> Result<FranciumClaimer<'a, 'b>, ProgramError> {
         let  (farming_pool, staking_program_id_pubkey) =
             match internal_mining_type {
                 MiningType::Francium {
@@ -43,14 +42,14 @@ impl<'a, 'b> FranciumClaimer<'a, 'b> {
             return Err(ProgramError::InvalidArgument);
         }
 
-        let farming_pool = next_with_key(account_info_iter, &farming_pool)?;
-        let farming_pool_authority = next_unchecked(account_info_iter)?;
-        let pool_stake_token = next_unchecked(account_info_iter)?;
-        let pool_reward_a = next_unchecked(account_info_iter)?;
-        let pool_reward_b = next_unchecked(account_info_iter)?;
-        let user_farming = next_unchecked(account_info_iter)?;
-        let user_stake = next_unchecked(account_info_iter)?;
-        let clock = next_unchecked(account_info_iter)?;
+        let farming_pool = AccountLoader::next_with_key(account_info_iter, &farming_pool)?;
+        let farming_pool_authority = AccountLoader::next_unchecked(account_info_iter)?;
+        let pool_stake_token = AccountLoader::next_unchecked(account_info_iter)?;
+        let pool_reward_a = AccountLoader::next_unchecked(account_info_iter)?;
+        let pool_reward_b = AccountLoader::next_unchecked(account_info_iter)?;
+        let user_farming = AccountLoader::next_unchecked(account_info_iter)?;
+        let user_stake = AccountLoader::next_unchecked(account_info_iter)?;
+        let clock = AccountLoader::next_unchecked(account_info_iter)?;
         let sub_reward = fill_sub_rewards_accounts.as_ref().unwrap().reward_transit_info;
 
         Ok(FranciumClaimer {
@@ -67,7 +66,7 @@ impl<'a, 'b> FranciumClaimer<'a, 'b> {
     }
 }
 
-impl<'a, 'b> RewardClaimer<'b> for SolendClaimer<'a, 'b> {
+impl<'a, 'b> RewardClaimer<'b> for FranciumClaimer<'a, 'b> {
     ///
     fn claim_reward(
         &self,
