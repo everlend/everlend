@@ -5,10 +5,13 @@ use solana_program::{account_info::AccountInfo, program_error::ProgramError, pub
 mod larix;
 mod port_finance;
 mod quarry;
+mod solend;
 
 pub use larix::*;
 pub use port_finance::*;
 pub use quarry::*;
+pub use solend::*;
+
 ///
 pub trait RewardClaimer<'a> {
     /// Claim mining reward

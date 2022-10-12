@@ -18,7 +18,7 @@ pub struct Solend<'a, 'b> {
     reserve_liquidity_pyth_oracle: &'a AccountInfo<'b>,
     reserve_liquidity_switchboard_oracle: &'a AccountInfo<'b>,
 
-    mining: &'a Option<SolendMining<'b>>,
+    mining: Option<SolendMining<'a, 'b>>,
 }
 
 struct SolendMining<'a, 'b> {
@@ -65,8 +65,8 @@ impl<'a, 'b> Solend<'a, 'b> {
                     AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
 
                 solend.mining = Some(SolendMining {
-                    obligation_info: obligation_info.clone(),
-                    collateral_supply_info: collateral_supply_info.clone(),
+                    obligation_info,
+                    collateral_supply_info,
                 })
             }
             _ => {}
@@ -230,12 +230,12 @@ impl<'a, 'b> MoneyMarket<'b> for Solend<'a, 'b> {
     }
 }
 
-impl<'a> CollateralStorage<'a> for Solend<'a> {
+impl<'a, 'b> CollateralStorage<'b> for Solend<'a, 'b> {
     fn deposit_collateral_tokens(
         &self,
-        collateral_transit: AccountInfo<'a>,
-        authority: AccountInfo<'a>,
-        clock: AccountInfo<'a>,
+        collateral_transit: AccountInfo<'b>,
+        authority: AccountInfo<'b>,
+        clock: AccountInfo<'b>,
         collateral_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
@@ -271,9 +271,9 @@ impl<'a> CollateralStorage<'a> for Solend<'a> {
 
     fn withdraw_collateral_tokens(
         &self,
-        collateral_transit: AccountInfo<'a>,
-        authority: AccountInfo<'a>,
-        clock: AccountInfo<'a>,
+        collateral_transit: AccountInfo<'b>,
+        authority: AccountInfo<'b>,
+        clock: AccountInfo<'b>,
         collateral_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {

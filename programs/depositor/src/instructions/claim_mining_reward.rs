@@ -1,4 +1,6 @@
-use crate::claimer::{LarixClaimer, PortFinanceClaimer, QuarryClaimer, RewardClaimer};
+use crate::claimer::{
+    LarixClaimer, PortFinanceClaimer, QuarryClaimer, RewardClaimer, SolendClaimer,
+};
 use crate::{
     find_internal_mining_program_address,
     state::{Depositor, InternalMining, MiningType},
@@ -67,6 +69,7 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
         program_id: &Pubkey,
         account_info_iter: &'a mut Enumerate<Iter<'a, AccountInfo<'b>>>,
         with_subrewards: bool,
+        additional_data: &[u8],
     ) -> ProgramResult {
         {
             let depositor = Depositor::unpack(&self.depositor.data.borrow())?;
@@ -155,7 +158,7 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
                 MiningType::Quarry { .. } => {
                     // Quarry doesn't have subreward tokens
                     if with_subrewards {
-                        return Err(ProgramError::InvalidArgument)
+                        return Err(ProgramError::InvalidArgument);
                     }
 
                     let quarry = QuarryClaimer::init(
@@ -169,6 +172,16 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
                     )?;
 
                     Box::new(quarry)
+                }
+                MiningType::Solend { .. } => {
+                    let solend = SolendClaimer::init(
+                        self.staking_program_id.key,
+                        internal_mining_type,
+                        additional_data,
+                        account_info_iter,
+                    )?;
+
+                    Box::new(solend)
                 }
                 _ => return Err(EverlendError::MiningNotInitialized.into()),
             }

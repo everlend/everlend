@@ -9,7 +9,7 @@ use solana_program::{
 };
 use spl_associated_token_account::get_associated_token_address;
 
-#[derive(Debug, PartialEq, BorshSerialize, BorshDeserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct ClaimData {
     bump: u8,
     index: u64,

@@ -246,6 +246,25 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                     &[signers_seeds.as_ref()],
                 )?;
             }
+            MiningType::Solend { obligation } => {
+                let money_market_program_id_info =
+                    AccountLoader::next_unchecked(account_info_iter)?;
+                let obligation_info = AccountLoader::next_with_key(account_info_iter, &obligation)?;
+                let lending_market_info = AccountLoader::next_unchecked(account_info_iter)?;
+                let clock = AccountLoader::next_with_key(account_info_iter, &clock::id())?;
+                let _spl_token_program =
+                    AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
+
+                cpi::solend::init_obligation(
+                    money_market_program_id_info.key,
+                    obligation_info.clone(),
+                    lending_market_info.clone(),
+                    self.depositor_authority.clone(),
+                    clock.clone(),
+                    self.rent.clone(),
+                    &[signers_seeds.as_ref()],
+                )?;
+            }
             MiningType::None => {}
         }
 
