@@ -7,22 +7,22 @@ use spl_token::state::Account;
 use std::{iter::Enumerate, slice::Iter};
 
 ///
-pub struct Solend<'a> {
+pub struct Solend<'a, 'b> {
     money_market_program_id: Pubkey,
-    reserve: AccountInfo<'a>,
-    reserve_liquidity_supply: AccountInfo<'a>,
-    lending_market: AccountInfo<'a>,
-    lending_market_authority: AccountInfo<'a>,
-    reserve_liquidity_pyth_oracle: AccountInfo<'a>,
-    reserve_liquidity_switchboard_oracle: AccountInfo<'a>,
+    reserve: &'a AccountInfo<'b>,
+    reserve_liquidity_supply: &'a AccountInfo<'b>,
+    lending_market: &'a AccountInfo<'b>,
+    lending_market_authority: &'a AccountInfo<'b>,
+    reserve_liquidity_pyth_oracle: &'a AccountInfo<'b>,
+    reserve_liquidity_switchboard_oracle: &'a AccountInfo<'b>,
 }
 
-impl<'a, 'b> Solend<'a> {
+impl<'a, 'b> Solend<'a, 'b> {
     ///
     pub fn init(
         money_market_program_id: Pubkey,
-        account_info_iter: &'b mut Enumerate<Iter<'_, AccountInfo<'a>>>,
-    ) -> Result<Solend<'a>, ProgramError> {
+        account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
+    ) -> Result<Solend<'a, 'b>, ProgramError> {
         let reserve_info =
             AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
         let reserve_liquidity_supply_info =
@@ -36,24 +36,24 @@ impl<'a, 'b> Solend<'a> {
 
         Ok(Solend {
             money_market_program_id,
-            reserve: reserve_info.clone(),
-            reserve_liquidity_supply: reserve_liquidity_supply_info.clone(),
-            lending_market: lending_market_info.clone(),
-            lending_market_authority: lending_market_authority_info.clone(),
-            reserve_liquidity_pyth_oracle: reserve_liquidity_pyth_oracle_info.clone(),
-            reserve_liquidity_switchboard_oracle: reserve_liquidity_switchboard_oracle_info.clone(),
+            reserve: reserve_info,
+            reserve_liquidity_supply: reserve_liquidity_supply_info,
+            lending_market: lending_market_info,
+            lending_market_authority: lending_market_authority_info,
+            reserve_liquidity_pyth_oracle: reserve_liquidity_pyth_oracle_info,
+            reserve_liquidity_switchboard_oracle: reserve_liquidity_switchboard_oracle_info,
         })
     }
 }
 
-impl<'a> MoneyMarket<'a> for Solend<'a> {
+impl<'a, 'b> MoneyMarket<'b> for Solend<'a, 'b> {
     fn money_market_deposit(
         &self,
-        collateral_mint: AccountInfo<'a>,
-        source_liquidity: AccountInfo<'a>,
-        destination_collateral: AccountInfo<'a>,
-        authority: AccountInfo<'a>,
-        clock: AccountInfo<'a>,
+        collateral_mint: AccountInfo<'b>,
+        source_liquidity: AccountInfo<'b>,
+        destination_collateral: AccountInfo<'b>,
+        authority: AccountInfo<'b>,
+        clock: AccountInfo<'b>,
         liquidity_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<u64, ProgramError> {
@@ -88,11 +88,11 @@ impl<'a> MoneyMarket<'a> for Solend<'a> {
 
     fn money_market_redeem(
         &self,
-        collateral_mint: AccountInfo<'a>,
-        source_collateral: AccountInfo<'a>,
-        destination_liquidity: AccountInfo<'a>,
-        authority: AccountInfo<'a>,
-        clock: AccountInfo<'a>,
+        collateral_mint: AccountInfo<'b>,
+        source_collateral: AccountInfo<'b>,
+        destination_liquidity: AccountInfo<'b>,
+        authority: AccountInfo<'b>,
+        clock: AccountInfo<'b>,
         collateral_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
@@ -123,11 +123,11 @@ impl<'a> MoneyMarket<'a> for Solend<'a> {
     ///
     fn money_market_deposit_and_deposit_mining(
         &self,
-        _collateral_mint: AccountInfo<'a>,
-        _source_liquidity: AccountInfo<'a>,
-        _collateral_transit: AccountInfo<'a>,
-        _authority: AccountInfo<'a>,
-        _clock: AccountInfo<'a>,
+        _collateral_mint: AccountInfo<'b>,
+        _source_liquidity: AccountInfo<'b>,
+        _collateral_transit: AccountInfo<'b>,
+        _authority: AccountInfo<'b>,
+        _clock: AccountInfo<'b>,
         _liquidity_amount: u64,
         _signers_seeds: &[&[&[u8]]],
     ) -> Result<u64, ProgramError> {
@@ -137,11 +137,11 @@ impl<'a> MoneyMarket<'a> for Solend<'a> {
     ///
     fn money_market_redeem_and_withdraw_mining(
         &self,
-        _collateral_mint: AccountInfo<'a>,
-        _collateral_transit: AccountInfo<'a>,
-        _liquidity_destination: AccountInfo<'a>,
-        _authority: AccountInfo<'a>,
-        _clock: AccountInfo<'a>,
+        _collateral_mint: AccountInfo<'b>,
+        _collateral_transit: AccountInfo<'b>,
+        _liquidity_destination: AccountInfo<'b>,
+        _authority: AccountInfo<'b>,
+        _clock: AccountInfo<'b>,
         _collateral_amount: u64,
         _signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {

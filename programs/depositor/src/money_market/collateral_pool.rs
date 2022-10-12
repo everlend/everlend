@@ -11,23 +11,23 @@ use std::{iter::Enumerate, slice::Iter};
 
 /// Container
 #[derive(Clone)]
-pub struct CollateralPool<'a> {
-    collateral_pool_market: AccountInfo<'a>,
-    collateral_pool_market_authority: AccountInfo<'a>,
-    collateral_pool: AccountInfo<'a>,
-    collateral_pool_token_account: AccountInfo<'a>,
-    collateral_pool_withdraw_authority: Option<AccountInfo<'a>>,
+pub struct CollateralPool<'a, 'b> {
+    collateral_pool_market: &'a AccountInfo<'b>,
+    collateral_pool_market_authority: &'a AccountInfo<'b>,
+    collateral_pool: &'a AccountInfo<'b>,
+    collateral_pool_token_account: &'a AccountInfo<'b>,
+    collateral_pool_withdraw_authority: Option<&'a AccountInfo<'b>>,
 }
 
-impl<'a, 'b> CollateralPool<'a> {
+impl<'a, 'b> CollateralPool<'a, 'b> {
     ///
     pub fn init(
         registry_markets: &RegistryMarkets,
-        collateral_mint: &'b AccountInfo<'a>,
-        authority: &'b AccountInfo<'a>,
-        account_info_iter: &mut Enumerate<Iter<'_, AccountInfo<'a>>>,
+        collateral_mint: &AccountInfo<'b>,
+        authority: &AccountInfo<'b>,
+        account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
         is_withdraw_expected: bool,
-    ) -> Result<CollateralPool<'a>, ProgramError> {
+    ) -> Result<CollateralPool<'a, 'b>, ProgramError> {
         msg!("Init CollateralPool");
         let collateral_pool_market_info =
             AccountLoader::next_with_owner(account_info_iter, &everlend_collateral_pool::id())?;
@@ -46,28 +46,32 @@ impl<'a, 'b> CollateralPool<'a> {
             return Err(ProgramError::InvalidArgument);
         }
 
-        // Check collateral pool
-        let (collateral_pool_pubkey, _) = everlend_collateral_pool::find_pool_program_address(
-            &everlend_collateral_pool::id(),
-            collateral_pool_market_info.key,
-            collateral_mint.key,
-        );
-        assert_account_key(collateral_pool_info, &collateral_pool_pubkey)?;
+        {
+            // Check collateral pool
+            let (collateral_pool_pubkey, _) = everlend_collateral_pool::find_pool_program_address(
+                &everlend_collateral_pool::id(),
+                collateral_pool_market_info.key,
+                collateral_mint.key,
+            );
+            assert_account_key(collateral_pool_info, &collateral_pool_pubkey)?;
+        }
 
-        let collateral_pool =
-            everlend_collateral_pool::state::Pool::unpack(&collateral_pool_info.data.borrow())?;
+        {
+            let collateral_pool =
+                everlend_collateral_pool::state::Pool::unpack(&collateral_pool_info.data.borrow())?;
 
-        // Check collateral pool accounts
-        assert_account_key(collateral_mint, &collateral_pool.token_mint)?;
-        assert_account_key(
-            collateral_pool_token_account_info,
-            &collateral_pool.token_account,
-        )?;
+            // Check collateral pool accounts
+            assert_account_key(collateral_mint, &collateral_pool.token_mint)?;
+            assert_account_key(
+                collateral_pool_token_account_info,
+                &collateral_pool.token_account,
+            )?;
+        }
 
         let _everlend_collateral_pool_info =
             AccountLoader::next_with_key(account_info_iter, &everlend_collateral_pool::id())?;
 
-        let mut collateral_pool_withdraw_authority: Option<AccountInfo<'a>> = None;
+        let mut collateral_pool_withdraw_authority: Option<&'a AccountInfo<'b>> = None;
         if is_withdraw_expected {
             let collateral_pool_withdraw_authority_info =
                 AccountLoader::next_unchecked(account_info_iter)?;
@@ -84,26 +88,25 @@ impl<'a, 'b> CollateralPool<'a> {
                 &collateral_pool_withdraw_authority_pubkey,
             )?;
 
-            collateral_pool_withdraw_authority =
-                Some(collateral_pool_withdraw_authority_info.clone());
+            collateral_pool_withdraw_authority = Some(collateral_pool_withdraw_authority_info);
         }
 
         Ok(CollateralPool {
-            collateral_pool_market: collateral_pool_market_info.clone(),
-            collateral_pool_market_authority: collateral_pool_market_authority_info.clone(),
-            collateral_pool: collateral_pool_info.clone(),
-            collateral_pool_token_account: collateral_pool_token_account_info.clone(),
+            collateral_pool_market: collateral_pool_market_info,
+            collateral_pool_market_authority: collateral_pool_market_authority_info,
+            collateral_pool: collateral_pool_info,
+            collateral_pool_token_account: collateral_pool_token_account_info,
             collateral_pool_withdraw_authority,
         })
     }
 }
 
-impl<'a> CollateralStorage<'a> for CollateralPool<'a> {
+impl<'a, 'b> CollateralStorage<'b> for CollateralPool<'a, 'b> {
     fn deposit_collateral_tokens(
         &self,
-        collateral_transit: AccountInfo<'a>,
-        authority: AccountInfo<'a>,
-        _clock: AccountInfo<'a>,
+        collateral_transit: AccountInfo<'b>,
+        authority: AccountInfo<'b>,
+        _clock: AccountInfo<'b>,
         collateral_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
@@ -125,9 +128,9 @@ impl<'a> CollateralStorage<'a> for CollateralPool<'a> {
 
     fn withdraw_collateral_tokens(
         &self,
-        collateral_transit: AccountInfo<'a>,
-        authority: AccountInfo<'a>,
-        _clock: AccountInfo<'a>,
+        collateral_transit: AccountInfo<'b>,
+        authority: AccountInfo<'b>,
+        _clock: AccountInfo<'b>,
         collateral_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
@@ -143,10 +146,7 @@ impl<'a> CollateralStorage<'a> for CollateralPool<'a> {
                 pool: self.collateral_pool.clone(),
                 token_account: self.collateral_pool_token_account.clone(),
             },
-            self.collateral_pool_withdraw_authority
-                .as_ref()
-                .unwrap()
-                .clone(),
+            self.collateral_pool_withdraw_authority.unwrap().clone(),
             collateral_transit,
             authority,
             collateral_amount,

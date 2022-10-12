@@ -9,37 +9,37 @@ use std::{iter::Enumerate, slice::Iter};
 use crate::state::MiningType;
 
 ///
-pub struct Francium<'a> {
+pub struct Francium<'a, 'b> {
     money_market_program_id: Pubkey,
-    reserve: AccountInfo<'a>,
-    reserve_liquidity_supply: AccountInfo<'a>,
-    lending_market: AccountInfo<'a>,
-    lending_market_authority: AccountInfo<'a>,
+    reserve: &'a AccountInfo<'b>,
+    reserve_liquidity_supply: &'a AccountInfo<'b>,
+    lending_market: &'a AccountInfo<'b>,
+    lending_market_authority: &'a AccountInfo<'b>,
 
-    mining: Option<FranciumFarming<'a>>,
+    mining: Option<FranciumFarming<'a, 'b>>,
 }
 
-struct FranciumFarming<'a> {
-    lend_reward_program_id: AccountInfo<'a>,
-    user_farming: AccountInfo<'a>,
-    user_reward_a:AccountInfo<'a>,
-    user_reward_b: AccountInfo<'a>,
-    farming_pool: AccountInfo<'a>,
-    farming_pool_authority: AccountInfo<'a>,
-    pool_stake_token: AccountInfo<'a>,
-    pool_reward_a: AccountInfo<'a>,
-    pool_reward_b: AccountInfo<'a>,
-    token_mint_address_a: AccountInfo<'a>,
-    token_mint_address_b: AccountInfo<'a>,
+struct FranciumFarming<'a, 'b> {
+    lend_reward_program_id: &'a AccountInfo<'b>,
+    user_farming: &'a AccountInfo<'b>,
+    user_reward_a: &'a AccountInfo<'b>,
+    user_reward_b: &'a AccountInfo<'b>,
+    farming_pool: &'a AccountInfo<'b>,
+    farming_pool_authority: &'a AccountInfo<'b>,
+    pool_stake_token: &'a AccountInfo<'b>,
+    pool_reward_a: &'a AccountInfo<'b>,
+    pool_reward_b: &'a AccountInfo<'b>,
+    token_mint_address_a: &'a AccountInfo<'b>,
+    token_mint_address_b: &'a AccountInfo<'b>,
 }
 
-impl<'a, 'b> Francium<'a> {
+impl<'a, 'b> Francium<'a, 'b> {
     ///
     pub fn init(
         money_market_program_id: Pubkey,
-        account_info_iter: &'b mut Enumerate<Iter<'_, AccountInfo<'a>>>,
+        account_info_iter: &'b mut Enumerate<Iter<'a, AccountInfo<'b>>>,
         internal_mining_type: Option<MiningType>,
-    ) -> Result<Francium<'a>, ProgramError> {
+    ) -> Result<Francium<'a, 'b>, ProgramError> {
         let reserve_info =
             AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
         let reserve_liquidity_supply_info =
@@ -102,15 +102,15 @@ impl<'a, 'b> Francium<'a> {
     }
 }
 
-impl<'a> MoneyMarket<'a> for Francium<'a> {
+impl<'a, 'b> MoneyMarket<'b> for Francium<'a, 'b> {
     ///
     fn money_market_deposit(
         &self,
-        collateral_mint: AccountInfo<'a>,
-        source_liquidity: AccountInfo<'a>,
-        destination_collateral: AccountInfo<'a>,
-        authority: AccountInfo<'a>,
-        clock: AccountInfo<'a>,
+        collateral_mint: AccountInfo<'b>,
+        source_liquidity: AccountInfo<'b>,
+        destination_collateral: AccountInfo<'b>,
+        authority: AccountInfo<'b>,
+        clock: AccountInfo<'b>,
         amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<u64, ProgramError> {
@@ -140,11 +140,11 @@ impl<'a> MoneyMarket<'a> for Francium<'a> {
     ///
     fn money_market_redeem(
         &self,
-        collateral_mint: AccountInfo<'a>,
-        source_collateral: AccountInfo<'a>,
-        destination_liquidity: AccountInfo<'a>,
-        authority: AccountInfo<'a>,
-        clock: AccountInfo<'a>,
+        collateral_mint: AccountInfo<'b>,
+        source_collateral: AccountInfo<'b>,
+        destination_liquidity: AccountInfo<'b>,
+        authority: AccountInfo<'b>,
+        clock: AccountInfo<'b>,
         amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
@@ -244,7 +244,7 @@ impl<'a> MoneyMarket<'a> for Francium<'a> {
     }
 }
 
-impl<'a> CollateralStorage<'a> for Francium<'a> {
+impl<'a, 'b> CollateralStorage<'b> for Francium<'a, 'b> {
     fn deposit_collateral_tokens(
         &self,
         collateral_transit: AccountInfo<'a>,

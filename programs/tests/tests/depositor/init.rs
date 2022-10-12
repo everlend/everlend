@@ -31,7 +31,10 @@ async fn success() {
         .unwrap();
 
     let test_depositor = TestDepositor::new();
-    test_depositor.init(&mut env.context, &env.registry).await.unwrap();
+    test_depositor
+        .init(&mut env.context, &env.registry)
+        .await
+        .unwrap();
 
     let depositor = test_depositor.get_data(&mut env.context).await;
 
@@ -58,7 +61,10 @@ async fn fail_second_time_init() {
         .unwrap();
 
     let test_depositor = TestDepositor::new();
-    test_depositor.init(&mut env.context, &env.registry).await.unwrap();
+    test_depositor
+        .init(&mut env.context, &env.registry)
+        .await
+        .unwrap();
 
     let depositor = test_depositor.get_data(&mut env.context).await;
 
@@ -185,6 +191,9 @@ async fn fail_with_invalid_uncreated_depositor_account() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(0, InstructionError::AccountNotRentExempt)
+        TransactionError::InstructionError(
+            0,
+            InstructionError::Custom(EverlendError::InvalidAccountOwner as u32)
+        )
     );
 }

@@ -1,0 +1,17 @@
+[package]
+name = "everlend-rewards"
+version = "0.1.0"
+edition = "2018"
+
+[features]
+no-entrypoint = []
+test-bpf = []
+
+[dependencies]
+solana-program = "1.9.13"
+spl-token = { version = "3.1", features = [ "no-entrypoint" ] }
+everlend-utils = { path = "../utils" }
+borsh = "0.9.0"
+
+[lib]
+crate-type = ["cdylib", "lib"]

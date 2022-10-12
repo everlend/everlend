@@ -1,16 +1,16 @@
 //! Instruction types
 
 use borsh::{BorshDeserialize, BorshSerialize};
+use everlend_general_pool::find_withdrawal_requests_program_address;
+use everlend_liquidity_oracle::{find_token_oracle_program_address, state::DistributionArray};
+use everlend_utils::cpi::quarry;
+use everlend_utils::find_program_address;
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
     system_program, sysvar,
 };
 use spl_associated_token_account::get_associated_token_address;
-use everlend_general_pool::find_withdrawal_requests_program_address;
-use everlend_liquidity_oracle::{find_token_oracle_program_address, state::DistributionArray};
-use everlend_utils::cpi::quarry;
-use everlend_utils::find_program_address;
 
 use crate::{find_rebalancing_program_address, find_transit_program_address, state::MiningType};
 
@@ -32,9 +32,9 @@ pub enum DepositorInstruction {
     ///
     /// Accounts:
     /// [R] Depositor account
+    /// [R] Depositor authority
     /// [W] Transit account
     /// [R] Token mint
-    /// [R] Depositor authority
     /// [WS] From account
     /// [R] Rent sysvar
     /// [R] System program
@@ -66,7 +66,6 @@ pub enum DepositorInstruction {
     /// [R] Clock sysvar
     /// [R] System program
     /// [R] Token program id
-    /// [R] Everlend Liquidity Oracle program id
     /// [R] Everlend general pool program id
     StartRebalancing {
         /// Refresh income
@@ -89,6 +88,9 @@ pub enum DepositorInstruction {
     /// [R] Clock sysvar
     /// [R] Token program id
     /// [R] Money market program id
+    /// [R] Internal mining account
+    /// [] Money market deposit accounts
+    /// [] Collateral storage accounts or money market mining accounts
     Deposit,
 
     /// Withdraw funds from MM pool to money market.
@@ -111,6 +113,9 @@ pub enum DepositorInstruction {
     /// [R] Clock sysvar
     /// [R] Token program id
     /// [R] Money market program id
+    /// [R] Internal mining account
+    /// [] Money market deposit accounts
+    /// [] Collateral storage accounts or money market mining accounts
     Withdraw,
 
     /// Initialize account for mining LM rewards
@@ -122,18 +127,30 @@ pub enum DepositorInstruction {
     /// [R] Depositor
     /// [R] Depositor authority
     /// [R] Registry
-    /// [S] Manager
+    /// [WS] Manager
     /// [R] Rent sysvar
     /// [R] System program
     /// For larix mining:
-    /// [R] Mining account
+    /// [R] Mining program ID
+    /// [W] Mining account
     /// [R] Lending market
+    /// [R] Optional: Additional reward token account
     /// For PortFinance mining:
     /// [R] Staking program id
     /// [R] Staking pool
     /// [W] Staking account
+    /// [R] Money market program ID
+    /// [W] Obligation account
+    /// [R] Lending market
+    /// [R] Clock sysvar
+    /// [R] Token program ID
     /// For PortFinanceQuarry:
-    ///
+    /// [R] Staking program id
+    /// [R] Rewarder
+    /// [W] Quarry
+    /// [W] Miner account
+    /// [R] Miner vault
+    /// [R] Token program ID
     InitMiningAccount {
         /// Type of mining
         mining_type: MiningType,
@@ -152,7 +169,6 @@ pub enum DepositorInstruction {
     /// [R] Token program id
     /// [R] Staking program id
     /// [R] ELD reward program id
-    /// [R] ELD config
     /// [W] Reward pool
     /// Reward fill accounts
     /// [R] Reward mint
@@ -205,20 +221,39 @@ pub enum DepositorInstruction {
     /// [R] Depositor
     /// [W] Rebalancing account
     /// [R] Token mint
-    /// [WS] Manager
-    /// [R] System program
+    /// [S] Manager
     SetRebalancing {
         /// Manual setup of amount to distribute
         amount_to_distribute: u64,
         /// Manual setup of prev distributed liquidity
-        distributed_liquidity: u64,
+        distributed_liquidity: DistributionArray,
         /// Manual setup of prev distribution array
         distribution_array: DistributionArray,
     },
 
     /// Refresh incomes for MM
+    /// Withdraw funds from MM pool and deposit back to charge rewards.
     ///
     /// Accounts:
+    /// [R] Registry config
+    /// [R] Depositor
+    /// [R] Depositor authority
+    /// [W] Rebalancing account
+    /// [R] Income pool market
+    /// [R] Income pool
+    /// [W] Income pool token account (for liquidity mint)
+    /// [W] Collateral transit account
+    /// [W] Collateral mint
+    /// [W] Liquidity transit account
+    /// [W] Liquidity reserve transit account
+    /// [R] Liquidity mint
+    /// [S] Rebalance executor account
+    /// [R] Clock sysvar
+    /// [R] Token program id
+    /// [R] Money market program id
+    /// [R] Internal mining account
+    /// [] Money market deposit accounts
+    /// [] Collateral storage accounts or money market mining accounts
     RefreshMMIncomes,
 }
 
@@ -251,7 +286,7 @@ pub fn create_transit(
     program_id: &Pubkey,
     depositor: &Pubkey,
     mint: &Pubkey,
-    rebalance_executor: &Pubkey,
+    signer: &Pubkey,
     seed: Option<String>,
 ) -> Instruction {
     let seed = seed.unwrap_or_default();
@@ -260,10 +295,11 @@ pub fn create_transit(
 
     let accounts = vec![
         AccountMeta::new_readonly(*depositor, false),
+        AccountMeta::new_readonly(depositor_authority, false),
         AccountMeta::new(transit, false),
         AccountMeta::new_readonly(*mint, false),
-        AccountMeta::new_readonly(depositor_authority, false),
-        AccountMeta::new(*rebalance_executor, true),
+        // Any account
+        AccountMeta::new(*signer, true),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
@@ -335,7 +371,6 @@ pub fn start_rebalancing(
         AccountMeta::new_readonly(sysvar::clock::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
         AccountMeta::new_readonly(spl_token::id(), false),
-        AccountMeta::new_readonly(everlend_liquidity_oracle::id(), false),
         AccountMeta::new_readonly(everlend_general_pool::id(), false),
     ];
 
@@ -355,7 +390,7 @@ pub fn reset_rebalancing(
     liquidity_mint: &Pubkey,
     manager: &Pubkey,
     amount_to_distribute: u64,
-    distributed_liquidity: u64,
+    distributed_liquidity: DistributionArray,
     distribution_array: DistributionArray,
 ) -> Instruction {
     let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
@@ -366,7 +401,6 @@ pub fn reset_rebalancing(
         AccountMeta::new(rebalancing, false),
         AccountMeta::new_readonly(*liquidity_mint, false),
         AccountMeta::new_readonly(*manager, true),
-        AccountMeta::new_readonly(system_program::id(), false),
     ];
 
     Instruction::new_with_borsh(
@@ -583,21 +617,14 @@ pub fn refresh_mm_incomes(
 #[allow(clippy::too_many_arguments)]
 pub fn migrate_depositor(
     program_id: &Pubkey,
-    depositor: &Pubkey,
-    registry: &Pubkey,
-    manager: &Pubkey,
-    rebalancing: &Pubkey,
-    liquidity_mint: &Pubkey,
+    _depositor: &Pubkey,
+    _registry: &Pubkey,
+    _manager: &Pubkey,
+    _rebalancing: &Pubkey,
+    _liquidity_mint: &Pubkey,
+    _amount_to_distribute: u64,
 ) -> Instruction {
-    let accounts = vec![
-        AccountMeta::new_readonly(*depositor, false),
-        AccountMeta::new_readonly(*registry, false),
-        AccountMeta::new(*manager, true),
-        AccountMeta::new(*rebalancing, false),
-        AccountMeta::new_readonly(*liquidity_mint, false),
-        AccountMeta::new_readonly(sysvar::rent::id(), false),
-        AccountMeta::new_readonly(system_program::id(), false),
-    ];
+    let accounts = vec![];
 
     Instruction::new_with_borsh(
         *program_id,
@@ -697,14 +724,11 @@ pub fn init_mining_account(
             accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
             accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
         }
-        MiningType::Quarry {
-            rewarder,
-        } => {
-
+        MiningType::Quarry { rewarder } => {
             let (quarry, _) = quarry::find_quarry_program_address(
                 &quarry::staking_program_id(),
                 &rewarder,
-                &pubkeys.liquidity_mint,
+                &pubkeys.collateral_mint,
             );
             let (miner_pubkey, _) = quarry::find_miner_program_address(
                 &quarry::staking_program_id(),
@@ -714,7 +738,10 @@ pub fn init_mining_account(
 
             let miner_vault = get_associated_token_address(&miner_pubkey, &pubkeys.collateral_mint);
 
-            accounts.push(AccountMeta::new_readonly(quarry::staking_program_id(), false));
+            accounts.push(AccountMeta::new_readonly(
+                quarry::staking_program_id(),
+                false,
+            ));
             accounts.push(AccountMeta::new_readonly(rewarder, false));
             accounts.push(AccountMeta::new(quarry, false));
             accounts.push(AccountMeta::new(miner_pubkey, false));

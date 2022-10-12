@@ -1,9 +1,12 @@
 use crate::utils::arg_pubkey;
 use crate::{Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
-use everlend_depositor::find_rebalancing_program_address;
 use everlend_depositor::state::Rebalancing;
+use everlend_depositor::{find_rebalancing_program_address, find_transit_program_address};
+use everlend_general_pool::state::{Pool, WithdrawalRequests};
+use everlend_general_pool::{find_pool_program_address, find_withdrawal_requests_program_address};
 use solana_clap_utils::input_parsers::pubkey_of;
+use spl_token::state::Account;
 
 const ARG_MINT: &str = "mint";
 
@@ -35,8 +38,40 @@ impl<'a> ToolkitCommand<'a> for GetRebalancingAccountCommand {
         let (rebalancing_pubkey, _) =
             find_rebalancing_program_address(&everlend_depositor::id(), &acc.depositor, &mint);
 
-        let oracle: Rebalancing = config.get_account_unpack(&rebalancing_pubkey)?;
-        println!("{:#?}", oracle);
+        let (pool_pubkey, _) = find_pool_program_address(
+            &everlend_general_pool::id(),
+            &acc.general_pool_market,
+            &mint,
+        );
+        // Check withdrawal requests
+        let (withdrawal_requests, _) = find_withdrawal_requests_program_address(
+            &everlend_general_pool::id(),
+            &acc.general_pool_market,
+            &mint,
+        );
+
+        let (liquidity_transit, _) =
+            find_transit_program_address(&everlend_depositor::id(), &acc.depositor, &mint, "");
+
+        let rebalancing: Rebalancing = config.get_account_unpack(&rebalancing_pubkey)?;
+        let pool: Pool = config.get_account_unpack(&pool_pubkey)?;
+        let pool_ta: Account = config.get_account_unpack(&pool.token_account)?;
+        let requests: WithdrawalRequests = config.get_account_unpack(&withdrawal_requests)?;
+        let transit: Account = config.get_account_unpack(&liquidity_transit)?;
+
+        println!("{:?}", rebalancing);
+        println!("{:?}", pool);
+        println!("{:?}", pool_ta);
+
+        println!(
+            "total_amount_borrowed: {}. Diff {}. Requests {}. Transit {}",
+            pool.total_amount_borrowed,
+            rebalancing
+                .amount_to_distribute
+                .saturating_sub(pool.total_amount_borrowed),
+            requests.liquidity_supply,
+            transit.amount,
+        );
 
         Ok(())
     }

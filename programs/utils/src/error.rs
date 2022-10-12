@@ -112,7 +112,21 @@ pub enum EverlendError {
 
     /// Amount cannot be zero
     #[error("Amount cannot be zero")]
-    ZeroAmount
+    ZeroAmount,
+
+    /// Rewards
+
+    /// Invalid vault
+    #[error("Rewards: Invalid vault")]
+    RewardsInvalidVault,
+
+    /// No deposits
+    #[error("Rewards: No deposits")]
+    RewardsNoDeposits,
+
+    /// Check for liquidity amount in rebalance
+    #[error("Rebalancing: liquidity check failed")]
+    RebalanceLiquidityCheckFailed,
 }
 
 impl PrintProgramError for EverlendError {

@@ -17,6 +17,7 @@
     "test:watch": "jest --watch"
   },
   "devDependencies": {
+    "@types/bn.js": "^5.1.1",
     "@types/jest": "^27.0.2",
     "@types/node": "^16.11.1",
     "jest": "^27.3.0",
@@ -31,9 +32,10 @@
     ]
   },
   "dependencies": {
-    "@everlend/common": "^0.0.3",
+    "@everlend/common": "^0.0.5",
     "@solana/spl-token": "^0.1.5",
     "@solana/web3.js": "^1.16.1",
+    "bn.js": "^5.2.1",
     "borsh": "^0.6.0",
     "bs58": "^4.0.1",
     "buffer": "^6.0.3"

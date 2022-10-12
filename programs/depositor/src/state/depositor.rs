@@ -30,11 +30,13 @@ impl Depositor {
     const ACTUAL_VERSION: AccountVersion = AccountVersion::V0;
 
     /// Initialize a voting pool
-    pub fn init(&mut self, params: InitDepositorParams) {
-        self.account_type = AccountType::Depositor;
-        self.registry = params.registry;
-        self.account_version = Self::ACTUAL_VERSION;
-        self.rebalance_executor = params.rebalance_executor;
+    pub fn init(params: InitDepositorParams) -> Depositor {
+        Depositor {
+            account_type: AccountType::Depositor,
+            account_version: Self::ACTUAL_VERSION,
+            registry: params.registry,
+            rebalance_executor: params.rebalance_executor,
+        }
     }
 }
 

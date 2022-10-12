@@ -220,6 +220,7 @@ pub fn claim_rewards<'a>(
             rewards_token_mint,
             rewards_token_account,
             rewards_fee_account,
+            authority,
             miner,
             quarry,
             quarry_rewarder,
