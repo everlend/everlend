@@ -146,3 +146,183 @@ pub fn redeem<'a>(
         signed_seeds,
     )
 }
+
+#[allow(clippy::too_many_arguments)]
+pub fn stake<'a>(
+    program_id: &Pubkey,
+    user_wallet: AccountInfo<'a>,
+    user_farming: AccountInfo<'a>,
+    user_stake_token: AccountInfo<'a>,
+    user_reward_a: AccountInfo<'a>,
+    user_reward_b: AccountInfo<'a>,
+    farming_pool: AccountInfo<'a>,
+    farming_pool_authority: AccountInfo<'a>,
+    pool_stake_token: AccountInfo<'a>,
+    pool_reward_a: AccountInfo<'a>,
+    pool_reward_b: AccountInfo<'a>,
+    clock: AccountInfo<'a>,
+    amount: u64,
+    signed_seeds: &[&[&[u8]]],
+) -> Result<(), ProgramError> {
+    #[derive(Debug, PartialEq, BorshSerialize)]
+    pub struct Stake {
+        instruction: u8,
+        amount: u64,
+    }
+
+    let ix = Instruction {
+        program_id: *program_id,
+        accounts: vec![
+            AccountMeta::new(*user_wallet.key, true),
+            AccountMeta::new(*user_farming.key, false),
+            AccountMeta::new(*user_stake_token.key, false),
+            AccountMeta::new(*user_reward_a.key, false),
+            AccountMeta::new(*user_reward_b.key, false),
+            AccountMeta::new(*farming_pool.key, false),
+            AccountMeta::new_readonly(*farming_pool_authority.key, false),
+            AccountMeta::new(*pool_stake_token.key, true),
+            AccountMeta::new(*pool_reward_a.key, true),
+            AccountMeta::new(*pool_reward_b.key, true),
+            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(sysvar::clock::id(), false),
+        ],
+        data: Stake {
+            instruction: 3,
+            amount,
+        }
+            .try_to_vec()?,
+    };
+
+    invoke_signed(
+        &ix,
+        &[
+            user_wallet,
+            user_farming,
+            user_stake_token,
+            user_reward_a,
+            user_reward_b,
+            farming_pool,
+            farming_pool_authority,
+            pool_stake_token,
+            pool_reward_a,
+            pool_reward_b,
+            clock,
+        ],
+        signed_seeds,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn unstake<'a>(
+    program_id: &Pubkey,
+    user_wallet: AccountInfo<'a>,
+    user_farming: AccountInfo<'a>,
+    user_stake_token: AccountInfo<'a>,
+    user_reward_a: AccountInfo<'a>,
+    user_reward_b: AccountInfo<'a>,
+    farming_pool: AccountInfo<'a>,
+    farming_pool_authority: AccountInfo<'a>,
+    pool_stake_token: AccountInfo<'a>,
+    pool_reward_a: AccountInfo<'a>,
+    pool_reward_b: AccountInfo<'a>,
+    clock: AccountInfo<'a>,
+    amount: u64,
+    signed_seeds: &[&[&[u8]]],
+) -> Result<(), ProgramError> {
+    #[derive(Debug, PartialEq, BorshSerialize)]
+    pub struct Unstake {
+        instruction: u8,
+        amount: u64,
+    }
+
+    let ix = Instruction {
+        program_id: *program_id,
+        accounts: vec![
+            AccountMeta::new(*user_wallet.key, true),
+            AccountMeta::new(*user_farming.key, false),
+            AccountMeta::new(*user_stake_token.key, false),
+            AccountMeta::new(*user_reward_a.key, false),
+            AccountMeta::new(*user_reward_b.key, false),
+            AccountMeta::new(*farming_pool.key, false),
+            AccountMeta::new_readonly(*farming_pool_authority.key, false),
+            AccountMeta::new(*pool_stake_token.key, true),
+            AccountMeta::new(*pool_reward_a.key, true),
+            AccountMeta::new(*pool_reward_b.key, true),
+            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(sysvar::clock::id(), false),
+        ],
+        data: Unstake {
+            instruction: 4,
+            amount,
+        }
+            .try_to_vec()?,
+    };
+
+    invoke_signed(
+        &ix,
+        &[
+            user_wallet,
+            user_farming,
+            user_stake_token,
+            user_reward_a,
+            user_reward_b,
+            farming_pool,
+            farming_pool_authority,
+            pool_stake_token,
+            pool_reward_a,
+            pool_reward_b,
+            clock,
+        ],
+        signed_seeds,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn init_farming_user<'a>(
+    program_id: &Pubkey,
+    user_wallet: AccountInfo<'a>,
+    user_farming: AccountInfo<'a>,
+    farming_pool: AccountInfo<'a>,
+    user_stake_token: AccountInfo<'a>,
+    user_reward_a: AccountInfo<'a>,
+    user_reward_b: AccountInfo<'a>,
+    system_program: AccountInfo<'a>,
+    rent_info: AccountInfo<'a>,
+    signed_seeds: &[&[&[u8]]],
+) -> Result<(), ProgramError> {
+    #[derive(Debug, PartialEq, BorshSerialize)]
+    pub struct Init {
+        instruction: u8,
+    }
+
+    let ix = Instruction {
+        program_id: *program_id,
+        accounts: vec![
+            AccountMeta::new(*user_wallet.key, true),
+            AccountMeta::new(*user_farming.key, false),
+            AccountMeta::new(*farming_pool.key, false),
+            AccountMeta::new(*user_stake_token.key, false),
+            AccountMeta::new(*user_reward_a.key, false),
+            AccountMeta::new(*user_reward_b.key, false),
+            AccountMeta::new_readonly(*system_program.key, false),
+            AccountMeta::new_readonly(*rent_info.key, false),
+        ],
+        data: Init {
+            instruction: 1,
+        }
+            .try_to_vec()?,
+    };
+
+    invoke_signed(
+        &ix,
+        &[
+            user_wallet,
+            user_farming,
+            farming_pool,
+            user_stake_token,
+            user_reward_a,
+            user_reward_b,
+        ],
+        signed_seeds,
+    )
+}

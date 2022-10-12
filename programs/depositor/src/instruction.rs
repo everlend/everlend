@@ -722,6 +722,31 @@ pub fn init_mining_account(
 
             accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
         }
+        MiningType::Francium {
+            staking_program_id,
+            farming_pool,
+            user_reward_a,
+            user_reward_b
+        } => {
+            let (collateral_transit, _) =
+                find_transit_program_address(program_id, &pubkeys.depositor, &pubkeys.collateral_mint, "");
+
+            let ( user_farming, _ ) = Pubkey::find_program_address(
+                &[
+                    depositor_authority.as_ref(),
+                    farming_pool.as_ref(),
+                    collateral_transit.as_ref()
+                ],
+                &staking_program_id,
+            );
+
+            accounts.push(AccountMeta::new_readonly(staking_program_id, false));
+            accounts.push(AccountMeta::new(farming_pool, false));
+            accounts.push(AccountMeta::new(user_farming, false));
+            accounts.push(AccountMeta::new(user_reward_a, false));
+            accounts.push(AccountMeta::new(user_reward_b, false));
+            accounts.push(AccountMeta::new(collateral_transit, false));
+        }
         MiningType::None => {}
     }
 

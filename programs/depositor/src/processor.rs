@@ -627,9 +627,9 @@ impl<'a, 'b> Processor {
         let depositor_authority_info = next_account_info(account_info_iter)?;
         let registry_info = next_account_info(account_info_iter)?;
         let manager_info = next_account_info(account_info_iter)?;
-        let rent_info = next_account_info(account_info_iter)?;
+            let rent_info = next_account_info(account_info_iter)?;
         let rent = &Rent::from_account_info(rent_info)?;
-        let _system_program_info = next_account_info(account_info_iter)?;
+        let system_program_info = next_account_info(account_info_iter)?;
 
         assert_signer(manager_info)?;
         assert_owned_by(registry_info, &everlend_registry::id())?;
@@ -802,6 +802,28 @@ impl<'a, 'b> Processor {
                     manager_info.clone(),
                     collateral_mint_info.clone(),
                     miner_vault_info.clone(),
+                    &[signers_seeds.as_ref()],
+                )?;
+            }
+            MiningType::Francium {
+               ..
+            } => {
+                let farming_pool_info = next_account_info(account_info_iter)?;
+                let user_farming_info = next_account_info(account_info_iter)?;
+                let user_reward_a_info = next_account_info(account_info_iter)?;
+                let user_reward_b_info = next_account_info(account_info_iter)?;
+                let user_stake_info = next_account_info(account_info_iter)?;
+
+                cpi::francium::init_farming_user(
+                    &staking_program_id_info.key,
+                    depositor_authority_info.clone(),
+                    user_farming_info.clone(),
+                    farming_pool_info.clone(),
+                    user_stake_info.clone(),
+                    user_reward_a_info.clone(),
+                    user_reward_b_info.clone(),
+                    system_program_info.clone(),
+                    rent_info.clone(),
                     &[signers_seeds.as_ref()],
                 )?;
             }
@@ -1060,6 +1082,54 @@ impl<'a, 'b> Processor {
                     redemption_vault_info.clone(),
                     reward_accounts.reward_transit_info.clone(),
                     depositor_authority_info.clone(),
+                    &[signers_seeds.as_ref()],
+                )?;
+            }
+            MiningType::Francium {
+                user_reward_b,
+                ..
+            } => {
+                if with_subrewards {
+                    let sub_reward_accounts = parse_fill_reward_accounts(
+                        program_id,
+                        depositor_info.key,
+                        reward_pool_info.key,
+                        eld_reward_program_id.key,
+                        account_info_iter,
+                        true,
+                    )?;
+
+                    assert_account_key(
+                        &sub_reward_accounts.reward_transit_info,
+                        &user_reward_b,
+                    )?;
+
+                    fill_sub_rewards_accounts = Some(sub_reward_accounts);
+                };
+
+                let user_farming_info = next_account_info(account_info_iter)?;
+                let user_stake_info = next_account_info(account_info_iter)?;
+                let farming_pool_info = next_account_info(account_info_iter)?;
+                let farming_pool_authority_info = next_account_info(account_info_iter)?;
+                let pool_stake_token_info = next_account_info(account_info_iter)?;
+                let pool_reward_a_info = next_account_info(account_info_iter)?;
+                let pool_reward_b_info = next_account_info(account_info_iter)?;
+                let clock = next_account_info(account_info_iter)?;
+
+                cpi::francium::stake(
+                    staking_program_id_info.key,
+                    depositor_authority_info.clone(),
+                    user_farming_info.clone(),
+                    user_stake_info.clone(),
+                    reward_accounts.reward_transit_info.clone(),
+                    fill_sub_rewards_accounts.as_ref().unwrap().reward_transit_info.clone(),
+                    farming_pool_info.clone(),
+                    farming_pool_authority_info.clone(),
+                    pool_stake_token_info.clone(),
+                    pool_reward_a_info.clone(),
+                    pool_reward_b_info.clone(),
+                    clock.clone(),
+                    0,
                     &[signers_seeds.as_ref()],
                 )?;
             }

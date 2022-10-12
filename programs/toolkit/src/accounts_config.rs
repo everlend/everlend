@@ -107,6 +107,8 @@ pub struct FranciumAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub lending_market: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
+    pub staking_program_id: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
     pub reserve_liquidity_supply: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
     pub reserve_sol: Pubkey,
@@ -291,6 +293,9 @@ pub struct TokenAccounts {
 
     #[serde_as(as = "DisplayFromStr")]
     pub port_finance_obligation_account: Pubkey,
+
+    #[serde_as(as = "DisplayFromStr")]
+    pub francium_farming_pool_account: Pubkey,
 
     pub mining_accounts: Vec<MiningAccounts>,
 }
