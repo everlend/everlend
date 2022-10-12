@@ -26,6 +26,7 @@ pub struct InitMiningAccountContext<'a, 'b> {
     registry: &'a AccountInfo<'b>,
     manager: &'a AccountInfo<'b>,
     rent: &'a AccountInfo<'b>,
+    system_program: &'a AccountInfo<'b>,
 }
 
 impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
@@ -43,7 +44,7 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
         let manager = AccountLoader::next_signer(account_info_iter)?;
         let rent = AccountLoader::next_with_key(account_info_iter, &Rent::id())?;
 
-        let _system_program =
+        let system_program =
             AccountLoader::next_with_key(account_info_iter, &system_program::id())?;
 
         let staking_program_id = AccountLoader::next_unchecked(account_info_iter)?;
@@ -58,6 +59,7 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
             registry,
             manager,
             rent,
+            system_program,
         })
     }
 
@@ -243,6 +245,31 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                     self.manager.clone(),
                     self.collateral_mint.clone(),
                     miner_vault_info.clone(),
+                    &[signers_seeds.as_ref()],
+                )?;
+            }
+            MiningType::Francium {
+                farming_pool,
+                user_reward_a,
+                user_reward_b,
+                ..
+            } => {
+                let farming_pool_info = AccountLoader::next_with_key(account_info_iter, &farming_pool)?;
+                let user_farming_info = AccountLoader::next_unchecked(account_info_iter)?;
+                let user_reward_a_info = AccountLoader::next_with_key(account_info_iter, &user_reward_a)?;
+                let user_reward_b_info = AccountLoader::next_with_key(account_info_iter, &user_reward_b)?;
+                let user_stake_info = AccountLoader::next_unchecked(account_info_iter)?;
+
+                cpi::francium::init_farming_user(
+                    self.staking_program_id.key,
+                    self.depositor_authority.clone(),
+                    user_farming_info.clone(),
+                    farming_pool_info.clone(),
+                    user_stake_info.clone(),
+                    user_reward_a_info.clone(),
+                    user_reward_b_info.clone(),
+                    self.system_program.clone(),
+                    self.rent.clone(),
                     &[signers_seeds.as_ref()],
                 )?;
             }

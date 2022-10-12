@@ -1,4 +1,4 @@
-use crate::claimer::{LarixClaimer, PortFinanceClaimer, QuarryClaimer, RewardClaimer};
+use crate::claimer::{LarixClaimer, PortFinanceClaimer, QuarryClaimer, RewardClaimer, FranciumClaimer};
 use crate::{
     find_internal_mining_program_address,
     state::{Depositor, InternalMining, MiningType},
@@ -169,6 +169,20 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
                     )?;
 
                     Box::new(quarry)
+                }
+                MiningType::Francium { .. } => {
+                    if with_subrewards {
+                        reward_accounts.check_transit_reward_destination(program_id, self.depositor.key)?;
+                    };
+
+                    let francium = FranciumClaimer::init(
+                        self.staking_program_id.key,
+                        internal_mining_type,
+                        fill_sub_rewards_accounts.clone(),
+                        account_info_iter,
+                    )?;
+
+                    Box::new(francium)
                 }
                 _ => return Err(EverlendError::MiningNotInitialized.into()),
             }
