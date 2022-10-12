@@ -206,7 +206,7 @@ token_accounts:
     port_finance_obligation_account: "11111111111111111111111111111111"
     mining_accounts:
       - staking_account: "11111111111111111111111111111111"
-        internal_mining_account: "11111111111111111111111111111111"
+        internal_mining_account: 8aX7siq9GvP7CCFGAuWQzzDZB2adaRfoxXefjVPPMk5j
       - staking_account: A1oBy1twZ5FSUifBjspfDi39p6iBwwUPJDxbkrJbXvhd
         internal_mining_account: 4oX3H75U7BYVnuBZx42EBXrqotJnS581FyYVEqitM49W
       - staking_account: "11111111111111111111111111111111"
@@ -257,7 +257,7 @@ token_accounts:
     port_finance_obligation_account: "11111111111111111111111111111111"
     mining_accounts:
       - staking_account: "11111111111111111111111111111111"
-        internal_mining_account: "11111111111111111111111111111111"
+        internal_mining_account: HESwn3aria7cXuULsfmRY3qBkUfaqiJxnWTDFhjb4MB
       - staking_account: AqBd8auQY3w89pLj1eWvanuBNGUtKJgJBMteB9GF6wx6
         internal_mining_account: 3dKpggMTFmLFzeLqabFak7WVtzJ5AtSZkJ2soWavEz1a
       - staking_account: "11111111111111111111111111111111"
@@ -359,7 +359,7 @@ token_accounts:
     port_finance_obligation_account: "11111111111111111111111111111111"
     mining_accounts:
       - staking_account: "11111111111111111111111111111111"
-        internal_mining_account: "11111111111111111111111111111111"
+        internal_mining_account: fzM7qKQfDqKYxswkR9T7v5hJ94iCtC8PuUCXzy5y59V
       - staking_account: 78BKEpfmtUCGXS9f6KcSTAMA4V3Nxh2BiJBQyYQ2XpLJ
         internal_mining_account: 2iD3eg5rFximvbtV5F6H3qoyqGnD4vmWFZH6YJzmMiqH
       - staking_account: "11111111111111111111111111111111"
@@ -512,7 +512,7 @@ token_accounts:
     port_finance_obligation_account: "11111111111111111111111111111111"
     mining_accounts:
       - staking_account: "11111111111111111111111111111111"
-        internal_mining_account: "11111111111111111111111111111111"
+        internal_mining_account: jZtJjHzpFdLko57mD4FekcyBVVWBKCH1X4ccaqvGhWn
       - staking_account: 7PSVdFnAPnAXmLs3C4mjks42QRTkZXFPEsLVGwDj8gVR
         internal_mining_account: CihTfEpFYWiqQ383aAdtjxPWmr4c4GmhRRA2h5GNLFCN
       - staking_account: "11111111111111111111111111111111"
@@ -574,5 +574,33 @@ token_accounts:
         internal_mining_account: "11111111111111111111111111111111"
 liquidity_oracle: 7ow9UCNZZpyEyELAhshi5Ar27QgNkwf5aQXpHSW4ZEew
 depositor: AjuLiFJuDynJTZFvy1bhU4xPLt8aSVuXifUunJV1fW1J
-quarry_mining: {}
+quarry_mining:
+  SOL:
+    token_mint: "11111111111111111111111111111111"
+    rewards_token_mint: "11111111111111111111111111111111"
+    miner_vault: 7FZHiP1kwoASQqrn4ajoo66V1Q8RNZdw8CTBs8JgN6Hf
+    token_source: "11111111111111111111111111111111"
+    rewards_token_account: "11111111111111111111111111111111"
+    fee_token_account: "11111111111111111111111111111111"
+  SRM:
+    token_mint: "11111111111111111111111111111111"
+    rewards_token_mint: "11111111111111111111111111111111"
+    miner_vault: 2yo2TczX7Cdot1wdMGbCApcJxcpvPCe3h8yB2rVwGWuL
+    token_source: "11111111111111111111111111111111"
+    rewards_token_account: "11111111111111111111111111111111"
+    fee_token_account: "11111111111111111111111111111111"
+  USDT:
+    token_mint: "11111111111111111111111111111111"
+    rewards_token_mint: "11111111111111111111111111111111"
+    miner_vault: D3tvZuvuUr3Q56VrWZip2UfpqRRLmmY5xAq61rApeRHo
+    token_source: "11111111111111111111111111111111"
+    rewards_token_account: "11111111111111111111111111111111"
+    fee_token_account: "11111111111111111111111111111111"
+  soBTC:
+    token_mint: "11111111111111111111111111111111"
+    rewards_token_mint: "11111111111111111111111111111111"
+    miner_vault: A3dxWz6X3MqKxF4YyVTW16JFPafzrHJeLhVm4sobZwJk
+    token_source: "11111111111111111111111111111111"
+    rewards_token_account: "11111111111111111111111111111111"
+    fee_token_account: "11111111111111111111111111111111"
 rebalance_executor: 5c3btNcKH3U3Ntk6b7k45fpAcYaQ5cByCcjqCmd8AGKY

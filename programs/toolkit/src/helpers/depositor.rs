@@ -142,7 +142,7 @@ pub fn reset_rebalancing(
     depositor_pubkey: &Pubkey,
     token_mint: &Pubkey,
     amount_to_distribute: u64,
-    distributed_liquidity: u64,
+    distributed_liquidity: DistributionArray,
     distribution_array: DistributionArray,
 ) -> Result<(Pubkey, Rebalancing), ClientError> {
     let tx = Transaction::new_with_payer(
@@ -241,6 +241,7 @@ pub fn migrate_depositor(
     depositor: &Pubkey,
     registry: &Pubkey,
     liquidity_mint: &Pubkey,
+    amount_to_distribute: u64,
 ) -> Result<(), ClientError> {
     let (rebalancing, _) =
         find_rebalancing_program_address(&everlend_depositor::id(), depositor, liquidity_mint);
@@ -253,6 +254,7 @@ pub fn migrate_depositor(
             &config.fee_payer.pubkey(),
             &rebalancing,
             liquidity_mint,
+            amount_to_distribute,
         )],
         Some(&config.fee_payer.pubkey()),
     );

@@ -16,7 +16,7 @@ pub enum RegistryInstruction {
     ///
     /// Accounts:
     /// [WS] Registry account - uninitialized
-    /// [S] Manager
+    /// [WS] Manager
     /// [R] System program
     /// [R] Rent sysvar
     Init,
@@ -55,7 +55,7 @@ pub enum RegistryInstruction {
 pub fn init(program_id: &Pubkey, registry: &Pubkey, manager: &Pubkey) -> Instruction {
     let accounts = vec![
         AccountMeta::new(*registry, true),
-        AccountMeta::new_readonly(*manager, true),
+        AccountMeta::new(*manager, true),
         AccountMeta::new_readonly(system_program::id(), false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
@@ -73,7 +73,7 @@ pub fn update_manager(
 ) -> Instruction {
     let accounts = vec![
         AccountMeta::new(*registry, false),
-        AccountMeta::new(*manager, true),
+        AccountMeta::new_readonly(*manager, true),
         AccountMeta::new_readonly(*new_manager, true),
     ];
 
@@ -89,7 +89,7 @@ pub fn update_registry(
 ) -> Instruction {
     let accounts = vec![
         AccountMeta::new(*registry, false),
-        AccountMeta::new(*manager, true),
+        AccountMeta::new_readonly(*manager, true),
     ];
 
     Instruction::new_with_borsh(
@@ -108,7 +108,7 @@ pub fn update_registry_markets(
 ) -> Instruction {
     let accounts = vec![
         AccountMeta::new(*registry, false),
-        AccountMeta::new(*manager, true),
+        AccountMeta::new_readonly(*manager, true),
     ];
 
     Instruction::new_with_borsh(

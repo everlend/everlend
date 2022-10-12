@@ -803,7 +803,7 @@ async fn fail_with_invalid_income_pool_token_account() {
             .await
             .unwrap_err()
             .unwrap(),
-                TransactionError::InstructionError(
+        TransactionError::InstructionError(
             0,
             InstructionError::Custom(EverlendError::InvalidAccountOwner as u32),
         )

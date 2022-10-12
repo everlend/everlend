@@ -123,6 +123,10 @@ pub enum EverlendError {
     /// No deposits
     #[error("Rewards: No deposits")]
     RewardsNoDeposits,
+
+    /// Check for liquidity amount in rebalance
+    #[error("Rebalancing: liquidity check failed")]
+    RebalanceLiquidityCheckFailed,
 }
 
 impl PrintProgramError for EverlendError {

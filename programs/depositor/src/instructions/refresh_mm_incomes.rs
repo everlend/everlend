@@ -1,10 +1,8 @@
-use crate::money_market::CollateralStorage;
 use crate::{
     find_internal_mining_program_address, find_rebalancing_program_address,
     find_transit_program_address,
-    money_market::CollateralPool,
     state::{Depositor, Rebalancing, RebalancingOperation},
-    utils::{deposit, money_market, withdraw},
+    utils::{collateral_storage, deposit, money_market, withdraw},
 };
 use everlend_income_pools::utils::IncomePoolAccounts;
 use everlend_registry::state::RegistryMarkets;
@@ -205,20 +203,14 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
             self.depositor_authority.key,
         )?;
 
-        let collateral_stor: Option<Box<dyn CollateralStorage>> = {
-            if !is_mining {
-                let coll_pool = CollateralPool::init(
-                    &registry_markets,
-                    self.collateral_mint,
-                    self.depositor_authority,
-                    account_info_iter,
-                    true,
-                )?;
-                Some(Box::new(coll_pool))
-            } else {
-                None
-            }
-        };
+        let collateral_stor = collateral_storage(
+            &registry_markets,
+            self.collateral_mint,
+            self.depositor_authority,
+            account_info_iter,
+            true,
+            is_mining,
+        )?;
 
         // Check two step operation
         let (withdraw_step, deposit_step) = rebalancing.next_refresh_steps()?;
@@ -263,22 +255,19 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
 
         {
             msg!("Refresh Deposit");
-            let collateral_amount = if deposit_step.liquidity_amount.eq(&0) {
-                0
-            } else {
-                deposit(
-                    self.collateral_transit,
-                    self.collateral_mint,
-                    self.liquidity_transit,
-                    self.depositor_authority,
-                    self.clock,
-                    &money_market,
-                    is_mining,
-                    collateral_stor,
-                    deposit_step.liquidity_amount,
-                    &[signers_seeds],
-                )?
-            };
+            let collateral_amount = deposit(
+                self.collateral_transit,
+                self.collateral_mint,
+                self.liquidity_transit,
+                self.depositor_authority,
+                self.clock,
+                &money_market,
+                is_mining,
+                collateral_stor,
+                deposit_step.liquidity_amount,
+                &[signers_seeds],
+            )?;
+
             rebalancing.execute_step(
                 RebalancingOperation::RefreshDeposit,
                 Some(collateral_amount),
