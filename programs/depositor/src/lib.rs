@@ -2,6 +2,7 @@
 
 //! Depositor contract
 
+pub mod claimer;
 pub mod instruction;
 pub mod instructions;
 pub mod money_market;

@@ -17,6 +17,9 @@ The SDK allows interacting with Everlend general pools, specifically:
 * preparing deposit transactions to a general pool
 * preparing withdrawal request transactions from a general pool
 * preparing withdrawal transactions from a general pool
+* preparing transactions for initializing a mining account for a user to allow receiving liquidity mining rewards
+* preparing transactions for claiming liquidity mining rewards
+* preparing transactions for transferring deposits
 
 It's still work in progress. In the future the SDK will be expanded with other useful features such as getting APYs for tokens etc.
 
@@ -57,8 +60,9 @@ import { prepareDepositTx } from '@everlend/general-pool';
 const depositTx = await prepareDepositTx(
   { connection, payerPublicKey, },
   pool,
-  registry,
   amount,
+  rewardPool,
+  rewardAccount,
   source,
   destination,
 );
@@ -71,8 +75,9 @@ import { prepareWithdrawalRequestTx } from '@everlend/general-pool';
 const withdrawalRequestTx = await prepareWithdrawalRequestTx(
   { connection, payerPublicKey, },
   pool,
-  registry,
-  amount,
+  collateralAmount,
+  rewardPool,
+  rewardAccount,
   source,
   destination,
 );
@@ -96,9 +101,3 @@ const withdrawalTx = await prepareWithdrawalTx(
 **Mainnet:** DzGDoJHdzUANM7P7V25t5nxqbvzRcHDmdhY51V6WNiXC
 
 **Devnet:** 4yC3cUWXQmoyyybfnENpxo33hiNxUNa1YAmmuxz93WAJ
-
-## Registry public keys
-
-**Mainnet:** UaqUGgMvVzUZLthLHC9uuuBzgw5Ldesich94Wu5pMJg
-
-**Devnet:** 6KCHtgSGR2WDE3aqrqSJppHRGVPgy9fHDX5XD8VZgb61

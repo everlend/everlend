@@ -1,6 +1,6 @@
 //! Utils
 
-use crate::money_market::{CollateralStorage, Francium, MoneyMarket, Tulip};
+use crate::money_market::{CollateralPool, CollateralStorage, Francium, MoneyMarket, Tulip};
 use crate::money_market::{Larix, PortFinance, SPLLending, Solend, Jet};
 use crate::{
     find_transit_program_address,
@@ -10,16 +10,13 @@ use everlend_collateral_pool::find_pool_withdraw_authority_program_address;
 use everlend_income_pools::utils::IncomePoolAccounts;
 use everlend_registry::state::RegistryMarkets;
 use everlend_utils::{
-    abs_diff, assert_account_key, cpi, find_program_address, integrations, EverlendError,
+    abs_diff, assert_account_key, cpi, find_program_address, integrations, AccountLoader,
+    EverlendError,
 };
+use num_traits::Zero;
 use solana_program::{
-    account_info::{next_account_info, AccountInfo},
-    entrypoint::ProgramResult,
-    instruction::AccountMeta,
-    msg,
-    program_error::ProgramError,
-    program_pack::Pack,
-    pubkey::Pubkey,
+    account_info::AccountInfo, entrypoint::ProgramResult, instruction::AccountMeta, msg,
+    program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,
 };
 use spl_token::state::Account;
 use std::{cmp::Ordering, iter::Enumerate, slice::Iter};
@@ -34,12 +31,16 @@ pub fn deposit<'a, 'b>(
     liquidity_transit: &'a AccountInfo<'b>,
     authority: &'a AccountInfo<'b>,
     clock: &'a AccountInfo<'b>,
-    money_market: &Box<dyn MoneyMarket<'b> + 'b>,
+    money_market: &Box<dyn MoneyMarket<'b> + 'a>,
     is_mining: bool,
-    collateral_storage: Option<Box<dyn CollateralStorage<'b> + 'b>>,
+    collateral_storage: Option<Box<dyn CollateralStorage<'b> + 'a>>,
     liquidity_amount: u64,
     signers_seeds: &[&[&[u8]]],
 ) -> Result<u64, ProgramError> {
+    if liquidity_amount.is_zero() {
+        return Ok(0);
+    }
+
     let collateral_amount = if is_mining {
         msg!("Deposit to Money market and deposit Mining");
         money_market.money_market_deposit_and_deposit_mining(
@@ -96,9 +97,9 @@ pub fn withdraw<'a, 'b>(
     liquidity_reserve_transit: &'a AccountInfo<'b>,
     authority: &'a AccountInfo<'b>,
     clock: &'a AccountInfo<'b>,
-    money_market: &Box<dyn MoneyMarket<'b> + 'b>,
+    money_market: &Box<dyn MoneyMarket<'b> + 'a>,
     is_mining: bool,
-    collateral_storage: &Option<Box<dyn CollateralStorage<'b> + 'b>>,
+    collateral_storage: &Option<Box<dyn CollateralStorage<'b> + 'a>>,
     collateral_amount: u64,
     expected_liquidity_amount: u64,
     signers_seeds: &[&[&[u8]]],
@@ -195,11 +196,11 @@ pub fn money_market<'a, 'b>(
     registry_markets: &RegistryMarkets,
     program_id: &Pubkey,
     money_market_program: &AccountInfo<'b>,
-    money_market_account_info_iter: &'a mut Enumerate<Iter<'_, AccountInfo<'b>>>,
+    money_market_account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
     internal_mining: &AccountInfo<'b>,
     collateral_token_mint: &Pubkey,
     depositor_authority: &Pubkey,
-) -> Result<(Box<dyn MoneyMarket<'b> + 'b>, bool), ProgramError> {
+) -> Result<(Box<dyn MoneyMarket<'b> + 'a>, bool), ProgramError> {
     let internal_mining_type = if internal_mining.owner == program_id {
         Some(InternalMining::unpack(&internal_mining.data.borrow())?.mining_type)
     } else {
@@ -235,7 +236,7 @@ pub fn money_market<'a, 'b>(
                 money_market_account_info_iter,
                 internal_mining_type,
                 collateral_token_mint,
-                depositor_authority
+                depositor_authority,
             )?;
             return Ok((Box::new(port), is_mining));
         }
@@ -282,6 +283,30 @@ pub fn money_market<'a, 'b>(
         }
         _ => Err(EverlendError::IncorrectInstructionProgramId.into()),
     }
+}
+
+/// Money market
+pub fn collateral_storage<'a, 'b>(
+    registry_markets: &RegistryMarkets,
+    collateral_mint: &AccountInfo<'b>,
+    depositor_authority: &AccountInfo<'b>,
+    account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
+    if_withdraw_expected: bool,
+    is_mining: bool,
+) -> Result<Option<Box<dyn CollateralStorage<'b> + 'a>>, ProgramError> {
+    if is_mining {
+        return Ok(None);
+    };
+
+    let coll_pool = CollateralPool::init(
+        registry_markets,
+        collateral_mint,
+        depositor_authority,
+        account_info_iter,
+        if_withdraw_expected,
+    )?;
+
+    Ok(Some(Box::new(coll_pool)))
 }
 
 /// Collateral pool deposit account
@@ -345,43 +370,49 @@ pub fn collateral_pool_withdraw_accounts(
 
 /// ELD Fill reward accounts for token container
 #[derive(Clone)]
-pub struct FillRewardAccounts<'a> {
+pub struct FillRewardAccounts<'a, 'b> {
     /// Rewards mint tokne
-    pub reward_mint_info: AccountInfo<'a>,
+    pub reward_mint_info: &'a AccountInfo<'b>,
     /// Reward transit account
-    pub reward_transit_info: AccountInfo<'a>,
+    pub reward_transit_info: &'a AccountInfo<'b>,
     /// Reward vault
-    pub vault_info: AccountInfo<'a>,
+    pub vault_info: &'a AccountInfo<'b>,
     /// Reward fee account
-    pub fee_account_info: AccountInfo<'a>,
+    pub fee_account_info: &'a AccountInfo<'b>,
+}
+
+impl<'a, 'b> FillRewardAccounts<'a, 'b> {
+    ///
+    // Check rewards destination account only if needed
+    pub fn check_transit_reward_destination(
+        &self,
+        program_id: &Pubkey,
+        depositor_id: &Pubkey,
+    ) -> Result<(), ProgramError> {
+        let (reward_token_account, _) = find_transit_program_address(
+            program_id,
+            depositor_id,
+            self.reward_mint_info.key,
+            "lm_reward",
+        );
+        assert_account_key(self.reward_transit_info, &reward_token_account)?;
+
+        Ok(())
+    }
 }
 
 /// Collateral pool deposit account
 #[allow(clippy::too_many_arguments)]
-pub fn parse_fill_reward_accounts<'a>(
-    program_id: &Pubkey,
-    depositor_id: &Pubkey,
+pub fn parse_fill_reward_accounts<'a, 'b>(
     reward_pool_id: &Pubkey,
     eld_reward_program_id: &Pubkey,
-    account_info_iter: &mut Iter<AccountInfo<'a>>,
-    check_transit_reward_destination: bool,
-) -> Result<FillRewardAccounts<'a>, ProgramError> {
-    let reward_mint_info = next_account_info(account_info_iter)?;
-    let reward_transit_info = next_account_info(account_info_iter)?;
+    account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
+) -> Result<FillRewardAccounts<'a, 'b>, ProgramError> {
+    let reward_mint_info = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+    let reward_transit_info = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
 
-    // Check rewards destination account only if needed
-    if check_transit_reward_destination {
-        let (reward_token_account, _) = find_transit_program_address(
-            program_id,
-            depositor_id,
-            reward_mint_info.key,
-            "lm_reward",
-        );
-        assert_account_key(reward_transit_info, &reward_token_account)?;
-    }
-
-    let vault_info = next_account_info(account_info_iter)?;
-    let fee_account_info = next_account_info(account_info_iter)?;
+    let vault_info = AccountLoader::next_unchecked(account_info_iter)?;
+    let fee_account_info = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
 
     let (vault, _) = Pubkey::find_program_address(
         &[
@@ -394,9 +425,30 @@ pub fn parse_fill_reward_accounts<'a>(
     assert_account_key(vault_info, &vault)?;
 
     Ok(FillRewardAccounts {
-        reward_mint_info: reward_mint_info.clone(),
-        reward_transit_info: reward_transit_info.clone(),
-        vault_info: vault_info.clone(),
-        fee_account_info: fee_account_info.clone(),
+        reward_mint_info,
+        reward_transit_info,
+        vault_info,
+        fee_account_info,
     })
+}
+
+/// Calculates available liquidity and amount to distribute
+pub fn calculate_amount_to_distribute(
+    total_distributed_liquidity: u64,
+    liquidity_transit: u64,
+    general_pool_amount: u64,
+    withdrawal_requests: u64,
+) -> Result<(u64, u64), ProgramError> {
+    let available_liquidity = total_distributed_liquidity
+        .checked_add(liquidity_transit)
+        .ok_or(EverlendError::MathOverflow)?;
+
+    // Calculate liquidity to distribute
+    let amount_to_distribute = general_pool_amount
+        .checked_add(available_liquidity)
+        .ok_or(EverlendError::MathOverflow)?
+        .checked_sub(withdrawal_requests)
+        .ok_or(EverlendError::MathOverflow)?;
+
+    Ok((available_liquidity, amount_to_distribute))
 }
