@@ -3,6 +3,7 @@
 use solana_program::{account_info::AccountInfo, program_error::ProgramError};
 
 mod collateral_pool;
+mod frakt;
 mod francium;
 mod larix;
 mod port_finance;
@@ -12,6 +13,7 @@ mod spl_lending;
 mod tulip;
 
 pub use collateral_pool::*;
+pub use frakt::*;
 pub use francium::*;
 pub use larix::*;
 pub use port_finance::*;

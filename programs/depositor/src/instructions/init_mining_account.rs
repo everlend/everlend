@@ -246,6 +246,30 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                     &[signers_seeds.as_ref()],
                 )?;
             }
+            MiningType::Frakt { deposit_account } => {
+                let liquidity_pool_info =
+                    AccountLoader::next_with_owner(account_info_iter, self.staking_program_id.key)?;
+                let liquidity_owner_info = {
+                    let (liquidity_owner_pubkey, _) = cpi::frakt::find_owner_address(
+                        self.staking_program_id.key,
+                        liquidity_pool_info.key,
+                    );
+                    AccountLoader::next_with_key(account_info_iter, &liquidity_owner_pubkey)?
+                };
+                let deposit_account_info =
+                    AccountLoader::next_with_key(account_info_iter, &deposit_account)?;
+
+                cpi::frakt::deposit(
+                    self.staking_program_id.key,
+                    liquidity_pool_info.clone(),
+                    liquidity_owner_info.clone(),
+                    deposit_account_info.clone(),
+                    self.depositor_authority.clone(),
+                    self.rent.clone(),
+                    0,
+                    &[signers_seeds.as_ref()],
+                )?;
+            }
             MiningType::None => {}
         }
 

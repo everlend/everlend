@@ -66,3 +66,11 @@ pub fn find_internal_mining_program_address(
         program_id,
     )
 }
+
+/// Generate transit unwrap address
+pub fn find_transit_sol_unwrap_address(
+    program_id: &Pubkey,
+    liquidity_pool: &Pubkey,
+) -> (Pubkey, u8) {
+    Pubkey::find_program_address(&[br"unwrap", &liquidity_pool.to_bytes()], program_id)
+}

@@ -9,6 +9,7 @@ use solana_program::pubkey::Pubkey;
 use solana_program::system_instruction;
 use solana_sdk::{signature::Keypair, signer::Signer, transaction::Transaction};
 
+pub mod frakt_liquidity_miner;
 pub mod larix_liquidity_miner;
 pub mod larix_raw_test;
 pub mod port_liquidity_miner;

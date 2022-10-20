@@ -1,4 +1,6 @@
-use crate::claimer::{LarixClaimer, PortFinanceClaimer, QuarryClaimer, RewardClaimer};
+use crate::claimer::{
+    FraktClaimer, LarixClaimer, PortFinanceClaimer, QuarryClaimer, RewardClaimer,
+};
 use crate::{
     find_internal_mining_program_address,
     state::{Depositor, InternalMining, MiningType},
@@ -155,7 +157,7 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
                 MiningType::Quarry { .. } => {
                     // Quarry doesn't have subreward tokens
                     if with_subrewards {
-                        return Err(ProgramError::InvalidArgument)
+                        return Err(ProgramError::InvalidArgument);
                     }
 
                     let quarry = QuarryClaimer::init(
@@ -169,6 +171,15 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
                     )?;
 
                     Box::new(quarry)
+                }
+                MiningType::Frakt { .. } => {
+                    let frakt = FraktClaimer::init(
+                        program_id,
+                        account_info_iter,
+                        self.depositor_authority.key,
+                    )?;
+
+                    Box::new(frakt)
                 }
                 _ => return Err(EverlendError::MiningNotInitialized.into()),
             }

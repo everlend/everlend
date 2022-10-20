@@ -3,7 +3,7 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use everlend_general_pool::find_withdrawal_requests_program_address;
 use everlend_liquidity_oracle::{find_token_oracle_program_address, state::DistributionArray};
-use everlend_utils::cpi::quarry;
+use everlend_utils::cpi::{frakt, quarry};
 use everlend_utils::find_program_address;
 use solana_program::{
     instruction::{AccountMeta, Instruction},
@@ -748,6 +748,19 @@ pub fn init_mining_account(
             accounts.push(AccountMeta::new_readonly(miner_vault, false));
 
             accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
+        }
+        MiningType::Frakt { deposit_account } => {
+            let liquidity_pool_pubkey = pubkeys.lending_market.unwrap();
+            let (liquidity_owner_pubkey, _) =
+                frakt::find_owner_address(&pubkeys.money_market_program_id, &liquidity_pool_pubkey);
+
+            accounts.push(AccountMeta::new_readonly(
+                pubkeys.money_market_program_id,
+                false,
+            ));
+            accounts.push(AccountMeta::new(liquidity_pool_pubkey.clone(), false));
+            accounts.push(AccountMeta::new(liquidity_owner_pubkey, false));
+            accounts.push(AccountMeta::new(deposit_account, false));
         }
         MiningType::None => {}
     }
