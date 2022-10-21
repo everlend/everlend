@@ -1,10 +1,9 @@
 use crate::liquidity_mining::{execute_account_creation, LiquidityMiner};
-use crate::utils::{get_asset_maps, spl_create_associated_token_account};
+use crate::utils::get_asset_maps;
 use crate::Config;
 use anyhow::Result;
 use everlend_depositor::instruction::InitMiningAccountsPubkeys;
 use everlend_depositor::state::MiningType;
-use everlend_utils::find_program_address;
 use everlend_utils::integrations::MoneyMarket;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
@@ -13,7 +12,7 @@ use solana_sdk::signer::Signer;
 
 pub struct SolendLiquidityMiner {}
 
-fn save_new_obligation_account(
+fn save_new_mining_account(
     config: &Config,
     token: &String,
     obligation_account: &Keypair,
@@ -34,23 +33,8 @@ fn save_new_obligation_account(
         .token_accounts
         .get_mut(token)
         .unwrap()
-        .solend_obligation_account = obligation_account.pubkey();
-
-    initialized_accounts
-        .save(config.accounts_path.as_str())
-        .unwrap();
-    Ok(())
-}
-
-fn save_new_mining_account(config: &Config, token: &String, miner_vault: Pubkey) -> Result<()> {
-    let mut initialized_accounts = config.get_initialized_accounts();
-
-    initialized_accounts
-        .token_accounts
-        .get_mut(token)
-        .unwrap()
         .mining_accounts[MoneyMarket::Solend as usize]
-        .staking_account = miner_vault;
+        .staking_account = obligation_account.pubkey();
 
     initialized_accounts
         .save(config.accounts_path.as_str())
@@ -76,37 +60,18 @@ impl LiquidityMiner for SolendLiquidityMiner {
         _mining_account: &Keypair,
         _sub_reward_token_mint: Option<Pubkey>,
     ) -> anyhow::Result<()> {
-        let initialized_accounts = config.get_initialized_accounts();
-        let token_accounts = initialized_accounts.token_accounts.get(token).unwrap();
         let default_accounts = config.get_default_accounts();
 
-        if token_accounts
-            .solend_obligation_account
-            .eq(&Pubkey::default())
-        {
-            let obligation_account = Keypair::new();
-            println!("Create Solend obligation account");
-            execute_account_creation(
-                config,
-                &default_accounts.solend.program_id,
-                &obligation_account,
-                solend_program::state::Obligation::LEN as u64,
-            )?;
+        let obligation_account = Keypair::new();
+        println!("Create Solend obligation account");
+        execute_account_creation(
+            config,
+            &default_accounts.solend.program_id,
+            &obligation_account,
+            solend_program::state::Obligation::LEN as u64,
+        )?;
 
-            save_new_obligation_account(config, token, &obligation_account)?;
-        }
-        let (depositor_authority, _) =
-            find_program_address(&everlend_depositor::id(), &initialized_accounts.depositor);
-
-        let (_, collateral_mint_map) = get_asset_maps(default_accounts);
-        let collateral_mint =
-            collateral_mint_map.get(token).unwrap()[MoneyMarket::Solend as usize].unwrap();
-
-        let miner_vault =
-            spl_create_associated_token_account(config, &depositor_authority, &collateral_mint)?;
-
-        println!("Miner vault: {}", miner_vault);
-        save_new_mining_account(config, token, miner_vault)?;
+        save_new_mining_account(config, token, &obligation_account)?;
 
         Ok(())
     }
@@ -140,8 +105,14 @@ impl LiquidityMiner for SolendLiquidityMiner {
         let initialized_accounts = config.get_initialized_accounts();
         let token_accounts = initialized_accounts.token_accounts.get(token).unwrap();
 
-        MiningType::Solend {
-            obligation: token_accounts.solend_obligation_account,
+        let obligation =
+            token_accounts.mining_accounts[MoneyMarket::Solend as usize].staking_account;
+
+        let solend_obligation_account = config.rpc_client.get_account(&obligation).unwrap();
+        if solend_obligation_account.lamports == 0 {
+            panic!("Uninitialized Obligation Account");
         }
+
+        MiningType::Solend { obligation }
     }
 }

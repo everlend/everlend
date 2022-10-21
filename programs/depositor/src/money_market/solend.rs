@@ -208,7 +208,22 @@ impl<'a, 'b> MoneyMarket<'b> for Solend<'a, 'b> {
             return Err(EverlendError::MiningNotInitialized.into());
         }
 
+        solend::refresh_reserve(
+            &self.money_market_program_id,
+            self.reserve.clone(),
+            self.reserve_liquidity_pyth_oracle.clone(),
+            self.reserve_liquidity_switchboard_oracle.clone(),
+            clock.clone(),
+        )?;
+
         let mining = self.mining.as_ref().unwrap();
+
+        solend::refresh_obligation(
+            &self.money_market_program_id,
+            mining.obligation_info.clone(),
+            self.reserve.clone(),
+            clock.clone(),
+        )?;
 
         solend::withdraw_obligation_collateral_and_redeem_reserve_collateral(
             &self.money_market_program_id,

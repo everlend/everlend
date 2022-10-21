@@ -7,7 +7,9 @@ use solana_program::{
     pubkey::Pubkey,
     system_program,
 };
-use spl_associated_token_account::get_associated_token_address;
+
+/// `global:deposit_liquidity` anchor program instruction
+const CLAIM_INSTRUCTION: [u8; 8] = [62, 198, 214, 193, 213, 159, 108, 210];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct ClaimData {
@@ -406,7 +408,7 @@ pub fn claim_rewards<'a>(
             AccountMeta::new_readonly(spl_token::id(), false),
         ],
         data: Claim {
-            instruction: [62, 198, 214, 193, 213, 159, 108, 210],
+            instruction: CLAIM_INSTRUCTION,
             bump: claim_data.bump,
             index: claim_data.index,
             amount: claim_data.amount,
@@ -418,28 +420,4 @@ pub fn claim_rewards<'a>(
     let accounts = [distributor, claim_status, from, to, claimant, payer];
 
     invoke_signed(&instruction, &accounts, signers_seeds)
-}
-
-pub fn get_rewards_token_account_pubkey(
-    owner_pubkey: &Pubkey,
-    distributor_info: AccountInfo,
-) -> Result<Pubkey, ProgramError> {
-    #[derive(Debug, PartialEq, BorshDeserialize)]
-    struct Distributor {
-        anchor_id: [u8; 8],
-        base: Pubkey,
-        root: [u8; 32],
-        mint: Pubkey,
-        max_total_claim: u64,
-        max_num_nodes: u64,
-        total_amount_claimed: u64,
-        num_nodes_claimed: u64,
-    }
-
-    let distributor = Distributor::try_from_slice(&mut distributor_info.data.borrow())?;
-
-    Ok(get_associated_token_address(
-        owner_pubkey,
-        &distributor.mint,
-    ))
 }
