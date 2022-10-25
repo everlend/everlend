@@ -54,8 +54,8 @@ tulip:
   reserve_sol: Zb3AcFwZ3HDSdpPHYWGqTnEE1yFQR4LyE6jjLTvSTQw
 jet:
   program_id: JPPooLEqRo3NCSx82EdE2VZY5vUaSsgskpZPBHNGVLZ
-  margin_pool: 3w9nDi3rB9e44J7xMvayXKrg59kD7ofeXqGZsYWtT1V9
-  vault: HefDXf74p9vRaLWX4yjZiGS99hg72y2EbXiajyYsgwXB
+  margin_pool_sol: 3w9nDi3rB9e44J7xMvayXKrg59kD7ofeXqGZsYWtT1V9
+  vault_sol: HefDXf74p9vRaLWX4yjZiGS99hg72y2EbXiajyYsgwXB
 multisig_program_id: 3ktyhEXgbiUyDG7RXCzzXWzjXJpThpqqePhJb85eVqFa
 sol_collateral:
   - Hk4Rp3kaPssB6hnjah3Mrqpt5CAXWGoqFT5dVsWA3TaM

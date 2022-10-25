@@ -62,8 +62,8 @@ francium:
   reserve_sol: EnZC8MB6QLTxwN1LNqCXYC7XMpvXqitnYQPf5y5AcQRn
 jet:
   program_id: JPPooLEqRo3NCSx82EdE2VZY5vUaSsgskpZPBHNGVLZ
-  margin_pool: 3w9nDi3rB9e44J7xMvayXKrg59kD7ofeXqGZsYWtT1V9
-  vault: HefDXf74p9vRaLWX4yjZiGS99hg72y2EbXiajyYsgwXB
+  margin_pool_sol: 3w9nDi3rB9e44J7xMvayXKrg59kD7ofeXqGZsYWtT1V9
+  vault_sol: HefDXf74p9vRaLWX4yjZiGS99hg72y2EbXiajyYsgwXB
 sol_collateral:
   - 8ezDtNNhX91t1NbSLe8xV2PcCEfoQjEm2qDVGjt3rjhg
   - ArWoXQYvvERzuoeGTpyyvf7pNNVEPB3x7kQg5W6zQdaB
