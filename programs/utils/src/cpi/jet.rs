@@ -1,4 +1,3 @@
-use anchor_lang::__private::bytemuck;
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::{AccountMeta, Instruction};
 use solana_program::program::{invoke_signed};
@@ -109,14 +108,14 @@ pub fn deposit<'a>(
     authority: AccountInfo<'a>,
     source_liquidity: AccountInfo<'a>,
     destination_collateral: AccountInfo<'a>,
-    amount: u64,
+    liquidity_amount: u64,
     signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
     #[derive(Debug, PartialEq, BorshSerialize)]
     pub struct DepositToLendingPool {
         instruction: [u8;8],
         change_kind: ChangeKind,
-        amount: u64,
+        liquidity_amount: u64,
     }
 
     let ix = Instruction {
@@ -133,7 +132,7 @@ pub fn deposit<'a>(
         data: DepositToLendingPool {
             instruction: DEPOSIT_INSTRUCTION,
             change_kind: ChangeKind::ShiftBy,
-            amount,
+            liquidity_amount,
         }
             .try_to_vec()?,
     };
@@ -161,18 +160,18 @@ pub fn redeem<'a>(
     authority: AccountInfo<'a>,
     source_collateral: AccountInfo<'a>,
     destination_liquidity: AccountInfo<'a>,
-    amount: u64,
+    collateral_amount: u64,
     signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
     #[derive(Debug, PartialEq, BorshSerialize)]
     pub struct WithdrawFromLendingPool {
         instruction: [ u8;8 ],
         change_kind: ChangeKind,
-        amount: u64,
+        liquidity_amount: u64,
     }
 
     let b = MarginPool::try_from_slice(*margin_pool.data.borrow())?;
-    let amount = b.convert_amount(amount);
+    let liquidity_amount = b.convert_amount(collateral_amount);
 
     let ix = Instruction {
         program_id: *program_id,
@@ -188,7 +187,7 @@ pub fn redeem<'a>(
         data: WithdrawFromLendingPool {
             instruction: REDEEM_INSTRUCTION,
             change_kind: ChangeKind::ShiftBy,
-            amount,
+            liquidity_amount,
         }
             .try_to_vec()?,
     };

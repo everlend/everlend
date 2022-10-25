@@ -1294,6 +1294,7 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "borsh 0.9.3",
+ "jet-proto-math",
  "larix-lending",
  "mpl-token-metadata",
  "num-derive",
@@ -1843,6 +1844,18 @@ name = "itoa"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "112c678d4050afce233f4f2852bb2eb519230b3cf12f33585275537d7e41578d"
+
+[[package]]
+name = "jet-proto-math"
+version = "1.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94514816f18f7c202968724b0001b8c53d41f90973ede022e15fe40dceb7f6fd"
+dependencies = [
+ "bytemuck",
+ "static_assertions",
+ "thiserror",
+ "uint 0.8.5",
+]
 
 [[package]]
 name = "jobserver"
