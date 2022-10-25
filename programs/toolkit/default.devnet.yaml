@@ -46,6 +46,11 @@ solend:
   reserve_switchboard_oracle: AdtRGGhmqvom3Jemp5YNrxd9q9unX36BZk1pujkkXijL
   reserve_sol: 5VVLD7BQp8y3bTgyF5ezm1ResyMTR3PhYsT4iHFU8Sxz
   reserve_sol_supply: furd3XUtjXZ2gRvSsoUts9A5m8cMJNqdsyR2Rt8vY9s
+francium:
+  program_id: "11111111111111111111111111111111"
+  lending_market: "11111111111111111111111111111111"
+  reserve_liquidity_supply: "11111111111111111111111111111111"
+  reserve_sol: "11111111111111111111111111111111"
 tulip:
   program_id: CbTkd91iCd48cMsqGejvYh9K2dwmy76hF8CQH4gt4Ykx
   lending_market: 6Z76FPMsFVXggtL2npzQ6nx6ghBGo1CCtueEYPvjFHz6
@@ -63,6 +68,7 @@ sol_collateral:
   - FzwZWRMc3GCqjSrcpVX3ueJc6UpcV6iWWb7ZMsTXE3Gf
   - 4vb2gBGaL6Q1Pmt4KeiGFEMko5ofivbRLoJQzN1tsTLn
   - "11111111111111111111111111111111"
+  - AbQfDjFBypnj4fTZUjvcEGsuYvqSjiQA9jG52PnkZe1q
 usdc_collateral:
   - HyxraiKfdajDbYTC6MVRToEUBdevBN5M5gfyR4LC3WSF
   - CLgRwCmZ49wbKxQjqEs5tHrNvx8ZoXjybN8hsiRwEVPm

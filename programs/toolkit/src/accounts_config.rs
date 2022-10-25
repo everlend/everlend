@@ -118,9 +118,9 @@ pub struct JetAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub program_id: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
-    pub margin_pool: Pubkey,
+    pub margin_pool_sol: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
-    pub vault: Pubkey,
+    pub vault_sol: Pubkey,
 }
 
 #[serde_as]
