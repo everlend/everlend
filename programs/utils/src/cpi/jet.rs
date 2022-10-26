@@ -170,8 +170,8 @@ pub fn redeem<'a>(
         liquidity_amount: u64,
     }
 
-    let b = MarginPool::try_from_slice(*margin_pool.data.borrow())?;
-    let liquidity_amount = b.convert_amount(collateral_amount);
+    let mp = MarginPool::try_from_slice(*margin_pool.data.borrow())?;
+    let liquidity_amount = mp.convert_amount(collateral_amount);
 
     let ix = Instruction {
         program_id: *program_id,

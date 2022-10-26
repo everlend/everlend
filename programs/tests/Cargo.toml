@@ -21,3 +21,6 @@ everlend-liquidity-oracle = { path = "../liquidity_oracle", features = [ "no-ent
 everlend-registry = { path = "../registry", features = [ "no-entrypoint" ] }
 everlend-rewards = { path = "../rewards", features = ["no-entrypoint"] }
 everlend-utils = { path = "../utils" }
+borsh = "0.9.3"
+jet-proto-math = "1.0.6"
+rand = "0.8"
