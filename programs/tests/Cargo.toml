@@ -24,3 +24,4 @@ everlend-utils = { path = "../utils" }
 borsh = "0.9.3"
 jet-proto-math = "1.0.6"
 rand = "0.8"
+anchor-lang = "0.24.2"
