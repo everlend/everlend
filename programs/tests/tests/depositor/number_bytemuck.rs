@@ -4,8 +4,6 @@ use anchor_lang::__private::bytemuck;
 use jet_proto_math::Number;
 use rand::Rng;
 
-use crate::utils::*;
-
 #[tokio::test]
 async fn number_bytemuck() {
     let mut arr: [u8; 24] = [0u8; 24];
