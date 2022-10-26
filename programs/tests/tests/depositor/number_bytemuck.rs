@@ -1,7 +1,6 @@
 use solana_program_test::*;
 
 use anchor_lang::__private::bytemuck;
-use borsh::{BorshDeserialize, BorshSerialize};
 use jet_proto_math::Number;
 use rand::Rng;
 
