@@ -1,7 +1,7 @@
 use crate::{print_commands, utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 
-use super::InitRegistryCommand;
+use super::{InitRegistryCommand, SetRegistryCommand};
 
 #[derive(Clone, Copy)]
 pub struct RegistryCommand;
@@ -20,7 +20,7 @@ impl<'a> ToolkitCommand<'a> for RegistryCommand {
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
-        vec![Box::new(InitRegistryCommand)]
+        vec![Box::new(InitRegistryCommand), Box::new(SetRegistryCommand)]
     }
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {

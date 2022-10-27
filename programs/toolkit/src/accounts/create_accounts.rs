@@ -81,6 +81,7 @@ impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
         distribution[2] = 0;
         distribution[3] = 0;
         distribution[4] = 0;
+        distribution[5] = 0;
 
         println!("Registry");
         let mut money_market_program_ids = DistributionPubkeys::default();
@@ -89,6 +90,7 @@ impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
         money_market_program_ids[2] = default_accounts.solend.program_id;
         money_market_program_ids[3] = default_accounts.tulip.program_id;
         money_market_program_ids[4] = default_accounts.francium.program_id;
+        money_market_program_ids[5] = default_accounts.jet.program_id;
 
         let mm_collateral_pool_markets = vec![
             create_collateral_market(config, None)?,

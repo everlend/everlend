@@ -1,29 +1,29 @@
 use crate::helpers::{init_registry, update_registry, update_registry_markets};
-use crate::utils::REFRESH_INCOME_INTERVAL;
+use crate::utils::{arg_pubkey, REFRESH_INCOME_INTERVAL};
 use crate::{
-    utils::{arg_keypair, Config},
+    utils::{Config},
     ToolkitCommand,
 };
 use clap::{Arg, ArgMatches};
 use everlend_registry::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
 use everlend_registry::state::DistributionPubkeys;
-use solana_clap_utils::input_parsers::keypair_of;
+use solana_clap_utils::input_parsers::pubkey_of;
 
 const ARG_REGISTRY: &str = "registry";
 
-pub struct InitRegistryCommand;
+pub struct SetRegistryCommand;
 
-impl<'a> ToolkitCommand<'a> for InitRegistryCommand {
+impl<'a> ToolkitCommand<'a> for SetRegistryCommand {
     fn get_name(&self) -> &'a str {
-        "init"
+        "set"
     }
 
     fn get_description(&self) -> &'a str {
-        "init registry"
+        "set registry"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        vec![arg_keypair(ARG_REGISTRY, true)]
+        vec![arg_pubkey(ARG_REGISTRY, true)]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
@@ -32,11 +32,9 @@ impl<'a> ToolkitCommand<'a> for InitRegistryCommand {
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
         let arg_matches = arg_matches.unwrap();
-        let keypair = keypair_of(arg_matches, ARG_REGISTRY);
+        let registry_pubkey = pubkey_of(arg_matches, ARG_REGISTRY).unwrap();
         let payer_pubkey = config.fee_payer.pubkey();
         println!("Fee payer: {}", payer_pubkey);
-
-        let registry_pubkey = init_registry(config, keypair)?;
 
         let default_accounts = config.get_default_accounts();
         let initialized_accounts = config.get_initialized_accounts();
