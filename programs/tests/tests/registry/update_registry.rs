@@ -1,6 +1,7 @@
+use everlend_registry::state::{DistributionPubkeys, MoneyMarket};
 use everlend_registry::{
     instructions::{UpdateRegistryData, UpdateRegistryMarketsData},
-    state::{AccountType, DistributionPubkeys},
+    state::{AccountType, MoneyMarkets},
 };
 use solana_program::example_mocks::solana_sdk::signature::Keypair;
 use solana_program_test::*;
@@ -14,9 +15,17 @@ async fn success() {
     let test_registry = TestRegistry::new();
     test_registry.init(&mut context).await.unwrap();
 
-    let mut mm_program_ids = DistributionPubkeys::default();
-    mm_program_ids[0] = Keypair::new().pubkey();
-    mm_program_ids[1] = Keypair::new().pubkey();
+    let mut mm_program_ids = MoneyMarkets::default();
+    mm_program_ids[0] = MoneyMarket {
+        id: everlend_utils::integrations::MoneyMarket::PortFinance,
+        program_id: Keypair::new().pubkey(),
+        lending_market: Keypair::new().pubkey(),
+    };
+    mm_program_ids[1] = MoneyMarket {
+        id: everlend_utils::integrations::MoneyMarket::PortFinance,
+        program_id: Keypair::new().pubkey(),
+        lending_market: Keypair::new().pubkey(),
+    };
 
     let mut collateral_program_ids = DistributionPubkeys::default();
     collateral_program_ids[0] = Keypair::new().pubkey();

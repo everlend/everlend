@@ -123,8 +123,6 @@ impl<'a, 'b> StartRebalancingContext<'a, 'b> {
         assert_account_key(self.general_pool_market, &registry.general_pool_market)?;
         assert_account_key(self.liquidity_oracle, &registry.liquidity_oracle)?;
 
-        let registry_markets = RegistryMarkets::unpack_from_slice(&self.registry.data.borrow())?;
-
         let bump_seed = {
             // Check rebalancing
             let (rebalancing_pubkey, bump_seed) =
@@ -295,11 +293,13 @@ impl<'a, 'b> StartRebalancingContext<'a, 'b> {
 
         let clock = Clock::from_account_info(self.clock)?;
 
+        let markets_indexes = RegistryMarkets::markets_indexes(&self.registry.data.borrow());
+
         // Compute rebalancing steps
         msg!("Computing");
         if refresh_income {
             rebalancing.compute_with_refresh_income(
-                &registry_markets.money_markets,
+                markets_indexes,
                 registry.refresh_income_interval,
                 clock.slot,
                 amount_to_distribute,
@@ -308,12 +308,7 @@ impl<'a, 'b> StartRebalancingContext<'a, 'b> {
             // Compute rebalancing steps
             let token_oracle = TokenOracle::unpack(&self.token_oracle.data.borrow())?;
 
-            rebalancing.compute(
-                &registry_markets.money_markets,
-                token_oracle,
-                amount_to_distribute,
-                clock.slot,
-            )?;
+            rebalancing.compute(markets_indexes, token_oracle, amount_to_distribute, clock.slot)?;
         }
 
         Rebalancing::pack(rebalancing, *self.rebalancing.data.borrow_mut())?;

@@ -5,7 +5,7 @@ use crate::state::RebalancingOperation;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 pub use deprecated::DeprecatedRebalancing;
 use everlend_liquidity_oracle::state::{Distribution, DistributionArray, TokenOracle};
-use everlend_registry::state::{DistributionPubkeys, TOTAL_DISTRIBUTIONS};
+use everlend_registry::state::TOTAL_DISTRIBUTIONS;
 use everlend_utils::{math, EverlendError};
 use solana_program::{
     clock::Slot,
@@ -59,7 +59,7 @@ impl Rebalancing {
     /// Generate new steps from new and latest distribuition arrays
     pub fn compute(
         &mut self,
-        money_market_program_ids: &DistributionPubkeys,
+        markets_indexes: Vec<usize>,
         token_oracle: TokenOracle,
         amount_to_distribute: u64,
         current_slot: Slot,
@@ -77,12 +77,7 @@ impl Rebalancing {
         self.steps = Vec::new();
 
         // Compute steps
-        for (index, _) in money_market_program_ids
-            .iter()
-            .enumerate()
-            // Keeping index order
-            .filter(|&id| *id.1 != Default::default())
-        {
+        for index in markets_indexes {
             // Spread percents
             let percent = token_oracle.liquidity_distribution.values[index];
             let prev_amount = self.distributed_liquidity[index];
@@ -145,7 +140,7 @@ impl Rebalancing {
     /// Generate new steps for withdraw all funds and deposit them back in MM pools
     pub fn compute_with_refresh_income(
         &mut self,
-        money_market_program_ids: &DistributionPubkeys,
+        markets_indexes: Vec<usize>,
         refresh_income_interval: u64,
         income_refreshed_at: Slot,
         amount_to_distribute: u64,
@@ -158,12 +153,7 @@ impl Rebalancing {
         self.steps = Vec::new();
 
         // Compute steps
-        for (index, _) in money_market_program_ids
-            .iter()
-            .enumerate()
-            // Keeping index order
-            .filter(|&id| *id.1 != Default::default())
-        {
+        for index in markets_indexes {
             // Spread percents
             let percent = self.liquidity_distribution.values[index];
             let prev_amount = self.distributed_liquidity[index];
@@ -430,6 +420,7 @@ pub mod tests {
     use super::*;
     use crate::state::RebalancingOperation;
     use everlend_liquidity_oracle::state::DistributionArray;
+    use everlend_registry::state::{MoneyMarket, MoneyMarkets};
 
     #[test]
     fn packing() {
@@ -465,9 +456,17 @@ pub mod tests {
             mint: pk,
         });
 
-        let mut money_market_program_ids = DistributionPubkeys::default();
-        money_market_program_ids[0] = pk;
-        money_market_program_ids[1] = pk;
+        let mut money_market_program_ids = MoneyMarkets::default();
+        money_market_program_ids[0] = MoneyMarket {
+            id: Default::default(),
+            program_id: pk,
+            lending_market: Default::default(),
+        };
+        money_market_program_ids[1] = MoneyMarket {
+            id: Default::default(),
+            program_id: pk,
+            lending_market: Default::default(),
+        };
 
         let mut oracle: TokenOracle = Default::default();
         let mut distribution = DistributionArray::default();
@@ -481,7 +480,7 @@ pub mod tests {
 
         rebalancing
             .compute(
-                &money_market_program_ids,
+                money_market_program_ids.len(),
                 oracle.clone(),
                 100_000_000,
                 current_slot,
@@ -505,9 +504,17 @@ pub mod tests {
             mint: pk,
         });
 
-        let mut money_market_program_ids = DistributionPubkeys::default();
-        money_market_program_ids[0] = pk;
-        money_market_program_ids[1] = pk;
+        let mut money_market_program_ids = MoneyMarkets::default();
+        money_market_program_ids[0] = MoneyMarket {
+            id: Default::default(),
+            program_id: pk,
+            lending_market: Default::default(),
+        };
+        money_market_program_ids[1] = MoneyMarket {
+            id: Default::default(),
+            program_id: pk,
+            lending_market: Default::default(),
+        };
 
         let mut token_oracle: TokenOracle = Default::default();
         let mut distribution = DistributionArray::default();
@@ -521,7 +528,7 @@ pub mod tests {
 
         rebalancing
             .compute(
-                &money_market_program_ids,
+                money_market_program_ids.len(),
                 token_oracle.clone(),
                 1,
                 current_slot,
@@ -538,7 +545,7 @@ pub mod tests {
             .unwrap();
         rebalancing
             .compute(
-                &money_market_program_ids,
+                money_market_program_ids.len(),
                 token_oracle.clone(),
                 1,
                 current_slot,

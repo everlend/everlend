@@ -1,6 +1,8 @@
 //! Lending money markets
 
+use solana_program::pubkey::Pubkey;
 use solana_program::{account_info::AccountInfo, program_error::ProgramError};
+use everlend_utils::EverlendError;
 
 mod collateral_pool;
 mod francium;
@@ -87,4 +89,17 @@ pub trait MoneyMarket<'a> {
         collateral_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError>;
+}
+
+/// Assert valid money market
+pub fn assert_valid_money_market(
+    market: everlend_registry::state::MoneyMarket,
+    money_market_program: &Pubkey,
+    lending_market: &Pubkey,
+) -> Result<(), EverlendError> {
+    if market.program_id.ne(money_market_program) || market.lending_market.ne(lending_market) {
+        return Err(EverlendError::InvalidRebalancingMoneyMarket);
+    }
+
+    Ok(())
 }

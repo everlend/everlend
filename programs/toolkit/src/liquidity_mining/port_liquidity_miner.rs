@@ -101,7 +101,7 @@ impl LiquidityMiner for PortLiquidityMiner {
             println!("Create port obligation account");
             execute_account_creation(
                 config,
-                &default_accounts.port_finance.program_id,
+                &default_accounts.port_finance[0].program_id,
                 &obligation_account,
                 port_variable_rate_lending_instructions::state::Obligation::LEN as u64,
             )?;
@@ -121,7 +121,7 @@ impl LiquidityMiner for PortLiquidityMiner {
         println!("Create and Init port staking account");
         execute_account_creation(
             config,
-            &default_accounts.port_finance.staking_program_id,
+            &default_accounts.port_finance[0].staking_program_id,
             mining_account,
             port_finance_staking::state::stake_account::StakeAccount::LEN as u64,
         )?;
@@ -143,8 +143,8 @@ impl LiquidityMiner for PortLiquidityMiner {
             depositor: initialized_accounts.depositor,
             registry: initialized_accounts.registry,
             manager: config.fee_payer.pubkey(),
-            money_market_program_id: default_accounts.port_finance.program_id,
-            lending_market: Some(default_accounts.port_finance.lending_market),
+            money_market_program_id: default_accounts.port_finance[0].program_id,
+            lending_market: Some(default_accounts.port_finance[0].lending_market),
         })
     }
 
@@ -161,7 +161,7 @@ impl LiquidityMiner for PortLiquidityMiner {
         let token_accounts = initialized_accounts.token_accounts.get(token).unwrap();
 
         MiningType::PortFinance {
-            staking_program_id: default_accounts.port_finance.staking_program_id,
+            staking_program_id: default_accounts.port_finance[0].staking_program_id,
             staking_account: mining_account,
             staking_pool: port_accounts.staking_pool,
             obligation: token_accounts.port_finance_obligation_account,

@@ -5,7 +5,7 @@ use crate::{
     utils::{collateral_storage, deposit, money_market, withdraw},
 };
 use everlend_income_pools::utils::IncomePoolAccounts;
-use everlend_registry::state::RegistryMarkets;
+use everlend_registry::state::{MoneyMarket, RegistryMarkets};
 use everlend_utils::{assert_account_key, find_program_address, AccountLoader, EverlendError};
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -116,8 +116,6 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
             assert_account_key(self.registry, &depositor.registry)?;
         }
 
-        let registry_markets = RegistryMarkets::unpack_from_slice(&self.registry.data.borrow())?;
-
         // Check rebalancing
         {
             let (rebalancing_pubkey, _) = find_rebalancing_program_address(
@@ -193,8 +191,22 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
 
         let clock = Clock::from_account_info(self.clock)?;
 
+        // Check two step operation
+        let (withdraw_step, deposit_step) = rebalancing.next_refresh_steps()?;
+
+        if withdraw_step.money_market_index != deposit_step.money_market_index {
+            return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
+        };
+
+        let market = MoneyMarket::unpack_from_slice_with_index(
+            &self.registry.data.borrow(),
+            usize::from(withdraw_step.money_market_index),
+        )?;
+        let collateral_pool_markets =
+            RegistryMarkets::unpack_collateral_pool_markets(&self.registry.data.borrow())?;
+
         let (money_market, is_mining) = money_market(
-            &registry_markets,
+            market,
             program_id,
             self.money_market_program,
             account_info_iter,
@@ -204,27 +216,13 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
         )?;
 
         let collateral_stor = collateral_storage(
-            &registry_markets,
+            collateral_pool_markets,
             self.collateral_mint,
             self.depositor_authority,
             account_info_iter,
             true,
             is_mining,
         )?;
-
-        // Check two step operation
-        let (withdraw_step, deposit_step) = rebalancing.next_refresh_steps()?;
-
-        if withdraw_step.money_market_index != deposit_step.money_market_index {
-            return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
-        };
-
-        // For both steps money_market is equal so check one of them
-        if !registry_markets.money_markets[usize::from(withdraw_step.money_market_index)]
-            .eq(self.money_market_program.key)
-        {
-            return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
-        }
 
         if withdraw_step.operation != RebalancingOperation::RefreshWithdraw
             || deposit_step.operation != RebalancingOperation::RefreshDeposit

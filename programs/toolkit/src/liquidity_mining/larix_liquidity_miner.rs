@@ -77,7 +77,7 @@ impl LiquidityMiner for LarixLiquidityMiner {
 
         execute_account_creation(
             config,
-            &default_accounts.larix.program_id,
+            &default_accounts.larix[0].program_id,
             mining_account,
             LARIX_MINING_SIZE,
         )?;
@@ -98,8 +98,8 @@ impl LiquidityMiner for LarixLiquidityMiner {
             depositor: initialized_accounts.depositor,
             registry: initialized_accounts.registry,
             manager: config.fee_payer.pubkey(),
-            money_market_program_id: default_accounts.larix.program_id,
-            lending_market: Some(default_accounts.larix.lending_market),
+            money_market_program_id: default_accounts.larix[0].program_id,
+            lending_market: Some(default_accounts.larix[0].lending_market),
         })
     }
 

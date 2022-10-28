@@ -1,6 +1,7 @@
 //! Instruction types
 
 use crate::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
+use crate::state::MoneyMarkets;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
     instruction::{AccountMeta, Instruction},
@@ -48,6 +49,16 @@ pub enum RegistryInstruction {
     UpdateRegistryMarkets {
         /// MoneyMarkets data to update
         data: UpdateRegistryMarketsData,
+    },
+
+    /// Migrate registry
+    /// [W] Registry account
+    /// [WS] Manager
+    /// [R] System program
+    /// [R] Rent sysvar
+    Migrate {
+        /// Money markets
+        money_markets: MoneyMarkets,
     },
 }
 
@@ -114,6 +125,27 @@ pub fn update_registry_markets(
     Instruction::new_with_borsh(
         *program_id,
         &RegistryInstruction::UpdateRegistryMarkets { data },
+        accounts,
+    )
+}
+
+/// Creates 'Migrate' instruction.
+pub fn migrate(
+    program_id: &Pubkey,
+    registry: &Pubkey,
+    manager: &Pubkey,
+    money_markets: MoneyMarkets,
+) -> Instruction {
+    let accounts = vec![
+        AccountMeta::new(*registry, false),
+        AccountMeta::new(*manager, true),
+        AccountMeta::new_readonly(system_program::id(), false),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &RegistryInstruction::Migrate { money_markets },
         accounts,
     )
 }

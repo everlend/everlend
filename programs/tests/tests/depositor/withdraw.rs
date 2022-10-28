@@ -14,6 +14,7 @@ use everlend_depositor::{
     instruction::DepositorInstruction,
 };
 use everlend_liquidity_oracle::state::DistributionArray;
+use everlend_registry::state::{MoneyMarket, MoneyMarkets};
 use everlend_utils::{
     find_program_address,
     integrations::{self, MoneyMarketPubkeys},
@@ -216,6 +217,13 @@ async fn setup() -> (
         .await
         .unwrap();
 
+    let mut money_markets = MoneyMarkets::default();
+    money_markets[0] = MoneyMarket {
+        id: Default::default(),
+        program_id: spl_token_lending::id(),
+        lending_market: env.spl_token_lending.market_pubkey,
+    };
+
     let ten = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
     let mut collateral_pool_markets = ten.map(|_| mm_pool_market.keypair.pubkey().clone());
     collateral_pool_markets[0] = mm_pool_market.keypair.pubkey();
@@ -237,7 +245,7 @@ async fn setup() -> (
         .update_registry_markets(
             &mut env.context,
             UpdateRegistryMarketsData {
-                money_markets: None,
+                money_markets: Some(money_markets),
                 collateral_pool_markets: Some(collateral_pool_markets),
             },
         )
@@ -1158,7 +1166,7 @@ async fn fail_with_invalid_mm_program_id() {
     context.warp_to_slot(5).unwrap();
     pyth_oracle.update(&mut context, 5).await;
 
-    let money_market_program_id = &Pubkey::new_unique();
+    let money_market_program_id = &spl_token_lending::id();
 
     let collateral_mint = mm_pool.token_mint_pubkey;
     let liquidity_mint = get_liquidity_mint().1;
@@ -1168,6 +1176,18 @@ async fn fail_with_invalid_mm_program_id() {
 
     let collateral_pool_withdraw_accounts =
         mm_pool.withdraw_accounts(&mm_pool_market, &test_depositor);
+
+    // Update registry markets data to set empty money markets
+    registry
+        .update_registry_markets(
+            &mut context,
+            UpdateRegistryMarketsData {
+                money_markets: Some(Default::default()),
+                collateral_pool_markets: None,
+            },
+        )
+        .await
+        .unwrap();
 
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::withdraw(

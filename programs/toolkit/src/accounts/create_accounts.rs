@@ -15,7 +15,7 @@ use crate::{arg_keypair, Config, InitializedAccounts, ToolkitCommand, ARG_ACCOUN
 use clap::{Arg, ArgMatches};
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
-use everlend_registry::state::DistributionPubkeys;
+use everlend_registry::state::{DistributionPubkeys, MoneyMarket, MoneyMarkets};
 use solana_clap_utils::input_parsers::{keypair_of, pubkey_of};
 use solana_client::client_error::ClientError;
 use solana_program::pubkey::Pubkey;
@@ -83,12 +83,32 @@ impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
         distribution[4] = 0;
 
         println!("Registry");
-        let mut money_market_program_ids = DistributionPubkeys::default();
-        money_market_program_ids[0] = default_accounts.port_finance.program_id;
-        money_market_program_ids[1] = default_accounts.larix.program_id;
-        money_market_program_ids[2] = default_accounts.solend.program_id;
-        money_market_program_ids[3] = default_accounts.tulip.program_id;
-        money_market_program_ids[4] = default_accounts.francium.program_id;
+        let mut money_market_program_ids = MoneyMarkets::default();
+        money_market_program_ids[0] = MoneyMarket {
+            id: everlend_utils::integrations::MoneyMarket::PortFinance,
+            program_id: default_accounts.port_finance[0].program_id,
+            lending_market: default_accounts.port_finance[0].lending_market,
+        };
+        money_market_program_ids[1] = MoneyMarket {
+            id: everlend_utils::integrations::MoneyMarket::Larix,
+            program_id: default_accounts.larix[0].program_id,
+            lending_market: default_accounts.larix[0].lending_market,
+        };
+        money_market_program_ids[2] = MoneyMarket {
+            id: everlend_utils::integrations::MoneyMarket::Solend,
+            program_id: default_accounts.solend[0].program_id,
+            lending_market: default_accounts.solend[0].lending_market,
+        };
+        money_market_program_ids[3] = MoneyMarket {
+            id: everlend_utils::integrations::MoneyMarket::Tulip,
+            program_id: default_accounts.tulip[0].program_id,
+            lending_market: default_accounts.tulip[0].lending_market,
+        };
+        money_market_program_ids[4] = MoneyMarket {
+            id: everlend_utils::integrations::MoneyMarket::Francium,
+            program_id: default_accounts.francium[0].program_id,
+            lending_market: default_accounts.francium[0].lending_market,
+        };
 
         let mm_collateral_pool_markets = vec![
             create_collateral_market(config, None)?,

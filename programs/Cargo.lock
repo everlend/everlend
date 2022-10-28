@@ -1246,6 +1246,7 @@ dependencies = [
  "anchor-lang",
  "anyhow",
  "base64 0.13.0",
+ "borsh 0.9.3",
  "bs58 0.2.5",
  "clap",
  "dirs-next",

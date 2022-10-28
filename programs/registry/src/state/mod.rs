@@ -1,8 +1,10 @@
 //! State types
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 
+mod deprecated_registry;
 mod registry;
 
+pub use deprecated_registry::*;
 pub use registry::*;
 
 /// Enum representing the account type managed by the program

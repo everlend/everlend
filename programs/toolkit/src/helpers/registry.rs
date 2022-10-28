@@ -7,6 +7,7 @@ use solana_sdk::{
 };
 
 use everlend_registry::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
+use everlend_registry::state::MoneyMarkets;
 
 use crate::utils::*;
 
@@ -101,6 +102,26 @@ pub fn registry_update_manager(
         tx,
         vec![config.fee_payer.as_ref(), manager, new_manager],
     )?;
+
+    Ok(())
+}
+
+pub fn migrate_registry(
+    config: &Config,
+    registry: &Pubkey,
+    money_markets: MoneyMarkets,
+) -> Result<(), ClientError> {
+    let tx = Transaction::new_with_payer(
+        &[everlend_registry::instruction::migrate(
+            &everlend_registry::id(),
+            registry,
+            &config.fee_payer.pubkey(),
+            money_markets,
+        )],
+        Some(&config.fee_payer.pubkey()),
+    );
+
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
     Ok(())
 }

@@ -141,19 +141,19 @@ pub struct DefaultAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub sol_oracle: Pubkey,
 
-    pub port_finance: PortFinanceAccounts,
+    pub port_finance: Vec<PortFinanceAccounts>,
 
     pub port_accounts: BTreeMap<String, PortAccounts>,
 
-    pub larix: LarixAccounts,
+    pub larix: Vec<LarixAccounts>,
 
     pub quarry: QuarryAccounts,
 
-    pub solend: SolendAccounts,
+    pub solend: Vec<SolendAccounts>,
 
-    pub tulip: TulipAccounts,
+    pub tulip: Vec<TulipAccounts>,
 
-    pub francium: FranciumAccounts,
+    pub francium: Vec<FranciumAccounts>,
 
     #[serde_as(as = "DisplayFromStr")]
     pub multisig_program_id: Pubkey,

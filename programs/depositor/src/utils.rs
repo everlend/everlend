@@ -10,7 +10,7 @@ use crate::{
 };
 use everlend_collateral_pool::find_pool_withdraw_authority_program_address;
 use everlend_income_pools::utils::IncomePoolAccounts;
-use everlend_registry::state::RegistryMarkets;
+use everlend_registry::state::DistributionPubkeys;
 use everlend_utils::{
     abs_diff, assert_account_key, cpi, find_program_address, integrations, AccountLoader,
     EverlendError,
@@ -195,7 +195,7 @@ pub fn withdraw<'a, 'b>(
 
 /// Money market
 pub fn money_market<'a, 'b>(
-    registry_markets: &RegistryMarkets,
+    market: everlend_registry::state::MoneyMarket,
     program_id: &Pubkey,
     money_market_program: &AccountInfo<'b>,
     money_market_account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
@@ -215,73 +215,64 @@ pub fn money_market<'a, 'b>(
     // Only for tests
     if money_market_program.key.to_string() == integrations::SPL_TOKEN_LENDING_PROGRAM_ID {
         let spl = SPLLending::init(
-            money_market_program.key.clone(),
+            *money_market_program.key,
+            market,
             money_market_account_info_iter,
         )?;
         return Ok((Box::new(spl), is_mining));
     }
 
-    let index = registry_markets
-        .money_markets
-        .iter()
-        .position(|&r| r.eq(money_market_program.key));
-
-    if index.is_none() {
-        return Err(EverlendError::IncorrectInstructionProgramId.into());
-    }
-
-    match index.unwrap() {
-        // Port Finance
-        0 => {
+    match market.id {
+        integrations::MoneyMarket::PortFinance => {
             let port = PortFinance::init(
-                money_market_program.key.clone(),
+                *money_market_program.key,
+                market,
                 money_market_account_info_iter,
                 internal_mining_type,
                 collateral_token_mint,
                 depositor_authority,
             )?;
-            return Ok((Box::new(port), is_mining));
+            Ok((Box::new(port), is_mining))
         }
-        // Larix
-        1 => {
+        integrations::MoneyMarket::Larix => {
             let larix = Larix::init(
-                money_market_program.key.clone(),
+                *money_market_program.key,
+                market,
                 money_market_account_info_iter,
                 internal_mining_type,
             )?;
-            return Ok((Box::new(larix), is_mining));
+            Ok((Box::new(larix), is_mining))
         }
-        // Solend
-        2 => {
+        integrations::MoneyMarket::Solend => {
             let solend = Solend::init(
-                money_market_program.key.clone(),
+                *money_market_program.key,
+                market,
                 money_market_account_info_iter,
             )?;
-            return Ok((Box::new(solend), is_mining));
+            Ok((Box::new(solend), is_mining))
         }
-        // Tulip
-        3 => {
+        integrations::MoneyMarket::Tulip => {
             let tulip = Tulip::init(
-                money_market_program.key.clone(),
+                *money_market_program.key,
+                market,
                 money_market_account_info_iter,
             )?;
-            return Ok((Box::new(tulip), is_mining));
+            Ok((Box::new(tulip), is_mining))
         }
-        // Francium
-        4 => {
+        integrations::MoneyMarket::Francium => {
             let francium = Francium::init(
-                money_market_program.key.clone(),
+                *money_market_program.key,
+                market,
                 money_market_account_info_iter,
             )?;
-            return Ok((Box::new(francium), is_mining));
+            Ok((Box::new(francium), is_mining))
         }
-        _ => Err(EverlendError::IncorrectInstructionProgramId.into()),
     }
 }
 
 /// Money market
 pub fn collateral_storage<'a, 'b>(
-    registry_markets: &RegistryMarkets,
+    collateral_pool_markets: DistributionPubkeys,
     collateral_mint: &AccountInfo<'b>,
     depositor_authority: &AccountInfo<'b>,
     account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
@@ -293,7 +284,7 @@ pub fn collateral_storage<'a, 'b>(
     };
 
     let coll_pool = CollateralPool::init(
-        registry_markets,
+        collateral_pool_markets,
         collateral_mint,
         depositor_authority,
         account_info_iter,

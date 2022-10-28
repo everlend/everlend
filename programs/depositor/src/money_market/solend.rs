@@ -1,4 +1,5 @@
 use super::MoneyMarket;
+use crate::money_market::assert_valid_money_market;
 use everlend_utils::{cpi::solend, AccountLoader, EverlendError};
 use solana_program::{
     account_info::AccountInfo, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,
@@ -21,6 +22,7 @@ impl<'a, 'b> Solend<'a, 'b> {
     ///
     pub fn init(
         money_market_program_id: Pubkey,
+        money_market: everlend_registry::state::MoneyMarket,
         account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
     ) -> Result<Solend<'a, 'b>, ProgramError> {
         let reserve_info =
@@ -33,6 +35,12 @@ impl<'a, 'b> Solend<'a, 'b> {
         let reserve_liquidity_pyth_oracle_info = AccountLoader::next_unchecked(account_info_iter)?;
         let reserve_liquidity_switchboard_oracle_info =
             AccountLoader::next_unchecked(account_info_iter)?;
+
+        assert_valid_money_market(
+            money_market,
+            &money_market_program_id,
+            lending_market_info.key,
+        )?;
 
         Ok(Solend {
             money_market_program_id,

@@ -4,7 +4,7 @@ use crate::{
     state::{Depositor, Rebalancing, RebalancingOperation},
     utils::{collateral_storage, deposit, money_market},
 };
-use everlend_registry::state::RegistryMarkets;
+use everlend_registry::state::{MoneyMarket, RegistryMarkets};
 use everlend_utils::{assert_account_key, find_program_address, AccountLoader, EverlendError};
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -147,11 +147,21 @@ impl<'a, 'b> DepositContext<'a, 'b> {
             assert_account_key(self.internal_mining, &internal_mining_pubkey)?;
         }
 
-        let registry_markets = RegistryMarkets::unpack_from_slice(&self.registry.data.borrow())?;
+        let step = rebalancing.next_step();
 
-        // let money_market =
+        if step.operation != RebalancingOperation::Deposit {
+            return Err(EverlendError::InvalidRebalancingOperation.into());
+        }
+
+        let market = MoneyMarket::unpack_from_slice_with_index(
+            &self.registry.data.borrow(),
+            usize::from(step.money_market_index),
+        )?;
+        let collateral_pool_markets =
+            RegistryMarkets::unpack_collateral_pool_markets(&self.registry.data.borrow())?;
+
         let (money_market, is_mining) = money_market(
-            &registry_markets,
+            market,
             program_id,
             self.money_market_program,
             account_info_iter,
@@ -161,7 +171,7 @@ impl<'a, 'b> DepositContext<'a, 'b> {
         )?;
 
         let collateral_stor = collateral_storage(
-            &registry_markets,
+            collateral_pool_markets,
             self.collateral_mint,
             self.depositor_authority,
             account_info_iter,
@@ -170,17 +180,6 @@ impl<'a, 'b> DepositContext<'a, 'b> {
         )?;
 
         {
-            let step = rebalancing.next_step();
-
-            if step.operation != RebalancingOperation::Deposit {
-                return Err(EverlendError::InvalidRebalancingOperation.into());
-            }
-
-            if registry_markets.money_markets[usize::from(step.money_market_index)]
-                != *self.money_market_program.key
-            {
-                return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
-            }
             msg!("Deposit");
             let collateral_amount = deposit(
                 self.collateral_transit,

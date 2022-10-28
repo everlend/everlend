@@ -1,18 +1,29 @@
+use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use num_enum::{FromPrimitive, IntoPrimitive};
 use solana_program::{instruction::AccountMeta, pubkey::Pubkey};
 
+pub mod francium;
 pub mod larix;
 pub mod solend;
 pub mod spl_token_lending;
 pub mod tulip;
-pub mod francium;
 
 // Program IDs
 pub const SPL_TOKEN_LENDING_PROGRAM_ID: &str = "Bp1MJ1qr4g8t9AQJjm5H6zDB2NmRrkJL8H8zuvb1g7oV";
 // pub const PORT_FINANCE_PROGRAM_ID: &str = "pdQ2rQQU5zH2rDgZ7xH2azMBJegUzUyunJ5Jd637hC4";
 // pub const LARIX_PROGRAM_ID: &str = "BDBsJpBPWtMfTgxejekYCWUAJu1mvQshiwrKuTjdEeT3";
 
-#[derive(Debug, IntoPrimitive, FromPrimitive, Clone, Copy)]
+#[derive(
+    Debug,
+    IntoPrimitive,
+    FromPrimitive,
+    BorshSchema,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    Clone,
+    Copy,
+)]
 #[repr(usize)]
 pub enum MoneyMarket {
     #[num_enum(default)]
@@ -21,6 +32,12 @@ pub enum MoneyMarket {
     Solend,
     Tulip,
     Francium,
+}
+
+impl Default for MoneyMarket {
+    fn default() -> Self {
+        Self::PortFinance
+    }
 }
 
 #[derive(Debug, IntoPrimitive, FromPrimitive, Clone, Copy, PartialEq)]

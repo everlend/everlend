@@ -26,14 +26,14 @@ pub fn init_mining_accounts(config: &Config, mining_account: &Keypair) -> Result
         &mining_account.pubkey(),
         rent,
         LARIX_MINING_SIZE,
-        &default_accounts.larix.program_id,
+        &default_accounts.larix[0].program_id,
     );
     let init_mining_instruction = Instruction {
-        program_id: default_accounts.larix.program_id,
+        program_id: default_accounts.larix[0].program_id,
         accounts: vec![
             AccountMeta::new(mining_account.pubkey(), false),
             AccountMeta::new_readonly(config.fee_payer.pubkey(), true),
-            AccountMeta::new_readonly(default_accounts.larix.lending_market, false),
+            AccountMeta::new_readonly(default_accounts.larix[0].lending_market, false),
         ],
         data: LendingInstruction::InitMining.pack(),
     };
@@ -57,9 +57,9 @@ pub fn deposit_liquidity(
 ) -> Result<(), ClientError> {
     let default_accounts = config.get_default_accounts();
     let collateral_mint = default_accounts.sol_collateral.get(1).unwrap().unwrap();
-    let lending_market = default_accounts.larix.lending_market;
+    let lending_market = default_accounts.larix[0].lending_market;
     let (lending_market_authority, _) =
-        find_program_address(&default_accounts.larix.program_id, &lending_market);
+        find_program_address(&default_accounts.larix[0].program_id, &lending_market);
     let rent = config
         .rpc_client
         .get_minimum_balance_for_rent_exemption(spl_token::state::Account::LEN as usize)?;
@@ -78,21 +78,21 @@ pub fn deposit_liquidity(
     )
     .unwrap();
     let refresh_instruction = Instruction {
-        program_id: default_accounts.larix.program_id,
+        program_id: default_accounts.larix[0].program_id,
         accounts: vec![
-            AccountMeta::new(default_accounts.larix.reserve_sol, false),
+            AccountMeta::new(default_accounts.larix[0].reserve_sol, false),
             AccountMeta::new_readonly(default_accounts.sol_oracle, false),
         ],
         data: LendingInstruction::RefreshReserves {}.pack(),
     };
     let deposit_instruction = Instruction {
-        program_id: default_accounts.larix.program_id,
+        program_id: default_accounts.larix[0].program_id,
         accounts: vec![
             AccountMeta::new(*source, false),
             AccountMeta::new(collateral_transit.pubkey(), false),
-            AccountMeta::new(default_accounts.larix.reserve_sol, false),
+            AccountMeta::new(default_accounts.larix[0].reserve_sol, false),
             AccountMeta::new(collateral_mint, false),
-            AccountMeta::new(default_accounts.larix.reserve_sol_supply, false),
+            AccountMeta::new(default_accounts.larix[0].reserve_sol_supply, false),
             AccountMeta::new_readonly(lending_market, false),
             AccountMeta::new_readonly(lending_market_authority, false),
             AccountMeta::new_readonly(config.fee_payer.pubkey(), true),
@@ -130,24 +130,24 @@ pub fn deposit_collateral(
 ) -> Result<(), ClientError> {
     let default_accounts = config.get_default_accounts();
     let refresh_instruction = Instruction {
-        program_id: default_accounts.larix.program_id,
+        program_id: default_accounts.larix[0].program_id,
         accounts: vec![
-            AccountMeta::new(default_accounts.larix.reserve_sol, false),
+            AccountMeta::new(default_accounts.larix[0].reserve_sol, false),
             AccountMeta::new_readonly(default_accounts.sol_oracle, false),
         ],
         data: LendingInstruction::RefreshReserves {}.pack(),
     };
     let deposit_mining_instruction = Instruction {
-        program_id: default_accounts.larix.program_id,
+        program_id: default_accounts.larix[0].program_id,
         accounts: vec![
             AccountMeta::new(*collateral_transit, false),
             AccountMeta::new(
-                default_accounts.larix.uncollateralized_ltoken_supply_sol,
+                default_accounts.larix[0].uncollateralized_ltoken_supply_sol,
                 false,
             ),
             AccountMeta::new(*mining, false),
-            AccountMeta::new_readonly(default_accounts.larix.reserve_sol, false),
-            AccountMeta::new_readonly(default_accounts.larix.lending_market, false),
+            AccountMeta::new_readonly(default_accounts.larix[0].reserve_sol, false),
+            AccountMeta::new_readonly(default_accounts.larix[0].lending_market, false),
             AccountMeta::new_readonly(config.fee_payer.pubkey(), false),
             AccountMeta::new_readonly(config.fee_payer.pubkey(), true),
             AccountMeta::new_readonly(spl_token::id(), false),
@@ -171,9 +171,9 @@ pub fn withdraw_collateral(
 ) -> Result<(), ClientError> {
     let default_accounts = config.get_default_accounts();
     let collateral_mint = default_accounts.sol_collateral.get(1).unwrap().unwrap();
-    let lending_market = default_accounts.larix.lending_market;
+    let lending_market = default_accounts.larix[0].lending_market;
     let (lending_market_authority, _) =
-        find_program_address(&default_accounts.larix.program_id, &lending_market);
+        find_program_address(&default_accounts.larix[0].program_id, &lending_market);
     let rent = config
         .rpc_client
         .get_minimum_balance_for_rent_exemption(spl_token::state::Account::LEN as usize)?;
@@ -192,24 +192,24 @@ pub fn withdraw_collateral(
     )
     .unwrap();
     let refresh_instruction = Instruction {
-        program_id: default_accounts.larix.program_id,
+        program_id: default_accounts.larix[0].program_id,
         accounts: vec![
-            AccountMeta::new(default_accounts.larix.reserve_sol, false),
+            AccountMeta::new(default_accounts.larix[0].reserve_sol, false),
             AccountMeta::new_readonly(default_accounts.sol_oracle, false),
         ],
         data: LendingInstruction::RefreshReserves {}.pack(),
     };
     let clock_id = Pubkey::from_str("SysvarC1ock11111111111111111111111111111111").unwrap();
     let deposit_mining_instruction = Instruction {
-        program_id: default_accounts.larix.program_id,
+        program_id: default_accounts.larix[0].program_id,
         accounts: vec![
             AccountMeta::new(
-                default_accounts.larix.uncollateralized_ltoken_supply_sol,
+                default_accounts.larix[0].uncollateralized_ltoken_supply_sol,
                 false,
             ),
             AccountMeta::new(destination.pubkey(), false),
             AccountMeta::new(*mining, false),
-            AccountMeta::new_readonly(default_accounts.larix.reserve_sol, false),
+            AccountMeta::new_readonly(default_accounts.larix[0].reserve_sol, false),
             AccountMeta::new_readonly(lending_market, false),
             AccountMeta::new_readonly(lending_market_authority, false),
             AccountMeta::new_readonly(config.fee_payer.pubkey(), false),
@@ -246,9 +246,9 @@ pub fn claim_mining(
     mining: &Pubkey,
 ) -> Result<(), ClientError> {
     let default_accounts = config.get_default_accounts();
-    let lending_market = default_accounts.larix.lending_market;
+    let lending_market = default_accounts.larix[0].lending_market;
     let (lending_market_authority, _) =
-        find_program_address(&default_accounts.larix.program_id, &lending_market);
+        find_program_address(&default_accounts.larix[0].program_id, &lending_market);
     let rent = config
         .rpc_client
         .get_minimum_balance_for_rent_exemption(spl_token::state::Account::LEN as usize)?;
@@ -262,29 +262,29 @@ pub fn claim_mining(
     let init_account_instruction = spl_token::instruction::initialize_account(
         &spl_token::id(),
         &destination.pubkey(),
-        &default_accounts.larix.ltoken_mint,
+        &default_accounts.larix[0].ltoken_mint,
         &config.fee_payer.pubkey(),
     )
     .unwrap();
     let refresh_instruction = Instruction {
-        program_id: default_accounts.larix.program_id,
+        program_id: default_accounts.larix[0].program_id,
         accounts: vec![
-            AccountMeta::new(default_accounts.larix.reserve_sol, false),
+            AccountMeta::new(default_accounts.larix[0].reserve_sol, false),
             AccountMeta::new_readonly(default_accounts.sol_oracle, false),
         ],
         data: LendingInstruction::RefreshReserves {}.pack(),
     };
     let claim_instruction = Instruction {
-        program_id: default_accounts.larix.program_id,
+        program_id: default_accounts.larix[0].program_id,
         accounts: vec![
             AccountMeta::new(*mining, false),
-            AccountMeta::new(default_accounts.larix.mining_supply, false),
+            AccountMeta::new(default_accounts.larix[0].mining_supply, false),
             AccountMeta::new(destination.pubkey(), false),
             AccountMeta::new_readonly(config.fee_payer.pubkey(), true),
             AccountMeta::new_readonly(lending_market, false),
             AccountMeta::new_readonly(lending_market_authority, false),
             AccountMeta::new_readonly(spl_token::id(), false),
-            AccountMeta::new_readonly(default_accounts.larix.reserve_sol, false),
+            AccountMeta::new_readonly(default_accounts.larix[0].reserve_sol, false),
         ],
         data: LendingInstruction::ClaimMiningMine.pack(),
     };
