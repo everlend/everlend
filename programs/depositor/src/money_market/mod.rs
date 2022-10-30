@@ -6,6 +6,7 @@ use everlend_utils::EverlendError;
 
 mod collateral_pool;
 mod francium;
+mod jet;
 mod larix;
 mod port_finance;
 mod quarry;
@@ -15,6 +16,7 @@ mod tulip;
 
 pub use collateral_pool::*;
 pub use francium::*;
+pub use jet::*;
 pub use larix::*;
 pub use port_finance::*;
 pub use solend::*;

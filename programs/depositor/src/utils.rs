@@ -1,9 +1,7 @@
 //! Utils
 
-use crate::money_market::{
-    CollateralPool, CollateralStorage, Francium, Larix, MoneyMarket, PortFinance, SPLLending,
-    Solend, Tulip,
-};
+use crate::money_market::{CollateralPool, CollateralStorage, Francium, MoneyMarket, Tulip};
+use crate::money_market::{Larix, PortFinance, SPLLending, Solend, Jet};
 use crate::{
     find_transit_program_address,
     state::{InternalMining, MiningType},
@@ -266,6 +264,13 @@ pub fn money_market<'a, 'b>(
                 money_market_account_info_iter,
             )?;
             Ok((Box::new(francium), is_mining))
+        }
+        integrations::MoneyMarket::Jet => {
+            let jet = Jet::init(
+                money_market_program.key.clone(),
+                money_market_account_info_iter,
+            )?;
+            return Ok((Box::new(jet), is_mining));
         }
     }
 }

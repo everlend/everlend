@@ -1,29 +1,29 @@
 use crate::helpers::{init_registry, update_registry, update_registry_markets};
-use crate::utils::REFRESH_INCOME_INTERVAL;
+use crate::utils::{arg_pubkey, REFRESH_INCOME_INTERVAL};
 use crate::{
-    utils::{arg_keypair, Config},
+    utils::{Config},
     ToolkitCommand,
 };
 use clap::{Arg, ArgMatches};
 use everlend_registry::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
-use everlend_registry::state::{DistributionPubkeys, MoneyMarket, MoneyMarkets};
-use solana_clap_utils::input_parsers::keypair_of;
+use everlend_registry::state::DistributionPubkeys;
+use solana_clap_utils::input_parsers::pubkey_of;
 
 const ARG_REGISTRY: &str = "registry";
 
-pub struct InitRegistryCommand;
+pub struct SetRegistryCommand;
 
-impl<'a> ToolkitCommand<'a> for InitRegistryCommand {
+impl<'a> ToolkitCommand<'a> for SetRegistryCommand {
     fn get_name(&self) -> &'a str {
-        "init"
+        "set"
     }
 
     fn get_description(&self) -> &'a str {
-        "init registry"
+        "set registry"
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        vec![arg_keypair(ARG_REGISTRY, true)]
+        vec![arg_pubkey(ARG_REGISTRY, true)]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
@@ -32,46 +32,20 @@ impl<'a> ToolkitCommand<'a> for InitRegistryCommand {
 
     fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
         let arg_matches = arg_matches.unwrap();
-        let keypair = keypair_of(arg_matches, ARG_REGISTRY);
+        let registry_pubkey = pubkey_of(arg_matches, ARG_REGISTRY).unwrap();
         let payer_pubkey = config.fee_payer.pubkey();
         println!("Fee payer: {}", payer_pubkey);
-
-        let registry_pubkey = init_registry(config, keypair)?;
 
         let default_accounts = config.get_default_accounts();
         let initialized_accounts = config.get_initialized_accounts();
 
-        let mut money_market_program_ids = MoneyMarkets::default();
-        money_market_program_ids[0] = MoneyMarket {
-            id: everlend_utils::integrations::MoneyMarket::PortFinance,
-            program_id: default_accounts.port_finance[0].program_id,
-            lending_market: default_accounts.port_finance[0].lending_market,
-        };
-        money_market_program_ids[1] = MoneyMarket {
-            id: everlend_utils::integrations::MoneyMarket::Larix,
-            program_id: default_accounts.larix[0].program_id,
-            lending_market: default_accounts.larix[0].lending_market,
-        };
-        money_market_program_ids[2] = MoneyMarket {
-            id: everlend_utils::integrations::MoneyMarket::Solend,
-            program_id: default_accounts.solend[0].program_id,
-            lending_market: default_accounts.solend[0].lending_market,
-        };
-        money_market_program_ids[3] = MoneyMarket {
-            id: everlend_utils::integrations::MoneyMarket::Tulip,
-            program_id: default_accounts.tulip[0].program_id,
-            lending_market: default_accounts.tulip[0].lending_market,
-        };
-        money_market_program_ids[4] = MoneyMarket {
-            id: everlend_utils::integrations::MoneyMarket::Francium,
-            program_id: default_accounts.francium[0].program_id,
-            lending_market: default_accounts.francium[0].lending_market,
-        };
-        money_market_program_ids[5] = MoneyMarket {
-            id: everlend_utils::integrations::MoneyMarket::Jet,
-            program_id: default_accounts.jet[0].program_id,
-            lending_market: default_accounts.jet[0].lending_market,
-        };
+        let mut money_market_program_ids = DistributionPubkeys::default();
+        money_market_program_ids[0] = default_accounts.port_finance.program_id;
+        money_market_program_ids[1] = default_accounts.larix.program_id;
+        money_market_program_ids[2] = default_accounts.solend.program_id;
+        money_market_program_ids[3] = default_accounts.tulip.program_id;
+        money_market_program_ids[4] = default_accounts.francium.program_id;
+        money_market_program_ids[5] = default_accounts.jet.program_id;
 
         let mut collateral_pool_markets = DistributionPubkeys::default();
         let initialized_collateral_pool_markets = &initialized_accounts.collateral_pool_markets;
