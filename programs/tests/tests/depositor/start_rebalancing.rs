@@ -951,23 +951,12 @@ async fn rebalancing_math_round() {
         oracle
             .update_liquidity_distribution(i as u64 + 1, d)
             .unwrap();
-        let indexes: Vec<usize> = p
-            .iter()
-            .enumerate()
-            .filter_map(|(index, mm)| {
-                if mm.eq(&MoneyMarket::default()) {
-                    None
-                } else {
-                    Some(index)
-                }
-            })
-            .collect();
-        r.compute(indexes.clone(), oracle.clone(), distr_amount, current_slot)
+        r.compute(vec![0, 1, 2], oracle.clone(), distr_amount, current_slot)
             .unwrap();
         println!("{}", r.total_distributed_liquidity());
         assert_eq!(distr_amount >= r.total_distributed_liquidity(), true);
 
-        r.compute_with_refresh_income(indexes, 0, i as u64 + 1, distr_amount)
+        r.compute_with_refresh_income(vec![0, 1, 2], 0, i as u64 + 1, distr_amount)
             .unwrap();
         println!("{}", r.total_distributed_liquidity());
         println!("{:?}", r.steps);
@@ -1041,18 +1030,7 @@ async fn rebalancing_check_steps() {
         oracle
             .update_liquidity_distribution(i as u64 + 1, d)
             .unwrap();
-        let indexes = p
-            .iter()
-            .enumerate()
-            .filter_map(|(index, mm)| {
-                if mm.eq(&MoneyMarket::default()) {
-                    None
-                } else {
-                    Some(index)
-                }
-            })
-            .collect();
-        r.compute(indexes, oracle.clone(), distr_amount, current_slot)
+        r.compute(vec![0, 1, 2], oracle.clone(), distr_amount, current_slot)
             .unwrap();
 
         println!(
@@ -1127,19 +1105,13 @@ async fn rebalancing_check_steps_math() {
     let amount_to_distribute = 25365814993;
     let current_slot = 1;
     oracle.reserve_rates.updated_at = current_slot;
-    let indexes = p
-        .iter()
-        .enumerate()
-        .filter_map(|(index, mm)| {
-            if mm.eq(&MoneyMarket::default()) {
-                None
-            } else {
-                Some(index)
-            }
-        })
-        .collect();
-    r.compute(indexes, oracle.clone(), amount_to_distribute, current_slot)
-        .unwrap();
+    r.compute(
+        vec![0, 1, 2],
+        oracle.clone(),
+        amount_to_distribute,
+        current_slot,
+    )
+    .unwrap();
 
     println!("{:?}", r.steps);
 
@@ -1197,19 +1169,13 @@ async fn collateral_leak_test() {
 
     oracle.liquidity_distribution.updated_at = current_slot;
     oracle.reserve_rates.updated_at = current_slot;
-    let indexes: Vec<usize> = p
-        .iter()
-        .enumerate()
-        .filter_map(|(index, mm)| {
-            if mm.eq(&MoneyMarket::default()) {
-                None
-            } else {
-                Some(index)
-            }
-        })
-        .collect();
-    r.compute(indexes.clone(), oracle.clone(), amount_to_distribute, current_slot)
-        .unwrap();
+    r.compute(
+        vec![0, 1, 2],
+        oracle.clone(),
+        amount_to_distribute,
+        current_slot,
+    )
+    .unwrap();
 
     assert_eq!(r.total_distributed_liquidity(), 100_000_000);
 
@@ -1227,8 +1193,13 @@ async fn collateral_leak_test() {
         .update_reserve_rates(current_slot, reserve_rates)
         .unwrap();
 
-    r.compute(indexes, oracle.clone(), amount_to_distribute, current_slot)
-        .unwrap();
+    r.compute(
+        vec![0, 1, 2],
+        oracle.clone(),
+        amount_to_distribute,
+        current_slot,
+    )
+    .unwrap();
 
     assert_eq!(r.total_distributed_liquidity(), 999_999_90);
 }
@@ -1311,19 +1282,13 @@ async fn collateral_leak_test2() {
         )
         .unwrap();
 
-        let indexes = p
-            .iter()
-            .enumerate()
-            .filter_map(|(index, mm)| {
-                if mm.eq(&MoneyMarket::default()) {
-                    None
-                } else {
-                    Some(index)
-                }
-            })
-            .collect();
-        r.compute(indexes, oracle.clone(), amount_to_distribute, current_slot)
-            .unwrap();
+        r.compute(
+            vec![0, 1, 2],
+            oracle.clone(),
+            amount_to_distribute,
+            current_slot,
+        )
+        .unwrap();
 
         println!(
             "amount_to_distribute: {} distributed_liquidity:{} \n\n",

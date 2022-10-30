@@ -138,18 +138,15 @@ impl RegistryMarkets {
     }
 
     ///
-    pub fn markets_indexes(src: &[u8]) -> Vec<usize> {
-        (0..TOTAL_DISTRIBUTIONS)
-            .into_iter()
-            .filter_map(|i| {
-                if MoneyMarket::unpack_from_slice_with_index(src, i).unwrap() == Default::default()
-                {
-                    None
-                } else {
-                    Some(i)
-                }
-            })
-            .collect()
+    pub fn unpack_money_markets(src: &[u8]) -> Result<MoneyMarkets, ProgramError> {
+        let mut src_mut =
+            &src[REGISTRY_LEN..REGISTRY_LEN + REGISTRY_MONEY_MARKET_LEN * TOTAL_DISTRIBUTIONS];
+
+        MoneyMarkets::deserialize(&mut src_mut).map_err(|err| {
+            msg!("Failed to deserialize");
+            msg!(&err.to_string());
+            ProgramError::InvalidAccountData
+        })
     }
 }
 

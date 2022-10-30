@@ -479,12 +479,7 @@ pub mod tests {
             .unwrap();
 
         rebalancing
-            .compute(
-                money_market_program_ids.len(),
-                oracle.clone(),
-                100_000_000,
-                current_slot,
-            )
+            .compute(vec![0, 1], oracle.clone(), 100_000_000, current_slot)
             .unwrap();
 
         assert_eq!(rebalancing.steps.len(), 2);
@@ -527,12 +522,7 @@ pub mod tests {
             .unwrap();
 
         rebalancing
-            .compute(
-                money_market_program_ids.len(),
-                token_oracle.clone(),
-                1,
-                current_slot,
-            )
+            .compute(vec![0, 1], token_oracle.clone(), 1, current_slot)
             .unwrap();
 
         rebalancing
@@ -544,12 +534,7 @@ pub mod tests {
             .update_liquidity_distribution(4, distribution)
             .unwrap();
         rebalancing
-            .compute(
-                money_market_program_ids.len(),
-                token_oracle.clone(),
-                1,
-                current_slot,
-            )
+            .compute(vec![0, 1], token_oracle.clone(), 1, current_slot)
             .unwrap();
 
         println!("rebalancing = {:#?}", rebalancing);
