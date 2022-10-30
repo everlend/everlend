@@ -17,12 +17,17 @@ impl<'a, 'b> Jet<'a, 'b> {
     ///
     pub fn init(
         money_market_program_id: Pubkey,
+        money_market: everlend_registry::state::MoneyMarket,
         account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
     ) -> Result<Jet<'a, 'b>, ProgramError> {
         let margin_pool_info =
             AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
         let vault_info =
             AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+
+        if money_market.program_id != money_market_program_id {
+            return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
+        }
 
         Ok(Jet {
             money_market_program_id,

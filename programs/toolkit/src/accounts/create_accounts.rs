@@ -113,7 +113,7 @@ impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
         money_market_program_ids[5] = MoneyMarket {
             id: everlend_utils::integrations::MoneyMarket::Jet,
             program_id: default_accounts.jet[0].program_id,
-            lending_market: default_accounts.jet[0].lending_market,
+            lending_market: Default::default(),
         };
 
         let mm_collateral_pool_markets = vec![

@@ -166,7 +166,7 @@ pub struct DefaultAccounts {
 
     pub francium: Vec<FranciumAccounts>,
 
-    pub jet: JetAccounts,
+    pub jet: Vec<JetAccounts>,
 
     #[serde_as(as = "DisplayFromStr")]
     pub multisig_program_id: Pubkey,

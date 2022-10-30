@@ -268,6 +268,7 @@ pub fn money_market<'a, 'b>(
         integrations::MoneyMarket::Jet => {
             let jet = Jet::init(
                 money_market_program.key.clone(),
+                market,
                 money_market_account_info_iter,
             )?;
             return Ok((Box::new(jet), is_mining));

@@ -70,7 +70,7 @@ impl<'a> ToolkitCommand<'a> for InitRegistryCommand {
         money_market_program_ids[5] = MoneyMarket {
             id: everlend_utils::integrations::MoneyMarket::Jet,
             program_id: default_accounts.jet[0].program_id,
-            lending_market: default_accounts.jet[0].lending_market,
+            lending_market: Default::default(),
         };
 
         let mut collateral_pool_markets = DistributionPubkeys::default();
