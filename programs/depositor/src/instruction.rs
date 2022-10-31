@@ -255,6 +255,17 @@ pub enum DepositorInstruction {
     /// [] Money market deposit accounts
     /// [] Collateral storage accounts or money market mining accounts
     RefreshMMIncomes,
+
+    /// Migrate Rebalancing
+    ///
+    /// Accounts:
+    /// [W] Rebalancing
+    /// [R] Depositor
+    /// [R] Registry
+    /// [S] Manager
+    /// [R] Rent sysvar
+    /// [R] System program
+    MigrateRebalancing,
 }
 
 /// Creates 'Init' instruction.
@@ -629,6 +640,31 @@ pub fn migrate_depositor(
     Instruction::new_with_borsh(
         *program_id,
         &DepositorInstruction::MigrateDepositor,
+        accounts,
+    )
+}
+
+/// Creates 'MigrateRebalancing' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn migrate_rebalancing(
+    program_id: &Pubkey,
+    depositor: &Pubkey,
+    registry: &Pubkey,
+    manager: &Pubkey,
+    rebalancing: &Pubkey,
+) -> Instruction {
+    let accounts = vec![
+        AccountMeta::new(*rebalancing, false),
+        AccountMeta::new_readonly(*depositor, false),
+        AccountMeta::new_readonly(*registry, false),
+        AccountMeta::new(*manager, true),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+        AccountMeta::new_readonly(system_program::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &DepositorInstruction::MigrateRebalancing,
         accounts,
     )
 }
