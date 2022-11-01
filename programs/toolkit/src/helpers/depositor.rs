@@ -237,37 +237,6 @@ pub fn depositor_withdraw(
     Ok(())
 }
 
-pub fn migrate_depositor(
-    config: &Config,
-    depositor: &Pubkey,
-    registry: &Pubkey,
-    liquidity_mint: &Pubkey,
-    amount_to_distribute: u64,
-) -> Result<(), ClientError> {
-    let (rebalancing, _) =
-        find_rebalancing_program_address(&everlend_depositor::id(), depositor, liquidity_mint);
-
-    let tx = Transaction::new_with_payer(
-        &[everlend_depositor::instruction::migrate_depositor(
-            &everlend_depositor::id(),
-            depositor,
-            registry,
-            &config.fee_payer.pubkey(),
-            &rebalancing,
-            liquidity_mint,
-            amount_to_distribute,
-        )],
-        Some(&config.fee_payer.pubkey()),
-    );
-
-    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
-
-    let depositor: Depositor = config.get_account_unpack(depositor)?;
-    println!("Migration of Depositor finished: \n{:?}", &depositor);
-
-    Ok(())
-}
-
 pub fn migrate_rebalancing(
     config: &Config,
     depositor: &Pubkey,

@@ -1,10 +1,11 @@
-use crate::helpers::migrate_depositor;
-use crate::{utils::{Config, arg_amount, arg_pubkey}, ToolkitCommand};
+use crate::helpers::migrate_rebalancing;
+use crate::utils::get_program_accounts;
+use crate::{utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
-use solana_clap_utils::input_parsers::{value_of, pubkey_of};
+use everlend_depositor::state::{AccountType, DeprecatedRebalancing};
+use solana_program::program_pack::Pack;
+use solana_program::pubkey::Pubkey;
 
-const ARG_AMOUNT: &str = "amount-to-distribute";
-const ARG_TOKEN_MINT: &str = "token-mint";
 pub struct MigrateDepositorCommand;
 
 impl<'a> ToolkitCommand<'a> for MigrateDepositorCommand {
@@ -17,24 +18,36 @@ impl<'a> ToolkitCommand<'a> for MigrateDepositorCommand {
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        vec![
-            arg_pubkey(ARG_TOKEN_MINT, true).help("Token mint pubkey"),
-            arg_amount(ARG_AMOUNT, true).help("Amount to distribute"),
-        ]
+        vec![]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
         vec![]
     }
 
-    fn handle(&self, config: &Config, arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
-        println!("Started Depositor migration");
-        let arg_matches = arg_matches.unwrap();
+    fn handle(&self, config: &Config, _arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
+        println!("Started Rebalancing accounts migration");
         let acc = config.get_initialized_accounts();
-        let amount_to_distribute = value_of::<u64>(arg_matches, ARG_AMOUNT).unwrap();
-        let token_mint_pubkey = pubkey_of(arg_matches, ARG_TOKEN_MINT).unwrap();
 
-        migrate_depositor(config, &acc.depositor, &acc.registry, &token_mint_pubkey, amount_to_distribute)?;
+        let rebalancing_accounts: Vec<Pubkey> = get_program_accounts(
+            config,
+            &everlend_depositor::id(),
+            AccountType::Rebalancing as u8,
+            &acc.depositor,
+        )?
+        .into_iter()
+        .filter_map(
+            |(pk, account)| match DeprecatedRebalancing::unpack_unchecked(&account.data) {
+                Ok(_) => Some(pk),
+                _ => None,
+            },
+        )
+        .collect();
+
+        println!("Migrating depositor rebalancing accounts:");
+        println!("{:#?}", rebalancing_accounts);
+
+        migrate_rebalancing(config, &acc.depositor, &acc.registry, rebalancing_accounts)?;
 
         Ok(())
     }

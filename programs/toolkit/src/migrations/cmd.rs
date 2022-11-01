@@ -3,8 +3,7 @@ use clap::{Arg, ArgMatches};
 
 use super::{
     MigrateDepositorCommand, MigrateGeneralPoolCommand, MigrateLiquidityOracleCommand,
-    MigratePoolMarketCommand, MigrateRebalancingCommand, MigrateRewardsPoolCommand,
-    MigrateRewardsRootCommand,
+    MigratePoolMarketCommand, MigrateRewardsPoolCommand, MigrateRewardsRootCommand,
 };
 
 #[derive(Clone, Copy)]
@@ -31,7 +30,6 @@ impl<'a> ToolkitCommand<'a> for MigrationsCommand {
             Box::new(MigrateLiquidityOracleCommand),
             Box::new(MigrateRewardsRootCommand),
             Box::new(MigrateRewardsPoolCommand),
-            Box::new(MigrateRebalancingCommand),
         ]
     }
 
