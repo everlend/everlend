@@ -237,21 +237,25 @@ pub fn depositor_withdraw(
     Ok(())
 }
 
-pub fn migrate_rebalancing(
-    config: &Config,
-    depositor: &Pubkey,
-    registry: &Pubkey,
-    rebalancing_accounts: Vec<Pubkey>,
-) -> Result<(), ClientError> {
-    let instructions: Vec<Instruction> = rebalancing_accounts
+pub fn migrate_rebalancing(config: &Config) -> Result<(), ClientError> {
+    let acc = config.get_initialized_accounts();
+
+    let instructions: Vec<Instruction> = acc
+        .token_accounts
         .iter()
-        .map(|rebalancing| {
+        .map(|(_, token)| {
+            let (rebalancing_pubkey, _) = find_rebalancing_program_address(
+                &everlend_depositor::id(),
+                &acc.depositor,
+                &token.mint,
+            );
+
             everlend_depositor::instruction::migrate_rebalancing(
                 &everlend_depositor::id(),
-                depositor,
-                registry,
+                &acc.depositor,
+                &acc.registry,
                 &config.fee_payer.pubkey(),
-                &rebalancing,
+                &rebalancing_pubkey,
             )
         })
         .collect();
@@ -259,11 +263,6 @@ pub fn migrate_rebalancing(
     let tx = Transaction::new_with_payer(&instructions, Some(&config.fee_payer.pubkey()));
 
     config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
-
-    println!(
-        "Migration of Rebalancing accounts finished: \n{:?}",
-        &depositor
-    );
 
     Ok(())
 }
