@@ -1,4 +1,4 @@
-use solana_program::{instruction::InstructionError, program_error::ProgramError};
+use solana_program::instruction::InstructionError;
 use solana_program_test::*;
 use solana_sdk::transaction::{Transaction, TransactionError};
 use solana_sdk::{signature::Keypair, signer::Signer};
@@ -170,9 +170,6 @@ async fn fail_double_create() {
             .await
             .unwrap_err()
             .unwrap(),
-        TransactionError::InstructionError(
-            0,
-            InstructionError::AccountAlreadyInitialized
-        )
+        TransactionError::InstructionError(0, InstructionError::AccountAlreadyInitialized)
     );
 }

@@ -2,8 +2,8 @@
 
 use borsh::BorshDeserialize;
 use everlend_utils::{
-    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
-    assert_non_zero_amount, cpi, find_program_address, EverlendError,
+    assert_account_key, assert_non_zero_amount, assert_owned_by, assert_rent_exempt, assert_signer,
+    assert_uninitialized, cpi, find_program_address, EverlendError,
 };
 use solana_program::{
     account_info::{next_account_info, AccountInfo},

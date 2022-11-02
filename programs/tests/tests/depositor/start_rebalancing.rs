@@ -1080,6 +1080,18 @@ async fn rebalancing_check_steps_math() {
 }
 
 #[tokio::test]
+#[should_panic(expected = "attempt to add with overflow")]
+async fn rebalancing_check_distribution_overflow() {
+    let mut oracle = TokenOracle::default();
+    let mut d: DistributionArray = DistributionArray::default();
+
+    d[0] = 1;
+    d[1] = u64::MAX;
+
+    oracle.update_liquidity_distribution(10, d).unwrap();
+}
+
+#[tokio::test]
 async fn rebalancing_percent_ratio() {
     let prev_amount = 12821948839;
     let new_amount = 8455271655;
