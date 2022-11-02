@@ -38,6 +38,7 @@ impl Processor {
         let rent_info = next_account_info(account_info_iter)?;
         let rent = &Rent::from_account_info(rent_info)?;
 
+        assert_signer(manager_info)?;
         assert_rent_exempt(rent, pool_market_info)?;
 
         // Check programs

@@ -64,6 +64,10 @@ impl Pack for Registry {
     }
 
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
+        if src.len() != REGISTRY_LEN + REGISTRY_MARKETS_LEN {
+            return Err(ProgramError::InvalidAccountData);
+        }
+
         let mut src_mut = &src[0..REGISTRY_LEN];
         Self::deserialize(&mut src_mut).map_err(|err| {
             msg!("Failed to deserialize");
@@ -107,6 +111,10 @@ impl Pack for RegistryMarkets {
     }
 
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
+        if src.len() != REGISTRY_LEN + REGISTRY_MARKETS_LEN {
+            return Err(ProgramError::InvalidAccountData);
+        }
+
         let mut src_mut = &src[REGISTRY_LEN..REGISTRY_LEN + REGISTRY_MARKETS_LEN];
 
         Self::deserialize(&mut src_mut).map_err(|err| {
