@@ -12,7 +12,7 @@ use solana_sdk::signer::Signer;
 
 pub struct SolendLiquidityMiner {}
 
-fn save_new_mining_account(
+fn save_new_obligation_account(
     config: &Config,
     token: &String,
     obligation_account: &Keypair,
@@ -33,8 +33,7 @@ fn save_new_mining_account(
         .token_accounts
         .get_mut(token)
         .unwrap()
-        .mining_accounts[MoneyMarket::Solend as usize]
-        .staking_account = obligation_account.pubkey();
+        .solend_obligation_account = obligation_account.pubkey();
 
     initialized_accounts
         .save(config.accounts_path.as_str())
@@ -49,8 +48,7 @@ impl LiquidityMiner for SolendLiquidityMiner {
             .token_accounts
             .get_mut(token)
             .unwrap()
-            .mining_accounts[MoneyMarket::Solend as usize]
-            .staking_account
+            .solend_obligation_account
     }
 
     fn create_mining_account(
@@ -71,7 +69,7 @@ impl LiquidityMiner for SolendLiquidityMiner {
             solend_program::state::Obligation::LEN as u64,
         )?;
 
-        save_new_mining_account(config, token, &obligation_account)?;
+        save_new_obligation_account(config, token, &obligation_account)?;
 
         Ok(())
     }
@@ -104,9 +102,7 @@ impl LiquidityMiner for SolendLiquidityMiner {
     ) -> MiningType {
         let initialized_accounts = config.get_initialized_accounts();
         let token_accounts = initialized_accounts.token_accounts.get(token).unwrap();
-
-        let obligation =
-            token_accounts.mining_accounts[MoneyMarket::Solend as usize].staking_account;
+        let obligation = token_accounts.solend_obligation_account;
 
         let solend_obligation_account = config.rpc_client.get_account(&obligation).unwrap();
         if solend_obligation_account.lamports == 0 {

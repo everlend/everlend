@@ -18,18 +18,22 @@ pub struct SolendClaimer<'a, 'b> {
 impl<'a, 'b> SolendClaimer<'a, 'b> {
     ///
     pub fn init(
-        _staking_program_id: &Pubkey,
+        staking_program_id: &Pubkey,
         internal_mining_type: MiningType,
         additional_data: &[u8],
         account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
     ) -> Result<SolendClaimer<'a, 'b>, ProgramError> {
+        if !staking_program_id.eq(&solend::staking_program_id()) {
+            return Err(ProgramError::InvalidArgument);
+        }
+
         match internal_mining_type {
             MiningType::Solend { .. } => {}
             _ => return Err(EverlendError::MiningNotInitialized.into()),
         };
 
-        let distributor = AccountLoader::next_unchecked(account_info_iter)?;
-        let claim_status = AccountLoader::next_unchecked(account_info_iter)?;
+        let distributor = AccountLoader::next_with_owner(account_info_iter, staking_program_id)?;
+        let claim_status = AccountLoader::next_with_owner(account_info_iter, staking_program_id)?;
         let source = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
 
         let claim_data = solend::ClaimData::try_from_slice(additional_data)?;

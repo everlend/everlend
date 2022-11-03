@@ -1,7 +1,7 @@
 use super::MoneyMarket;
 use crate::money_market::CollateralStorage;
 use crate::state::MiningType;
-use everlend_utils::{assert_account_key, cpi::solend, AccountLoader, EverlendError};
+use everlend_utils::{cpi::solend, AccountLoader, EverlendError};
 use solana_program::{
     account_info::AccountInfo, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,
 };
@@ -58,9 +58,7 @@ impl<'a, 'b> Solend<'a, 'b> {
 
         match internal_mining_type {
             Some(MiningType::Solend { obligation }) => {
-                let obligation_info = AccountLoader::next_unchecked(account_info_iter)?;
-                assert_account_key(obligation_info, &obligation)?;
-
+                let obligation_info = AccountLoader::next_with_key(account_info_iter, &obligation)?;
                 let collateral_supply_info =
                     AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
 

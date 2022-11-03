@@ -7,9 +7,14 @@ use solana_program::{
     pubkey::Pubkey,
     system_program,
 };
+use std::str::FromStr;
 
 /// `global:deposit_liquidity` anchor program instruction
 const CLAIM_INSTRUCTION: [u8; 8] = [62, 198, 214, 193, 213, 159, 108, 210];
+
+pub fn staking_program_id() -> Pubkey {
+    Pubkey::from_str("mrksLcZ6rMs9xkmJgw6oKiR3GECw44Gb5NeDqu64kiw").unwrap()
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct ClaimData {
