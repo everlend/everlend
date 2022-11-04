@@ -1,11 +1,12 @@
 use crate::money_market::{CollateralStorage, MoneyMarket};
 use everlend_utils::cpi::francium;
-use everlend_utils::{AccountLoader, assert_account_key, EverlendError};
+use everlend_utils::{AccountLoader, assert_account_key, assert_owned_by, EverlendError};
 use solana_program::{
     account_info::AccountInfo, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,
 };
 use spl_token::state::Account;
 use std::{iter::Enumerate, slice::Iter};
+use crate::find_transit_program_address;
 use crate::state::MiningType;
 
 ///
@@ -61,25 +62,24 @@ impl<'a, 'b> Francium<'a, 'b> {
         // Parse mining  accounts if presented
         match internal_mining_type {
             Some(MiningType::Francium {
-                     ..
+                    user_reward_a,
+                    user_reward_b,
+                    ..
                  }) => {
-                let lend_reward_program_id_info = AccountLoader::next_unchecked(account_info_iter)?;
+                let lend_reward_program_id_info = AccountLoader::next_with_key(account_info_iter, &francium::get_staking_program_id())?;
                 let farming_pool_info  =
                     AccountLoader::next_with_owner(account_info_iter, &lend_reward_program_id_info.key)?;
                 let farming_pool_authority_info =
                     AccountLoader::next_unchecked(account_info_iter)?;
-                let user_farming_info = AccountLoader::next_unchecked(account_info_iter)?;
-                let user_reward_a_info = AccountLoader::next_unchecked(account_info_iter)?;
-                let user_reward_b_info = AccountLoader::next_unchecked(account_info_iter)?;
-                let pool_stake_token_info = AccountLoader::next_unchecked(account_info_iter)?;
-                let pool_reward_a_info = AccountLoader::next_unchecked(account_info_iter)?;
-                let pool_reward_b_info = AccountLoader::next_unchecked(account_info_iter)?;
+                let user_farming_info = AccountLoader::next_with_owner(account_info_iter, &lend_reward_program_id_info.key)?;
+                let user_reward_a_info = AccountLoader::next_with_key(account_info_iter, &user_reward_a)?;
+                let user_reward_b_info = AccountLoader::next_with_key(account_info_iter, &user_reward_b)?;
+                let pool_stake_token_info = AccountLoader::next_with_owner(account_info_iter, &farming_pool_authority_info.key)?;
+                let pool_reward_a_info = AccountLoader::next_with_owner(account_info_iter, &farming_pool_authority_info.key)?;
+                let pool_reward_b_info = AccountLoader::next_with_owner(account_info_iter, &farming_pool_authority_info.key)?;
                 let token_mint_address_a_info = AccountLoader::next_unchecked(account_info_iter)?;
                 let token_mint_address_b_info = AccountLoader::next_unchecked(account_info_iter)?;
 
-                // assert_account_key(user_farming_info, &user_farming)?;
-                // assert_account_key(user_reward_a_info, &user_reward_a)?;
-                // assert_account_key(user_reward_b_info, &user_reward_b)?;
 
                 francium.mining = Some(FranciumFarming {
                     lend_reward_program_id: &lend_reward_program_id_info,
@@ -253,8 +253,6 @@ impl<'a, 'b> CollateralStorage<'b> for Francium<'a, 'b> {
         collateral_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
-        francium::refresh_reserve(&self.money_market_program_id, self.reserve.clone())?;
-
         let mining = self.mining.as_ref().unwrap();
 
         let ( user_farming, _ ) = Pubkey::find_program_address(
@@ -268,27 +266,27 @@ impl<'a, 'b> CollateralStorage<'b> for Francium<'a, 'b> {
 
         assert_account_key(&mining.user_farming, &user_farming)?;
 
-        let ( user_reward_a, _ ) = Pubkey::find_program_address(
-            &[
-                authority.key.as_ref(),
-                spl_token::id().as_ref(),
-                mining.token_mint_address_a.key.as_ref()
-            ],
-            &spl_associated_token_account::id(),
-        );
+        let (user_reward_a, _ ) =
+            find_transit_program_address(
+                &mining.lend_reward_program_id.key,
+                &authority.key,
+                &mining.token_mint_address_a.key,
+                "francium_reward"
+            );
 
         assert_account_key(&mining.user_reward_a, &user_reward_a)?;
 
-        let ( user_reward_b, _ ) = Pubkey::find_program_address(
-            &[
-                authority.key.as_ref(),
-                spl_token::id().as_ref(),
-                mining.token_mint_address_b.key.as_ref()
-            ],
-            &spl_associated_token_account::id(),
-        );
+        let (user_reward_b, _ ) =
+            find_transit_program_address(
+                &mining.lend_reward_program_id.key,
+                &authority.key,
+                &mining.token_mint_address_b.key,
+                "francium_reward"
+            );
 
         assert_account_key(&mining.user_reward_b, &user_reward_b)?;
+
+        assert_owned_by(&collateral_transit, authority.key)?;
 
         francium::stake(
             &mining.lend_reward_program_id.key,
@@ -316,8 +314,6 @@ impl<'a, 'b> CollateralStorage<'b> for Francium<'a, 'b> {
         collateral_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
-        francium::refresh_reserve(&self.money_market_program_id, self.reserve.clone())?;
-
         let mining = self.mining.as_ref().unwrap();
 
         let ( user_farming, _ ) = Pubkey::find_program_address(
@@ -326,32 +322,32 @@ impl<'a, 'b> CollateralStorage<'b> for Francium<'a, 'b> {
                 mining.farming_pool.key.as_ref(),
                 collateral_transit.key.as_ref()
             ],
-            &self.money_market_program_id,
+            &mining.lend_reward_program_id.key,
         );
 
         assert_account_key(&mining.user_farming, &user_farming)?;
 
-        let ( user_reward_a, _ ) = Pubkey::find_program_address(
-            &[
-                authority.key.as_ref(),
-                spl_token::id().as_ref(),
-                mining.token_mint_address_a.key.as_ref()
-            ],
-            &spl_associated_token_account::id(),
-        );
+        let (user_reward_a, _ ) =
+            find_transit_program_address(
+                &mining.lend_reward_program_id.key,
+                &authority.key,
+                &mining.token_mint_address_a.key,
+                "francium_reward"
+            );
 
         assert_account_key(&mining.user_reward_a, &user_reward_a)?;
 
-        let ( user_reward_b, _ ) = Pubkey::find_program_address(
-            &[
-                authority.key.as_ref(),
-                spl_token::id().as_ref(),
-                mining.token_mint_address_b.key.as_ref()
-            ],
-            &spl_associated_token_account::id(),
-        );
+        let (user_reward_b, _ ) =
+            find_transit_program_address(
+                &mining.lend_reward_program_id.key,
+                &authority.key,
+                &mining.token_mint_address_b.key,
+                "francium_reward"
+            );
 
         assert_account_key(&mining.user_reward_b, &user_reward_b)?;
+
+        assert_owned_by(&collateral_transit, authority.key)?;
 
         francium::unstake(
             &mining.lend_reward_program_id.key,

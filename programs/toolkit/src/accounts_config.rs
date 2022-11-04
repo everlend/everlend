@@ -300,6 +300,9 @@ pub struct TokenAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub francium_farming_pool_account: Pubkey,
 
+    #[serde_as(as = "DisplayFromStr")]
+    pub francium_user_token_stake: Pubkey,
+
     pub mining_accounts: Vec<MiningAccounts>,
 }
 

@@ -9,6 +9,7 @@ use everlend_utils::integrations::MoneyMarket;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::signature::{write_keypair_file, Keypair};
 use solana_sdk::signer::Signer;
+use everlend_depositor::find_transit_program_address;
 
 pub struct FranciumLiquidityMiner {}
 
@@ -65,6 +66,34 @@ fn save_new_mining_account(
         .unwrap()
         .mining_accounts[MoneyMarket::Francium as usize]
         .staking_account = mining_account.pubkey();
+
+    initialized_accounts
+        .save(config.accounts_path.as_str())
+        .unwrap();
+    Ok(())
+}
+
+fn save_new_user_token_stake_account(
+    config: &Config,
+    token: &String,
+    user_token_stake_account: &Keypair,
+) -> Result<()> {
+    let mut initialized_accounts = config.get_initialized_accounts();
+    write_keypair_file(
+        user_token_stake_account,
+        &format!(
+            ".keypairs/{}_francium_user_token_stake_{}.json",
+            token,
+            user_token_stake_account.pubkey()
+        ),
+    )
+        .unwrap();
+
+    initialized_accounts
+        .token_accounts
+        .get_mut(token)
+        .unwrap()
+        .francium_user_token_stake = user_token_stake_account.pubkey();
 
     initialized_accounts
         .save(config.accounts_path.as_str())
@@ -144,15 +173,16 @@ impl LiquidityMiner for FranciumLiquidityMiner {
 
         let (depositor_authority, _) = find_program_address(&everlend_depositor::id(), &initialized_accounts.depositor);
 
-        let user_reward_b = sub_reward_token_mint.map(|sub_reward_token_mint| {
-            spl_associated_token_account::get_associated_token_address(
+        let (user_reward_b, _ ) =
+            find_transit_program_address(
+                &default_accounts.francium.staking_program_id,
                 &depositor_authority,
-                &sub_reward_token_mint,
-            )
-        }).unwrap();
+                &sub_reward_token_mint.unwrap(),
+                "francium_reward"
+            );
 
         MiningType::Francium {
-            staking_program_id: default_accounts.francium.staking_program_id,
+            user_stake_token_account: token_accounts.francium_user_token_stake,
             farming_pool: token_accounts.francium_farming_pool_account,
             user_reward_a: mining_pubkey,
             user_reward_b,

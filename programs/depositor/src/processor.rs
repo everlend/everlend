@@ -102,7 +102,6 @@ impl<'a, 'b> Processor {
             }
 
             DepositorInstruction::RefreshMMIncomes => {
-                let account_info_iter = &mut accounts.iter().enumerate();
                 msg!("DepositorInstruction: RefreshMMIncomes");
                 RefreshMMIncomesContext::new(program_id, account_info_iter)?
                     .process(program_id, account_info_iter)

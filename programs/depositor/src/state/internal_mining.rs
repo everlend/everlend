@@ -48,7 +48,7 @@ pub enum MiningType {
     Francium {
         ///
         #[allow(dead_code)]
-        staking_program_id: Pubkey,
+        user_stake_token_account: Pubkey,
         ///
         #[allow(dead_code)]
         farming_pool: Pubkey,

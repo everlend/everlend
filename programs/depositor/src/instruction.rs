@@ -3,7 +3,7 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use everlend_general_pool::find_withdrawal_requests_program_address;
 use everlend_liquidity_oracle::{find_token_oracle_program_address, state::DistributionArray};
-use everlend_utils::cpi::quarry;
+use everlend_utils::cpi::{quarry,francium};
 use everlend_utils::find_program_address;
 use solana_program::{
     instruction::{AccountMeta, Instruction},
@@ -750,19 +750,18 @@ pub fn init_mining_account(
             accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
         }
         MiningType::Francium {
-            staking_program_id,
+            user_stake_token_account,
             farming_pool,
             user_reward_a,
             user_reward_b
         } => {
-            let (collateral_transit, _) =
-                find_transit_program_address(program_id, &pubkeys.depositor, &pubkeys.collateral_mint, "");
+            let staking_program_id = francium::get_staking_program_id();
 
             let ( user_farming, _ ) = Pubkey::find_program_address(
                 &[
                     depositor_authority.as_ref(),
                     farming_pool.as_ref(),
-                    collateral_transit.as_ref()
+                    user_stake_token_account.as_ref()
                 ],
                 &staking_program_id,
             );
@@ -772,7 +771,7 @@ pub fn init_mining_account(
             accounts.push(AccountMeta::new(user_farming, false));
             accounts.push(AccountMeta::new(user_reward_a, false));
             accounts.push(AccountMeta::new(user_reward_b, false));
-            accounts.push(AccountMeta::new(collateral_transit, false));
+            accounts.push(AccountMeta::new(user_stake_token_account, false));
         }
         MiningType::None => {}
     }

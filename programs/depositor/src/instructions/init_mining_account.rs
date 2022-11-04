@@ -13,6 +13,7 @@ use solana_program::{
     sysvar::SysvarId,
 };
 use spl_associated_token_account::get_associated_token_address;
+use everlend_utils::cpi::francium;
 use std::{iter::Enumerate, slice::Iter};
 
 /// Instruction context
@@ -252,13 +253,13 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                 farming_pool,
                 user_reward_a,
                 user_reward_b,
-                ..
+                user_stake_token_account
             } => {
                 let farming_pool_info = AccountLoader::next_with_key(account_info_iter, &farming_pool)?;
-                let user_farming_info = AccountLoader::next_unchecked(account_info_iter)?;
+                let user_farming_info = AccountLoader::next_with_key(account_info_iter, &francium::get_staking_program_id())?;
                 let user_reward_a_info = AccountLoader::next_with_key(account_info_iter, &user_reward_a)?;
                 let user_reward_b_info = AccountLoader::next_with_key(account_info_iter, &user_reward_b)?;
-                let user_stake_info = AccountLoader::next_unchecked(account_info_iter)?;
+                let user_stake_info = AccountLoader::next_with_key(account_info_iter, &user_stake_token_account)?;
 
                 cpi::francium::init_farming_user(
                     self.staking_program_id.key,

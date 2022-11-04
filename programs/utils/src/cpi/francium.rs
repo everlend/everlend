@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use borsh::BorshSerialize;
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::{AccountMeta, Instruction};
@@ -325,4 +326,8 @@ pub fn init_farming_user<'a>(
         ],
         signed_seeds,
     )
+}
+
+pub fn get_staking_program_id() -> Pubkey {
+    Pubkey::try_from("3Katmm9dhvLQijAvomteYMo6rfVbY5NaCRNq9ZBqBgr6").unwrap()
 }

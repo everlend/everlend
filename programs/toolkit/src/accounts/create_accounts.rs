@@ -237,6 +237,7 @@ impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
                     liquidity_transit: liquidity_transit_pubkey,
                     port_finance_obligation_account: Pubkey::default(),
                     francium_farming_pool_account: Pubkey::default(),
+                    francium_user_token_stake: Pubkey::default(),
                 },
             );
         }
