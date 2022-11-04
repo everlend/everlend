@@ -34,7 +34,6 @@ pub enum StakingMoneyMarket {
     Larix,
     Solend,
     Quarry,
-    Frakt,
 }
 
 #[derive(Debug)]

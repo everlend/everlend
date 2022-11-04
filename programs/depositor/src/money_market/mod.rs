@@ -46,6 +46,11 @@ pub trait CollateralStorage<'a> {
 ///
 pub trait MoneyMarket<'a> {
     ///
+    fn is_collateral_return(&self) -> bool {
+        true
+    }
+
+    ///
     fn money_market_deposit(
         &self,
         collateral_mint: AccountInfo<'a>,

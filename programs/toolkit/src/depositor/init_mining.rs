@@ -1,4 +1,3 @@
-use crate::liquidity_mining::frakt_liquidity_miner::FraktLiquidityMiner;
 use crate::liquidity_mining::larix_liquidity_miner::LarixLiquidityMiner;
 use crate::liquidity_mining::port_liquidity_miner::PortLiquidityMiner;
 use crate::liquidity_mining::quarry_liquidity_miner::QuarryLiquidityMiner;
@@ -60,7 +59,6 @@ impl<'a> ToolkitCommand<'a> for InitMiningCommand {
             StakingMoneyMarket::PortFinance => Some(Box::new(PortLiquidityMiner {})),
             StakingMoneyMarket::Larix => Some(Box::new(LarixLiquidityMiner {})),
             StakingMoneyMarket::Quarry => Some(Box::new(QuarryLiquidityMiner {})),
-            StakingMoneyMarket::Frakt => Some(Box::new(FraktLiquidityMiner {})),
             _ => None,
         };
 
@@ -90,7 +88,6 @@ impl<'a> ToolkitCommand<'a> for InitMiningCommand {
         let money_market = match staking_money_market {
             StakingMoneyMarket::Larix => MoneyMarket::Larix,
             StakingMoneyMarket::Solend => MoneyMarket::Solend,
-            StakingMoneyMarket::Frakt => MoneyMarket::Frakt,
             _ => MoneyMarket::PortFinance,
         };
 

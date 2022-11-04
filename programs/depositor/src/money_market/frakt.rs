@@ -63,37 +63,15 @@ impl<'a, 'b> Frakt<'a, 'b> {
 }
 
 impl<'a, 'b> MoneyMarket<'b> for Frakt<'a, 'b> {
+    fn is_collateral_return(&self) -> bool {
+        false
+    }
+
     fn money_market_deposit(
         &self,
         _collateral_mint: AccountInfo<'b>,
-        _source_liquidity: AccountInfo<'b>,
-        _destination_collateral: AccountInfo<'b>,
-        _authority: AccountInfo<'b>,
-        _clock: AccountInfo<'b>,
-        _liquidity_amount: u64,
-        _signers_seeds: &[&[&[u8]]],
-    ) -> Result<u64, ProgramError> {
-        return Err(EverlendError::MiningIsRequired.into());
-    }
-
-    fn money_market_redeem(
-        &self,
-        _collateral_mint: AccountInfo<'b>,
-        _source_collateral: AccountInfo<'b>,
-        _destination_liquidity: AccountInfo<'b>,
-        _authority: AccountInfo<'b>,
-        _clock: AccountInfo<'b>,
-        _collateral_amount: u64,
-        _signers_seeds: &[&[&[u8]]],
-    ) -> Result<(), ProgramError> {
-        return Err(EverlendError::MiningIsRequired.into());
-    }
-
-    fn money_market_deposit_and_deposit_mining(
-        &self,
-        _collateral_mint: AccountInfo<'b>,
         source_liquidity: AccountInfo<'b>,
-        _collateral_transit: AccountInfo<'b>,
+        _destination_collateral: AccountInfo<'b>,
         authority: AccountInfo<'b>,
         _clock: AccountInfo<'b>,
         liquidity_amount: u64,
@@ -151,14 +129,14 @@ impl<'a, 'b> MoneyMarket<'b> for Frakt<'a, 'b> {
             signers_seeds,
         )?;
 
-        Ok(liquidity_amount)
+        Ok(0)
     }
 
-    fn money_market_redeem_and_withdraw_mining(
+    fn money_market_redeem(
         &self,
         _collateral_mint: AccountInfo<'b>,
-        _collateral_transit: AccountInfo<'b>,
-        liquidity_destination: AccountInfo<'b>,
+        _source_collateral: AccountInfo<'b>,
+        destination_liquidity: AccountInfo<'b>,
         authority: AccountInfo<'b>,
         _clock: AccountInfo<'b>,
         collateral_amount: u64,
@@ -179,15 +157,60 @@ impl<'a, 'b> MoneyMarket<'b> for Frakt<'a, 'b> {
             signers_seeds,
         )?;
 
+        let starting_lamports = authority.lamports();
+
+        cpi::frakt::claim_rewards(
+            &self.money_market_program_id,
+            self.liquidity_pool.clone(),
+            self.deposit_account.clone(),
+            authority.clone(),
+            self.liquidity_owner.clone(),
+            self.admin.clone(),
+            dump,
+            &signers_seeds,
+        )?;
+
+        let amount = starting_lamports
+            .checked_sub(authority.lamports())
+            .ok_or(EverlendError::MathOverflow)?
+            .checked_add(collateral_amount)
+            .ok_or(EverlendError::MathOverflow)?;
+
         cpi::system::transfer(
             authority.clone(),
-            liquidity_destination.clone(),
-            collateral_amount,
+            destination_liquidity.clone(),
+            amount,
             signers_seeds,
         )?;
 
-        cpi::spl_token::sync_native(liquidity_destination.clone())?;
+        cpi::spl_token::sync_native(destination_liquidity.clone())?;
 
         Ok(())
+    }
+
+    fn money_market_deposit_and_deposit_mining(
+        &self,
+        _collateral_mint: AccountInfo<'b>,
+        _source_liquidity: AccountInfo<'b>,
+        _collateral_transit: AccountInfo<'b>,
+        _authority: AccountInfo<'b>,
+        _clock: AccountInfo<'b>,
+        _liquidity_amount: u64,
+        _signers_seeds: &[&[&[u8]]],
+    ) -> Result<u64, ProgramError> {
+        Err(EverlendError::MiningNotImplemented.into())
+    }
+
+    fn money_market_redeem_and_withdraw_mining(
+        &self,
+        _collateral_mint: AccountInfo<'b>,
+        _collateral_transit: AccountInfo<'b>,
+        _liquidity_destination: AccountInfo<'b>,
+        _authority: AccountInfo<'b>,
+        _clock: AccountInfo<'b>,
+        _collateral_amount: u64,
+        _signers_seeds: &[&[&[u8]]],
+    ) -> Result<(), ProgramError> {
+        Err(EverlendError::MiningNotImplemented.into())
     }
 }

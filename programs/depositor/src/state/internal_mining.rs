@@ -44,12 +44,6 @@ pub enum MiningType {
         #[allow(dead_code)]
         rewarder: Pubkey,
     },
-    ///
-    Frakt {
-        ///
-        #[allow(dead_code)]
-        deposit_account: Pubkey,
-    },
 }
 
 /// InternalMining

@@ -1,16 +1,8 @@
 //! Utils
 
 use crate::money_market::{
-    CollateralPool,
-    CollateralStorage,
-    Francium,
-    Larix,
-    MoneyMarket,
-    PortFinance,
-    SPLLending,
-    Solend,
-    Tulip,
-    Frakt
+    CollateralPool, CollateralStorage, Frakt, Francium, Larix, MoneyMarket, PortFinance,
+    SPLLending, Solend, Tulip,
 };
 use crate::{
     find_transit_program_address,
@@ -64,7 +56,7 @@ pub fn deposit<'a, 'b>(
         )?
     } else {
         msg!("Deposit to Money market");
-        let collateral_amount = money_market.money_market_deposit(
+        let mut collateral_amount = money_market.money_market_deposit(
             collateral_mint.clone(),
             liquidity_transit.clone(),
             collateral_transit.clone(),
@@ -75,7 +67,11 @@ pub fn deposit<'a, 'b>(
         )?;
 
         if collateral_amount == 0 {
-            return Err(EverlendError::CollateralLeak.into());
+            if money_market.is_collateral_return() {
+                return Err(EverlendError::CollateralLeak.into());
+            }
+
+            collateral_amount = liquidity_amount;
         }
 
         msg!("Deposit into collateral pool");
