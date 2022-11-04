@@ -32,5 +32,4 @@ impl Default for AccountType {
 }
 
 /// Total rebalancing steps for fixed state
-// TODO: Change to more
-pub const TOTAL_REBALANCING_STEP: usize = 8;
+pub const TOTAL_REBALANCING_STEP: usize = 14;

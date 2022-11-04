@@ -114,6 +114,17 @@ pub struct FranciumAccounts {
 
 #[serde_as]
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
+pub struct JetAccounts {
+    #[serde_as(as = "DisplayFromStr")]
+    pub program_id: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub margin_pool_sol: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub vault_sol: Pubkey,
+}
+
+#[serde_as]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
 pub struct FraktAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub program_id: Pubkey,
@@ -165,6 +176,8 @@ pub struct DefaultAccounts {
     pub tulip: TulipAccounts,
 
     pub francium: FranciumAccounts,
+
+    pub jet: JetAccounts,
 
     pub frakt: FraktAccounts,
 

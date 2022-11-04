@@ -26,6 +26,7 @@ use crate::income_pools::IncomePoolCommand;
 use crate::liquidity_oracle::LiquidityOracleCommand;
 use crate::multisig::MultisigCommand;
 use crate::root::TestCommand;
+use crate::root::AnchorEncodeCommand;
 
 mod accounts;
 mod accounts_config;
@@ -107,6 +108,7 @@ fn init() -> anyhow::Result<()> {
         Box::new(MultisigCommand),
         Box::new(CreateTokenCommand),
         Box::new(RewardsCommand),
+        Box::new(AnchorEncodeCommand),
     ];
 
     let subcommands: Vec<App> = commands
