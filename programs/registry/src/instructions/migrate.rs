@@ -1,7 +1,7 @@
 use crate::state::{
     DeprecatedRegistry, DeprecatedRegistryMarkets, MoneyMarkets, Registry, RegistryMarkets,
 };
-use everlend_utils::{cpi, AccountLoader};
+use everlend_utils::{cpi, AccountLoader, assert_account_key};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::program_error::ProgramError;
@@ -46,6 +46,8 @@ impl<'a, 'b> MigrateContext<'a, 'b> {
             DeprecatedRegistry::unpack_from_slice(&self.registry.data.borrow())?;
         let deprecated_registry_markets =
             DeprecatedRegistryMarkets::unpack_from_slice(&self.registry.data.borrow())?;
+
+        assert_account_key(self.manager, &deprecated_registry.manager)?;
 
         let registry = Registry::migrate(&deprecated_registry);
         let registry_markets =
