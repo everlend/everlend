@@ -272,6 +272,7 @@ pub fn money_market<'a, 'b>(
             let francium = Francium::init(
                 money_market_program.key.clone(),
                 money_market_account_info_iter,
+                depositor_authority,
                 internal_mining_type,
             )?;
             return Ok((Box::new(francium), is_mining));

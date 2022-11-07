@@ -1,4 +1,3 @@
-use std::convert::TryFrom;
 use borsh::BorshSerialize;
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::{AccountMeta, Instruction};
@@ -6,11 +5,9 @@ use solana_program::program::{invoke, invoke_signed};
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar;
+use std::convert::TryFrom;
 
-pub fn refresh_reserve(
-    program_id: &Pubkey,
-    reserve: AccountInfo,
-) -> Result<(), ProgramError> {
+pub fn refresh_reserve(program_id: &Pubkey, reserve: AccountInfo) -> Result<(), ProgramError> {
     #[derive(Debug, PartialEq, BorshSerialize)]
     pub struct UpdateLendingPool {
         instruction: u8,
@@ -18,16 +15,11 @@ pub fn refresh_reserve(
 
     let ix = Instruction {
         program_id: *program_id,
-        accounts: vec![
-            AccountMeta::new(*reserve.key, false),
-        ],
+        accounts: vec![AccountMeta::new(*reserve.key, false)],
         data: UpdateLendingPool { instruction: 17 }.try_to_vec()?,
     };
 
-    invoke(
-        &ix,
-        &[reserve],
-    )
+    invoke(&ix, &[reserve])
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -191,7 +183,7 @@ pub fn stake<'a>(
             instruction: 3,
             amount,
         }
-            .try_to_vec()?,
+        .try_to_vec()?,
     };
 
     invoke_signed(
@@ -256,7 +248,7 @@ pub fn unstake<'a>(
             instruction: 4,
             amount,
         }
-            .try_to_vec()?,
+        .try_to_vec()?,
     };
 
     invoke_signed(
@@ -308,10 +300,7 @@ pub fn init_farming_user<'a>(
             AccountMeta::new_readonly(*system_program.key, false),
             AccountMeta::new_readonly(*rent_info.key, false),
         ],
-        data: Init {
-            instruction: 1,
-        }
-            .try_to_vec()?,
+        data: Init { instruction: 1 }.try_to_vec()?,
     };
 
     invoke_signed(

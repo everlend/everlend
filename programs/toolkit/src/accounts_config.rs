@@ -157,6 +157,8 @@ pub struct DefaultAccounts {
 
     pub francium: FranciumAccounts,
 
+    pub francium_farming_pool_account: BTreeMap<String, Pubkey>,
+
     #[serde_as(as = "DisplayFromStr")]
     pub multisig_program_id: Pubkey,
 
@@ -296,12 +298,6 @@ pub struct TokenAccounts {
 
     #[serde_as(as = "DisplayFromStr")]
     pub port_finance_obligation_account: Pubkey,
-
-    #[serde_as(as = "DisplayFromStr")]
-    pub francium_farming_pool_account: Pubkey,
-
-    #[serde_as(as = "DisplayFromStr")]
-    pub francium_user_token_stake: Pubkey,
 
     pub mining_accounts: Vec<MiningAccounts>,
 }

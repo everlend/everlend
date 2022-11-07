@@ -1,10 +1,12 @@
 use crate::claimer::RewardClaimer;
 use crate::state::MiningType;
+use crate::utils::FillRewardAccounts;
 use everlend_utils::cpi::francium;
 use everlend_utils::{AccountLoader, EverlendError};
-use solana_program::{account_info::AccountInfo, sysvar::clock, program_error::ProgramError, pubkey::Pubkey};
+use solana_program::{
+    account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey, sysvar::clock,
+};
 use std::{iter::Enumerate, slice::Iter};
-use crate::utils::FillRewardAccounts;
 
 /// Container
 #[derive(Clone)]
@@ -23,35 +25,50 @@ pub struct FranciumClaimer<'a, 'b> {
 impl<'a, 'b> FranciumClaimer<'a, 'b> {
     ///
     pub fn init(
-        _staking_program_id: &Pubkey,
+        staking_program_id: &Pubkey,
+        depositor_authority: &Pubkey,
         internal_mining_type: MiningType,
         fill_sub_rewards_accounts: Option<FillRewardAccounts<'a, 'b>>,
         account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
     ) -> Result<FranciumClaimer<'a, 'b>, ProgramError> {
-        let  (farming_pool, user_stake_token_account) =
-            match internal_mining_type {
-                MiningType::Francium {
-                    farming_pool,
-                    user_stake_token_account,
-                    ..
-                } => (farming_pool, user_stake_token_account),
-                _ => return Err(EverlendError::MiningNotInitialized.into()),
-            };
+        assert_eq!(staking_program_id, &francium::get_staking_program_id());
+        let (farming_pool, user_stake_token_account) = match internal_mining_type {
+            MiningType::Francium {
+                farming_pool,
+                user_stake_token_account,
+                ..
+            } => (farming_pool, user_stake_token_account),
+            _ => return Err(EverlendError::MiningNotInitialized.into()),
+        };
 
         let farming_pool = AccountLoader::next_with_key(account_info_iter, &farming_pool)?;
         let farming_pool_authority = AccountLoader::next_unchecked(account_info_iter)?;
-        let pool_stake_token = AccountLoader::next_with_owner(account_info_iter, &farming_pool_authority.key)?;
-        let pool_reward_a = AccountLoader::next_with_owner(account_info_iter, &farming_pool_authority.key)?;
-        let pool_reward_b = AccountLoader::next_with_owner(account_info_iter, &farming_pool_authority.key)?;
-        let user_farming = AccountLoader::next_with_owner(account_info_iter, &francium::get_staking_program_id())?;
-        let user_stake = AccountLoader::next_with_key(account_info_iter,&user_stake_token_account)?;
+        let pool_stake_token = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let pool_reward_a = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let pool_reward_b = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+
+        let (user_farming_info, _) = Pubkey::find_program_address(
+            &[
+                depositor_authority.as_ref(),
+                farming_pool.key.as_ref(),
+                &user_stake_token_account.as_ref(),
+            ],
+            &staking_program_id,
+        );
+
+        let user_farming = AccountLoader::next_with_key(account_info_iter, &user_farming_info)?;
+        let user_stake =
+            AccountLoader::next_with_key(account_info_iter, &user_stake_token_account)?;
         let clock = AccountLoader::next_with_key(account_info_iter, &clock::id())?;
 
-        if let None = fill_sub_rewards_accounts {
+        if fill_sub_rewards_accounts.is_none() {
             return Err(ProgramError::InvalidArgument);
         }
 
-        let sub_reward = fill_sub_rewards_accounts.as_ref().unwrap().reward_transit_info;
+        let sub_reward = fill_sub_rewards_accounts
+            .as_ref()
+            .unwrap()
+            .reward_transit_info;
 
         Ok(FranciumClaimer {
             farming_pool,

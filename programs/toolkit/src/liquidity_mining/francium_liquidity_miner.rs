@@ -1,143 +1,85 @@
-use crate::liquidity_mining::{execute_account_creation, LiquidityMiner};
-use crate::utils::{get_asset_maps, spl_create_associated_token_account};
+use crate::liquidity_mining::LiquidityMiner;
+use crate::utils::get_asset_maps;
 use crate::Config;
-use anyhow::Result;
+
 use everlend_depositor::instruction::InitMiningAccountsPubkeys;
 use everlend_depositor::state::MiningType;
 use everlend_utils::find_program_address;
 use everlend_utils::integrations::MoneyMarket;
 use solana_program::pubkey::Pubkey;
-use solana_sdk::signature::{write_keypair_file, Keypair};
-use solana_sdk::signer::Signer;
+
+use solana_sdk::signature::Keypair;
+
+use crate::helpers::create_transit;
 use everlend_depositor::find_transit_program_address;
 
 pub struct FranciumLiquidityMiner {}
 
-const FARMING_POOL_SIZE: u64 = 530;
-
-fn save_new_farming_pool_account(
-    config: &Config,
-    token: &String,
-    farming_pool_account: &Keypair,
-) -> Result<()> {
-    write_keypair_file(
-        farming_pool_account,
-        &format!(
-            ".keypairs/{}_francium_farming_{}.json",
-            token,
-            farming_pool_account.pubkey()
-        ),
-    )
-        .unwrap();
-
-    let mut initialized_accounts = config.get_initialized_accounts();
-
-    initialized_accounts
-        .token_accounts
-        .get_mut(token)
-        .unwrap()
-        .francium_farming_pool_account = farming_pool_account.pubkey();
-
-    initialized_accounts
-        .save(config.accounts_path.as_str())
-        .unwrap();
-    Ok(())
-}
-
-fn save_new_mining_account(
-    config: &Config,
-    token: &String,
-    mining_account: &Keypair,
-) -> Result<()> {
-    let mut initialized_accounts = config.get_initialized_accounts();
-    write_keypair_file(
-        mining_account,
-        &format!(
-            ".keypairs/{}_francium_mining_{}.json",
-            token,
-            mining_account.pubkey()
-        ),
-    )
-        .unwrap();
-
-    initialized_accounts
-        .token_accounts
-        .get_mut(token)
-        .unwrap()
-        .mining_accounts[MoneyMarket::Francium as usize]
-        .staking_account = mining_account.pubkey();
-
-    initialized_accounts
-        .save(config.accounts_path.as_str())
-        .unwrap();
-    Ok(())
-}
-
-fn save_new_user_token_stake_account(
-    config: &Config,
-    token: &String,
-    user_token_stake_account: &Keypair,
-) -> Result<()> {
-    let mut initialized_accounts = config.get_initialized_accounts();
-    write_keypair_file(
-        user_token_stake_account,
-        &format!(
-            ".keypairs/{}_francium_user_token_stake_{}.json",
-            token,
-            user_token_stake_account.pubkey()
-        ),
-    )
-        .unwrap();
-
-    initialized_accounts
-        .token_accounts
-        .get_mut(token)
-        .unwrap()
-        .francium_user_token_stake = user_token_stake_account.pubkey();
-
-    initialized_accounts
-        .save(config.accounts_path.as_str())
-        .unwrap();
-    Ok(())
-}
-
 impl LiquidityMiner for FranciumLiquidityMiner {
     fn get_mining_pubkey(&self, config: &Config, token: &String) -> Pubkey {
-        let mut initialized_accounts = config.get_initialized_accounts();
-        initialized_accounts
-            .token_accounts
-            .get_mut(token)
+        let default_accounts = config.get_default_accounts();
+        *default_accounts
+            .francium_farming_pool_account
+            .get(token)
             .unwrap()
-            .mining_accounts[MoneyMarket::Francium as usize]
-            .staking_account
     }
 
     fn create_mining_account(
         &self,
         config: &Config,
         token: &String,
-        mining_account: &Keypair,
+        _mining_account: &Keypair,
         sub_reward_token_mint: Option<Pubkey>,
     ) -> anyhow::Result<()> {
         let default_accounts = config.get_default_accounts();
         let initialized_accounts = config.get_initialized_accounts();
+        let token_accounts = initialized_accounts.token_accounts.get(token).unwrap();
+        let (depositor_authority, _) =
+            find_program_address(&everlend_depositor::id(), &initialized_accounts.depositor);
 
-        let (depositor_authority, _) = find_program_address(&everlend_depositor::id(), &initialized_accounts.depositor);
-        if sub_reward_token_mint.is_some() {
-            spl_create_associated_token_account(
+        let (user_reward_a, _) = find_transit_program_address(
+            &default_accounts.francium.staking_program_id,
+            &depositor_authority,
+            &token_accounts.mint,
+            "francium_reward",
+        );
+
+        if config
+            .rpc_client
+            .get_token_account(&user_reward_a)
+            .unwrap()
+            .is_none()
+        {
+            create_transit(
                 config,
                 &depositor_authority,
-                &sub_reward_token_mint.unwrap(),
+                &token_accounts.mint,
+                Some("francium_reward".to_string()),
             )?;
         }
 
-        execute_account_creation(
-            config,
-            &default_accounts.francium.program_id,
-            mining_account,
-            FARMING_POOL_SIZE,
-        )?;
-        save_new_mining_account(config, token, mining_account)?;
+        if sub_reward_token_mint.is_some() {
+            let (user_reward_b, _) = find_transit_program_address(
+                &default_accounts.francium.staking_program_id,
+                &depositor_authority,
+                &sub_reward_token_mint.unwrap(),
+                "francium_reward",
+            );
+
+            if config
+                .rpc_client
+                .get_token_account(&user_reward_b)
+                .unwrap()
+                .is_none()
+            {
+                create_transit(
+                    config,
+                    &depositor_authority,
+                    &sub_reward_token_mint.unwrap(),
+                    Some("francium_reward".to_string()),
+                )?;
+            }
+        }
 
         Ok(())
     }
@@ -164,27 +106,43 @@ impl LiquidityMiner for FranciumLiquidityMiner {
         &self,
         config: &Config,
         token: &String,
-        mining_pubkey: Pubkey,
+        _mining_pubkey: Pubkey,
         sub_reward_token_mint: Option<Pubkey>,
     ) -> MiningType {
         let default_accounts = config.get_default_accounts();
         let initialized_accounts = config.get_initialized_accounts();
         let token_accounts = initialized_accounts.token_accounts.get(token).unwrap();
+        let (depositor_authority, _) =
+            find_program_address(&everlend_depositor::id(), &initialized_accounts.depositor);
 
-        let (depositor_authority, _) = find_program_address(&everlend_depositor::id(), &initialized_accounts.depositor);
+        let (user_stake_account, _) = find_transit_program_address(
+            &default_accounts.francium.staking_program_id,
+            &depositor_authority,
+            &default_accounts.stsol_collateral.get(1).unwrap().unwrap(),
+            "",
+        );
 
-        let (user_reward_b, _ ) =
-            find_transit_program_address(
-                &default_accounts.francium.staking_program_id,
-                &depositor_authority,
-                &sub_reward_token_mint.unwrap(),
-                "francium_reward"
-            );
+        let (user_reward_a, _) = find_transit_program_address(
+            &default_accounts.francium.staking_program_id,
+            &depositor_authority,
+            &token_accounts.mint,
+            "francium_reward",
+        );
+
+        let (user_reward_b, _) = find_transit_program_address(
+            &default_accounts.francium.staking_program_id,
+            &depositor_authority,
+            &sub_reward_token_mint.unwrap(),
+            "francium_reward",
+        );
 
         MiningType::Francium {
-            user_stake_token_account: token_accounts.francium_user_token_stake,
-            farming_pool: token_accounts.francium_farming_pool_account,
-            user_reward_a: mining_pubkey,
+            user_stake_token_account: user_stake_account,
+            farming_pool: *default_accounts
+                .francium_farming_pool_account
+                .get(token)
+                .unwrap(),
+            user_reward_a,
             user_reward_b,
         }
     }

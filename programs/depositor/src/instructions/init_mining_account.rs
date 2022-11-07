@@ -1,7 +1,4 @@
-use crate::{
-    find_internal_mining_program_address,
-    state::{Depositor, InternalMining, MiningType},
-};
+use crate::{find_internal_mining_program_address, find_transit_program_address, state::{Depositor, InternalMining, MiningType}};
 
 use everlend_registry::state::Registry;
 use everlend_utils::{
@@ -256,10 +253,30 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                 user_stake_token_account
             } => {
                 let farming_pool_info = AccountLoader::next_with_key(account_info_iter, &farming_pool)?;
-                let user_farming_info = AccountLoader::next_with_key(account_info_iter, &francium::get_staking_program_id())?;
+                let user_farming_info = AccountLoader::next_with_owner(account_info_iter, &self.system_program.key)?;
+
+                let (user_farming, _ ) = Pubkey::find_program_address(
+                    &[
+                        &self.depositor_authority.key.as_ref(),
+                        farming_pool.as_ref(),
+                        &user_stake_token_account.as_ref()
+                    ],
+                    &francium::get_staking_program_id(),
+                );
+                assert_account_key(user_farming_info, &user_farming)?;
+
                 let user_reward_a_info = AccountLoader::next_with_key(account_info_iter, &user_reward_a)?;
                 let user_reward_b_info = AccountLoader::next_with_key(account_info_iter, &user_reward_b)?;
                 let user_stake_info = AccountLoader::next_with_key(account_info_iter, &user_stake_token_account)?;
+                let (user_stake, _ ) =
+                    find_transit_program_address(
+                        &francium::get_staking_program_id(),
+                        &self.depositor_authority.key,
+                        &self.collateral_mint.key,
+                        ""
+                    );
+
+                assert_account_key(user_stake_info, &user_stake)?;
 
                 cpi::francium::init_farming_user(
                     self.staking_program_id.key,
