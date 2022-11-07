@@ -116,6 +116,17 @@ pub struct FranciumAccounts {
 
 #[serde_as]
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
+pub struct JetAccounts {
+    #[serde_as(as = "DisplayFromStr")]
+    pub program_id: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub margin_pool_sol: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub vault_sol: Pubkey,
+}
+
+#[serde_as]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
 pub struct DefaultAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub sol_mint: Pubkey,
@@ -158,6 +169,8 @@ pub struct DefaultAccounts {
     pub francium: FranciumAccounts,
 
     pub francium_farming_pool_account: BTreeMap<String, Pubkey>,
+
+    pub jet: JetAccounts,
 
     #[serde_as(as = "DisplayFromStr")]
     pub multisig_program_id: Pubkey,
