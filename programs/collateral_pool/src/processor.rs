@@ -606,7 +606,9 @@ impl Processor {
             source_info.clone(),
             token_account_info.clone(),
             user_transfer_authority_info.clone(),
-            amount + interest_amount,
+            amount
+                .checked_add(interest_amount)
+                .ok_or(EverlendError::MathOverflow)?,
             &[],
         )?;
 
