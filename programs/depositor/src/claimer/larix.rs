@@ -5,6 +5,7 @@ use everlend_utils::cpi::larix;
 use everlend_utils::{assert_account_key, find_program_address, AccountLoader, EverlendError};
 use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
 use std::{iter::Enumerate, slice::Iter};
+use solana_program::program_pack::Pack;
 
 /// Container
 #[derive(Clone)]
@@ -48,6 +49,15 @@ impl<'a, 'b> LarixClaimer<'a, 'b> {
             }
             _ => return Err(EverlendError::MiningNotInitialized.into()),
         };
+
+        {
+            let registry = AccountLoader::next_with_owner(account_info_iter, &everlend_registry::id())?;
+            let registry_markets
+                = everlend_registry::state::RegistryMarkets::unpack_from_slice(&registry.data.borrow())?;
+            if !registry_markets.money_markets.contains(staking_program_id) {
+                return Err(ProgramError::InvalidArgument);
+            }
+        }
 
         let mining_account =
             AccountLoader::next_with_key(account_info_iter, &mining_account_pubkey)?;

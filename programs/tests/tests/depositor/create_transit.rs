@@ -173,3 +173,38 @@ async fn fail_double_create() {
         TransactionError::InstructionError(0, InstructionError::AccountAlreadyInitialized)
     );
 }
+
+#[tokio::test]
+async fn fail_rebalancing_seed() {
+    let (mut context, test_depositor) = setup().await;
+
+    let token_mint = Keypair::new();
+    let payer_pubkey = context.payer.pubkey();
+
+    create_mint(&mut context, &token_mint, &payer_pubkey)
+        .await
+        .unwrap();
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::create_transit(
+            &everlend_depositor::id(),
+            &test_depositor.depositor.pubkey(),
+            &token_mint.pubkey(),
+            &context.payer.pubkey(),
+            Some("rebalancing".to_string()),
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
+    );
+}

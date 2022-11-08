@@ -5,6 +5,7 @@ use everlend_utils::{
     assert_account_key, assert_non_zero_amount, assert_owned_by, assert_rent_exempt, assert_signer,
     assert_uninitialized, cpi, find_program_address, EverlendError,
 };
+use solana_program::program_error::ProgramError;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
@@ -77,6 +78,12 @@ impl Processor {
 
         let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
         assert_account_key(manager_info, &pool_market.manager)?;
+
+        {
+            let (pool_market_authority_pubkey, _) =
+                find_program_address(program_id, pool_market_info.key);
+            assert_account_key(pool_market_authority_info, &pool_market_authority_pubkey)?;
+        }
 
         let (pool_pubkey, bump_seed) =
             find_pool_program_address(program_id, pool_market_info.key, token_mint_info.key);
@@ -158,6 +165,7 @@ impl Processor {
         assert_account_key(pool_borrow_authority_info, &pool_borrow_authority_pubkey)?;
 
         let signers_seeds = &[
+            b"borrow".as_ref(),
             &pool_info.key.to_bytes()[..32],
             &borrow_authority_info.key.to_bytes()[..32],
             &[bump_seed],
@@ -324,6 +332,7 @@ impl Processor {
         )?;
 
         let signers_seeds = &[
+            b"withdraw".as_ref(),
             &pool_info.key.to_bytes()[..32],
             &withdraw_authority_info.key.to_bytes()[..32],
             &[bump_seed],
@@ -455,8 +464,12 @@ impl Processor {
             withdraw_authority_info,
             &pool_withdraw_authority.withdraw_authority,
         )?;
-        let (_, bump_seed) = find_program_address(program_id, pool_market_info.key);
-        let signers_seeds = &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]];
+        let signers_seeds = {
+            let (pool_market_authority_pubkey, bump_seed) =
+                find_program_address(program_id, pool_market_info.key);
+            assert_account_key(pool_market_authority_info, &pool_market_authority_pubkey)?;
+            &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]]
+        };
         cpi::spl_token::transfer(
             token_account_info.clone(),
             destination_info.clone(),
@@ -493,6 +506,11 @@ impl Processor {
         assert_account_key(pool_market_info, &pool.pool_market)?;
         assert_account_key(token_account_info, &pool.token_account)?;
 
+        // Check the impossibility of self borrow
+        if token_account_info.key == destination_info.key {
+            return Err(ProgramError::InvalidArgument);
+        }
+
         let mut pool_borrow_authority =
             PoolBorrowAuthority::unpack(&pool_borrow_authority_info.data.borrow())?;
 
@@ -518,8 +536,12 @@ impl Processor {
         )?;
         Pool::pack(pool, *pool_info.data.borrow_mut())?;
 
-        let (_, bump_seed) = find_program_address(program_id, pool_market_info.key);
-        let signers_seeds = &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]];
+        let signers_seeds = {
+            let (pool_market_authority_pubkey, bump_seed) =
+                find_program_address(program_id, pool_market_info.key);
+            assert_account_key(pool_market_authority_info, &pool_market_authority_pubkey)?;
+            &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]]
+        };
 
         // Transfer from token account to destination borrower
         cpi::spl_token::transfer(

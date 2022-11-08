@@ -282,17 +282,14 @@ pub fn delete_pool_borrow_authority(
     program_id: &Pubkey,
     pool_market: &Pubkey,
     pool: &Pubkey,
-    borrow_authority: &Pubkey,
+    pool_borrow_authority: &Pubkey,
     receiver: &Pubkey,
     manager: &Pubkey,
 ) -> Instruction {
-    let (pool_borrow_authority, _) =
-        find_pool_borrow_authority_program_address(program_id, pool, borrow_authority);
-
     let accounts = vec![
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new_readonly(*pool, false),
-        AccountMeta::new(pool_borrow_authority, false),
+        AccountMeta::new(*pool_borrow_authority, false),
         AccountMeta::new(*receiver, false),
         AccountMeta::new_readonly(*manager, true),
     ];
@@ -339,17 +336,14 @@ pub fn delete_pool_withdraw_authority(
     program_id: &Pubkey,
     pool_market: &Pubkey,
     pool: &Pubkey,
-    withdraw_authority: &Pubkey,
+    pool_withdraw_authority: &Pubkey,
     receiver: &Pubkey,
     manager: &Pubkey,
 ) -> Instruction {
-    let (pool_withdraw_authority, _) =
-        find_pool_withdraw_authority_program_address(program_id, pool, withdraw_authority);
-
     let accounts = vec![
         AccountMeta::new_readonly(*pool_market, false),
         AccountMeta::new_readonly(*pool, false),
-        AccountMeta::new(pool_withdraw_authority, false),
+        AccountMeta::new(*pool_withdraw_authority, false),
         AccountMeta::new(*receiver, false),
         AccountMeta::new_readonly(*manager, true),
     ];

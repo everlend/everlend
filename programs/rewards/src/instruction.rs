@@ -121,6 +121,7 @@ pub enum RewardsInstruction {
     /// Accounts:
     /// [W] Root account (ex-Config program account)
     /// [WS] Payer
+    /// [R] Rent sysvar
     /// [R] System program
     MigrateRoot,
 }
@@ -332,6 +333,7 @@ pub fn migrate_root(program_id: &Pubkey, root_account: &Pubkey, payer: &Pubkey) 
     let accounts = vec![
         AccountMeta::new(*root_account, false),
         AccountMeta::new(*payer, true),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
     ];
 

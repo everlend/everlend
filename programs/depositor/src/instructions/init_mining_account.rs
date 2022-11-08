@@ -128,6 +128,19 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                 mining_account,
                 additional_reward_token_account,
             } => {
+                {
+                    let registry_markets =
+                        everlend_registry::state::RegistryMarkets::unpack_from_slice(
+                            &self.registry.data.borrow(),
+                        )?;
+                    if !registry_markets
+                        .money_markets
+                        .contains(self.staking_program_id.key)
+                    {
+                        return Err(ProgramError::InvalidArgument);
+                    }
+                }
+
                 let mining_account_info =
                     AccountLoader::next_with_key(account_info_iter, &mining_account)?;
                 assert_owned_by(mining_account_info, self.staking_program_id.key)?;

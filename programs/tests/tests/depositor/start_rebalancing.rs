@@ -12,6 +12,7 @@ use everlend_utils::{
     EverlendError,
 };
 use solana_program::instruction::InstructionError;
+use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program_test::*;
 use solana_sdk::signature::Keypair;
@@ -303,7 +304,10 @@ async fn success() {
         .get_rebalancing_data(&mut context, &general_pool.token_mint_pubkey)
         .await;
 
-    assert_eq!(data.total_distributed_liquidity(), deposit_amount / 2); // 50% distrubution
+    assert_eq!(
+        data.total_distributed_liquidity().unwrap(),
+        deposit_amount / 2
+    ); // 50% distrubution
     assert_eq!(data.amount_to_distribute, deposit_amount);
 }
 
@@ -349,7 +353,7 @@ async fn success_with_reserve_rates() {
         .get_rebalancing_data(&mut context, &general_pool.token_mint_pubkey)
         .await;
 
-    assert_eq!(data.total_distributed_liquidity(), 0); // because of collateral ratio
+    assert_eq!(data.total_distributed_liquidity().unwrap(), 0); // because of collateral ratio
     assert_eq!(data.amount_to_distribute, deposit_amount);
 }
 
@@ -934,14 +938,20 @@ async fn rebalancing_math_round() {
             .unwrap();
         r.compute(&p, oracle.clone(), distr_amount, current_slot)
             .unwrap();
-        println!("{}", r.total_distributed_liquidity());
-        assert_eq!(distr_amount >= r.total_distributed_liquidity(), true);
+        println!("{}", r.total_distributed_liquidity().unwrap());
+        assert_eq!(
+            distr_amount >= r.total_distributed_liquidity().unwrap(),
+            true
+        );
 
         r.compute_with_refresh_income(&p, 0, i as u64 + 1, distr_amount)
             .unwrap();
-        println!("{}", r.total_distributed_liquidity());
+        println!("{}", r.total_distributed_liquidity().unwrap());
         println!("{:?}", r.steps);
-        assert_eq!(distr_amount >= r.total_distributed_liquidity(), true);
+        assert_eq!(
+            distr_amount >= r.total_distributed_liquidity().unwrap(),
+            true
+        );
     }
 }
 
@@ -1009,7 +1019,7 @@ async fn rebalancing_check_steps() {
         println!(
             "{} {}",
             r.amount_to_distribute,
-            r.total_distributed_liquidity()
+            r.total_distributed_liquidity().unwrap()
         );
 
         for (idx, s) in r.clone().steps.iter().enumerate() {
@@ -1080,7 +1090,6 @@ async fn rebalancing_check_steps_math() {
 }
 
 #[tokio::test]
-#[should_panic(expected = "attempt to add with overflow")]
 async fn rebalancing_check_distribution_overflow() {
     let mut oracle = TokenOracle::default();
     let mut d: DistributionArray = DistributionArray::default();
@@ -1088,7 +1097,10 @@ async fn rebalancing_check_distribution_overflow() {
     d[0] = 1;
     d[1] = u64::MAX;
 
-    oracle.update_liquidity_distribution(10, d).unwrap();
+    assert_eq!(
+        oracle.update_liquidity_distribution(10, d).unwrap_err(),
+        ProgramError::Custom(EverlendError::MathOverflow as u32)
+    )
 }
 
 #[tokio::test]
@@ -1128,7 +1140,7 @@ async fn collateral_leak_test() {
     r.compute(&p, oracle.clone(), amount_to_distribute, current_slot)
         .unwrap();
 
-    assert_eq!(r.total_distributed_liquidity(), 100_000_000);
+    assert_eq!(r.total_distributed_liquidity().unwrap(), 100_000_000);
 
     let mut reserve_rates: DistributionArray = DistributionArray::default();
     reserve_rates[0] = 1_000_000;
@@ -1147,7 +1159,7 @@ async fn collateral_leak_test() {
     r.compute(&p, oracle.clone(), amount_to_distribute, current_slot)
         .unwrap();
 
-    assert_eq!(r.total_distributed_liquidity(), 999_999_90);
+    assert_eq!(r.total_distributed_liquidity().unwrap(), 999_999_90);
 }
 
 #[tokio::test]
@@ -1213,7 +1225,7 @@ async fn collateral_leak_test2() {
             .unwrap();
 
         let (_, amount_to_distribute) = calculate_amount_to_distribute(
-            r.total_distributed_liquidity(),
+            r.total_distributed_liquidity().unwrap(),
             elem.transit_amount,
             0,
             0,
@@ -1226,10 +1238,13 @@ async fn collateral_leak_test2() {
         println!(
             "amount_to_distribute: {} distributed_liquidity:{} \n\n",
             r.amount_to_distribute,
-            r.total_distributed_liquidity()
+            r.total_distributed_liquidity().unwrap()
         );
 
-        assert_eq!(r.total_distributed_liquidity(), elem.distributed_liquidity);
+        assert_eq!(
+            r.total_distributed_liquidity().unwrap(),
+            elem.distributed_liquidity
+        );
 
         for (idx, s) in r.clone().steps.iter().enumerate() {
             let mm_index = elem.steps[idx].0;

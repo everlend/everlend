@@ -1,5 +1,5 @@
 use crate::state::{Pool, PoolBorrowAuthority};
-use everlend_utils::{assert_account_key, cpi, AccountLoader};
+use everlend_utils::{assert_account_key, cpi, AccountLoader, EverlendError};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
     program_pack::Pack, pubkey::Pubkey,
@@ -76,7 +76,9 @@ impl<'a, 'b> RepayContext<'a, 'b> {
             self.source.clone(),
             self.token_account.clone(),
             self.user_transfer_authority.clone(),
-            amount + interest_amount,
+            amount
+                .checked_add(interest_amount)
+                .ok_or(EverlendError::MathOverflow)?,
             &[],
         )?;
 

@@ -231,7 +231,7 @@ impl<'a, 'b> StartRebalancingContext<'a, 'b> {
             WithdrawalRequests::unpack(&self.withdrawal_requests.data.borrow())?;
 
         let (available_liquidity, amount_to_distribute) = calculate_amount_to_distribute(
-            rebalancing.total_distributed_liquidity(),
+            rebalancing.total_distributed_liquidity()?,
             liquidity_transit.amount,
             general_pool.amount,
             withdrawal_requests.liquidity_supply,

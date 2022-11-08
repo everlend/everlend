@@ -54,6 +54,11 @@ impl<'a, 'b> CreateTransitContext<'a, 'b> {
         _account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
         seed: String,
     ) -> ProgramResult {
+        // Check seed
+        if seed.eq("rebalancing") {
+            return Err(ProgramError::InvalidArgument);
+        }
+
         // Check depositor initialized
         Depositor::unpack(&self.depositor.data.borrow())?;
 

@@ -3,7 +3,7 @@
 use super::AccountType;
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use everlend_registry::state::TOTAL_DISTRIBUTIONS;
-use everlend_utils::{Uninitialized, PRECISION_SCALER};
+use everlend_utils::{EverlendError, Uninitialized, PRECISION_SCALER};
 use solana_program::{
     clock::Slot,
     msg,
@@ -51,7 +51,11 @@ impl TokenOracle {
         distribution: DistributionArray,
     ) -> Result<(), ProgramError> {
         // Total distribution always should be < 1 * PRECISION_SCALER
-        if distribution.iter().sum::<u64>() > (PRECISION_SCALER) as u64 {
+        let total_distribution = distribution
+            .iter()
+            .try_fold(0u64, |acc, &x| acc.checked_add(x))
+            .ok_or(EverlendError::MathOverflow)?;
+        if total_distribution > (PRECISION_SCALER) as u64 {
             return Err(ProgramError::InvalidArgument);
         }
 

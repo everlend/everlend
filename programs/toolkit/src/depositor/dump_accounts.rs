@@ -70,7 +70,7 @@ impl<'a> ToolkitCommand<'a> for DumpAccountsCommand {
             println!(
                 "{} distributed_liquidity: {} amount_to_distribute: {} - total_amount_borrowed: {}. Diff {}. Requests {}. Transit {}",
                 pair.0,
-                oracle.total_distributed_liquidity(),
+                oracle.total_distributed_liquidity()?,
                 oracle.amount_to_distribute,
                 pool.total_amount_borrowed,
                 oracle.amount_to_distribute.saturating_sub(pool.total_amount_borrowed),
