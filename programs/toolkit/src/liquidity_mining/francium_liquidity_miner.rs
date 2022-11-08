@@ -111,18 +111,15 @@ impl LiquidityMiner for FranciumLiquidityMiner {
             "",
         );
 
-        let (user_farming, _) = Pubkey::find_program_address(
-            &[
-                depositor_authority.as_ref(),
-                default_accounts
-                    .francium_farming_pool_account
-                    .get(token)
-                    .unwrap()
-                    .as_ref(),
-                &user_stake_account.as_ref(),
-            ],
-            &francium::get_staking_program_id(),
+        let user_farming = francium::find_user_farming_address(
+            &depositor_authority,
+            default_accounts
+                .francium_farming_pool_account
+                .get(token)
+                .unwrap(),
+            &user_stake_account,
         );
+
         save_new_mining_account(config, token, user_farming)?;
 
         Ok(())

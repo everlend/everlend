@@ -261,14 +261,12 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                 let user_farming_info =
                     AccountLoader::next_with_owner(account_info_iter, &self.system_program.key)?;
 
-                let (user_farming, _) = Pubkey::find_program_address(
-                    &[
-                        &self.depositor_authority.key.as_ref(),
-                        farming_pool.as_ref(),
-                        &user_stake_token_account.as_ref(),
-                    ],
-                    &francium::get_staking_program_id(),
+                let user_farming = francium::find_user_farming_address(
+                    self.depositor_authority.key,
+                    &farming_pool,
+                    &user_stake_token_account,
                 );
+
                 assert_account_key(user_farming_info, &user_farming)?;
                 let user_reward_a_info =
                     AccountLoader::next_with_key(account_info_iter, &user_reward_a)?;

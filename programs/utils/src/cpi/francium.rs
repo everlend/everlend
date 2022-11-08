@@ -1,18 +1,17 @@
-use borsh::{BorshSerialize, BorshDeserialize};
+use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::account_info::AccountInfo;
+use solana_program::clock::Slot;
 use solana_program::instruction::{AccountMeta, Instruction};
 use solana_program::program::{invoke, invoke_signed};
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar;
 use std::str::FromStr;
-use solana_program::clock::Slot;
 
 pub const FRANCIUM_REWARD_SEED: &str = "francium_reward";
 
 #[derive(Debug, BorshSerialize, BorshDeserialize)]
 pub struct FarmingPool {
-
     pub version: u8,
     pub is_dual_rewards: u8,
     pub admin: Pubkey,
@@ -49,7 +48,7 @@ pub struct FarmingPool {
 
     pub accumulated_rewards_per_share: u128,
     pub accumulated_rewards_per_share_b: u128,
-    pub padding: [u8;128]
+    pub padding: [u8; 128],
 }
 
 pub fn refresh_reserve(program_id: &Pubkey, reserve: AccountInfo) -> Result<(), ProgramError> {
@@ -364,4 +363,20 @@ pub fn init_farming_user<'a>(
 
 pub fn get_staking_program_id() -> Pubkey {
     Pubkey::from_str("3Katmm9dhvLQijAvomteYMo6rfVbY5NaCRNq9ZBqBgr6").unwrap()
+}
+
+pub fn find_user_farming_address(
+    depositor_authority: &Pubkey,
+    farming_pool: &Pubkey,
+    user_stake_token_account: &Pubkey,
+) -> Pubkey {
+    let (user_farming, _) = Pubkey::find_program_address(
+        &[
+            depositor_authority.as_ref(),
+            farming_pool.as_ref(),
+            user_stake_token_account.as_ref(),
+        ],
+        &get_staking_program_id(),
+    );
+    user_farming
 }

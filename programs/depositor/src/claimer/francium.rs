@@ -47,13 +47,10 @@ impl<'a, 'b> FranciumClaimer<'a, 'b> {
         let pool_reward_a = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let pool_reward_b = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
 
-        let (user_farming_info, _) = Pubkey::find_program_address(
-            &[
-                depositor_authority.as_ref(),
-                farming_pool.key.as_ref(),
-                &user_stake_token_account.as_ref(),
-            ],
-            &staking_program_id,
+        let user_farming_info = francium::find_user_farming_address(
+            depositor_authority,
+            farming_pool.key,
+            &user_stake_token_account,
         );
 
         let user_farming = AccountLoader::next_with_key(account_info_iter, &user_farming_info)?;

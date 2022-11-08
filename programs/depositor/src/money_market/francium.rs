@@ -1,3 +1,4 @@
+use crate::find_transit_program_address;
 use crate::money_market::{CollateralStorage, MoneyMarket};
 use crate::state::MiningType;
 use everlend_utils::cpi::francium;
@@ -7,7 +8,6 @@ use solana_program::{
 };
 use spl_token::state::Account;
 use std::{iter::Enumerate, slice::Iter};
-use crate::find_transit_program_address;
 
 ///
 pub struct Francium<'a, 'b> {
@@ -77,13 +77,10 @@ impl<'a, 'b> Francium<'a, 'b> {
                 )?;
                 let farming_pool_authority_info = AccountLoader::next_unchecked(account_info_iter)?;
 
-                let (user_farming, _) = Pubkey::find_program_address(
-                    &[
-                        depositor_authority.as_ref(),
-                        farming_pool_info.key.as_ref(),
-                        &user_stake_token_account.as_ref(),
-                    ],
-                    &francium::get_staking_program_id(),
+                let user_farming = francium::find_user_farming_address(
+                    depositor_authority,
+                    farming_pool_info.key,
+                    &user_stake_token_account,
                 );
 
                 let user_farming_info =
