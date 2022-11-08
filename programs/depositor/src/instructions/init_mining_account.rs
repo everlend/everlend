@@ -283,7 +283,7 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                         program_id,
                         &self.depositor_authority.key,
                         &farming_pool.rewards_token_mint,
-                        "francium_reward",
+                        francium::FRANCIUM_REWARD_SEED,
                     );
 
                     assert_account_key(&user_reward_a_info, &user_reward_a_check)?;
@@ -292,7 +292,7 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                         program_id,
                         &self.depositor_authority.key,
                         &farming_pool.rewards_token_mint_b,
-                        "francium_reward",
+                        francium::FRANCIUM_REWARD_SEED,
                     );
 
                     assert_account_key(&user_reward_b_info, &user_reward_b_check)?;
