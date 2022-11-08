@@ -1,4 +1,3 @@
-use crate::find_transit_program_address;
 use crate::money_market::{CollateralStorage, MoneyMarket};
 use crate::state::MiningType;
 use everlend_utils::cpi::francium;
@@ -8,6 +7,7 @@ use solana_program::{
 };
 use spl_token::state::Account;
 use std::{iter::Enumerate, slice::Iter};
+use crate::find_transit_program_address;
 
 ///
 pub struct Francium<'a, 'b> {
@@ -35,6 +35,7 @@ struct FranciumFarming<'a, 'b> {
 impl<'a, 'b> Francium<'a, 'b> {
     ///
     pub fn init(
+        program_id: &Pubkey,
         money_market_program_id: Pubkey,
         account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
         depositor_authority: &Pubkey,
@@ -103,19 +104,19 @@ impl<'a, 'b> Francium<'a, 'b> {
                     AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
 
                 let (user_reward_a_check, _) = find_transit_program_address(
-                    &lend_reward_program_id_info.key,
+                    program_id,
                     &depositor_authority,
                     &token_mint_address_a_info.key,
-                    "francium_reward",
+                    francium::FRANCIUM_REWARD_SEED,
                 );
 
                 assert_account_key(&user_reward_a_info, &user_reward_a_check)?;
 
                 let (user_reward_b_check, _) = find_transit_program_address(
-                    &lend_reward_program_id_info.key,
+                    program_id,
                     &depositor_authority,
                     &token_mint_address_b_info.key,
-                    "francium_reward",
+                    francium::FRANCIUM_REWARD_SEED,
                 );
 
                 assert_account_key(&user_reward_b_info, &user_reward_b_check)?;

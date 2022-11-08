@@ -268,6 +268,7 @@ pub fn money_market<'a, 'b>(
         // Francium
         4 => {
             let francium = Francium::init(
+                program_id,
                 money_market_program.key.clone(),
                 money_market_account_info_iter,
                 depositor_authority,

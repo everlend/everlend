@@ -1,11 +1,56 @@
-use borsh::BorshSerialize;
+use borsh::{BorshSerialize, BorshDeserialize};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::{AccountMeta, Instruction};
 use solana_program::program::{invoke, invoke_signed};
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar;
-use std::convert::TryFrom;
+use std::str::FromStr;
+use solana_program::clock::Slot;
+
+pub const FRANCIUM_REWARD_SEED: &str = "francium_reward";
+
+#[derive(Debug, BorshSerialize, BorshDeserialize)]
+pub struct FarmingPool {
+
+    pub version: u8,
+    pub is_dual_rewards: u8,
+    pub admin: Pubkey,
+    pub pool_authority: Pubkey,
+    pub token_program_id: Pubkey,
+
+    // staked_token
+    pub staked_token_mint: Pubkey,
+    pub staked_token_account: Pubkey,
+
+    // reward_token
+    pub rewards_token_mint: Pubkey,
+    pub rewards_token_account: Pubkey,
+
+    // reward_token_b
+    pub rewards_token_mint_b: Pubkey,
+    pub rewards_token_account_b: Pubkey,
+
+    // rewards config
+    pub pool_stake_cap: u64,
+    pub user_stake_cap: u64,
+    // rewards a
+    pub rewards_start_slot: Slot,
+    pub rewards_end_slot: Slot,
+    pub rewards_per_day: u64,
+
+    // rewards b
+    pub rewards_start_slot_b: Slot,
+    pub rewards_end_slot_b: Slot,
+    pub rewards_per_day_b: u64,
+
+    pub total_staked_amount: u64,
+    pub last_update_slot: Slot,
+
+    pub accumulated_rewards_per_share: u128,
+    pub accumulated_rewards_per_share_b: u128,
+    pub padding: [u8;128]
+}
 
 pub fn refresh_reserve(program_id: &Pubkey, reserve: AccountInfo) -> Result<(), ProgramError> {
     #[derive(Debug, PartialEq, BorshSerialize)]
@@ -318,5 +363,5 @@ pub fn init_farming_user<'a>(
 }
 
 pub fn get_staking_program_id() -> Pubkey {
-    Pubkey::try_from("3Katmm9dhvLQijAvomteYMo6rfVbY5NaCRNq9ZBqBgr6").unwrap()
+    Pubkey::from_str("3Katmm9dhvLQijAvomteYMo6rfVbY5NaCRNq9ZBqBgr6").unwrap()
 }

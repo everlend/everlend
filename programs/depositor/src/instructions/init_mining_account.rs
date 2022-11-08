@@ -1,6 +1,11 @@
-use crate::{find_internal_mining_program_address, find_transit_program_address, state::{Depositor, InternalMining, MiningType}};
+use crate::{
+    find_internal_mining_program_address, find_transit_program_address,
+    state::{Depositor, InternalMining, MiningType},
+};
 
+use borsh::BorshDeserialize;
 use everlend_registry::state::Registry;
+use everlend_utils::cpi::francium;
 use everlend_utils::{
     assert_account_key, assert_owned_by, cpi, find_program_address, AccountLoader, EverlendError,
 };
@@ -10,7 +15,6 @@ use solana_program::{
     sysvar::SysvarId,
 };
 use spl_associated_token_account::get_associated_token_address;
-use everlend_utils::cpi::francium;
 use std::{iter::Enumerate, slice::Iter};
 
 /// Instruction context
@@ -250,31 +254,58 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                 farming_pool,
                 user_reward_a,
                 user_reward_b,
-                user_stake_token_account
+                user_stake_token_account,
             } => {
-                let farming_pool_info = AccountLoader::next_with_key(account_info_iter, &farming_pool)?;
-                let user_farming_info = AccountLoader::next_with_owner(account_info_iter, &self.system_program.key)?;
+                let farming_pool_info =
+                    AccountLoader::next_with_key(account_info_iter, &farming_pool)?;
+                let user_farming_info =
+                    AccountLoader::next_with_owner(account_info_iter, &self.system_program.key)?;
 
-                let (user_farming, _ ) = Pubkey::find_program_address(
+                let (user_farming, _) = Pubkey::find_program_address(
                     &[
                         &self.depositor_authority.key.as_ref(),
                         farming_pool.as_ref(),
-                        &user_stake_token_account.as_ref()
+                        &user_stake_token_account.as_ref(),
                     ],
                     &francium::get_staking_program_id(),
                 );
                 assert_account_key(user_farming_info, &user_farming)?;
+                let user_reward_a_info =
+                    AccountLoader::next_with_key(account_info_iter, &user_reward_a)?;
+                let user_reward_b_info =
+                    AccountLoader::next_with_key(account_info_iter, &user_reward_b)?;
 
-                let user_reward_a_info = AccountLoader::next_with_key(account_info_iter, &user_reward_a)?;
-                let user_reward_b_info = AccountLoader::next_with_key(account_info_iter, &user_reward_b)?;
-                let user_stake_info = AccountLoader::next_with_key(account_info_iter, &user_stake_token_account)?;
-                let (user_stake, _ ) =
-                    find_transit_program_address(
-                        &francium::get_staking_program_id(),
+                {
+                    let farming_pool =
+                        francium::FarmingPool::try_from_slice(&farming_pool_info.data.borrow())?;
+
+                    let (user_reward_a_check, _) = find_transit_program_address(
+                        program_id,
                         &self.depositor_authority.key,
-                        &self.collateral_mint.key,
-                        ""
+                        &farming_pool.rewards_token_mint,
+                        "francium_reward",
                     );
+
+                    assert_account_key(&user_reward_a_info, &user_reward_a_check)?;
+
+                    let (user_reward_b_check, _) = find_transit_program_address(
+                        program_id,
+                        &self.depositor_authority.key,
+                        &farming_pool.rewards_token_mint_b,
+                        "francium_reward",
+                    );
+
+                    assert_account_key(&user_reward_b_info, &user_reward_b_check)?;
+                }
+
+                let user_stake_info =
+                    AccountLoader::next_with_key(account_info_iter, &user_stake_token_account)?;
+                let (user_stake, _) = find_transit_program_address(
+                    program_id,
+                    &self.depositor_authority.key,
+                    &self.collateral_mint.key,
+                    "",
+                );
 
                 assert_account_key(user_stake_info, &user_stake)?;
 
