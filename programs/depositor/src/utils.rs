@@ -292,6 +292,7 @@ pub fn money_market<'a, 'b>(
             let frakt = Frakt::init(
                 money_market_program.key.clone(),
                 program_id.clone(),
+                depositor_authority,
                 money_market_account_info_iter,
             )?;
             return Ok((Box::new(frakt), is_mining));

@@ -1,8 +1,8 @@
 use crate::find_transit_sol_unwrap_address;
 use crate::money_market::MoneyMarket;
 use everlend_utils::cpi;
-use everlend_utils::cpi::frakt::find_deposit_address;
-use everlend_utils::{assert_account_key, AccountLoader, EverlendError};
+use everlend_utils::cpi::frakt::{find_deposit_address, find_owner_address};
+use everlend_utils::{AccountLoader, EverlendError};
 use solana_program::account_info::AccountInfo;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
@@ -30,13 +30,22 @@ impl<'a, 'b> Frakt<'a, 'b> {
     pub fn init(
         money_market_program_id: Pubkey,
         program_id: Pubkey,
+        authority: &Pubkey,
         account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
     ) -> Result<Frakt<'a, 'b>, ProgramError> {
         let liquidity_pool =
             AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
-        let liquidity_owner = AccountLoader::next_unchecked(account_info_iter)?;
-        let deposit_account =
-            AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
+
+        let liquidity_owner = {
+            let (liquidity_owner_pubkey, _) =
+                find_owner_address(&money_market_program_id, liquidity_pool.key);
+            AccountLoader::next_with_key(account_info_iter, &liquidity_owner_pubkey)?
+        };
+        let deposit_account = {
+            let (deposit_account_pubkey, _) =
+                find_deposit_address(&money_market_program_id, liquidity_pool.key, authority);
+            AccountLoader::next_with_key(account_info_iter, &deposit_account_pubkey)?
+        };
         let admin = AccountLoader::next_unchecked(account_info_iter)?;
 
         let unwrap_sol = {
@@ -147,8 +156,11 @@ impl<'a, 'b> MoneyMarket<'b> for Frakt<'a, 'b> {
         collateral_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
-        let (_, dump) =
-            find_deposit_address(&self.program_id, self.liquidity_pool.key, authority.key);
+        let (_, dump) = find_deposit_address(
+            &self.money_market_program_id,
+            self.liquidity_pool.key,
+            authority.key,
+        );
 
         cpi::frakt::redeem(
             &self.money_market_program_id,
