@@ -38,7 +38,12 @@ impl<'a, 'b> Frakt<'a, 'b> {
         let deposit_account =
             AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
         let admin = AccountLoader::next_unchecked(account_info_iter)?;
-        let unwrap_sol = AccountLoader::next_uninitialized(account_info_iter)?;
+
+        let unwrap_sol = {
+            let (unwrap_sol_pubkey, _) =
+                find_transit_sol_unwrap_address(&program_id, liquidity_pool.key);
+            AccountLoader::next_with_key(account_info_iter, &unwrap_sol_pubkey)?
+        };
         let token_mint =
             AccountLoader::next_with_key(account_info_iter, &spl_token::native_mint::id())?;
         let rent = AccountLoader::next_with_key(account_info_iter, &sysvar::rent::id())?;
@@ -78,9 +83,8 @@ impl<'a, 'b> MoneyMarket<'b> for Frakt<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
     ) -> Result<u64, ProgramError> {
         let unwrap_acc_signers_seeds = {
-            let (unwrap_sol_pubkey, bump_seed) =
+            let (_, bump_seed) =
                 find_transit_sol_unwrap_address(&self.program_id, self.liquidity_pool.key);
-            assert_account_key(self.unwrap_sol, &unwrap_sol_pubkey)?;
 
             &[
                 br"unwrap",
@@ -129,6 +133,7 @@ impl<'a, 'b> MoneyMarket<'b> for Frakt<'a, 'b> {
             signers_seeds,
         )?;
 
+        // Return 0 because FRAKT doesn't return collateral tokens
         Ok(0)
     }
 

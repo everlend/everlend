@@ -42,6 +42,11 @@ impl<'a, 'b> Francium<'a, 'b> {
 
 impl<'a, 'b> MoneyMarket<'b> for Francium<'a, 'b> {
     ///
+    fn is_collateral_return(&self) -> bool {
+        true
+    }
+
+    ///
     fn money_market_deposit(
         &self,
         collateral_mint: AccountInfo<'b>,

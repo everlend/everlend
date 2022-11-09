@@ -69,6 +69,8 @@ pub fn deposit<'a, 'b>(
                 return Err(EverlendError::CollateralLeak.into());
             }
 
+            // For money markets that do not return collateral tokens,
+            // the collateral amount should be returned as a liquidity amount
             collateral_amount = liquidity_amount;
         }
 
