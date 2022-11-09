@@ -198,8 +198,10 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
                     };
 
                     let francium = FranciumClaimer::init(
+                        program_id,
                         self.staking_program_id.key,
                         self.depositor_authority.key,
+                        self.depositor.key,
                         internal_mining_type,
                         fill_sub_rewards_accounts.clone(),
                         account_info_iter,

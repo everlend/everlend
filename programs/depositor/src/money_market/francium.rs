@@ -39,6 +39,7 @@ impl<'a, 'b> Francium<'a, 'b> {
         money_market_program_id: Pubkey,
         account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
         depositor_authority: &Pubkey,
+        depositor: &Pubkey,
         internal_mining_type: Option<MiningType>,
     ) -> Result<Francium<'a, 'b>, ProgramError> {
         let reserve_info =
@@ -102,7 +103,7 @@ impl<'a, 'b> Francium<'a, 'b> {
 
                 let (user_reward_a_check, _) = find_transit_program_address(
                     program_id,
-                    &depositor_authority,
+                    &depositor,
                     &token_mint_address_a_info.key,
                     francium::FRANCIUM_REWARD_SEED,
                 );
@@ -111,7 +112,7 @@ impl<'a, 'b> Francium<'a, 'b> {
 
                 let (user_reward_b_check, _) = find_transit_program_address(
                     program_id,
-                    &depositor_authority,
+                    &depositor,
                     &token_mint_address_b_info.key,
                     francium::FRANCIUM_REWARD_SEED,
                 );

@@ -279,7 +279,7 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
 
                     let (user_reward_a_check, _) = find_transit_program_address(
                         program_id,
-                        &self.depositor_authority.key,
+                        &self.depositor.key,
                         &farming_pool.rewards_token_mint,
                         francium::FRANCIUM_REWARD_SEED,
                     );
@@ -288,7 +288,7 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
 
                     let (user_reward_b_check, _) = find_transit_program_address(
                         program_id,
-                        &self.depositor_authority.key,
+                        &self.depositor.key,
                         &farming_pool.rewards_token_mint_b,
                         francium::FRANCIUM_REWARD_SEED,
                     );
@@ -300,7 +300,7 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                     AccountLoader::next_with_key(account_info_iter, &user_stake_token_account)?;
                 let (user_stake, _) = find_transit_program_address(
                     program_id,
-                    &self.depositor_authority.key,
+                    &self.depositor.key,
                     &self.collateral_mint.key,
                     "",
                 );

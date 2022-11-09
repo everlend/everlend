@@ -1,8 +1,10 @@
 use crate::claimer::RewardClaimer;
+use crate::find_transit_program_address;
 use crate::state::MiningType;
 use crate::utils::FillRewardAccounts;
+use borsh::BorshDeserialize;
 use everlend_utils::cpi::francium;
-use everlend_utils::{AccountLoader, EverlendError};
+use everlend_utils::{assert_account_key, AccountLoader, EverlendError};
 use solana_program::{
     account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey, sysvar::clock,
 };
@@ -25,8 +27,10 @@ pub struct FranciumClaimer<'a, 'b> {
 impl<'a, 'b> FranciumClaimer<'a, 'b> {
     ///
     pub fn init(
+        program_id: &Pubkey,
         staking_program_id: &Pubkey,
         depositor_authority: &Pubkey,
+        depositor: &Pubkey,
         internal_mining_type: MiningType,
         fill_sub_rewards_accounts: Option<FillRewardAccounts<'a, 'b>>,
         account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
@@ -62,6 +66,18 @@ impl<'a, 'b> FranciumClaimer<'a, 'b> {
 
         if fill_sub_rewards_accounts.is_none() {
             sub_reward = AccountLoader::next_with_key(account_info_iter, &user_reward_b)?;
+            let token_mint_address_b =
+                francium::FarmingPool::try_from_slice(&farming_pool.data.borrow())?
+                    .rewards_token_mint_b;
+
+            let (user_reward_b_check, _) = find_transit_program_address(
+                program_id,
+                depositor,
+                &token_mint_address_b,
+                francium::FRANCIUM_REWARD_SEED,
+            );
+
+            assert_account_key(&sub_reward, &user_reward_b_check)?;
         } else {
             sub_reward = fill_sub_rewards_accounts
                 .as_ref()
