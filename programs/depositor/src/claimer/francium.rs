@@ -32,12 +32,13 @@ impl<'a, 'b> FranciumClaimer<'a, 'b> {
         account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
     ) -> Result<FranciumClaimer<'a, 'b>, ProgramError> {
         assert_eq!(staking_program_id, &francium::get_staking_program_id());
-        let (farming_pool, user_stake_token_account) = match internal_mining_type {
+        let (farming_pool, user_stake_token_account, user_reward_b) = match internal_mining_type {
             MiningType::Francium {
                 farming_pool,
                 user_stake_token_account,
+                user_reward_b,
                 ..
-            } => (farming_pool, user_stake_token_account),
+            } => (farming_pool, user_stake_token_account, user_reward_b),
             _ => return Err(EverlendError::MiningNotInitialized.into()),
         };
 
@@ -57,15 +58,16 @@ impl<'a, 'b> FranciumClaimer<'a, 'b> {
         let user_stake =
             AccountLoader::next_with_key(account_info_iter, &user_stake_token_account)?;
         let clock = AccountLoader::next_with_key(account_info_iter, &clock::id())?;
+        let sub_reward: &AccountInfo;
 
         if fill_sub_rewards_accounts.is_none() {
-            return Err(ProgramError::InvalidArgument);
+            sub_reward = AccountLoader::next_with_key(account_info_iter, &user_reward_b)?;
+        } else {
+            sub_reward = fill_sub_rewards_accounts
+                .as_ref()
+                .unwrap()
+                .reward_transit_info;
         }
-
-        let sub_reward = fill_sub_rewards_accounts
-            .as_ref()
-            .unwrap()
-            .reward_transit_info;
 
         Ok(FranciumClaimer {
             farming_pool,
