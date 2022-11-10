@@ -6,9 +6,7 @@ use crate::{
     state::{Depositor, InternalMining, MiningType},
     utils::{parse_fill_reward_accounts, FillRewardAccounts},
 };
-use borsh::BorshDeserialize;
 use everlend_rewards::{cpi::fill_vault, state::RewardPool};
-use everlend_utils::cpi::francium;
 use everlend_utils::{assert_account_key, find_program_address, AccountLoader, EverlendError};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
@@ -183,58 +181,15 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
 
                     Box::new(quarry)
                 }
-                MiningType::Francium {
-                    user_reward_a,
-                    user_reward_b,
-                    farming_pool,
-                    ..
-                } => {
-                    let farming_pool =
-                        AccountLoader::next_with_key(account_info_iter, &farming_pool)?;
-                    let farming_pool_unpack: francium::FarmingPool =
-                        francium::FarmingPool::try_from_slice(&farming_pool.data.borrow())?;
-
-                    if farming_pool_unpack.is_dual_rewards != with_subrewards {
-                        return Err(ProgramError::InvalidArgument);
-                    }
-                    let check: bool = farming_pool_unpack.rewards_per_day != 0
-                        && farming_pool_unpack.rewards_start_slot
-                            != farming_pool_unpack.rewards_end_slot;
-
-                    if check {
-                        assert_account_key(reward_accounts.reward_transit_info, &user_reward_a)?;
-                    } else {
-                        assert_account_key(reward_accounts.reward_transit_info, &user_reward_b)?;
-                    }
-
-                    if with_subrewards {
-                        if check {
-                            assert_account_key(
-                                fill_sub_rewards_accounts
-                                    .as_ref()
-                                    .unwrap()
-                                    .reward_transit_info,
-                                &user_reward_b,
-                            )?;
-                        } else {
-                            assert_account_key(
-                                fill_sub_rewards_accounts
-                                    .as_ref()
-                                    .unwrap()
-                                    .reward_transit_info,
-                                &user_reward_a,
-                            )?;
-                        }
-                    };
-
+                MiningType::Francium { .. } => {
                     let francium = FranciumClaimer::init(
                         program_id,
                         self.staking_program_id.key,
                         self.depositor_authority.key,
                         self.depositor.key,
                         internal_mining_type,
+                        reward_accounts.clone(),
                         fill_sub_rewards_accounts.clone(),
-                        farming_pool,
                         account_info_iter,
                     )?;
 
