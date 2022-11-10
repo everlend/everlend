@@ -39,26 +39,20 @@ impl<'a, 'b> FranciumClaimer<'a, 'b> {
         depositor: &Pubkey,
         internal_mining_type: MiningType,
         fill_sub_rewards_accounts: Option<FillRewardAccounts<'a, 'b>>,
+        farming_pool: &'a AccountInfo<'b>,
         account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
     ) -> Result<FranciumClaimer<'a, 'b>, ProgramError> {
         assert_eq!(staking_program_id, &francium::get_staking_program_id());
-        let (farming_pool, user_stake_token_account, user_reward_b, user_reward_a) =
-            match internal_mining_type {
-                MiningType::Francium {
-                    farming_pool,
-                    user_stake_token_account,
-                    user_reward_b,
-                    user_reward_a,
-                } => (
-                    farming_pool,
-                    user_stake_token_account,
-                    user_reward_b,
-                    user_reward_a,
-                ),
-                _ => return Err(EverlendError::MiningNotInitialized.into()),
-            };
+        let (user_stake_token_account, user_reward_b, user_reward_a) = match internal_mining_type {
+            MiningType::Francium {
+                user_stake_token_account,
+                user_reward_b,
+                user_reward_a,
+                ..
+            } => (user_stake_token_account, user_reward_b, user_reward_a),
+            _ => return Err(EverlendError::MiningNotInitialized.into()),
+        };
 
-        let farming_pool = AccountLoader::next_with_key(account_info_iter, &farming_pool)?;
         let farming_pool_authority = AccountLoader::next_unchecked(account_info_iter)?;
         let pool_stake_token = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let pool_reward_a = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
@@ -79,7 +73,11 @@ impl<'a, 'b> FranciumClaimer<'a, 'b> {
         let farming_pool_unpack: francium::FarmingPool =
             francium::FarmingPool::try_from_slice(&farming_pool.data.borrow())?;
 
-        if farming_pool_unpack.is_dual_rewards && fill_sub_rewards_accounts.is_some() {
+        if farming_pool_unpack.is_dual_rewards != fill_sub_rewards_accounts.is_some() {
+            return Err(ProgramError::InvalidArgument);
+        }
+
+        if farming_pool_unpack.is_dual_rewards {
             sub_reward = fill_sub_rewards_accounts
                 .as_ref()
                 .unwrap()
