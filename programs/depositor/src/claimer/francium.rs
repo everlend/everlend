@@ -6,7 +6,13 @@ use borsh::BorshDeserialize;
 use everlend_utils::cpi::francium;
 use everlend_utils::{assert_account_key, AccountLoader, EverlendError};
 use solana_program::{
-    account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey, sysvar::clock,
+    account_info::AccountInfo,
+    program_error::ProgramError,
+    pubkey::Pubkey,
+    sysvar::{
+        clock::{self, Clock},
+        Sysvar,
+    },
 };
 use std::{iter::Enumerate, slice::Iter};
 
@@ -36,15 +42,21 @@ impl<'a, 'b> FranciumClaimer<'a, 'b> {
         account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
     ) -> Result<FranciumClaimer<'a, 'b>, ProgramError> {
         assert_eq!(staking_program_id, &francium::get_staking_program_id());
-        let (farming_pool, user_stake_token_account, user_reward_b) = match internal_mining_type {
-            MiningType::Francium {
-                farming_pool,
-                user_stake_token_account,
-                user_reward_b,
-                ..
-            } => (farming_pool, user_stake_token_account, user_reward_b),
-            _ => return Err(EverlendError::MiningNotInitialized.into()),
-        };
+        let (farming_pool, user_stake_token_account, user_reward_b, user_reward_a) =
+            match internal_mining_type {
+                MiningType::Francium {
+                    farming_pool,
+                    user_stake_token_account,
+                    user_reward_b,
+                    user_reward_a,
+                } => (
+                    farming_pool,
+                    user_stake_token_account,
+                    user_reward_b,
+                    user_reward_a,
+                ),
+                _ => return Err(EverlendError::MiningNotInitialized.into()),
+            };
 
         let farming_pool = AccountLoader::next_with_key(account_info_iter, &farming_pool)?;
         let farming_pool_authority = AccountLoader::next_unchecked(account_info_iter)?;
@@ -64,25 +76,42 @@ impl<'a, 'b> FranciumClaimer<'a, 'b> {
         let clock = AccountLoader::next_with_key(account_info_iter, &clock::id())?;
         let sub_reward: &AccountInfo;
 
-        if fill_sub_rewards_accounts.is_none() {
-            sub_reward = AccountLoader::next_with_key(account_info_iter, &user_reward_b)?;
-            let token_mint_address_b =
-                francium::FarmingPool::try_from_slice(&farming_pool.data.borrow())?
-                    .rewards_token_mint_b;
+        let farming_pool_unpack: francium::FarmingPool =
+            francium::FarmingPool::try_from_slice(&farming_pool.data.borrow())?;
 
-            let (user_reward_b_check, _) = find_transit_program_address(
-                program_id,
-                depositor,
-                &token_mint_address_b,
-                francium::FRANCIUM_REWARD_SEED,
-            );
-
-            assert_account_key(&sub_reward, &user_reward_b_check)?;
-        } else {
+        if farming_pool_unpack.is_dual_rewards && fill_sub_rewards_accounts.is_some() {
             sub_reward = fill_sub_rewards_accounts
                 .as_ref()
                 .unwrap()
                 .reward_transit_info;
+        } else {
+            let current_slot = Clock::from_account_info(clock)?.slot;
+            if farming_pool_unpack.rewards_per_day != 0
+                && farming_pool_unpack.rewards_start_slot != farming_pool_unpack.rewards_end_slot
+                && current_slot < farming_pool_unpack.rewards_end_slot
+            {
+                sub_reward = AccountLoader::next_with_key(account_info_iter, &user_reward_b)?;
+
+                let (user_reward_b_check, _) = find_transit_program_address(
+                    program_id,
+                    depositor,
+                    &farming_pool_unpack.rewards_token_mint_b,
+                    francium::FRANCIUM_REWARD_SEED,
+                );
+
+                assert_account_key(&sub_reward, &user_reward_b_check)?;
+            } else {
+                sub_reward = AccountLoader::next_with_key(account_info_iter, &user_reward_a)?;
+
+                let (user_reward_a_check, _) = find_transit_program_address(
+                    program_id,
+                    depositor,
+                    &farming_pool_unpack.rewards_token_mint,
+                    francium::FRANCIUM_REWARD_SEED,
+                );
+
+                assert_account_key(&sub_reward, &user_reward_a_check)?;
+            }
         }
 
         Ok(FranciumClaimer {

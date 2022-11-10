@@ -13,7 +13,7 @@ pub const FRANCIUM_REWARD_SEED: &str = "francium_reward";
 #[derive(Debug, BorshSerialize, BorshDeserialize)]
 pub struct FarmingPool {
     pub version: u8,
-    pub is_dual_rewards: u8,
+    pub is_dual_rewards: bool,
     pub admin: Pubkey,
     pub pool_authority: Pubkey,
     pub token_program_id: Pubkey,
