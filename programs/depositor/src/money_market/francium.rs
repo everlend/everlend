@@ -66,16 +66,14 @@ impl<'a, 'b> Francium<'a, 'b> {
                 user_reward_a,
                 user_reward_b,
                 user_stake_token_account,
-                ..
+                farming_pool,
             }) => {
                 let lend_reward_program_id_info = AccountLoader::next_with_key(
                     account_info_iter,
                     &francium::get_staking_program_id(),
                 )?;
-                let farming_pool_info = AccountLoader::next_with_owner(
-                    account_info_iter,
-                    &lend_reward_program_id_info.key,
-                )?;
+                let farming_pool_info =
+                    AccountLoader::next_with_key(account_info_iter, &farming_pool)?;
                 let farming_pool_authority_info = AccountLoader::next_unchecked(account_info_iter)?;
 
                 let user_farming = francium::find_user_farming_address(
