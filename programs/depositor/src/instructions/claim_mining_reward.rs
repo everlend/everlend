@@ -186,7 +186,6 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
                         program_id,
                         self.staking_program_id.key,
                         self.depositor_authority.key,
-                        self.depositor.key,
                         internal_mining_type,
                         reward_accounts.clone(),
                         fill_sub_rewards_accounts.clone(),
