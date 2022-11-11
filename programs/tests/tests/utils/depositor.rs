@@ -4,11 +4,12 @@ use super::{
     TestRegistry,
 };
 use everlend_depositor::{
-    find_rebalancing_program_address,
     state::{Depositor, Rebalancing},
+    RebalancingPDA,
 };
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_utils::integrations::{self, MoneyMarketPubkeys};
+use everlend_utils::PDA;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::ProgramTestContext;
 use solana_sdk::{
@@ -38,11 +39,11 @@ impl TestDepositor {
         context: &mut ProgramTestContext,
         mint: &Pubkey,
     ) -> Rebalancing {
-        let (rebalancing, _) = find_rebalancing_program_address(
-            &everlend_depositor::id(),
-            &self.depositor.pubkey(),
-            mint,
-        );
+        let (rebalancing, _) = RebalancingPDA {
+            depositor: self.depositor.pubkey(),
+            mint: mint.clone(),
+        }
+        .find_address(&everlend_depositor::id());
         let account = get_account(context, &rebalancing).await;
         Rebalancing::unpack_unchecked(&account.data).unwrap()
     }

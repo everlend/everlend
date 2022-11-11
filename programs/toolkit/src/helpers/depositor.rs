@@ -1,8 +1,7 @@
-use everlend_depositor::{
-    find_rebalancing_program_address, find_transit_program_address,
-    state::{Depositor, Rebalancing},
-};
+use everlend_depositor::state::{Depositor, Rebalancing};
+use everlend_depositor::{RebalancingPDA, TransitPDA};
 use everlend_liquidity_oracle::state::DistributionArray;
+use everlend_utils::PDA;
 use solana_client::client_error::ClientError;
 use solana_program::{
     instruction::AccountMeta, program_pack::Pack, pubkey::Pubkey, system_instruction,
@@ -68,12 +67,12 @@ pub fn create_transit(
     token_mint: &Pubkey,
     seed: Option<String>,
 ) -> Result<Pubkey, ClientError> {
-    let (transit_pubkey, _) = find_transit_program_address(
-        &everlend_depositor::id(),
-        depositor_pubkey,
-        token_mint,
-        &seed.clone().unwrap_or_default(),
-    );
+    let (transit_pubkey, _) = TransitPDA {
+        seed: &seed.clone().unwrap_or_default(),
+        depositor: depositor_pubkey.clone(),
+        mint: token_mint.clone(),
+    }
+    .find_address(&everlend_depositor::id());
 
     let account_info = config
         .rpc_client
@@ -127,8 +126,11 @@ pub fn start_rebalancing(
 
     config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
-    let (rebalancing_pubkey, _) =
-        find_rebalancing_program_address(&everlend_depositor::id(), depositor_pubkey, token_mint);
+    let (rebalancing_pubkey, _) = RebalancingPDA {
+        depositor: depositor_pubkey.clone(),
+        mint: token_mint.clone(),
+    }
+    .find_address(&everlend_depositor::id());
 
     let rebalancing_account = config.rpc_client.get_account(&rebalancing_pubkey)?;
     let rebalancing = Rebalancing::unpack(&rebalancing_account.data).unwrap();
@@ -161,8 +163,11 @@ pub fn reset_rebalancing(
 
     config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
-    let (rebalancing_pubkey, _) =
-        find_rebalancing_program_address(&everlend_depositor::id(), depositor_pubkey, token_mint);
+    let (rebalancing_pubkey, _) = RebalancingPDA {
+        depositor: depositor_pubkey.clone(),
+        mint: token_mint.clone(),
+    }
+    .find_address(&everlend_depositor::id());
 
     let rebalancing_account = config.rpc_client.get_account(&rebalancing_pubkey)?;
     let rebalancing = Rebalancing::unpack(&rebalancing_account.data).unwrap();
@@ -243,9 +248,11 @@ pub fn migrate_depositor(
     liquidity_mint: &Pubkey,
     amount_to_distribute: u64,
 ) -> Result<(), ClientError> {
-    let (rebalancing, _) =
-        find_rebalancing_program_address(&everlend_depositor::id(), depositor, liquidity_mint);
-
+    let (rebalancing, _) = RebalancingPDA {
+        depositor: depositor.clone(),
+        mint: liquidity_mint.clone(),
+    }
+    .find_address(&everlend_depositor::id());
     let tx = Transaction::new_with_payer(
         &[everlend_depositor::instruction::migrate_depositor(
             &everlend_depositor::id(),

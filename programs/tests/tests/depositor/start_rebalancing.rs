@@ -1,11 +1,10 @@
 use crate::utils::*;
-use everlend_depositor::find_transit_program_address;
 use everlend_depositor::state::{Rebalancing, RebalancingOperation};
 use everlend_depositor::utils::calculate_amount_to_distribute;
 use everlend_liquidity_oracle::state::{DistributionArray, TokenOracle};
 use everlend_registry::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
 use everlend_registry::state::DistributionPubkeys;
-use everlend_utils::{abs_diff, percent_ratio};
+use everlend_utils::{abs_diff, percent_ratio, PDA};
 use everlend_utils::{
     find_program_address,
     integrations::{self, MoneyMarketPubkeys},
@@ -166,12 +165,12 @@ async fn setup(
         )
         .await
         .unwrap();
-    let (reserve_transit_pubkey, _) = find_transit_program_address(
-        &everlend_depositor::id(),
-        &test_depositor.depositor.pubkey(),
-        &general_pool.token_mint_pubkey,
-        "reserve",
-    );
+    let (reserve_transit_pubkey, _) = everlend_depositor::TransitPDA {
+        seed: "reserve",
+        depositor: test_depositor.depositor.pubkey(),
+        mint: general_pool.token_mint_pubkey,
+    }
+    .find_address(&everlend_depositor::id());
     token_transfer(
         &mut env.context,
         &liquidity_provider.token_account,

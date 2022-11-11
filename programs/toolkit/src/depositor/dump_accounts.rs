@@ -1,10 +1,11 @@
 use crate::{Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 use everlend_depositor::state::Rebalancing;
-use everlend_depositor::{find_rebalancing_program_address, find_transit_program_address};
+use everlend_depositor::{RebalancingPDA, TransitPDA};
 use everlend_general_pool::state::{Pool, WithdrawalRequests};
 use everlend_general_pool::{find_pool_program_address, find_withdrawal_requests_program_address};
 use everlend_registry::state::RegistryMarkets;
+use everlend_utils::PDA;
 use solana_program::program_pack::Pack;
 use spl_token::state::Account;
 
@@ -38,11 +39,11 @@ impl<'a> ToolkitCommand<'a> for DumpAccountsCommand {
         println!("{:?}", registry_markets);
 
         for pair in acc.token_accounts.into_iter() {
-            let (rebalancing_pubkey, _) = find_rebalancing_program_address(
-                &everlend_depositor::id(),
-                &acc.depositor,
-                &pair.1.mint,
-            );
+            let (rebalancing_pubkey, _) = RebalancingPDA {
+                depositor: acc.depositor.clone(),
+                mint: pair.1.mint,
+            }
+            .find_address(&everlend_depositor::id());
 
             let (pool_pubkey, _) = find_pool_program_address(
                 &everlend_general_pool::id(),
@@ -56,12 +57,12 @@ impl<'a> ToolkitCommand<'a> for DumpAccountsCommand {
                 &pair.1.mint,
             );
 
-            let (liquidity_transit, _) = find_transit_program_address(
-                &everlend_depositor::id(),
-                &acc.depositor,
-                &pair.1.mint,
-                "",
-            );
+            let (liquidity_transit, _) = TransitPDA {
+                seed: "",
+                depositor: acc.depositor.clone(),
+                mint: pair.1.mint.clone(),
+            }
+            .find_address(&everlend_depositor::id());
 
             let oracle: Rebalancing = config.get_account_unpack(&rebalancing_pubkey)?;
             let pool: Pool = config.get_account_unpack(&pool_pubkey)?;

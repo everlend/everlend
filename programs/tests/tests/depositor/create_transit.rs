@@ -3,8 +3,7 @@ use solana_program_test::*;
 use solana_sdk::transaction::{Transaction, TransactionError};
 use solana_sdk::{signature::Keypair, signer::Signer};
 
-use everlend_depositor::find_transit_program_address;
-use everlend_utils::find_program_address;
+use everlend_utils::{find_program_address, PDA};
 
 use crate::utils::*;
 
@@ -51,12 +50,12 @@ async fn success() {
         .await
         .unwrap();
 
-    let (transit_pubkey, _) = find_transit_program_address(
-        &everlend_depositor::id(),
-        &test_depositor.depositor.pubkey(),
-        &token_mint.pubkey(),
-        "",
-    );
+    let (transit_pubkey, _) = everlend_depositor::TransitPDA {
+        seed: "",
+        depositor: test_depositor.depositor.pubkey(),
+        mint: token_mint.pubkey(),
+    }
+    .find_address(&everlend_depositor::id());
 
     let (depositor_authority, _) = find_program_address(
         &everlend_depositor::id(),
@@ -87,12 +86,12 @@ async fn success_with_different_seed() {
 
     context.warp_to_slot(3).unwrap();
 
-    let (transit_pubkey, _) = find_transit_program_address(
-        &everlend_depositor::id(),
-        &test_depositor.depositor.pubkey(),
-        &token_mint.pubkey(),
-        "",
-    );
+    let (transit_pubkey, _) = everlend_depositor::TransitPDA {
+        seed: "",
+        depositor: test_depositor.depositor.pubkey(),
+        mint: token_mint.pubkey(),
+    }
+    .find_address(&everlend_depositor::id());
 
     let (depositor_authority, _) = find_program_address(
         &everlend_depositor::id(),
@@ -119,12 +118,12 @@ async fn success_with_different_seed() {
 
     context.banks_client.process_transaction(tx).await.unwrap();
 
-    let (transit_pubkey_second, _) = find_transit_program_address(
-        &everlend_depositor::id(),
-        &test_depositor.depositor.pubkey(),
-        &token_mint.pubkey(),
-        "second",
-    );
+    let (transit_pubkey_second, _) = everlend_depositor::TransitPDA {
+        seed: "second",
+        depositor: test_depositor.depositor.pubkey(),
+        mint: token_mint.pubkey(),
+    }
+    .find_address(&everlend_depositor::id());
 
     let transit = get_token_account_data(&mut context, &transit_pubkey_second).await;
 

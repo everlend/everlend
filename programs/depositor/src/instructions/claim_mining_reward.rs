@@ -1,11 +1,11 @@
 use crate::claimer::{LarixClaimer, PortFinanceClaimer, QuarryClaimer, RewardClaimer};
 use crate::{
-    find_internal_mining_program_address,
     state::{Depositor, InternalMining, MiningType},
     utils::{parse_fill_reward_accounts, FillRewardAccounts},
+    InternalMiningPDA,
 };
 use everlend_rewards::{cpi::fill_vault, state::RewardPool};
-use everlend_utils::{assert_account_key, find_program_address, AccountLoader, EverlendError};
+use everlend_utils::{assert_account_key, find_program_address, AccountLoader, EverlendError, PDA};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
     program_pack::Pack, pubkey::Pubkey,
@@ -74,12 +74,13 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
         }
 
         {
-            let (internal_mining_pubkey, _) = find_internal_mining_program_address(
-                program_id,
-                self.liquidity_mint.key,
-                self.collateral_mint.key,
-                self.depositor.key,
-            );
+            let (internal_mining_pubkey, _) = InternalMiningPDA {
+                liquidity_mint: *self.liquidity_mint.key,
+                collateral_mint: *self.collateral_mint.key,
+                depositor: *self.depositor.key,
+            }
+            .find_address(program_id);
+
             assert_account_key(self.internal_mining, &internal_mining_pubkey)
         }?;
 
@@ -155,7 +156,7 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
                 MiningType::Quarry { .. } => {
                     // Quarry doesn't have subreward tokens
                     if with_subrewards {
-                        return Err(ProgramError::InvalidArgument)
+                        return Err(ProgramError::InvalidArgument);
                     }
 
                     let quarry = QuarryClaimer::init(

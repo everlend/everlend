@@ -4,6 +4,7 @@ use crate::utils::*;
 use anyhow::Result;
 use everlend_depositor::{instruction::InitMiningAccountsPubkeys, state::MiningType};
 use everlend_utils::integrations::MoneyMarket;
+use everlend_utils::PDA;
 use solana_client::client_error::ClientError;
 use solana_program::pubkey::Pubkey;
 use solana_program::system_instruction;
@@ -66,12 +67,14 @@ pub fn get_internal_mining_account(
     let liquidity_mint = mint_map.get(token).unwrap();
     let collateral_mint = collateral_mint_map.get(token).unwrap()[money_market as usize].unwrap();
     // Generate internal mining account
-    let (internal_mining_account, _) = everlend_depositor::find_internal_mining_program_address(
-        &everlend_depositor::id(),
-        liquidity_mint,
-        &collateral_mint,
-        &initialized_accounts.depositor,
-    );
+    let (internal_mining_account, _) = everlend_depositor::InternalMiningPDA {
+        liquidity_mint: liquidity_mint.clone(),
+
+        collateral_mint,
+        depositor: initialized_accounts.depositor,
+    }
+    .find_address(&everlend_depositor::id());
+
     internal_mining_account
 }
 

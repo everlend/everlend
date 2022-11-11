@@ -1,13 +1,15 @@
 use crate::{
-    find_rebalancing_program_address, find_transit_program_address,
     state::{Depositor, InitRebalancingParams, Rebalancing},
     utils::calculate_amount_to_distribute,
+    RebalancingPDA, TransitPDA,
 };
 use everlend_general_pool::{find_withdrawal_requests_program_address, state::WithdrawalRequests};
 
 use everlend_liquidity_oracle::{find_token_oracle_program_address, state::TokenOracle};
 use everlend_registry::state::{Registry, RegistryMarkets};
-use everlend_utils::{assert_account_key, cpi, find_program_address, AccountLoader, EverlendError};
+use everlend_utils::{
+    assert_account_key, cpi, find_program_address, AccountLoader, EverlendError, PDA,
+};
 use num_traits::Zero;
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -125,32 +127,28 @@ impl<'a, 'b> StartRebalancingContext<'a, 'b> {
 
         let registry_markets = RegistryMarkets::unpack_from_slice(&self.registry.data.borrow())?;
 
-        let bump_seed = {
+        let seed = {
             // Check rebalancing
-            let (rebalancing_pubkey, bump_seed) =
-                find_rebalancing_program_address(program_id, self.depositor.key, self.mint.key);
+            let pda = RebalancingPDA {
+                depositor: *self.depositor.key,
+                mint: *self.mint.key,
+            };
+            let (rebalancing_pubkey, bump) = pda.find_address(program_id);
             assert_account_key(self.rebalancing, &rebalancing_pubkey)?;
-            bump_seed
+            pda.get_signing_seeds(bump)
         };
 
         // Create or get rebalancing account
         let mut rebalancing = match self.rebalancing.lamports() {
             // Create rebalancing account
             0 => {
-                let signers_seeds = &[
-                    "rebalancing".as_bytes(),
-                    &self.depositor.key.to_bytes()[..32],
-                    &self.mint.key.to_bytes()[..32],
-                    &[bump_seed],
-                ];
-
                 let rent = &Rent::from_account_info(self.rent)?;
 
                 cpi::system::create_account::<Rebalancing>(
                     program_id,
                     self.executor.clone(),
                     self.rebalancing.clone(),
-                    &[signers_seeds],
+                    &[&seed.as_seeds_slice()],
                     rent,
                 )?;
 
@@ -220,8 +218,12 @@ impl<'a, 'b> StartRebalancingContext<'a, 'b> {
 
         {
             // Check transit: liquidity
-            let (liquidity_transit_pubkey, _) =
-                find_transit_program_address(program_id, self.depositor.key, self.mint.key, "");
+            let (liquidity_transit_pubkey, _) = TransitPDA {
+                seed: "",
+                depositor: *self.depositor.key,
+                mint: *self.mint.key,
+            }
+            .find_address(program_id);
             assert_account_key(self.liquidity_transit, &liquidity_transit_pubkey)?;
         }
 
