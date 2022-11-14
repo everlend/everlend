@@ -38,8 +38,8 @@ impl<'a, 'b> Francium<'a, 'b> {
         program_id: &Pubkey,
         money_market_program_id: Pubkey,
         account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
-        depositor_authority: &Pubkey,
         depositor: &Pubkey,
+        depositor_authority: &Pubkey,
         internal_mining_type: Option<MiningType>,
     ) -> Result<Francium<'a, 'b>, ProgramError> {
         let reserve_info =

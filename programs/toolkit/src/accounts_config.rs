@@ -156,7 +156,7 @@ pub struct DefaultAccounts {
 
     pub port_finance: PortFinanceAccounts,
 
-    pub port_accounts: BTreeMap<String, PortAccounts>,
+    pub port_accounts: BTreeMap<String, StakingPoolAccounts>,
 
     pub larix: LarixAccounts,
 
@@ -168,7 +168,7 @@ pub struct DefaultAccounts {
 
     pub francium: FranciumAccounts,
 
-    pub francium_farming_pool_account: BTreeMap<String, Pubkey>,
+    pub francium_farming_pool_account: BTreeMap<String, StakingPoolAccounts>,
 
     pub jet: JetAccounts,
 
@@ -211,7 +211,7 @@ pub struct DefaultAccounts {
 
 #[serde_as]
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
-pub struct PortAccounts {
+pub struct StakingPoolAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub staking_pool: Pubkey,
 }

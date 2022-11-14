@@ -66,9 +66,8 @@ impl LiquidityMiner for FranciumLiquidityMiner {
 
         if config
             .rpc_client
-            .get_token_account(&user_reward_a)
-            .unwrap()
-            .is_none()
+            .get_account_with_commitment(&user_reward_a, config.rpc_client.commitment())?
+            .value.is_none()
         {
             create_transit(
                 config,
@@ -88,9 +87,8 @@ impl LiquidityMiner for FranciumLiquidityMiner {
 
             if config
                 .rpc_client
-                .get_token_account(&user_reward_b)
-                .unwrap()
-                .is_none()
+                .get_account_with_commitment(&user_reward_b, config.rpc_client.commitment())?
+                .value.is_none()
             {
                 create_transit(
                     config,
@@ -113,10 +111,10 @@ impl LiquidityMiner for FranciumLiquidityMiner {
 
         let user_farming = francium::find_user_farming_address(
             &depositor_authority,
-            default_accounts
+            &default_accounts
                 .francium_farming_pool_account
                 .get(token)
-                .unwrap(),
+                .unwrap().staking_pool,
             &user_stake_account,
         );
 
@@ -181,10 +179,10 @@ impl LiquidityMiner for FranciumLiquidityMiner {
 
         MiningType::Francium {
             user_stake_token_account: user_stake_account,
-            farming_pool: *default_accounts
+            farming_pool: default_accounts
                 .francium_farming_pool_account
                 .get(token)
-                .unwrap(),
+                .unwrap().staking_pool,
             user_reward_a,
             user_reward_b,
         }

@@ -707,7 +707,7 @@ pub fn init_mining_account(
         AccountMeta::new_readonly(pubkeys.liquidity_mint, false),
         AccountMeta::new_readonly(pubkeys.collateral_mint, false),
         AccountMeta::new_readonly(pubkeys.depositor, false),
-        AccountMeta::new_readonly(depositor_authority, false),
+        AccountMeta::new(depositor_authority, false),
         AccountMeta::new_readonly(pubkeys.registry, false),
         AccountMeta::new(pubkeys.manager, true),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
