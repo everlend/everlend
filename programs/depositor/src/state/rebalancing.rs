@@ -282,6 +282,37 @@ impl Rebalancing {
         Ok(())
     }
 
+    /// Rollback next deposit rebalancing step
+    pub fn rollback_deposit(&mut self, slot: Slot) -> Result<(), ProgramError> {
+        let step = self.next_step_mut();
+        if step.operation != RebalancingOperation::Deposit {
+            return Err(EverlendError::InvalidRebalancingOperation.into());
+        }
+        let rollback_amount = step.liquidity_amount;
+
+        step.set_executed_at(slot);
+
+        let money_market_index = usize::from(step.money_market_index);
+
+        let old_distributed_liquidity = self.distributed_liquidity[money_market_index]
+            .checked_sub(rollback_amount)
+            .ok_or(EverlendError::MathOverflow)?;
+
+        self.liquidity_distribution.values[money_market_index] = if old_distributed_liquidity == 0 {
+            0
+        } else {
+            self.liquidity_distribution.values[money_market_index]
+                .checked_mul(old_distributed_liquidity)
+                .ok_or(EverlendError::MathOverflow)?
+                .checked_div(self.distributed_liquidity[money_market_index])
+                .ok_or(EverlendError::MathOverflow)?
+        };
+
+        self.distributed_liquidity[money_market_index] = old_distributed_liquidity;
+
+        Ok(())
+    }
+
     /// Add rebalancing step
     pub fn add_step(&mut self, rebalancing_step: RebalancingStep) {
         self.steps.push(rebalancing_step);

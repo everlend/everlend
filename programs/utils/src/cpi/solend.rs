@@ -1,9 +1,11 @@
+use solana_program::program_pack::Pack;
 use solana_program::{
     account_info::AccountInfo,
     program::{invoke, invoke_signed},
     program_error::ProgramError,
     pubkey::Pubkey,
 };
+use solend_program::math::TryAdd;
 
 pub fn refresh_reserve<'a>(
     program_id: &Pubkey,
@@ -116,4 +118,16 @@ pub fn redeem<'a>(
         ],
         signers_seeds,
     )
+}
+
+pub fn is_deposit_disabled(reserve: AccountInfo) -> Result<bool, ProgramError> {
+    let reserve = solend_program::state::Reserve::unpack(&reserve.data.borrow())?;
+    let total_asset = reserve
+        .liquidity
+        .borrowed_amount_wads
+        .try_add(solend_program::math::Decimal::from(
+            reserve.liquidity.available_amount,
+        ))?
+        .try_floor_u64()?;
+    Ok(reserve.config.deposit_limit == 0 || total_asset > reserve.config.deposit_limit)
 }

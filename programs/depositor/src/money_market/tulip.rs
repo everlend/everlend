@@ -143,4 +143,8 @@ impl<'a, 'b> MoneyMarket<'b> for Tulip<'a, 'b> {
     ) -> Result<(), ProgramError> {
         Err(EverlendError::MiningNotImplemented.into())
     }
+
+    fn is_deposit_disabled(&self) -> Result<bool, ProgramError> {
+        Ok(false)
+    }
 }

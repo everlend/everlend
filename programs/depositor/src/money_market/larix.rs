@@ -208,6 +208,10 @@ impl<'a, 'b> MoneyMarket<'b> for Larix<'a, 'b> {
             signers_seeds,
         )
     }
+
+    fn is_deposit_disabled(&self) -> Result<bool, ProgramError> {
+        larix::is_deposit_disabled(self.reserve.clone())
+    }
 }
 
 impl<'a, 'b> CollateralStorage<'b> for Larix<'a, 'b> {

@@ -141,4 +141,8 @@ impl<'a, 'b> MoneyMarket<'b> for SPLLending<'a, 'b> {
     ) -> Result<(), ProgramError> {
         return Err(EverlendError::MiningNotInitialized.into());
     }
+
+    fn is_deposit_disabled(&self) -> Result<bool, ProgramError> {
+        Ok(false)
+    }
 }

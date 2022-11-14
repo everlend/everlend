@@ -181,27 +181,33 @@ impl<'a, 'b> DepositContext<'a, 'b> {
             {
                 return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
             }
-            msg!("Deposit");
-            let collateral_amount = deposit(
-                self.collateral_transit,
-                self.collateral_mint,
-                self.liquidity_transit,
-                self.depositor_authority,
-                self.clock,
-                &money_market,
-                is_mining,
-                collateral_stor,
-                step.liquidity_amount,
-                &[signers_seeds],
-            )?;
 
             let clock = Clock::from_account_info(self.clock)?;
 
-            rebalancing.execute_step(
-                RebalancingOperation::Deposit,
-                Some(collateral_amount),
-                clock.slot,
-            )?;
+            if money_market.is_deposit_disabled()? {
+                msg!("The deposit is disabled. Executing rollback.");
+                rebalancing.rollback_deposit(clock.slot)?;
+            } else {
+                msg!("Deposit");
+                let collateral_amount = deposit(
+                    self.collateral_transit,
+                    self.collateral_mint,
+                    self.liquidity_transit,
+                    self.depositor_authority,
+                    self.clock,
+                    &money_market,
+                    is_mining,
+                    collateral_stor,
+                    step.liquidity_amount,
+                    &[signers_seeds],
+                )?;
+
+                rebalancing.execute_step(
+                    RebalancingOperation::Deposit,
+                    Some(collateral_amount),
+                    clock.slot,
+                )?;
+            }
         }
 
         Rebalancing::pack(rebalancing, *self.rebalancing.data.borrow_mut())?;

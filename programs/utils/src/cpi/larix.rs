@@ -1,4 +1,5 @@
 use larix_lending::instruction::LendingInstruction;
+use solana_program::program_pack::Pack;
 use solana_program::{
     account_info::AccountInfo,
     entrypoint::ProgramResult,
@@ -293,4 +294,9 @@ pub fn refresh_mine<'a>(
     };
 
     invoke(&ix, &[mining, reserve])
+}
+
+pub fn is_deposit_disabled(reserve: AccountInfo) -> Result<bool, ProgramError> {
+    let reserve = larix_lending::state::reserve::Reserve::unpack(&reserve.data.borrow())?;
+    Ok(reserve.config.deposit_paused)
 }

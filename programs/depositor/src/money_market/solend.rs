@@ -147,4 +147,8 @@ impl<'a, 'b> MoneyMarket<'b> for Solend<'a, 'b> {
     ) -> Result<(), ProgramError> {
         return Err(EverlendError::MiningNotInitialized.into());
     }
+
+    fn is_deposit_disabled(&self) -> Result<bool, ProgramError> {
+        Ok(solend::is_deposit_disabled(self.reserve.clone())?)
+    }
 }

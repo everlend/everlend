@@ -276,6 +276,10 @@ impl<'a, 'b> MoneyMarket<'b> for PortFinance<'a, 'b> {
             signers_seeds,
         )
     }
+
+    fn is_deposit_disabled(&self) -> Result<bool, ProgramError> {
+        Ok(false)
+    }
 }
 
 impl<'a, 'b> CollateralStorage<'b> for PortFinance<'a, 'b> {
