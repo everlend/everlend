@@ -97,6 +97,7 @@ impl<'a> ToolkitCommand<'a> for InitMiningCommand {
         let money_market = match staking_money_market {
             StakingMoneyMarket::Larix => MoneyMarket::Larix,
             StakingMoneyMarket::Solend => MoneyMarket::Solend,
+            StakingMoneyMarket::Francium => MoneyMarket::Francium,
             _ => MoneyMarket::PortFinance,
         };
 
