@@ -90,5 +90,6 @@ pub trait MoneyMarket<'a> {
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError>;
 
+    ///
     fn is_deposit_disabled(&self) -> Result<bool, ProgramError>;
 }

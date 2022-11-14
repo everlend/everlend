@@ -298,15 +298,12 @@ impl Rebalancing {
             .checked_sub(rollback_amount)
             .ok_or(EverlendError::MathOverflow)?;
 
-        self.liquidity_distribution.values[money_market_index] = if old_distributed_liquidity == 0 {
-            0
-        } else {
-            self.liquidity_distribution.values[money_market_index]
-                .checked_mul(old_distributed_liquidity)
-                .ok_or(EverlendError::MathOverflow)?
-                .checked_div(self.distributed_liquidity[money_market_index])
-                .ok_or(EverlendError::MathOverflow)?
-        };
+        self.liquidity_distribution.values[money_market_index] = self.liquidity_distribution.values
+            [money_market_index]
+            .checked_mul(old_distributed_liquidity)
+            .ok_or(EverlendError::MathOverflow)?
+            .checked_div(self.distributed_liquidity[money_market_index])
+            .ok_or(EverlendError::MathOverflow)?;
 
         self.distributed_liquidity[money_market_index] = old_distributed_liquidity;
 
