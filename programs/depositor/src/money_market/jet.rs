@@ -1,4 +1,4 @@
-use crate::money_market::{MoneyMarket};
+use crate::money_market::MoneyMarket;
 use everlend_utils::{cpi::jet, AccountLoader, EverlendError};
 use solana_program::{
     account_info::AccountInfo, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,
@@ -21,8 +21,7 @@ impl<'a, 'b> Jet<'a, 'b> {
     ) -> Result<Jet<'a, 'b>, ProgramError> {
         let margin_pool_info =
             AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
-        let vault_info =
-            AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let vault_info = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
 
         Ok(Jet {
             money_market_program_id,
@@ -96,7 +95,9 @@ impl<'a, 'b> MoneyMarket<'b> for Jet<'a, 'b> {
         _clock: AccountInfo<'b>,
         _liquidity_amount: u64,
         _signers_seeds: &[&[&[u8]]],
-    ) -> Result<u64, ProgramError> { Err(EverlendError::MiningNotImplemented.into()) }
+    ) -> Result<u64, ProgramError> {
+        Err(EverlendError::MiningNotImplemented.into())
+    }
 
     ///
     fn money_market_redeem_and_withdraw_mining(
@@ -108,5 +109,7 @@ impl<'a, 'b> MoneyMarket<'b> for Jet<'a, 'b> {
         _clock: AccountInfo<'b>,
         _collateral_amount: u64,
         _signers_seeds: &[&[&[u8]]],
-    ) -> Result<(), ProgramError> { Err(EverlendError::MiningNotImplemented.into()) }
+    ) -> Result<(), ProgramError> {
+        Err(EverlendError::MiningNotImplemented.into())
+    }
 }
