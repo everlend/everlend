@@ -32,6 +32,18 @@ pub fn find_pool_program_address(
     )
 }
 
+/// Generates legacy pool withdraw/borrow authority address
+pub fn find_legacy_pool_withdraw_authority_program_address(
+    program_id: &Pubkey,
+    pool_pubkey: &Pubkey,
+    withdraw_authority: &Pubkey,
+) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[&pool_pubkey.to_bytes(), &withdraw_authority.to_bytes()],
+        program_id,
+    )
+}
+
 /// Generates pool borrow authority address
 pub fn find_pool_borrow_authority_program_address(
     program_id: &Pubkey,

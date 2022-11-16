@@ -1,7 +1,9 @@
 use crate::utils::*;
 use anchor_lang::prelude::AccountMeta;
+use everlend_collateral_pool::state::{PoolBorrowAuthority, PoolWithdrawAuthority};
 use everlend_collateral_pool::{
-    find_pool_program_address, find_pool_withdraw_authority_program_address,
+    find_pool_borrow_authority_program_address, find_pool_program_address,
+    find_pool_withdraw_authority_program_address,
     instruction::{self, CollateralPoolsInstruction},
     state::{Pool, PoolMarket},
 };
@@ -165,6 +167,82 @@ pub fn create_pool_withdraw_authority(
         pool, pool_withdraw_authority
     );
     Ok(pool_withdraw_authority)
+}
+
+pub fn bulk_migrate_pool_withdraw_authority(
+    config: &Config,
+    pool_withdraw_authority: &[(Pubkey, Pubkey, PoolWithdrawAuthority)],
+) -> Result<(), ClientError> {
+    let instructions: Vec<Instruction> = pool_withdraw_authority
+        .iter()
+        .map(|(market_pubkey, authority_pubkey, authority)| {
+            let (new_pool_withdraw_authority, _) = find_pool_withdraw_authority_program_address(
+                &everlend_collateral_pool::id(),
+                &authority.pool,
+                &authority.withdraw_authority,
+            );
+
+            let accounts = vec![
+                AccountMeta::new_readonly(*market_pubkey, false),
+                AccountMeta::new_readonly(authority.pool, false),
+                AccountMeta::new(*authority_pubkey, false),
+                AccountMeta::new(new_pool_withdraw_authority, false),
+                AccountMeta::new(config.fee_payer.pubkey(), true),
+                AccountMeta::new_readonly(sysvar::rent::id(), false),
+                AccountMeta::new_readonly(system_program::id(), false),
+            ];
+
+            Instruction::new_with_borsh(
+                everlend_collateral_pool::id(),
+                &CollateralPoolsInstruction::MigratePoolWithdrawAuthority,
+                accounts,
+            )
+        })
+        .collect();
+
+    let tx = Transaction::new_with_payer(&instructions, Some(&config.fee_payer.pubkey()));
+
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+
+    Ok(())
+}
+
+pub fn bulk_migrate_pool_borrow_authority(
+    config: &Config,
+    pool_borrow_authority: &[(Pubkey, Pubkey, PoolBorrowAuthority)],
+) -> Result<(), ClientError> {
+    let instructions: Vec<Instruction> = pool_borrow_authority
+        .iter()
+        .map(|(market_pubkey, authority_pubkey, authority)| {
+            let (new_pool_borrow_authority, _) = find_pool_borrow_authority_program_address(
+                &everlend_collateral_pool::id(),
+                &authority.pool,
+                &authority.borrow_authority,
+            );
+
+            let accounts = vec![
+                AccountMeta::new_readonly(*market_pubkey, false),
+                AccountMeta::new_readonly(authority.pool, false),
+                AccountMeta::new(*authority_pubkey, false),
+                AccountMeta::new(new_pool_borrow_authority, false),
+                AccountMeta::new(config.fee_payer.pubkey(), true),
+                AccountMeta::new_readonly(sysvar::rent::id(), false),
+                AccountMeta::new_readonly(system_program::id(), false),
+            ];
+
+            Instruction::new_with_borsh(
+                everlend_collateral_pool::id(),
+                &CollateralPoolsInstruction::MigratePoolBorrowAuthority,
+                accounts,
+            )
+        })
+        .collect();
+
+    let tx = Transaction::new_with_payer(&instructions, Some(&config.fee_payer.pubkey()));
+
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
+
+    Ok(())
 }
 
 pub fn collateral_pool_update_manager(

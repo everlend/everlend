@@ -17,6 +17,7 @@ use solana_program::{
 };
 
 use crate::{
+    find_legacy_pool_withdraw_authority_program_address,
     find_pool_borrow_authority_program_address, find_pool_program_address,
     find_pool_withdraw_authority_program_address,
     instruction::CollateralPoolsInstruction,
@@ -637,6 +638,189 @@ impl Processor {
         Ok(())
     }
 
+    /// Process MigratePoolWithdrawAuthority instruction
+    pub fn migrate_pool_withdraw_authority(
+        program_id: &Pubkey,
+        accounts: &[AccountInfo],
+    ) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let pool_market_info = next_account_info(account_info_iter)?;
+        let pool_info = next_account_info(account_info_iter)?;
+        let pool_withdraw_authority_info = next_account_info(account_info_iter)?;
+        let new_pool_withdraw_authority_info = next_account_info(account_info_iter)?;
+        let manager_info = next_account_info(account_info_iter)?;
+        let rent_info = next_account_info(account_info_iter)?;
+        let rent = &Rent::from_account_info(rent_info)?;
+        let _system_program_info = next_account_info(account_info_iter)?;
+
+        assert_signer(manager_info)?;
+        assert_owned_by(pool_market_info, program_id)?;
+        assert_owned_by(pool_info, program_id)?;
+        assert_owned_by(pool_withdraw_authority_info, program_id)?;
+
+        let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+        assert_account_key(manager_info, &pool_market.manager)?;
+
+        let pool = Pool::unpack(&pool_info.data.borrow())?;
+        assert_account_key(pool_market_info, &pool.pool_market)?;
+
+        let pool_withdraw_authority =
+            PoolWithdrawAuthority::unpack(&pool_withdraw_authority_info.data.borrow())?;
+        assert_account_key(pool_info, &pool_withdraw_authority.pool)?;
+
+        {
+            let (pool_withdraw_authority_pubkey, _) =
+                find_legacy_pool_withdraw_authority_program_address(
+                    program_id,
+                    pool_info.key,
+                    &pool_withdraw_authority.withdraw_authority,
+                );
+            assert_account_key(
+                pool_withdraw_authority_info,
+                &pool_withdraw_authority_pubkey,
+            )?;
+        }
+        let bump = {
+            let (new_pool_withdraw_authority_pubkey, bump) =
+                find_pool_withdraw_authority_program_address(
+                    program_id,
+                    pool_info.key,
+                    &pool_withdraw_authority.withdraw_authority,
+                );
+            assert_account_key(
+                new_pool_withdraw_authority_info,
+                &new_pool_withdraw_authority_pubkey,
+            )?;
+            bump
+        };
+
+        // Close old pool withdraw authority accounte
+        let receiver_starting_lamports = manager_info.lamports();
+        let pool_withdraw_authority_lamports = pool_withdraw_authority_info.lamports();
+        **pool_withdraw_authority_info.lamports.borrow_mut() = 0;
+        **manager_info.lamports.borrow_mut() = receiver_starting_lamports
+            .checked_add(pool_withdraw_authority_lamports)
+            .ok_or(EverlendError::MathOverflow)?;
+
+        PoolWithdrawAuthority::pack(
+            Default::default(),
+            *pool_withdraw_authority_info.data.borrow_mut(),
+        )?;
+
+        let signers_seeds = &[
+            b"withdraw".as_ref(),
+            &pool_info.key.to_bytes()[..32],
+            &pool_withdraw_authority.withdraw_authority.to_bytes()[..32],
+            &[bump],
+        ];
+
+        // Create new withdraw authority account
+        cpi::system::create_account::<PoolWithdrawAuthority>(
+            program_id,
+            manager_info.clone(),
+            new_pool_withdraw_authority_info.clone(),
+            &[signers_seeds],
+            rent,
+        )?;
+
+        PoolWithdrawAuthority::pack(
+            pool_withdraw_authority,
+            *new_pool_withdraw_authority_info.data.borrow_mut(),
+        )?;
+
+        Ok(())
+    }
+
+    /// Process MigratePoolBorrowAuthority instruction
+    pub fn migrate_pool_borrow_authority(
+        program_id: &Pubkey,
+        accounts: &[AccountInfo],
+    ) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let pool_market_info = next_account_info(account_info_iter)?;
+        let pool_info = next_account_info(account_info_iter)?;
+        let pool_borrow_authority_info = next_account_info(account_info_iter)?;
+        let new_pool_borrow_authority_info = next_account_info(account_info_iter)?;
+        let manager_info = next_account_info(account_info_iter)?;
+        let rent_info = next_account_info(account_info_iter)?;
+        let rent = &Rent::from_account_info(rent_info)?;
+        let _system_program_info = next_account_info(account_info_iter)?;
+
+        assert_signer(manager_info)?;
+        assert_owned_by(pool_market_info, program_id)?;
+        assert_owned_by(pool_info, program_id)?;
+        assert_owned_by(pool_borrow_authority_info, program_id)?;
+
+        let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+        assert_account_key(manager_info, &pool_market.manager)?;
+
+        let pool = Pool::unpack(&pool_info.data.borrow())?;
+        assert_account_key(pool_market_info, &pool.pool_market)?;
+
+        let pool_borrow_authority =
+            PoolBorrowAuthority::unpack(&pool_borrow_authority_info.data.borrow())?;
+        assert_account_key(pool_info, &pool_borrow_authority.pool)?;
+
+        {
+            let (pool_borrow_authority_pubkey, _) =
+                find_legacy_pool_withdraw_authority_program_address(
+                    program_id,
+                    pool_info.key,
+                    &pool_borrow_authority.borrow_authority,
+                );
+            assert_account_key(pool_borrow_authority_info, &pool_borrow_authority_pubkey)?;
+        }
+        let bump = {
+            let (new_pool_borrow_authority_pubkey, bump) =
+                find_pool_borrow_authority_program_address(
+                    program_id,
+                    pool_info.key,
+                    &pool_borrow_authority.borrow_authority,
+                );
+            assert_account_key(
+                new_pool_borrow_authority_info,
+                &new_pool_borrow_authority_pubkey,
+            )?;
+            bump
+        };
+
+        // Close old pool borrow authority accounte
+        let receiver_starting_lamports = manager_info.lamports();
+        let pool_borrow_authority_lamports = pool_borrow_authority_info.lamports();
+        **pool_borrow_authority_info.lamports.borrow_mut() = 0;
+        **manager_info.lamports.borrow_mut() = receiver_starting_lamports
+            .checked_add(pool_borrow_authority_lamports)
+            .ok_or(EverlendError::MathOverflow)?;
+
+        PoolBorrowAuthority::pack(
+            Default::default(),
+            *pool_borrow_authority_info.data.borrow_mut(),
+        )?;
+
+        let signers_seeds = &[
+            b"borrow".as_ref(),
+            &pool_info.key.to_bytes()[..32],
+            &pool_borrow_authority.borrow_authority.to_bytes()[..32],
+            &[bump],
+        ];
+
+        // Create new borrow authority account
+        cpi::system::create_account::<PoolBorrowAuthority>(
+            program_id,
+            manager_info.clone(),
+            new_pool_borrow_authority_info.clone(),
+            &[signers_seeds],
+            rent,
+        )?;
+
+        PoolBorrowAuthority::pack(
+            pool_borrow_authority,
+            *new_pool_borrow_authority_info.data.borrow_mut(),
+        )?;
+
+        Ok(())
+    }
+
     /// Instruction processing router
     pub fn process_instruction(
         program_id: &Pubkey,
@@ -707,6 +891,16 @@ impl Processor {
             CollateralPoolsInstruction::UpdateManager => {
                 msg!("CollateralPoolsInstruction: UpdateManager");
                 Self::update_manager(program_id, accounts)
+            }
+
+            CollateralPoolsInstruction::MigratePoolWithdrawAuthority => {
+                msg!("CollateralPoolsInstruction: MigratePoolWithdrawAuthority");
+                Self::migrate_pool_withdraw_authority(program_id, accounts)
+            }
+
+            CollateralPoolsInstruction::MigratePoolBorrowAuthority => {
+                msg!("CollateralPoolsInstruction: MigratePoolBorrowAuthority");
+                Self::migrate_pool_borrow_authority(program_id, accounts)
             }
         }
     }

@@ -1,7 +1,6 @@
 use super::{get_account, BanksClientResult, TestPool, TestPoolMarket};
 use everlend_collateral_pool::{
-    find_pool_borrow_authority_program_address, find_pool_withdraw_authority_program_address,
-    instruction, state::PoolWithdrawAuthority,
+    find_pool_withdraw_authority_program_address, instruction, state::PoolWithdrawAuthority,
 };
 use solana_program::{program_pack::Pack, pubkey::Pubkey};
 use solana_program_test::ProgramTestContext;
@@ -64,17 +63,12 @@ impl TestPoolWithdrawAuthority {
         withdraw_authority: Option<&Keypair>,
     ) -> BanksClientResult<()> {
         let withdraw_authority = withdraw_authority.unwrap_or(&context.payer);
-        let (pool_withdraw_authority_pubkey, _) = find_pool_borrow_authority_program_address(
-            &everlend_collateral_pool::id(),
-            &test_pool.pool_pubkey,
-            &withdraw_authority.pubkey(),
-        );
         let tx = Transaction::new_signed_with_payer(
             &[instruction::delete_pool_withdraw_authority(
                 &everlend_collateral_pool::id(),
                 &test_pool_market.keypair.pubkey(),
                 &test_pool.pool_pubkey,
-                &pool_withdraw_authority_pubkey,
+                &withdraw_authority.pubkey(),
                 &context.payer.pubkey(),
                 &test_pool_market.manager.pubkey(),
             )],

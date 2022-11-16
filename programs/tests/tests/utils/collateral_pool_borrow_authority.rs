@@ -101,18 +101,12 @@ impl TestPoolBorrowAuthority {
         test_pool_market: &TestPoolMarket,
         test_pool: &TestPool,
     ) -> BanksClientResult<()> {
-        let (pool_borrow_authority_pubkey, _) = find_pool_borrow_authority_program_address(
-            &everlend_collateral_pool::id(),
-            &test_pool.pool_pubkey,
-            &self.borrow_authority,
-        );
-
         let tx = Transaction::new_signed_with_payer(
             &[instruction::delete_pool_borrow_authority(
                 &everlend_collateral_pool::id(),
                 &test_pool_market.keypair.pubkey(),
                 &test_pool.pool_pubkey,
-                &pool_borrow_authority_pubkey,
+                &self.borrow_authority,
                 &context.payer.pubkey(),
                 &test_pool_market.manager.pubkey(),
             )],
