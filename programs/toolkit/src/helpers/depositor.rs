@@ -3,6 +3,7 @@ use everlend_depositor::{RebalancingPDA, TransitPDA};
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_utils::PDA;
 use solana_client::client_error::ClientError;
+use solana_program::instruction::Instruction;
 use solana_program::{
     instruction::AccountMeta, program_pack::Pack, pubkey::Pubkey, system_instruction,
 };
@@ -270,6 +271,36 @@ pub fn migrate_depositor(
 
     let depositor: Depositor = config.get_account_unpack(depositor)?;
     println!("Migration of Depositor finished: \n{:?}", &depositor);
+
+    Ok(())
+}
+
+pub fn migrate_rebalancing(config: &Config) -> Result<(), ClientError> {
+    let acc = config.get_initialized_accounts();
+
+    let instructions: Vec<Instruction> = acc
+        .token_accounts
+        .iter()
+        .map(|(_, token)| {
+            let (rebalancing_pubkey, _) = find_rebalancing_program_address(
+                &everlend_depositor::id(),
+                &acc.depositor,
+                &token.mint,
+            );
+
+            everlend_depositor::instruction::migrate_rebalancing(
+                &everlend_depositor::id(),
+                &acc.depositor,
+                &acc.registry,
+                &config.fee_payer.pubkey(),
+                &rebalancing_pubkey,
+            )
+        })
+        .collect();
+
+    let tx = Transaction::new_with_payer(&instructions, Some(&config.fee_payer.pubkey()));
+
+    config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
     Ok(())
 }

@@ -315,7 +315,7 @@ pub struct InitRebalancingParams {
 
 impl Sealed for Rebalancing {}
 impl Pack for Rebalancing {
-    // 557
+    // 725
     const LEN: usize = 1
         + 32
         + 32
@@ -348,6 +348,8 @@ impl IsInitialized for Rebalancing {
 }
 
 mod deprecated {
+    pub const DEPRECATED_TOTAL_REBALANCING_STEP: usize = 8;
+
     use super::*;
 
     /// Rebalancing
@@ -366,8 +368,8 @@ mod deprecated {
         /// Amount to distribute
         pub amount_to_distribute: u64,
 
-        /// Sum of distributed liquidity into MMs including roundings
-        pub distributed_liquidity: u64,
+        /// Distributed liquidity into MMs
+        pub distributed_liquidity: DistributionArray,
 
         /// Received collateral in each market
         pub received_collateral: DistributionArray,
@@ -384,15 +386,15 @@ mod deprecated {
 
     impl Sealed for DeprecatedRebalancing {}
     impl Pack for DeprecatedRebalancing {
-        // 1 + 32 + 32 + 8 + 8 + (8 * 10) + 88 + (4 + 8 * 28) + 8 = 485
+        // 1 + 32 + 32 + 8 + (8 * 10) + (8 * 10) + 88 + (4 + 8 * 28) + 8 = 557
         const LEN: usize = 1
             + 32
             + 32
             + 8
-            + 8
+            + (8 * TOTAL_DISTRIBUTIONS)
             + (8 * TOTAL_DISTRIBUTIONS)
             + Distribution::LEN
-            + (4 + TOTAL_REBALANCING_STEP * RebalancingStep::LEN)
+            + (4 + DEPRECATED_TOTAL_REBALANCING_STEP * RebalancingStep::LEN)
             + 8;
 
         fn pack_into_slice(&self, dst: &mut [u8]) {

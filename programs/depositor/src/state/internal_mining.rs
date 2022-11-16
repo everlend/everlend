@@ -44,6 +44,21 @@ pub enum MiningType {
         #[allow(dead_code)]
         rewarder: Pubkey,
     },
+    ///
+    Francium {
+        ///
+        #[allow(dead_code)]
+        user_stake_token_account: Pubkey,
+        ///
+        #[allow(dead_code)]
+        farming_pool: Pubkey,
+        ///
+        #[allow(dead_code)]
+        user_reward_a: Pubkey,
+        ///
+        #[allow(dead_code)]
+        user_reward_b: Pubkey,
+    },
 }
 
 /// InternalMining
