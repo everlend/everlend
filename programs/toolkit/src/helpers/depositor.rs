@@ -282,11 +282,11 @@ pub fn migrate_rebalancing(config: &Config) -> Result<(), ClientError> {
         .token_accounts
         .iter()
         .map(|(_, token)| {
-            let (rebalancing_pubkey, _) = find_rebalancing_program_address(
-                &everlend_depositor::id(),
-                &acc.depositor,
-                &token.mint,
-            );
+            let (rebalancing_pubkey, _) = RebalancingPDA {
+                depositor: acc.depositor,
+                mint: token.mint,
+            }
+            .find_address(&everlend_depositor::id());
 
             everlend_depositor::instruction::migrate_rebalancing(
                 &everlend_depositor::id(),

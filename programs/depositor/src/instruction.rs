@@ -3,7 +3,6 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use everlend_general_pool::find_withdrawal_requests_program_address;
 use everlend_liquidity_oracle::{find_token_oracle_program_address, state::DistributionArray};
-use everlend_utils::cpi::quarry;
 use everlend_utils::cpi::{francium, quarry};
 use everlend_utils::{find_program_address, PDA};
 use solana_program::{

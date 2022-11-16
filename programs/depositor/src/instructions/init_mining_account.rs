@@ -1,7 +1,6 @@
 use crate::{
-    find_internal_mining_program_address, find_transit_program_address,
     state::{Depositor, InternalMining, MiningType},
-    InternalMiningPDA,
+    InternalMiningPDA, TransitPDA,
 };
 
 use borsh::BorshDeserialize;
@@ -283,33 +282,33 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                     let farming_pool =
                         francium::FarmingPool::try_from_slice(&farming_pool_info.data.borrow())?;
 
-                    let (user_reward_a_check, _) = find_transit_program_address(
-                        program_id,
-                        &self.depositor.key,
-                        &farming_pool.rewards_token_mint,
-                        francium::FRANCIUM_REWARD_SEED,
-                    );
+                    let (user_reward_a_check, _) = TransitPDA {
+                        depositor: *self.depositor.key,
+                        mint: farming_pool.rewards_token_mint,
+                        seed: francium::FRANCIUM_REWARD_SEED,
+                    }
+                    .find_address(program_id);
 
                     assert_account_key(&user_reward_a_info, &user_reward_a_check)?;
 
-                    let (user_reward_b_check, _) = find_transit_program_address(
-                        program_id,
-                        &self.depositor.key,
-                        &farming_pool.rewards_token_mint_b,
-                        francium::FRANCIUM_REWARD_SEED,
-                    );
+                    let (user_reward_b_check, _) = TransitPDA {
+                        depositor: *self.depositor.key,
+                        mint: farming_pool.rewards_token_mint_b,
+                        seed: francium::FRANCIUM_REWARD_SEED,
+                    }
+                    .find_address(program_id);
 
                     assert_account_key(&user_reward_b_info, &user_reward_b_check)?;
                 }
 
                 let user_stake_info =
                     AccountLoader::next_with_key(account_info_iter, &user_stake_token_account)?;
-                let (user_stake, _) = find_transit_program_address(
-                    program_id,
-                    &self.depositor.key,
-                    &self.collateral_mint.key,
-                    "",
-                );
+                let (user_stake, _) = TransitPDA {
+                    depositor: *self.depositor.key,
+                    mint: *self.collateral_mint.key,
+                    seed: "",
+                }
+                .find_address(program_id);
 
                 assert_account_key(user_stake_info, &user_stake)?;
 
