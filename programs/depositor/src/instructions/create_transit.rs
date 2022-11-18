@@ -1,5 +1,5 @@
 use crate::state::Depositor;
-use crate::TransitPDA;
+use crate::{TransitPDA, ALLOWED_TRANSIT_SEEDS};
 use everlend_utils::{assert_account_key, cpi, find_program_address, AccountLoader, PDA};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
@@ -55,8 +55,8 @@ impl<'a, 'b> CreateTransitContext<'a, 'b> {
         _account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
         seed: String,
     ) -> ProgramResult {
-        // Check seed if it's not equal to "rebalancing" because it conflicts with the Rebalancing PDA
-        if seed.eq("rebalancing") {
+        // Check seed if it's allowed
+        if !ALLOWED_TRANSIT_SEEDS.contains(&seed.as_str()) {
             return Err(ProgramError::InvalidArgument);
         }
 

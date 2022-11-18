@@ -69,7 +69,7 @@ async fn success() {
 }
 
 #[tokio::test]
-async fn success_with_different_seed() {
+async fn fail_with_not_reserved_seed() {
     let (mut context, test_depositor) = setup().await;
 
     let token_mint = Keypair::new();
@@ -78,30 +78,6 @@ async fn success_with_different_seed() {
     create_mint(&mut context, &token_mint, &payer_pubkey)
         .await
         .unwrap();
-
-    test_depositor
-        .create_transit(&mut context, &token_mint.pubkey(), None)
-        .await
-        .unwrap();
-
-    context.warp_to_slot(3).unwrap();
-
-    let (transit_pubkey, _) = everlend_depositor::TransitPDA {
-        seed: "",
-        depositor: test_depositor.depositor.pubkey(),
-        mint: token_mint.pubkey(),
-    }
-    .find_address(&everlend_depositor::id());
-
-    let (depositor_authority, _) = find_program_address(
-        &everlend_depositor::id(),
-        &test_depositor.depositor.pubkey(),
-    );
-
-    let transit = get_token_account_data(&mut context, &transit_pubkey).await;
-
-    assert_eq!(transit.mint, token_mint.pubkey());
-    assert_eq!(transit.owner, depositor_authority);
 
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::create_transit(
@@ -116,19 +92,15 @@ async fn success_with_different_seed() {
         context.last_blockhash,
     );
 
-    context.banks_client.process_transaction(tx).await.unwrap();
-
-    let (transit_pubkey_second, _) = everlend_depositor::TransitPDA {
-        seed: "second",
-        depositor: test_depositor.depositor.pubkey(),
-        mint: token_mint.pubkey(),
-    }
-    .find_address(&everlend_depositor::id());
-
-    let transit = get_token_account_data(&mut context, &transit_pubkey_second).await;
-
-    assert_eq!(transit.mint, token_mint.pubkey());
-    assert_eq!(transit.owner, depositor_authority);
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
+    );
 }
 
 #[tokio::test]

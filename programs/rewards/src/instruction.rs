@@ -115,15 +115,6 @@ pub enum RewardsInstruction {
     /// [R] System program
     /// [R] Rent sysvar
     MigratePool,
-
-    /// Migrates reward root account
-    ///
-    /// Accounts:
-    /// [W] Root account (ex-Config program account)
-    /// [WS] Payer
-    /// [R] Rent sysvar
-    /// [R] System program
-    MigrateRoot,
 }
 
 /// Creates 'InitializePool' instruction.
@@ -326,16 +317,4 @@ pub fn migrate_pool(
     ];
 
     Instruction::new_with_borsh(*program_id, &RewardsInstruction::MigratePool, accounts)
-}
-
-/// Creates 'MigrateRoot' instruction.
-pub fn migrate_root(program_id: &Pubkey, root_account: &Pubkey, payer: &Pubkey) -> Instruction {
-    let accounts = vec![
-        AccountMeta::new(*root_account, false),
-        AccountMeta::new(*payer, true),
-        AccountMeta::new_readonly(sysvar::rent::id(), false),
-        AccountMeta::new_readonly(system_program::id(), false),
-    ];
-
-    Instruction::new_with_borsh(*program_id, &RewardsInstruction::MigrateRoot, accounts)
 }

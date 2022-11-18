@@ -53,9 +53,5 @@ pub fn process_instruction(
             msg!("RewardsInstruction: MigratePool");
             MigratePoolContext::new(program_id, accounts)?.process(program_id)
         }
-        RewardsInstruction::MigrateRoot => {
-            msg!("RewardsInstruction: MigrateRoot");
-            MigrateRootContext::new(program_id, accounts)?.process(program_id)
-        }
     }
 }

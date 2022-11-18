@@ -14,11 +14,15 @@ pub mod utils;
 pub mod entrypoint;
 
 // Export current sdk types for downstream users building with a different sdk version
+use everlend_utils::cpi::francium::FRANCIUM_REWARD_SEED;
 use everlend_utils::{Seeds, PDA};
 pub use solana_program;
 use solana_program::pubkey::Pubkey;
 
 solana_program::declare_id!("DepSR26sqzN67TNf1aZ3VCjTPduzKKqTEY8QQkk3KwEz");
+
+/// The list of allowed transit seeds
+const ALLOWED_TRANSIT_SEEDS: &[&str] = &["", "lm_reward", "reserve", FRANCIUM_REWARD_SEED];
 
 /// Generates transit address
 pub struct TransitPDA<'a> {
