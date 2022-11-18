@@ -233,11 +233,13 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
             return Err(EverlendError::InvalidRebalancingOperation.into());
         }
 
+        // Skip the refresh steps if the money market has no income and the amount of liquidity is the same for withdrawal and deposit
         if !money_market.is_income(
             withdraw_step.collateral_amount.unwrap(),
             withdraw_step.liquidity_amount,
             self.clock.clone(),
-        )? {
+        )? && withdraw_step.liquidity_amount == deposit_step.liquidity_amount
+        {
             msg!("Zero income amount. Skipping refresh step");
             rebalancing.skip_refresh_steps(clock.slot)?;
         } else {
