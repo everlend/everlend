@@ -147,4 +147,24 @@ impl<'a, 'b> MoneyMarket<'b> for Solend<'a, 'b> {
     ) -> Result<(), ProgramError> {
         return Err(EverlendError::MiningNotInitialized.into());
     }
+
+    fn is_income(
+        &self,
+        collateral_amount: u64,
+        expected_liquidity_amount: u64,
+        clock: AccountInfo<'b>,
+    ) -> Result<bool, ProgramError> {
+        solend::refresh_reserve(
+            &self.money_market_program_id,
+            self.reserve.clone(),
+            self.reserve_liquidity_pyth_oracle.clone(),
+            self.reserve_liquidity_switchboard_oracle.clone(),
+            clock.clone(),
+        )?;
+
+        let real_liquidity_amount =
+            solend::get_real_liquidity_amount(self.reserve.clone(), collateral_amount)?;
+
+        Ok(real_liquidity_amount > expected_liquidity_amount)
+    }
 }

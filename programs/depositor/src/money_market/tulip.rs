@@ -143,4 +143,23 @@ impl<'a, 'b> MoneyMarket<'b> for Tulip<'a, 'b> {
     ) -> Result<(), ProgramError> {
         Err(EverlendError::MiningNotImplemented.into())
     }
+
+    fn is_income(
+        &self,
+        collateral_amount: u64,
+        expected_liquidity_amount: u64,
+        clock: AccountInfo<'b>,
+    ) -> Result<bool, ProgramError> {
+        tulip::refresh_reserve(
+            &self.money_market_program_id,
+            self.reserve.clone(),
+            self.reserve_liquidity_oracle.clone(),
+            clock.clone(),
+        )?;
+
+        let real_liquidity_amount =
+            tulip::get_real_liquidity_amount(self.reserve.clone(), collateral_amount)?;
+
+        Ok(real_liquidity_amount > expected_liquidity_amount)
+    }
 }

@@ -112,4 +112,16 @@ impl<'a, 'b> MoneyMarket<'b> for Jet<'a, 'b> {
     ) -> Result<(), ProgramError> {
         Err(EverlendError::MiningNotImplemented.into())
     }
+
+    fn is_income(
+        &self,
+        collateral_amount: u64,
+        expected_liquidity_amount: u64,
+        _clock: AccountInfo<'b>,
+    ) -> Result<bool, ProgramError> {
+        let real_liquidity_amount =
+            jet::get_real_liquidity_amount(self.margin_pool.clone(), collateral_amount)?;
+
+        Ok(real_liquidity_amount > expected_liquidity_amount)
+    }
 }

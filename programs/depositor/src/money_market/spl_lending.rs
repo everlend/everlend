@@ -141,4 +141,23 @@ impl<'a, 'b> MoneyMarket<'b> for SPLLending<'a, 'b> {
     ) -> Result<(), ProgramError> {
         return Err(EverlendError::MiningNotInitialized.into());
     }
+
+    fn is_income(
+        &self,
+        collateral_amount: u64,
+        expected_liquidity_amount: u64,
+        clock: AccountInfo<'b>,
+    ) -> Result<bool, ProgramError> {
+        spl_token_lending::refresh_reserve(
+            &self.money_market_program_id,
+            self.reserve.clone(),
+            self.reserve_liquidity_oracle.clone(),
+            clock.clone(),
+        )?;
+
+        let real_liquidity_amount =
+            spl_token_lending::get_real_liquidity_amount(self.reserve.clone(), collateral_amount)?;
+
+        Ok(real_liquidity_amount > expected_liquidity_amount)
+    }
 }

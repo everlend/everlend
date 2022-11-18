@@ -233,7 +233,14 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
             return Err(EverlendError::InvalidRebalancingOperation.into());
         }
 
-        {
+        if !money_market.is_income(
+            withdraw_step.collateral_amount.unwrap(),
+            withdraw_step.liquidity_amount,
+            self.clock.clone(),
+        )? {
+            msg!("Zero income amount. Skipping refresh step");
+            rebalancing.skip_refresh_steps(clock.slot)?;
+        } else {
             msg!("Refresh Withdraw");
             withdraw(
                 self.income_pool_accounts,
@@ -252,9 +259,7 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
             )?;
 
             rebalancing.execute_step(RebalancingOperation::RefreshWithdraw, None, clock.slot)?;
-        }
 
-        {
             msg!("Refresh Deposit");
             let collateral_amount = deposit(
                 self.collateral_transit,

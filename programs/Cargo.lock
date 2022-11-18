@@ -1296,6 +1296,7 @@ name = "everlend-utils"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
+ "arrayref",
  "borsh 0.9.3",
  "jet-proto-math",
  "larix-lending",
@@ -1314,6 +1315,7 @@ dependencies = [
  "spl-token 3.2.0",
  "spl-token-lending",
  "thiserror",
+ "tulipv2-sdk-common",
  "tulipv2-sdk-lending",
 ]
 

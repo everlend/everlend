@@ -1,6 +1,7 @@
 use solana_program::account_info::AccountInfo;
 use solana_program::program::{invoke, invoke_signed};
 use solana_program::program_error::ProgramError;
+use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 
 pub fn refresh_reserve<'a>(
@@ -104,4 +105,14 @@ pub fn redeem<'a>(
         ],
         signed_seeds,
     )
+}
+
+pub fn get_real_liquidity_amount(
+    reserve: AccountInfo,
+    collateral_amount: u64,
+) -> Result<u64, ProgramError> {
+    let mut reserve =
+        tulipv2_sdk_common::lending::reserve::Reserve::unpack(&reserve.data.borrow())?;
+
+    reserve.redeem_collateral(collateral_amount)
 }

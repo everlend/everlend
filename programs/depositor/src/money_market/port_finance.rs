@@ -276,6 +276,25 @@ impl<'a, 'b> MoneyMarket<'b> for PortFinance<'a, 'b> {
             signers_seeds,
         )
     }
+
+    fn is_income(
+        &self,
+        collateral_amount: u64,
+        expected_liquidity_amount: u64,
+        clock: AccountInfo<'b>,
+    ) -> Result<bool, ProgramError> {
+        port_finance::refresh_reserve(
+            &self.money_market_program_id,
+            self.reserve.clone(),
+            self.reserve_liquidity_oracle.clone(),
+            clock.clone(),
+        )?;
+
+        let real_liquidity_amount =
+            port_finance::get_real_liquidity_amount(self.reserve.clone(), collateral_amount)?;
+
+        Ok(real_liquidity_amount > expected_liquidity_amount)
+    }
 }
 
 impl<'a, 'b> CollateralStorage<'b> for PortFinance<'a, 'b> {

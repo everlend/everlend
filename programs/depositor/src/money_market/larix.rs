@@ -208,6 +208,24 @@ impl<'a, 'b> MoneyMarket<'b> for Larix<'a, 'b> {
             signers_seeds,
         )
     }
+
+    fn is_income(
+        &self,
+        collateral_amount: u64,
+        expected_liquidity_amount: u64,
+        _clock: AccountInfo<'b>,
+    ) -> Result<bool, ProgramError> {
+        larix::refresh_reserve(
+            &self.money_market_program_id,
+            self.reserve.clone(),
+            self.reserve_liquidity_oracle.clone(),
+        )?;
+
+        let real_liquidity_amount =
+            larix::get_real_liquidity_amount(self.reserve.clone(), collateral_amount)?;
+
+        Ok(real_liquidity_amount > expected_liquidity_amount)
+    }
 }
 
 impl<'a, 'b> CollateralStorage<'b> for Larix<'a, 'b> {
