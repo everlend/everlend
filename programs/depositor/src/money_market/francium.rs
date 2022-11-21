@@ -276,6 +276,10 @@ impl<'a, 'b> MoneyMarket<'b> for Francium<'a, 'b> {
             signers_seeds,
         )
     }
+
+    fn is_deposit_disabled(&self) -> Result<bool, ProgramError> {
+        francium::is_deposit_disabled(self.reserve.clone())
+    }
 }
 
 impl<'a, 'b> CollateralStorage<'b> for Francium<'a, 'b> {
@@ -339,9 +343,5 @@ impl<'a, 'b> CollateralStorage<'b> for Francium<'a, 'b> {
             collateral_amount,
             signers_seeds,
         )
-    }
-
-    fn is_deposit_disabled(&self) -> Result<bool, ProgramError> {
-        francium::is_deposit_disabled(self.reserve.clone())
     }
 }

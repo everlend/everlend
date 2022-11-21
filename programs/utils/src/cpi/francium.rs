@@ -13,7 +13,6 @@ pub const FRANCIUM_REWARD_SEED: &str = "francium_reward";
 
 const DISABLED_DEPOSIT_VALUE: u8 = 0xFF;
 
-pub fn refresh_reserve(program_id: &Pubkey, reserve: AccountInfo) -> Result<(), ProgramError> {
 #[derive(Debug, BorshSerialize, BorshDeserialize)]
 pub struct FarmingPool {
     pub version: u8,
@@ -360,7 +359,7 @@ pub fn init_farming_user<'a>(
             user_stake_token,
             user_reward_a,
             user_reward_b,
-            rent_info
+            rent_info,
         ],
         signed_seeds,
     )
