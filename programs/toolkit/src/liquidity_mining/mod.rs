@@ -14,6 +14,7 @@ pub mod larix_raw_test;
 pub mod port_liquidity_miner;
 pub mod quarry_liquidity_miner;
 pub mod quarry_raw_test;
+pub mod francium_liquidity_miner;
 
 pub fn execute_account_creation(
     config: &Config,
@@ -102,6 +103,7 @@ pub trait LiquidityMiner {
         token: &String,
         mining_account: &Keypair,
         sub_reward_token_mint: Option<Pubkey>,
+        reward_token_mint: Option<Pubkey>,
     ) -> Result<()>;
     fn get_pubkeys(&self, config: &Config, token: &String) -> Option<InitMiningAccountsPubkeys>;
     fn get_mining_type(
@@ -110,5 +112,6 @@ pub trait LiquidityMiner {
         token: &String,
         mining_pubkey: Pubkey,
         sub_reward_token_mint: Option<Pubkey>,
+        reward_token_mint: Option<Pubkey>,
     ) -> MiningType;
 }
