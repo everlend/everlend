@@ -278,6 +278,7 @@ impl<'a, 'b> MoneyMarket<'b> for PortFinance<'a, 'b> {
     }
 
     fn is_deposit_disabled(&self) -> Result<bool, ProgramError> {
+        // Not presented
         Ok(false)
     }
 }

@@ -1296,6 +1296,7 @@ name = "everlend-utils"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
+ "arrayref",
  "borsh 0.9.3",
  "jet-proto-math",
  "larix-lending",

@@ -133,6 +133,6 @@ impl<'a, 'b> MoneyMarket<'b> for Francium<'a, 'b> {
     }
 
     fn is_deposit_disabled(&self) -> Result<bool, ProgramError> {
-        Ok(false)
+        francium::is_deposit_disabled(self.reserve.clone())
     }
 }

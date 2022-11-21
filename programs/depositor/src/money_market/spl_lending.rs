@@ -143,6 +143,7 @@ impl<'a, 'b> MoneyMarket<'b> for SPLLending<'a, 'b> {
     }
 
     fn is_deposit_disabled(&self) -> Result<bool, ProgramError> {
+        // Not presented
         Ok(false)
     }
 }

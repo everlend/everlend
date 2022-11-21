@@ -114,6 +114,6 @@ impl<'a, 'b> MoneyMarket<'b> for Jet<'a, 'b> {
     }
 
     fn is_deposit_disabled(&self) -> Result<bool, ProgramError> {
-        Ok(false)
+        jet::is_deposit_disabled(self.margin_pool.clone())
     }
 }
