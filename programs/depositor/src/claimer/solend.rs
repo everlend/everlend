@@ -12,6 +12,7 @@ pub struct SolendClaimer<'a, 'b> {
     distributor: &'a AccountInfo<'b>,
     claim_status: &'a AccountInfo<'b>,
     source: &'a AccountInfo<'b>,
+    executor: &'a AccountInfo<'b>,
     claim_data: solend::ClaimData,
 }
 
@@ -21,6 +22,7 @@ impl<'a, 'b> SolendClaimer<'a, 'b> {
         staking_program_id: &Pubkey,
         internal_mining_type: MiningType,
         additional_data: &[u8],
+        executor: &'a AccountInfo<'b>,
         account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
     ) -> Result<SolendClaimer<'a, 'b>, ProgramError> {
         if !staking_program_id.eq(&solend::staking_program_id()) {
@@ -33,7 +35,7 @@ impl<'a, 'b> SolendClaimer<'a, 'b> {
         };
 
         let distributor = AccountLoader::next_with_owner(account_info_iter, staking_program_id)?;
-        let claim_status = AccountLoader::next_with_owner(account_info_iter, staking_program_id)?;
+        let claim_status = AccountLoader::next_uninitialized(account_info_iter)?;
         let source = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
 
         let claim_data = solend::ClaimData::try_from_slice(additional_data)?;
@@ -42,6 +44,7 @@ impl<'a, 'b> SolendClaimer<'a, 'b> {
             distributor,
             claim_status,
             source,
+            executor,
             claim_data,
         })
     }
@@ -63,7 +66,7 @@ impl<'a, 'b> RewardClaimer<'b> for SolendClaimer<'a, 'b> {
             self.source.clone(),
             reward_transit_token_account,
             authority.clone(),
-            authority.clone(),
+            self.executor.clone(),
             self.claim_data.clone(),
             signers_seeds,
         )?;

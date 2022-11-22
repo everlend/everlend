@@ -249,8 +249,12 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
             MiningType::Solend { obligation } => {
                 let money_market_program_id_info =
                     AccountLoader::next_unchecked(account_info_iter)?;
-                let obligation_info = AccountLoader::next_with_key(account_info_iter, &obligation)?;
-                let lending_market_info = AccountLoader::next_unchecked(account_info_iter)?;
+                let obligation_info = AccountLoader::next_uninitialized(account_info_iter)?;
+                assert_account_key(obligation_info, &obligation)?;
+                let lending_market_info = AccountLoader::next_with_owner(
+                    account_info_iter,
+                    money_market_program_id_info.key,
+                )?;
                 let clock = AccountLoader::next_with_key(account_info_iter, &clock::id())?;
                 let _spl_token_program =
                     AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;

@@ -178,6 +178,7 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
                         self.staking_program_id.key,
                         internal_mining_type,
                         additional_data,
+                        self.executor,
                         account_info_iter,
                     )?;
 

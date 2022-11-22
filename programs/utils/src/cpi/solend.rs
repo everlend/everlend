@@ -16,12 +16,12 @@ pub fn staking_program_id() -> Pubkey {
     Pubkey::from_str("mrksLcZ6rMs9xkmJgw6oKiR3GECw44Gb5NeDqu64kiw").unwrap()
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct ClaimData {
     bump: u8,
     index: u64,
     amount: u64,
-    proof: [u8; 32],
+    proof: Vec<[u8; 32]>,
 }
 
 pub fn refresh_reserve<'a>(
@@ -397,7 +397,7 @@ pub fn claim_rewards<'a>(
         bump: u8,
         index: u64,
         amount: u64,
-        proof: [u8; 32],
+        proof: Vec<[u8; 32]>,
     }
 
     let instruction = Instruction {
