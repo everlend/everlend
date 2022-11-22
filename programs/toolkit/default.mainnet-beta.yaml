@@ -60,14 +60,18 @@ francium:
   lending_market: 4XNif294wbrxj6tJ8K5Rg7SuaEACnu9s2L27i28MQB6E
   reserve_liquidity_supply: GiJwrxQW5NQWWAva4rnDMXwHxfrhyUzwMX5to1pmCCgF
   reserve_sol: EnZC8MB6QLTxwN1LNqCXYC7XMpvXqitnYQPf5y5AcQRn
-frakt:
-  program_id: A66HabVL3DzNzeJgcHYtRRNW1ZRMKwBfrdSR4kLsZ9DJ
-  liquidity_pool: FuydvCEeh5sa4YyPzQuoJFBRJ4sF5mwT4rbeaWMi3nuN
-  pool_admin: 9aTtUqAnuSMndCpjcPosRNf3fCkrTQAV8C8GERf3tZi3
+  staking_program_id: 3Katmm9dhvLQijAvomteYMo6rfVbY5NaCRNq9ZBqBgr6
+francium_farming_pool_account:
+  stSOL:
+    staking_pool: J7Ny8VBzKHqVxbi8RAeNHatxELF61KhPCeV7S6m3AVa3
 jet:
   program_id: JPPooLEqRo3NCSx82EdE2VZY5vUaSsgskpZPBHNGVLZ
   margin_pool_sol: 3w9nDi3rB9e44J7xMvayXKrg59kD7ofeXqGZsYWtT1V9
   vault_sol: HefDXf74p9vRaLWX4yjZiGS99hg72y2EbXiajyYsgwXB
+frakt:
+  program_id: A66HabVL3DzNzeJgcHYtRRNW1ZRMKwBfrdSR4kLsZ9DJ
+  liquidity_pool: FuydvCEeh5sa4YyPzQuoJFBRJ4sF5mwT4rbeaWMi3nuN
+  pool_admin: 9aTtUqAnuSMndCpjcPosRNf3fCkrTQAV8C8GERf3tZi3
 sol_collateral:
   - 8ezDtNNhX91t1NbSLe8xV2PcCEfoQjEm2qDVGjt3rjhg
   - ArWoXQYvvERzuoeGTpyyvf7pNNVEPB3x7kQg5W6zQdaB

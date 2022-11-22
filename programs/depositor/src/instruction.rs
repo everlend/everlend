@@ -3,7 +3,7 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use everlend_general_pool::find_withdrawal_requests_program_address;
 use everlend_liquidity_oracle::{find_token_oracle_program_address, state::DistributionArray};
-use everlend_utils::cpi::quarry;
+use everlend_utils::cpi::{francium, quarry};
 use everlend_utils::find_program_address;
 use solana_program::{
     instruction::{AccountMeta, Instruction},
@@ -707,7 +707,7 @@ pub fn init_mining_account(
         AccountMeta::new_readonly(pubkeys.liquidity_mint, false),
         AccountMeta::new_readonly(pubkeys.collateral_mint, false),
         AccountMeta::new_readonly(pubkeys.depositor, false),
-        AccountMeta::new_readonly(depositor_authority, false),
+        AccountMeta::new(depositor_authority, false),
         AccountMeta::new_readonly(pubkeys.registry, false),
         AccountMeta::new(pubkeys.manager, true),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
@@ -784,6 +784,30 @@ pub fn init_mining_account(
             accounts.push(AccountMeta::new_readonly(miner_vault, false));
 
             accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
+        }
+        MiningType::Francium {
+            user_stake_token_account,
+            farming_pool,
+            user_reward_a,
+            user_reward_b,
+        } => {
+            let staking_program_id = francium::get_staking_program_id();
+
+            let (user_farming, _) = Pubkey::find_program_address(
+                &[
+                    depositor_authority.as_ref(),
+                    farming_pool.as_ref(),
+                    user_stake_token_account.as_ref(),
+                ],
+                &staking_program_id,
+            );
+
+            accounts.push(AccountMeta::new_readonly(staking_program_id, false));
+            accounts.push(AccountMeta::new(farming_pool, false));
+            accounts.push(AccountMeta::new(user_farming, false));
+            accounts.push(AccountMeta::new(user_reward_a, false));
+            accounts.push(AccountMeta::new(user_reward_b, false));
+            accounts.push(AccountMeta::new(user_stake_token_account, false));
         }
         MiningType::None => {}
     }

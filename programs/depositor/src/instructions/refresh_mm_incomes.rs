@@ -201,6 +201,7 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
             self.internal_mining,
             self.collateral_mint.key,
             self.depositor_authority.key,
+            self.depositor.key,
         )?;
 
         let collateral_stor = collateral_storage(

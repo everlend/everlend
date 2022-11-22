@@ -206,6 +206,7 @@ pub fn money_market<'a, 'b>(
     internal_mining: &AccountInfo<'b>,
     collateral_token_mint: &Pubkey,
     depositor_authority: &Pubkey,
+    depositor: &Pubkey,
 ) -> Result<(Box<dyn MoneyMarket<'b> + 'a>, bool), ProgramError> {
     let internal_mining_type = if internal_mining.owner == program_id {
         Some(InternalMining::unpack(&internal_mining.data.borrow())?.mining_type)
@@ -274,8 +275,12 @@ pub fn money_market<'a, 'b>(
         // Francium
         4 => {
             let francium = Francium::init(
+                program_id,
                 money_market_program.key.clone(),
                 money_market_account_info_iter,
+                depositor,
+                depositor_authority,
+                internal_mining_type,
             )?;
             return Ok((Box::new(francium), is_mining));
         }
