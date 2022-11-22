@@ -9,6 +9,7 @@ use solana_program::pubkey::Pubkey;
 use solana_program::system_instruction;
 use solana_sdk::{signature::Keypair, signer::Signer, transaction::Transaction};
 
+pub mod francium_liquidity_miner;
 pub mod larix_liquidity_miner;
 pub mod larix_raw_test;
 pub mod port_liquidity_miner;
@@ -103,6 +104,7 @@ pub trait LiquidityMiner {
         token: &String,
         mining_account: &Keypair,
         sub_reward_token_mint: Option<Pubkey>,
+        reward_token_mint: Option<Pubkey>,
     ) -> Result<()>;
     fn get_pubkeys(&self, config: &Config, token: &String) -> Option<InitMiningAccountsPubkeys>;
     fn get_mining_type(
@@ -111,5 +113,6 @@ pub trait LiquidityMiner {
         token: &String,
         mining_pubkey: Pubkey,
         sub_reward_token_mint: Option<Pubkey>,
+        reward_token_mint: Option<Pubkey>,
     ) -> MiningType;
 }

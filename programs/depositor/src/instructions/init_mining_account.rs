@@ -1,9 +1,11 @@
 use crate::{
-    find_internal_mining_program_address,
+    find_internal_mining_program_address, find_transit_program_address,
     state::{Depositor, InternalMining, MiningType},
 };
 
+use borsh::BorshDeserialize;
 use everlend_registry::state::Registry;
+use everlend_utils::cpi::francium;
 use everlend_utils::{
     assert_account_key, assert_owned_by, cpi, find_program_address, AccountLoader, EverlendError,
 };
@@ -26,6 +28,7 @@ pub struct InitMiningAccountContext<'a, 'b> {
     registry: &'a AccountInfo<'b>,
     manager: &'a AccountInfo<'b>,
     rent: &'a AccountInfo<'b>,
+    system_program: &'a AccountInfo<'b>,
 }
 
 impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
@@ -43,7 +46,7 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
         let manager = AccountLoader::next_signer(account_info_iter)?;
         let rent = AccountLoader::next_with_key(account_info_iter, &Rent::id())?;
 
-        let _system_program =
+        let system_program =
             AccountLoader::next_with_key(account_info_iter, &system_program::id())?;
 
         let staking_program_id = AccountLoader::next_unchecked(account_info_iter)?;
@@ -58,6 +61,7 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
             registry,
             manager,
             rent,
+            system_program,
         })
     }
 
@@ -243,6 +247,76 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                     self.manager.clone(),
                     self.collateral_mint.clone(),
                     miner_vault_info.clone(),
+                    &[signers_seeds.as_ref()],
+                )?;
+            }
+            MiningType::Francium {
+                farming_pool,
+                user_reward_a,
+                user_reward_b,
+                user_stake_token_account,
+            } => {
+                let farming_pool_info =
+                    AccountLoader::next_with_key(account_info_iter, &farming_pool)?;
+                let user_farming_info =
+                    AccountLoader::next_with_owner(account_info_iter, &self.system_program.key)?;
+
+                let user_farming = francium::find_user_farming_address(
+                    self.depositor_authority.key,
+                    &farming_pool,
+                    &user_stake_token_account,
+                );
+
+                assert_account_key(user_farming_info, &user_farming)?;
+                let user_reward_a_info =
+                    AccountLoader::next_with_key(account_info_iter, &user_reward_a)?;
+                let user_reward_b_info =
+                    AccountLoader::next_with_key(account_info_iter, &user_reward_b)?;
+
+                {
+                    let farming_pool =
+                        francium::FarmingPool::try_from_slice(&farming_pool_info.data.borrow())?;
+
+                    let (user_reward_a_check, _) = find_transit_program_address(
+                        program_id,
+                        &self.depositor.key,
+                        &farming_pool.rewards_token_mint,
+                        francium::FRANCIUM_REWARD_SEED,
+                    );
+
+                    assert_account_key(&user_reward_a_info, &user_reward_a_check)?;
+
+                    let (user_reward_b_check, _) = find_transit_program_address(
+                        program_id,
+                        &self.depositor.key,
+                        &farming_pool.rewards_token_mint_b,
+                        francium::FRANCIUM_REWARD_SEED,
+                    );
+
+                    assert_account_key(&user_reward_b_info, &user_reward_b_check)?;
+                }
+
+                let user_stake_info =
+                    AccountLoader::next_with_key(account_info_iter, &user_stake_token_account)?;
+                let (user_stake, _) = find_transit_program_address(
+                    program_id,
+                    &self.depositor.key,
+                    &self.collateral_mint.key,
+                    "",
+                );
+
+                assert_account_key(user_stake_info, &user_stake)?;
+
+                cpi::francium::init_farming_user(
+                    self.staking_program_id.key,
+                    self.depositor_authority.clone(),
+                    user_farming_info.clone(),
+                    farming_pool_info.clone(),
+                    user_stake_info.clone(),
+                    user_reward_a_info.clone(),
+                    user_reward_b_info.clone(),
+                    self.system_program.clone(),
+                    self.rent.clone(),
                     &[signers_seeds.as_ref()],
                 )?;
             }

@@ -3,8 +3,8 @@
 use crate::instruction::DepositorInstruction;
 use crate::instructions::{
     ClaimMiningRewardContext, CreateTransitContext, DepositContext, InitContext,
-    InitMiningAccountContext, MigrateDepositorContext, RefreshMMIncomesContext,
-    SetRebalancingContext, StartRebalancingContext, WithdrawContext,
+    InitMiningAccountContext, MigrateDepositorContext, MigrateRebalancingContext,
+    RefreshMMIncomesContext, SetRebalancingContext, StartRebalancingContext, WithdrawContext,
 };
 use borsh::BorshDeserialize;
 use solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, msg, pubkey::Pubkey};
@@ -108,6 +108,12 @@ impl<'a, 'b> Processor {
             DepositorInstruction::RefreshMMIncomes => {
                 msg!("DepositorInstruction: RefreshMMIncomes");
                 RefreshMMIncomesContext::new(program_id, account_info_iter)?
+                    .process(program_id, account_info_iter)
+            }
+
+            DepositorInstruction::MigrateRebalancing => {
+                msg!("DepositorInstruction: MigrateRebalancing");
+                MigrateRebalancingContext::new(program_id, account_info_iter)?
                     .process(program_id, account_info_iter)
             }
         }
