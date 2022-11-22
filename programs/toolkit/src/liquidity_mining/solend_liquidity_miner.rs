@@ -57,6 +57,7 @@ impl LiquidityMiner for SolendLiquidityMiner {
         token: &String,
         _mining_account: &Keypair,
         _sub_reward_token_mint: Option<Pubkey>,
+        _reward_token_mint: Option<Pubkey>,
     ) -> anyhow::Result<()> {
         let default_accounts = config.get_default_accounts();
 
@@ -99,6 +100,7 @@ impl LiquidityMiner for SolendLiquidityMiner {
         token: &String,
         _mining_pubkey: Pubkey,
         _sub_reward_token_mint: Option<Pubkey>,
+        _reward_token_mint: Option<Pubkey>,
     ) -> MiningType {
         let initialized_accounts = config.get_initialized_accounts();
         let token_accounts = initialized_accounts.token_accounts.get(token).unwrap();
