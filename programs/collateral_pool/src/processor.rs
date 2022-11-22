@@ -647,10 +647,7 @@ impl Processor {
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_info = next_account_info(account_info_iter)?;
         let pool_withdraw_authority_info = next_account_info(account_info_iter)?;
-        let new_pool_withdraw_authority_info = next_account_info(account_info_iter)?;
         let manager_info = next_account_info(account_info_iter)?;
-        let rent_info = next_account_info(account_info_iter)?;
-        let rent = &Rent::from_account_info(rent_info)?;
         let _system_program_info = next_account_info(account_info_iter)?;
 
         assert_signer(manager_info)?;
@@ -680,19 +677,6 @@ impl Processor {
                 &pool_withdraw_authority_pubkey,
             )?;
         }
-        let bump = {
-            let (new_pool_withdraw_authority_pubkey, bump) =
-                find_pool_withdraw_authority_program_address(
-                    program_id,
-                    pool_info.key,
-                    &pool_withdraw_authority.withdraw_authority,
-                );
-            assert_account_key(
-                new_pool_withdraw_authority_info,
-                &new_pool_withdraw_authority_pubkey,
-            )?;
-            bump
-        };
 
         // Close old pool withdraw authority accounte
         let receiver_starting_lamports = manager_info.lamports();
@@ -701,32 +685,6 @@ impl Processor {
         **manager_info.lamports.borrow_mut() = receiver_starting_lamports
             .checked_add(pool_withdraw_authority_lamports)
             .ok_or(EverlendError::MathOverflow)?;
-
-        PoolWithdrawAuthority::pack(
-            Default::default(),
-            *pool_withdraw_authority_info.data.borrow_mut(),
-        )?;
-
-        let signers_seeds = &[
-            b"withdraw".as_ref(),
-            &pool_info.key.to_bytes()[..32],
-            &pool_withdraw_authority.withdraw_authority.to_bytes()[..32],
-            &[bump],
-        ];
-
-        // Create new withdraw authority account
-        cpi::system::create_account::<PoolWithdrawAuthority>(
-            program_id,
-            manager_info.clone(),
-            new_pool_withdraw_authority_info.clone(),
-            &[signers_seeds],
-            rent,
-        )?;
-
-        PoolWithdrawAuthority::pack(
-            pool_withdraw_authority,
-            *new_pool_withdraw_authority_info.data.borrow_mut(),
-        )?;
 
         Ok(())
     }
@@ -740,10 +698,7 @@ impl Processor {
         let pool_market_info = next_account_info(account_info_iter)?;
         let pool_info = next_account_info(account_info_iter)?;
         let pool_borrow_authority_info = next_account_info(account_info_iter)?;
-        let new_pool_borrow_authority_info = next_account_info(account_info_iter)?;
         let manager_info = next_account_info(account_info_iter)?;
-        let rent_info = next_account_info(account_info_iter)?;
-        let rent = &Rent::from_account_info(rent_info)?;
         let _system_program_info = next_account_info(account_info_iter)?;
 
         assert_signer(manager_info)?;
@@ -770,19 +725,6 @@ impl Processor {
                 );
             assert_account_key(pool_borrow_authority_info, &pool_borrow_authority_pubkey)?;
         }
-        let bump = {
-            let (new_pool_borrow_authority_pubkey, bump) =
-                find_pool_borrow_authority_program_address(
-                    program_id,
-                    pool_info.key,
-                    &pool_borrow_authority.borrow_authority,
-                );
-            assert_account_key(
-                new_pool_borrow_authority_info,
-                &new_pool_borrow_authority_pubkey,
-            )?;
-            bump
-        };
 
         // Close old pool borrow authority accounte
         let receiver_starting_lamports = manager_info.lamports();
@@ -791,32 +733,6 @@ impl Processor {
         **manager_info.lamports.borrow_mut() = receiver_starting_lamports
             .checked_add(pool_borrow_authority_lamports)
             .ok_or(EverlendError::MathOverflow)?;
-
-        PoolBorrowAuthority::pack(
-            Default::default(),
-            *pool_borrow_authority_info.data.borrow_mut(),
-        )?;
-
-        let signers_seeds = &[
-            b"borrow".as_ref(),
-            &pool_info.key.to_bytes()[..32],
-            &pool_borrow_authority.borrow_authority.to_bytes()[..32],
-            &[bump],
-        ];
-
-        // Create new borrow authority account
-        cpi::system::create_account::<PoolBorrowAuthority>(
-            program_id,
-            manager_info.clone(),
-            new_pool_borrow_authority_info.clone(),
-            &[signers_seeds],
-            rent,
-        )?;
-
-        PoolBorrowAuthority::pack(
-            pool_borrow_authority,
-            *new_pool_borrow_authority_info.data.borrow_mut(),
-        )?;
 
         Ok(())
     }

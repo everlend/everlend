@@ -51,6 +51,10 @@ francium:
   lending_market: "11111111111111111111111111111111"
   reserve_liquidity_supply: "11111111111111111111111111111111"
   reserve_sol: "11111111111111111111111111111111"
+  staking_program_id: "11111111111111111111111111111111"
+francium_farming_pool_account:
+  SOL:
+    staking_pool: "11111111111111111111111111111111"
 tulip:
   program_id: CbTkd91iCd48cMsqGejvYh9K2dwmy76hF8CQH4gt4Ykx
   lending_market: 6Z76FPMsFVXggtL2npzQ6nx6ghBGo1CCtueEYPvjFHz6

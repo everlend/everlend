@@ -38,6 +38,9 @@ impl<'a> ToolkitCommand<'a> for MigrateCollateralPoolCommand {
 
         for (_, mm_collateral_mint) in collateral_mint_map.iter() {
             for (money_market_index, collateral_mint) in mm_collateral_mint.iter().enumerate() {
+                if collateral_mint.is_none() {
+                    continue
+                }
                 let collateral_mint = collateral_mint.unwrap();
                 let collateral_pool_market_pubkey =
                     initialiazed_accounts.collateral_pool_markets[money_market_index];
@@ -92,7 +95,7 @@ impl<'a> ToolkitCommand<'a> for MigrateCollateralPoolCommand {
             }
         }
 
-        let withdraw_authorities_chunks = withdraw_authorities.chunks(10);
+        let withdraw_authorities_chunks = withdraw_authorities.chunks(5);
         for chunk in withdraw_authorities_chunks {
             bulk_migrate_pool_withdraw_authority(config, chunk).unwrap();
         }

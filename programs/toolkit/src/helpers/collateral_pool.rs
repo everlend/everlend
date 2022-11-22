@@ -173,32 +173,35 @@ pub fn bulk_migrate_pool_withdraw_authority(
     config: &Config,
     pool_withdraw_authority: &[(Pubkey, Pubkey, PoolWithdrawAuthority)],
 ) -> Result<(), ClientError> {
-    let instructions: Vec<Instruction> = pool_withdraw_authority
+    let mut instructions: Vec<Instruction> = vec![];
+    pool_withdraw_authority
         .iter()
         .map(|(market_pubkey, authority_pubkey, authority)| {
-            let (new_pool_withdraw_authority, _) = find_pool_withdraw_authority_program_address(
-                &everlend_collateral_pool::id(),
-                &authority.pool,
-                &authority.withdraw_authority,
+            let create_new_instr =
+                everlend_collateral_pool::instruction::create_pool_withdraw_authority(
+                    &everlend_collateral_pool::id(),
+                    market_pubkey,
+                    &authority.pool,
+                    &authority.withdraw_authority,
+                    &config.fee_payer.pubkey(),
             );
 
             let accounts = vec![
                 AccountMeta::new_readonly(*market_pubkey, false),
                 AccountMeta::new_readonly(authority.pool, false),
                 AccountMeta::new(*authority_pubkey, false),
-                AccountMeta::new(new_pool_withdraw_authority, false),
                 AccountMeta::new(config.fee_payer.pubkey(), true),
-                AccountMeta::new_readonly(sysvar::rent::id(), false),
                 AccountMeta::new_readonly(system_program::id(), false),
             ];
 
-            Instruction::new_with_borsh(
+            let migrate =  Instruction::new_with_borsh(
                 everlend_collateral_pool::id(),
                 &CollateralPoolsInstruction::MigratePoolWithdrawAuthority,
                 accounts,
-            )
-        })
-        .collect();
+            );
+
+            instructions.append(&mut vec![create_new_instr, migrate])
+        });
 
     let tx = Transaction::new_with_payer(&instructions, Some(&config.fee_payer.pubkey()));
 
