@@ -117,6 +117,9 @@ impl<'a, 'b> RewardClaimer<'b> for QuarryMergeClaimer<'a, 'b> {
         authority: AccountInfo<'b>,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
+        let amount =
+            Account::unpack_from_slice(self.rewards_token_account.data.borrow().as_ref())?.amount;
+
         quarry_merge::claim_rewards(
             staking_program_id,
             self.mint_wrapper.clone(),
@@ -133,9 +136,6 @@ impl<'a, 'b> RewardClaimer<'b> for QuarryMergeClaimer<'a, 'b> {
             self.miner.clone(),
             self.miner_vault.clone(),
         )?;
-
-        let amount =
-            Account::unpack_from_slice(self.rewards_token_account.data.borrow().as_ref())?.amount;
 
         quarry_merge::withdraw_tokens(
             staking_program_id,
