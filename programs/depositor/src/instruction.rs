@@ -3,7 +3,7 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use everlend_general_pool::find_withdrawal_requests_program_address;
 use everlend_liquidity_oracle::{find_token_oracle_program_address, state::DistributionArray};
-use everlend_utils::cpi::{francium, quarry};
+use everlend_utils::cpi::{francium, quarry, quarry_merge};
 use everlend_utils::find_program_address;
 use solana_program::{
     instruction::{AccountMeta, Instruction},
@@ -783,6 +783,33 @@ pub fn init_mining_account(
             accounts.push(AccountMeta::new(miner_pubkey, false));
             accounts.push(AccountMeta::new_readonly(miner_vault, false));
 
+            accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
+        }
+        MiningType::QuarryMerge { pool, rewarder } => {
+            let (merge_miner, _) = quarry_merge::find_merge_miner_program_address(
+                &quarry_merge::staking_program_id(),
+                &pool,
+                &depositor_authority,
+            );
+            let (quarry, _) = quarry::find_quarry_program_address(
+                &quarry::staking_program_id(),
+                &rewarder,
+                &pubkeys.collateral_mint,
+            );
+            let (miner_pubkey, _) = quarry::find_miner_program_address(
+                &quarry::staking_program_id(),
+                &quarry,
+                &merge_miner,
+            );
+
+            let miner_vault = get_associated_token_address(&miner_pubkey, &pubkeys.collateral_mint);
+
+            accounts.push(AccountMeta::new(pool, false));
+            accounts.push(AccountMeta::new(merge_miner, false));
+            accounts.push(AccountMeta::new(quarry, false));
+            accounts.push(AccountMeta::new_readonly(rewarder, false));
+            accounts.push(AccountMeta::new(miner_pubkey, false));
+            accounts.push(AccountMeta::new_readonly(miner_vault, false));
             accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
         }
         MiningType::Francium {

@@ -250,6 +250,77 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                     &[signers_seeds.as_ref()],
                 )?;
             }
+            MiningType::QuarryMerge { pool, rewarder } => {
+                assert_account_key(
+                    self.staking_program_id,
+                    &cpi::quarry_merge::staking_program_id(),
+                )?;
+
+                let pool_info = AccountLoader::next_with_key(account_info_iter, &pool)?;
+
+                let merge_miner_info = {
+                    let (merge_miner_pubkey, _) =
+                        cpi::quarry_merge::find_merge_miner_program_address(
+                            &cpi::quarry_merge::staking_program_id(),
+                            pool_info.key,
+                            self.depositor_authority.key,
+                        );
+                    AccountLoader::next_with_key(account_info_iter, &merge_miner_pubkey)
+                }?;
+                assert_owned_by(merge_miner_info, &self.system_program.key)?;
+
+                cpi::quarry_merge::init_merge_miner(
+                    self.staking_program_id.key,
+                    pool_info.clone(),
+                    self.depositor_authority.clone(),
+                    merge_miner_info.clone(),
+                    self.depositor_authority.clone(),
+                    &[signers_seeds.as_ref()],
+                )?;
+
+                let quarry_info = {
+                    let (quarry, _) = cpi::quarry::find_quarry_program_address(
+                        &cpi::quarry::staking_program_id(),
+                        &rewarder,
+                        self.collateral_mint.key,
+                    );
+
+                    AccountLoader::next_with_key(account_info_iter, &quarry)
+                }?;
+
+                let rewarder_info = AccountLoader::next_with_key(account_info_iter, &rewarder)?;
+
+                let miner_info = {
+                    let (miner_pubkey, _) = cpi::quarry::find_miner_program_address(
+                        &cpi::quarry::staking_program_id(),
+                        quarry_info.key,
+                        merge_miner_info.key,
+                    );
+                    AccountLoader::next_with_key(account_info_iter, &miner_pubkey)
+                }?;
+
+                let miner_vault_info = {
+                    let miner_vault =
+                        get_associated_token_address(miner_info.key, self.collateral_mint.key);
+                    AccountLoader::next_with_key(account_info_iter, &miner_vault)
+                }?;
+
+                let _spl_token_program =
+                    AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
+
+                cpi::quarry_merge::init_miner(
+                    self.staking_program_id.key,
+                    pool_info.clone(),
+                    merge_miner_info.clone(),
+                    miner_info.clone(),
+                    quarry_info.clone(),
+                    rewarder_info.clone(),
+                    self.collateral_mint.clone(),
+                    miner_vault_info.clone(),
+                    self.depositor_authority.clone(),
+                    &[signers_seeds.as_ref()],
+                )?;
+            }
             MiningType::Francium {
                 farming_pool,
                 user_reward_a,

@@ -162,6 +162,8 @@ pub struct DefaultAccounts {
 
     pub quarry: QuarryAccounts,
 
+    pub quarry_merge: QuarryAccounts,
+
     pub solend: SolendAccounts,
 
     pub tulip: TulipAccounts,
@@ -247,6 +249,27 @@ impl QuarryMining {
 }
 
 #[serde_as]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
+pub struct QuarryMergeMining {
+    #[serde_as(as = "DisplayFromStr")]
+    pub pool: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub miner_vault: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub merge_miner: Pubkey,
+}
+
+impl QuarryMergeMining {
+    pub fn default() -> QuarryMergeMining {
+        QuarryMergeMining {
+            pool: Pubkey::default(),
+            miner_vault: Pubkey::default(),
+            merge_miner: Pubkey::default(),
+        }
+    }
+}
+
+#[serde_as]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
 pub struct InitializedAccounts {
     #[serde_as(as = "DisplayFromStr")]
@@ -273,6 +296,8 @@ pub struct InitializedAccounts {
     pub depositor: Pubkey,
 
     pub quarry_mining: BTreeMap<String, QuarryMining>,
+
+    pub quarry_merge_mining: BTreeMap<String, QuarryMergeMining>,
     #[serde_as(as = "DisplayFromStr")]
     pub rebalance_executor: Pubkey,
 

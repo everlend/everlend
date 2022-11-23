@@ -1,7 +1,7 @@
 //! Utils
 
 use crate::money_market::{CollateralPool, CollateralStorage, Francium, MoneyMarket, Tulip};
-use crate::money_market::{Jet, Larix, PortFinance, SPLLending, Solend};
+use crate::money_market::{Jet, Larix, PortFinance, QuarryMerge, SPLLending, Solend};
 use crate::{
     find_transit_program_address,
     state::{InternalMining, MiningType},
@@ -198,7 +198,7 @@ pub fn money_market<'a, 'b>(
     money_market_program: &AccountInfo<'b>,
     money_market_account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
     internal_mining: &AccountInfo<'b>,
-    collateral_token_mint: &Pubkey,
+    collateral_token_mint: &'a AccountInfo<'b>,
     depositor_authority: &Pubkey,
     depositor: &Pubkey,
 ) -> Result<(Box<dyn MoneyMarket<'b> + 'a>, bool), ProgramError> {
@@ -236,7 +236,7 @@ pub fn money_market<'a, 'b>(
                 money_market_program.key.clone(),
                 money_market_account_info_iter,
                 internal_mining_type,
-                collateral_token_mint,
+                collateral_token_mint.key,
                 depositor_authority,
             )?;
             return Ok((Box::new(port), is_mining));
@@ -286,6 +286,17 @@ pub fn money_market<'a, 'b>(
             )?;
             return Ok((Box::new(jet), is_mining));
         }
+        //QuarryMerge
+        6 => {
+            let quarry_merge = QuarryMerge::init(
+                money_market_account_info_iter,
+                depositor_authority,
+                collateral_token_mint,
+                internal_mining_type,
+            )?;
+            return Ok((Box::new(quarry_merge), is_mining));
+        }
+
         _ => Err(EverlendError::IncorrectInstructionProgramId.into()),
     }
 }

@@ -1,5 +1,6 @@
 use crate::claimer::{
-    FranciumClaimer, LarixClaimer, PortFinanceClaimer, QuarryClaimer, RewardClaimer,
+    FranciumClaimer, LarixClaimer, PortFinanceClaimer, QuarryClaimer, QuarryMergeClaimer,
+    RewardClaimer,
 };
 use crate::{
     find_internal_mining_program_address,
@@ -193,6 +194,17 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
                     )?;
 
                     Box::new(francium)
+                }
+                MiningType::QuarryMerge { .. } => {
+                    let quarry_merge = QuarryMergeClaimer::init(
+                        self.depositor_authority.key,
+                        self.staking_program_id.key,
+                        self.collateral_mint.key,
+                        internal_mining_type,
+                        account_info_iter,
+                    )?;
+
+                    Box::new(quarry_merge)
                 }
                 _ => return Err(EverlendError::MiningNotInitialized.into()),
             }
