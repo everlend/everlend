@@ -173,8 +173,7 @@ pub fn bulk_migrate_pool_withdraw_authority(
     config: &Config,
     pool_withdraw_authority: &[(Pubkey, Pubkey, PoolWithdrawAuthority)],
 ) -> Result<(), ClientError> {
-    let mut instructions: Vec<Instruction> = vec![];
-    pool_withdraw_authority
+    let instructions: Vec<Vec<Instruction>> = pool_withdraw_authority
         .iter()
         .map(|(market_pubkey, authority_pubkey, authority)| {
             let create_new_instr =
@@ -200,10 +199,10 @@ pub fn bulk_migrate_pool_withdraw_authority(
                 accounts,
             );
 
-            instructions.append(&mut vec![create_new_instr, migrate])
-        });
+            vec![create_new_instr, migrate]
+        }).collect();
 
-    let tx = Transaction::new_with_payer(&instructions, Some(&config.fee_payer.pubkey()));
+    let tx = Transaction::new_with_payer(&instructions.concat(), Some(&config.fee_payer.pubkey()));
 
     config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
 
