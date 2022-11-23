@@ -116,7 +116,7 @@ impl<'a, 'b> MoneyMarket<'b> for QuarryMerge<'a, 'b> {
         amount: u64,
         _signers_seeds: &[&[&[u8]]],
     ) -> Result<u64, ProgramError> {
-        Ok(amount)
+        return Err(EverlendError::MiningIsRequired.into());
     }
 
     ///
@@ -130,7 +130,7 @@ impl<'a, 'b> MoneyMarket<'b> for QuarryMerge<'a, 'b> {
         _amount: u64,
         _signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
-        Ok(())
+        return Err(EverlendError::MiningIsRequired.into());
     }
 
     ///
