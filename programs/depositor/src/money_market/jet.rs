@@ -33,6 +33,11 @@ impl<'a, 'b> Jet<'a, 'b> {
 
 impl<'a, 'b> MoneyMarket<'b> for Jet<'a, 'b> {
     ///
+    fn is_collateral_return(&self) -> bool {
+        true
+    }
+
+    ///
     fn money_market_deposit(
         &self,
         collateral_mint: AccountInfo<'b>,

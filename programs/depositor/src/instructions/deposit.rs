@@ -158,6 +158,7 @@ impl<'a, 'b> DepositContext<'a, 'b> {
             self.collateral_mint.key,
             self.depositor_authority.key,
             self.depositor.key,
+            self.liquidity_mint,
         )?;
 
         let collateral_stor = collateral_storage(
