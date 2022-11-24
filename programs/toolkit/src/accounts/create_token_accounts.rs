@@ -171,6 +171,7 @@ impl<'a> ToolkitCommand<'a> for CreateTokenAccountsCommand {
                     collateral_pools,
                     liquidity_transit: liquidity_transit_pubkey,
                     port_finance_obligation_account: Pubkey::default(),
+                    solend_obligation_account: Default::default(),
                 },
             );
         }

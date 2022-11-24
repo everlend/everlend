@@ -6,11 +6,14 @@ mod francium;
 mod larix;
 mod port_finance;
 mod quarry;
+mod solend;
 
 pub use francium::*;
 pub use larix::*;
 pub use port_finance::*;
 pub use quarry::*;
+pub use solend::*;
+
 ///
 pub trait RewardClaimer<'a> {
     /// Claim mining reward

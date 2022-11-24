@@ -205,6 +205,8 @@ pub enum DepositorInstruction {
     ClaimMiningReward {
         ///
         with_subrewards: bool,
+        ///
+        additional_data: Vec<u8>,
     },
 
     /// Migrate Depositor
@@ -866,6 +868,19 @@ pub fn init_mining_account(
             accounts.push(AccountMeta::new(user_reward_a, false));
             accounts.push(AccountMeta::new(user_reward_b, false));
             accounts.push(AccountMeta::new(user_stake_token_account, false));
+        }
+        MiningType::Solend { obligation } => {
+            accounts.push(AccountMeta::new_readonly(
+                pubkeys.money_market_program_id,
+                false,
+            ));
+            accounts.push(AccountMeta::new(obligation, false));
+            accounts.push(AccountMeta::new_readonly(
+                pubkeys.lending_market.unwrap(),
+                false,
+            ));
+            accounts.push(AccountMeta::new_readonly(sysvar::clock::id(), false));
+            accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
         }
         MiningType::None => {}
     }

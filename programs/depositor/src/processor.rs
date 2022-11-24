@@ -92,12 +92,16 @@ impl<'a, 'b> Processor {
                 )
             }
 
-            DepositorInstruction::ClaimMiningReward { with_subrewards } => {
+            DepositorInstruction::ClaimMiningReward {
+                with_subrewards,
+                additional_data,
+            } => {
                 msg!("DepositorInstruction: ClaimMiningReward");
                 ClaimMiningRewardContext::new(program_id, account_info_iter)?.process(
                     program_id,
                     account_info_iter,
                     with_subrewards,
+                    &additional_data,
                 )
             }
 

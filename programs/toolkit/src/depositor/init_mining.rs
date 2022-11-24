@@ -1,7 +1,8 @@
+use crate::liquidity_mining::francium_liquidity_miner::FranciumLiquidityMiner;
 use crate::liquidity_mining::larix_liquidity_miner::LarixLiquidityMiner;
 use crate::liquidity_mining::port_liquidity_miner::PortLiquidityMiner;
 use crate::liquidity_mining::quarry_liquidity_miner::QuarryLiquidityMiner;
-use crate::liquidity_mining::francium_liquidity_miner::FranciumLiquidityMiner;
+use crate::liquidity_mining::solend_liquidity_miner::SolendLiquidityMiner;
 use crate::liquidity_mining::{execute_init_mining_accounts, save_mining_accounts, LiquidityMiner};
 use crate::utils::arg;
 use crate::{Config, ToolkitCommand};
@@ -67,6 +68,7 @@ impl<'a> ToolkitCommand<'a> for InitMiningCommand {
             StakingMoneyMarket::Larix => Some(Box::new(LarixLiquidityMiner {})),
             StakingMoneyMarket::Quarry => Some(Box::new(QuarryLiquidityMiner {})),
             StakingMoneyMarket::Francium => Some(Box::new(FranciumLiquidityMiner {})),
+            StakingMoneyMarket::Solend => Some(Box::new(SolendLiquidityMiner {})),
             _ => None,
         };
 
@@ -89,8 +91,13 @@ impl<'a> ToolkitCommand<'a> for InitMiningCommand {
         };
 
         let pubkeys = liquidity_miner.get_pubkeys(config, &token);
-        let mining_type =
-            liquidity_miner.get_mining_type(config, &token, mining_pubkey, sub_reward_mint, reward_mint);
+        let mining_type = liquidity_miner.get_mining_type(
+            config,
+            &token,
+            mining_pubkey,
+            sub_reward_mint,
+            reward_mint,
+        );
 
         execute_init_mining_accounts(config, &pubkeys.unwrap(), mining_type)?;
 

@@ -1,5 +1,5 @@
 use crate::claimer::{
-    FranciumClaimer, LarixClaimer, PortFinanceClaimer, QuarryClaimer, RewardClaimer,
+    FranciumClaimer, LarixClaimer, PortFinanceClaimer, QuarryClaimer, RewardClaimer, SolendClaimer,
 };
 use crate::{
     state::{Depositor, InternalMining, MiningType},
@@ -69,6 +69,7 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
         program_id: &Pubkey,
         account_info_iter: &'a mut Enumerate<Iter<'a, AccountInfo<'b>>>,
         with_subrewards: bool,
+        additional_data: &[u8],
     ) -> ProgramResult {
         {
             let depositor = Depositor::unpack(&self.depositor.data.borrow())?;
@@ -194,6 +195,17 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
                     )?;
 
                     Box::new(francium)
+                }
+                MiningType::Solend { .. } => {
+                    let solend = SolendClaimer::init(
+                        self.staking_program_id.key,
+                        internal_mining_type,
+                        additional_data,
+                        self.executor,
+                        account_info_iter,
+                    )?;
+
+                    Box::new(solend)
                 }
                 _ => return Err(EverlendError::MiningNotInitialized.into()),
             }

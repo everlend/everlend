@@ -59,6 +59,12 @@ pub enum MiningType {
         #[allow(dead_code)]
         user_reward_b: Pubkey,
     },
+    ///
+    Solend {
+        ///
+        #[allow(dead_code)]
+        obligation: Pubkey,
+    },
 }
 
 /// InternalMining
