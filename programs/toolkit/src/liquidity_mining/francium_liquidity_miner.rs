@@ -4,14 +4,14 @@ use crate::Config;
 use anyhow::Result;
 use everlend_depositor::instruction::InitMiningAccountsPubkeys;
 use everlend_depositor::state::MiningType;
-use everlend_utils::find_program_address;
 use everlend_utils::integrations::MoneyMarket;
+use everlend_utils::{find_program_address, PDA};
 use solana_program::pubkey::Pubkey;
 
 use solana_sdk::signature::Keypair;
 
 use crate::helpers::create_transit;
-use everlend_depositor::find_transit_program_address;
+use everlend_depositor::TransitPDA;
 use everlend_utils::cpi::francium;
 
 pub struct FranciumLiquidityMiner {}
@@ -57,17 +57,18 @@ impl LiquidityMiner for FranciumLiquidityMiner {
         let (depositor_authority, _) =
             find_program_address(&everlend_depositor::id(), &initialized_accounts.depositor);
 
-        let (user_reward_a, _) = find_transit_program_address(
-            &everlend_depositor::id(),
-            &initialized_accounts.depositor,
-            &reward_token_mint.unwrap(),
-            francium::FRANCIUM_REWARD_SEED,
-        );
+        let (user_reward_a, _) = TransitPDA {
+            depositor: initialized_accounts.depositor,
+            mint: reward_token_mint.unwrap(),
+            seed: francium::FRANCIUM_REWARD_SEED,
+        }
+        .find_address(&everlend_depositor::id());
 
         if config
             .rpc_client
             .get_account_with_commitment(&user_reward_a, config.rpc_client.commitment())?
-            .value.is_none()
+            .value
+            .is_none()
         {
             create_transit(
                 config,
@@ -78,17 +79,18 @@ impl LiquidityMiner for FranciumLiquidityMiner {
         }
 
         if sub_reward_token_mint.is_some() {
-            let (user_reward_b, _) = find_transit_program_address(
-                &everlend_depositor::id(),
-                &initialized_accounts.depositor,
-                &sub_reward_token_mint.unwrap(),
-                francium::FRANCIUM_REWARD_SEED,
-            );
+            let (user_reward_b, _) = TransitPDA {
+                depositor: initialized_accounts.depositor,
+                mint: sub_reward_token_mint.unwrap(),
+                seed: francium::FRANCIUM_REWARD_SEED,
+            }
+            .find_address(&everlend_depositor::id());
 
             if config
                 .rpc_client
                 .get_account_with_commitment(&user_reward_b, config.rpc_client.commitment())?
-                .value.is_none()
+                .value
+                .is_none()
             {
                 create_transit(
                     config,
@@ -102,19 +104,20 @@ impl LiquidityMiner for FranciumLiquidityMiner {
         let collateral_mint =
             collateral_mint_map.get(token).unwrap()[MoneyMarket::Francium as usize].unwrap();
 
-        let (user_stake_account, _) = find_transit_program_address(
-            &everlend_depositor::id(),
-            &initialized_accounts.depositor,
-            &collateral_mint,
-            "",
-        );
+        let (user_stake_account, _) = TransitPDA {
+            depositor: initialized_accounts.depositor,
+            mint: collateral_mint,
+            seed: "",
+        }
+        .find_address(&everlend_depositor::id());
 
         let user_farming = francium::find_user_farming_address(
             &depositor_authority,
             &default_accounts
                 .francium_farming_pool_account
                 .get(token)
-                .unwrap().staking_pool,
+                .unwrap()
+                .staking_pool,
             &user_stake_account,
         );
 
@@ -156,33 +159,34 @@ impl LiquidityMiner for FranciumLiquidityMiner {
         let collateral_mint =
             collateral_mint_map.get(token).unwrap()[MoneyMarket::Francium as usize].unwrap();
 
-        let (user_stake_account, _) = find_transit_program_address(
-            &everlend_depositor::id(),
-            &initialized_accounts.depositor,
-            &collateral_mint,
-            "",
-        );
+        let (user_stake_account, _) = TransitPDA {
+            depositor: initialized_accounts.depositor,
+            mint: collateral_mint,
+            seed: "",
+        }
+        .find_address(&everlend_depositor::id());
 
-        let (user_reward_a, _) = find_transit_program_address(
-            &everlend_depositor::id(),
-            &initialized_accounts.depositor,
-            &reward_token_mint.unwrap(),
-            francium::FRANCIUM_REWARD_SEED,
-        );
+        let (user_reward_a, _) = TransitPDA {
+            depositor: initialized_accounts.depositor,
+            mint: reward_token_mint.unwrap(),
+            seed: francium::FRANCIUM_REWARD_SEED,
+        }
+        .find_address(&everlend_depositor::id());
 
-        let (user_reward_b, _) = find_transit_program_address(
-            &everlend_depositor::id(),
-            &initialized_accounts.depositor,
-            &sub_reward_token_mint.unwrap(),
-            francium::FRANCIUM_REWARD_SEED,
-        );
+        let (user_reward_b, _) = TransitPDA {
+            depositor: initialized_accounts.depositor,
+            mint: sub_reward_token_mint.unwrap(),
+            seed: francium::FRANCIUM_REWARD_SEED,
+        }
+        .find_address(&everlend_depositor::id());
 
         MiningType::Francium {
             user_stake_token_account: user_stake_account,
             farming_pool: default_accounts
                 .francium_farming_pool_account
                 .get(token)
-                .unwrap().staking_pool,
+                .unwrap()
+                .staking_pool,
             user_reward_a,
             user_reward_b,
         }

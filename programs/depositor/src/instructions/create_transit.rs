@@ -1,5 +1,6 @@
-use crate::{find_transit_program_address, state::Depositor};
-use everlend_utils::{assert_account_key, cpi, find_program_address, AccountLoader};
+use crate::state::Depositor;
+use crate::{TransitPDA, ALLOWED_TRANSIT_SEEDS};
+use everlend_utils::{assert_account_key, cpi, find_program_address, AccountLoader, PDA};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
     program_pack::Pack, pubkey::Pubkey, rent::Rent, system_program, sysvar::Sysvar,
@@ -54,6 +55,11 @@ impl<'a, 'b> CreateTransitContext<'a, 'b> {
         _account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
         seed: String,
     ) -> ProgramResult {
+        // Check seed if it's allowed
+        if !ALLOWED_TRANSIT_SEEDS.contains(&seed.as_str()) {
+            return Err(ProgramError::InvalidArgument);
+        }
+
         // Check depositor initialized
         Depositor::unpack(&self.depositor.data.borrow())?;
 
@@ -65,17 +71,17 @@ impl<'a, 'b> CreateTransitContext<'a, 'b> {
         }?;
 
         // Create transit account for SPL program
-        let signers_seeds = {
-            let (transit_pubkey, bump_seed) =
-                find_transit_program_address(program_id, self.depositor.key, self.mint.key, &seed);
+        let seeds = {
+            let pda = TransitPDA {
+                depositor: *self.depositor.key,
+                mint: *self.mint.key,
+                seed: &seed,
+            };
+
+            let (transit_pubkey, bump) = pda.find_address(program_id);
             assert_account_key(self.transit, &transit_pubkey)?;
 
-            &[
-                seed.as_bytes(),
-                &self.depositor.key.to_bytes()[..32],
-                &self.mint.key.to_bytes()[..32],
-                &[bump_seed],
-            ]
+            pda.get_signing_seeds(bump)
         };
 
         {
@@ -85,7 +91,7 @@ impl<'a, 'b> CreateTransitContext<'a, 'b> {
                 &spl_token::id(),
                 self.from.clone(),
                 self.transit.clone(),
-                &[signers_seeds],
+                &[&seeds.as_seeds_slice()],
                 rent,
             )?;
         }

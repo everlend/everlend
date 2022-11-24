@@ -1,7 +1,6 @@
-use everlend_depositor::find_transit_program_address;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
-use everlend_utils::find_program_address;
+use everlend_utils::{find_program_address, PDA};
 use solana_program_test::*;
 use solana_sdk::signer::Signer;
 
@@ -134,12 +133,12 @@ async fn setup() -> (TestEnvironment, TestGeneralPool, TestDepositor) {
         )
         .await
         .unwrap();
-    let (reserve_transit_pubkey, _) = find_transit_program_address(
-        &everlend_depositor::id(),
-        &test_depositor.depositor.pubkey(),
-        &general_pool.token_mint_pubkey,
-        "reserve",
-    );
+    let (reserve_transit_pubkey, _) = everlend_depositor::TransitPDA {
+        seed: "reserve",
+        depositor: test_depositor.depositor.pubkey(),
+        mint: general_pool.token_mint_pubkey,
+    }
+    .find_address(&everlend_depositor::id());
     token_transfer(
         &mut env.context,
         &liquidity_provider.token_account,

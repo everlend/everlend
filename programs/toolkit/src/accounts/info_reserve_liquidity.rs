@@ -1,6 +1,7 @@
 use crate::utils::get_asset_maps;
 use crate::{Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
+use everlend_utils::PDA;
 
 pub struct InfoReserveLiquidityCommand;
 
@@ -28,13 +29,12 @@ impl<'a> ToolkitCommand<'a> for InfoReserveLiquidityCommand {
         let (mint_map, _) = get_asset_maps(default_accounts);
 
         for (token, mint) in mint_map.iter() {
-            let (liquidity_reserve_transit_pubkey, _) =
-                everlend_depositor::find_transit_program_address(
-                    &everlend_depositor::id(),
-                    &initialiazed_accounts.depositor,
-                    mint,
-                    "reserve",
-                );
+            let (liquidity_reserve_transit_pubkey, _) = everlend_depositor::TransitPDA {
+                depositor: initialiazed_accounts.depositor.clone(),
+                mint: mint.clone(),
+                seed: "reserve",
+            }
+            .find_address(&everlend_depositor::id());
 
             let liquidity_reserve_transit = config
                 .get_account_unpack::<spl_token::state::Account>(

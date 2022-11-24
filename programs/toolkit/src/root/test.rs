@@ -8,13 +8,13 @@ use crate::utils::{arg, delay};
 use crate::{distribution, Config, InitializedAccounts, ToolkitCommand};
 use anyhow::Context;
 use clap::{Arg, ArgMatches};
-use everlend_depositor::find_rebalancing_program_address;
 use everlend_depositor::state::{Rebalancing, RebalancingOperation};
+use everlend_depositor::RebalancingPDA;
 use everlend_general_pool::state::WITHDRAW_DELAY;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::state::{Registry, RegistryMarkets};
-use everlend_utils::integrations;
 use everlend_utils::integrations::MoneyMarketPubkeys;
+use everlend_utils::{integrations, PDA};
 use solana_account_decoder::parse_token::UiTokenAmount;
 use solana_clap_utils::input_parsers::value_of;
 use solana_program::program_pack::Pack;
@@ -219,11 +219,11 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
 
         let complete_rebalancing = |rebalancing: Option<Rebalancing>| -> anyhow::Result<()> {
             let rebalancing = rebalancing.or_else(|| {
-                let (rebalancing_pubkey, _) = find_rebalancing_program_address(
-                    &everlend_depositor::id(),
-                    &depositor,
-                    &sol.mint,
-                );
+                let (rebalancing_pubkey, _) = RebalancingPDA {
+                    depositor: depositor.clone(),
+                    mint: sol.mint,
+                }
+                .find_address(&everlend_depositor::id());
                 config
                     .rpc_client
                     .get_account(&rebalancing_pubkey)

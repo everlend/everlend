@@ -1,8 +1,8 @@
 use crate::claimer::RewardClaimer;
-use crate::find_transit_program_address;
 use crate::state::MiningType;
+use crate::TransitPDA;
 use everlend_utils::cpi::quarry;
-use everlend_utils::{AccountLoader, EverlendError};
+use everlend_utils::{AccountLoader, EverlendError, PDA};
 use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
 use std::{iter::Enumerate, slice::Iter};
 
@@ -52,12 +52,12 @@ impl<'a, 'b> QuarryClaimer<'a, 'b> {
         let rewards_token_mint = AccountLoader::next_unchecked(account_info_iter)?;
 
         let rewards_token_account = {
-            let (reward_token_account_pubkey, _) = find_transit_program_address(
-                program_id,
-                depositor,
-                rewards_token_mint.key,
-                "lm_reward",
-            );
+            let (reward_token_account_pubkey, _) = TransitPDA {
+                seed: "lm_reward",
+                depositor: depositor.clone(),
+                mint: *rewards_token_mint.key,
+            }
+            .find_address(program_id);
 
             AccountLoader::next_with_key(account_info_iter, &reward_token_account_pubkey)?
         };

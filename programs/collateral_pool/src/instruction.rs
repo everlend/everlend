@@ -21,7 +21,7 @@ pub enum CollateralPoolsInstruction {
     ///
     /// Accounts:
     /// [W] Pool market - uninitialized
-    /// [R] Market manager
+    /// [RS] Market manager
     /// [R] Rent sysvar
     InitPoolMarket,
 
@@ -166,6 +166,30 @@ pub enum CollateralPoolsInstruction {
     /// [RS] New manager
     ///
     UpdateManager,
+
+    /// Migrate pool withdraw authority
+    ///
+    /// Accounts:
+    /// [R] Pool market
+    /// [R] Pool
+    /// [W] Pool withdraw authority
+    /// [W] New pool withdraw authority
+    /// [WS] Market manager
+    /// [R] Rent sysvar
+    /// [R] System program
+    MigratePoolWithdrawAuthority,
+
+    /// Migrate pool borrow authority
+    ///
+    /// Accounts:
+    /// [R] Pool market
+    /// [R] Pool
+    /// [W] Pool borrow authority
+    /// [W] New pool borrow authority
+    /// [WS] Market manager
+    /// [R] Rent sysvar
+    /// [R] System program
+    MigratePoolBorrowAuthority,
 }
 
 /// Creates 'InitPoolMarket' instruction.
@@ -177,7 +201,7 @@ pub fn init_pool_market(
 ) -> Instruction {
     let accounts = vec![
         AccountMeta::new(*pool_market, false),
-        AccountMeta::new_readonly(*manager, false),
+        AccountMeta::new_readonly(*manager, true),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
 
@@ -502,6 +526,60 @@ pub fn update_manager(
     Instruction::new_with_borsh(
         *program_id,
         &CollateralPoolsInstruction::UpdateManager,
+        accounts,
+    )
+}
+
+/// Creates 'MigratePoolWithdrawAuthority' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn migrate_pool_withdraw_authority(
+    program_id: &Pubkey,
+    pool_market: &Pubkey,
+    pool: &Pubkey,
+    pool_withdraw_authority: &Pubkey,
+    new_pool_withdraw_authority: &Pubkey,
+    manager: &Pubkey,
+) -> Instruction {
+    let accounts = vec![
+        AccountMeta::new_readonly(*pool_market, false),
+        AccountMeta::new_readonly(*pool, false),
+        AccountMeta::new(*pool_withdraw_authority, false),
+        AccountMeta::new(*new_pool_withdraw_authority, false),
+        AccountMeta::new_readonly(*manager, true),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+        AccountMeta::new_readonly(system_program::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &CollateralPoolsInstruction::MigratePoolWithdrawAuthority,
+        accounts,
+    )
+}
+
+/// Creates 'MigratePoolBorrowAuthority' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn migrate_pool_borrow_authority(
+    program_id: &Pubkey,
+    pool_market: &Pubkey,
+    pool: &Pubkey,
+    pool_borrow_authority: &Pubkey,
+    new_pool_borrow_authority: &Pubkey,
+    manager: &Pubkey,
+) -> Instruction {
+    let accounts = vec![
+        AccountMeta::new_readonly(*pool_market, false),
+        AccountMeta::new_readonly(*pool, false),
+        AccountMeta::new(*pool_borrow_authority, false),
+        AccountMeta::new(*new_pool_borrow_authority, false),
+        AccountMeta::new_readonly(*manager, true),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+        AccountMeta::new_readonly(system_program::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &CollateralPoolsInstruction::MigratePoolBorrowAuthority,
         accounts,
     )
 }

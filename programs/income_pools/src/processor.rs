@@ -9,8 +9,8 @@ use crate::{
 use borsh::BorshDeserialize;
 use everlend_general_pool::state::Pool;
 use everlend_utils::{
-    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
-    assert_non_zero_amount, cpi, find_program_address, math, EverlendError,
+    assert_account_key, assert_non_zero_amount, assert_owned_by, assert_rent_exempt, assert_signer,
+    assert_uninitialized, cpi, find_program_address, math, EverlendError,
 };
 
 use solana_program::{
@@ -40,6 +40,7 @@ impl Processor {
         let rent_info = next_account_info(account_info_iter)?;
         let rent = &Rent::from_account_info(rent_info)?;
 
+        assert_signer(manager_info)?;
         assert_rent_exempt(rent, pool_market_info)?;
 
         // Check programs
@@ -85,6 +86,13 @@ impl Processor {
 
         // Check manager
         assert_account_key(manager_info, &pool_market.manager)?;
+
+        // Check pool market authority pubkey
+        {
+            let (pool_market_authority_pubkey, _) =
+                find_program_address(program_id, pool_market_info.key);
+            assert_account_key(pool_market_authority_info, &pool_market_authority_pubkey)?;
+        }
 
         // Create pool account
         let (pool_pubkey, bump_seed) =
@@ -262,6 +270,7 @@ impl Processor {
         assert_signer(manager_info)?;
 
         assert_owned_by(income_pool_info, program_id)?;
+        assert_owned_by(income_pool_market_info, program_id)?;
 
         // Get pool market state
         let income_pool_market = IncomePoolMarket::unpack(&income_pool_market_info.data.borrow())?;

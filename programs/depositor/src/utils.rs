@@ -3,15 +3,15 @@
 use crate::money_market::{CollateralPool, CollateralStorage, Francium, MoneyMarket, Tulip};
 use crate::money_market::{Jet, Larix, PortFinance, SPLLending, Solend};
 use crate::{
-    find_transit_program_address,
     state::{InternalMining, MiningType},
+    TransitPDA,
 };
 use everlend_collateral_pool::find_pool_withdraw_authority_program_address;
 use everlend_income_pools::utils::IncomePoolAccounts;
 use everlend_registry::state::RegistryMarkets;
 use everlend_utils::{
     abs_diff, assert_account_key, cpi, find_program_address, integrations, AccountLoader,
-    EverlendError,
+    EverlendError, PDA,
 };
 use num_traits::Zero;
 use solana_program::{
@@ -394,12 +394,12 @@ impl<'a, 'b> FillRewardAccounts<'a, 'b> {
         program_id: &Pubkey,
         depositor_id: &Pubkey,
     ) -> Result<(), ProgramError> {
-        let (reward_token_account, _) = find_transit_program_address(
-            program_id,
-            depositor_id,
-            self.reward_mint_info.key,
-            "lm_reward",
-        );
+        let (reward_token_account, _) = TransitPDA {
+            seed: "lm_reward",
+            depositor: depositor_id.clone(),
+            mint: *self.reward_mint_info.key,
+        }
+        .find_address(program_id);
         assert_account_key(self.reward_transit_info, &reward_token_account)?;
 
         Ok(())

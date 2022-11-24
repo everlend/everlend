@@ -48,6 +48,14 @@ impl RewardPool {
 
     /// Process add vault
     pub fn add_vault(&mut self, reward: RewardVault) -> ProgramResult {
+        if self
+            .vaults
+            .iter()
+            .any(|v| v.reward_mint == reward.reward_mint)
+        {
+            return Err(ProgramError::InvalidArgument);
+        }
+
         self.vaults.push(reward);
 
         Ok(())
