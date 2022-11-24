@@ -54,7 +54,7 @@ pub fn deposit<'a, 'b>(
         )?
     } else {
         msg!("Deposit to Money market");
-        let mut collateral_amount = money_market.money_market_deposit(
+        let collateral_amount = money_market.money_market_deposit(
             collateral_mint.clone(),
             liquidity_transit.clone(),
             collateral_transit.clone(),
@@ -71,7 +71,7 @@ pub fn deposit<'a, 'b>(
 
             // For money markets that do not return collateral tokens,
             // the collateral amount should be returned as a liquidity amount
-            collateral_amount = liquidity_amount;
+            return Ok(liquidity_amount);
         }
 
         msg!("Deposit into collateral pool");
@@ -124,22 +124,24 @@ pub fn withdraw<'a, 'b>(
             signers_seeds,
         )?;
     } else {
-        msg!("Withdraw from collateral pool");
+        if money_market.is_collateral_return() {
+            msg!("Withdraw from collateral pool");
 
-        if collateral_storage.is_none() {
-            return Err(ProgramError::InvalidArgument);
+            if collateral_storage.is_none() {
+                return Err(ProgramError::InvalidArgument);
+            }
+
+            collateral_storage
+                .as_ref()
+                .unwrap()
+                .withdraw_collateral_tokens(
+                    collateral_transit.clone(),
+                    authority.clone(),
+                    clock.clone(),
+                    collateral_amount,
+                    signers_seeds,
+                )?;
         }
-
-        collateral_storage
-            .as_ref()
-            .unwrap()
-            .withdraw_collateral_tokens(
-                collateral_transit.clone(),
-                authority.clone(),
-                clock.clone(),
-                collateral_amount,
-                signers_seeds,
-            )?;
 
         msg!("Redeem from Money market");
         money_market.money_market_redeem(
@@ -207,6 +209,7 @@ pub fn money_market<'a, 'b>(
     collateral_token_mint: &Pubkey,
     depositor_authority: &Pubkey,
     depositor: &Pubkey,
+    liquidity_mint: &'a AccountInfo<'b>,
 ) -> Result<(Box<dyn MoneyMarket<'b> + 'a>, bool), ProgramError> {
     let internal_mining_type = if internal_mining.owner == program_id {
         Some(InternalMining::unpack(&internal_mining.data.borrow())?.mining_type)
@@ -298,6 +301,7 @@ pub fn money_market<'a, 'b>(
                 money_market_program.key.clone(),
                 program_id.clone(),
                 depositor_authority,
+                liquidity_mint,
                 money_market_account_info_iter,
             )?;
             return Ok((Box::new(frakt), is_mining));

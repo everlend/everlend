@@ -31,6 +31,7 @@ impl<'a, 'b> Frakt<'a, 'b> {
         money_market_program_id: Pubkey,
         program_id: Pubkey,
         authority: &Pubkey,
+        token_mint: &'a AccountInfo<'b>,
         account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
     ) -> Result<Frakt<'a, 'b>, ProgramError> {
         let liquidity_pool =
@@ -53,8 +54,6 @@ impl<'a, 'b> Frakt<'a, 'b> {
                 find_transit_sol_unwrap_address(&program_id, liquidity_pool.key);
             AccountLoader::next_with_key(account_info_iter, &unwrap_sol_pubkey)?
         };
-        let token_mint =
-            AccountLoader::next_with_key(account_info_iter, &spl_token::native_mint::id())?;
         let rent = AccountLoader::next_with_key(account_info_iter, &sysvar::rent::id())?;
 
         let _system_program =
@@ -162,6 +161,8 @@ impl<'a, 'b> MoneyMarket<'b> for Frakt<'a, 'b> {
             authority.key,
         );
 
+        let starting_lamports = authority.lamports();
+
         cpi::frakt::redeem(
             &self.money_market_program_id,
             self.liquidity_pool.clone(),
@@ -174,8 +175,6 @@ impl<'a, 'b> MoneyMarket<'b> for Frakt<'a, 'b> {
             signers_seeds,
         )?;
 
-        let starting_lamports = authority.lamports();
-
         cpi::frakt::claim_rewards(
             &self.money_market_program_id,
             self.liquidity_pool.clone(),
@@ -187,10 +186,9 @@ impl<'a, 'b> MoneyMarket<'b> for Frakt<'a, 'b> {
             &signers_seeds,
         )?;
 
-        let amount = starting_lamports
-            .checked_sub(authority.lamports())
-            .ok_or(EverlendError::MathOverflow)?
-            .checked_add(collateral_amount)
+        let amount = authority
+            .lamports()
+            .checked_sub(starting_lamports)
             .ok_or(EverlendError::MathOverflow)?;
 
         cpi::system::transfer(
