@@ -1,8 +1,9 @@
+use crate::utils::refresh;
 use crate::{
     find_internal_mining_program_address, find_rebalancing_program_address,
     find_transit_program_address,
     state::{Depositor, Rebalancing, RebalancingOperation},
-    utils::{collateral_storage, deposit, money_market, withdraw},
+    utils::{collateral_storage, money_market},
 };
 use everlend_income_pools::utils::IncomePoolAccounts;
 use everlend_registry::state::RegistryMarkets;
@@ -234,8 +235,8 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
         }
 
         {
-            msg!("Refresh Withdraw");
-            withdraw(
+            msg!("Refresh");
+            let collateral_amount = refresh(
                 self.income_pool_accounts,
                 self.collateral_transit,
                 self.collateral_mint,
@@ -245,30 +246,14 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
                 self.clock,
                 &money_market,
                 is_mining,
-                &collateral_stor,
+                collateral_stor,
                 withdraw_step.collateral_amount.unwrap(),
                 withdraw_step.liquidity_amount,
-                &[signers_seeds],
-            )?;
-
-            rebalancing.execute_step(RebalancingOperation::RefreshWithdraw, None, clock.slot)?;
-        }
-
-        {
-            msg!("Refresh Deposit");
-            let collateral_amount = deposit(
-                self.collateral_transit,
-                self.collateral_mint,
-                self.liquidity_transit,
-                self.depositor_authority,
-                self.clock,
-                &money_market,
-                is_mining,
-                collateral_stor,
                 deposit_step.liquidity_amount,
                 &[signers_seeds],
             )?;
 
+            rebalancing.execute_step(RebalancingOperation::RefreshWithdraw, None, clock.slot)?;
             rebalancing.execute_step(
                 RebalancingOperation::RefreshDeposit,
                 Some(collateral_amount),
