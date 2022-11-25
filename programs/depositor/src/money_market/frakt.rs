@@ -228,4 +228,53 @@ impl<'a, 'b> MoneyMarket<'b> for Frakt<'a, 'b> {
     ) -> Result<(), ProgramError> {
         Err(EverlendError::MiningNotImplemented.into())
     }
+
+    fn refresh_income(
+        &self,
+        _liquidity_reserve_transit: AccountInfo<'b>,
+        _collateral_mint: AccountInfo<'b>,
+        liquidity_transit: AccountInfo<'b>,
+        _collateral_transit: AccountInfo<'b>,
+        authority: AccountInfo<'b>,
+        _clock: AccountInfo<'b>,
+        _collateral_amount: u64,
+        _expected_liquidity_amount: u64,
+        _deposit_liquidity_amount: u64,
+        signers_seeds: &[&[&[u8]]],
+    ) -> Result<(u64, u64), ProgramError> {
+        let (_, dump) = find_deposit_address(
+            &self.money_market_program_id,
+            self.liquidity_pool.key,
+            authority.key,
+        );
+
+        let starting_lamports = authority.lamports();
+
+        cpi::frakt::claim_rewards(
+            &self.money_market_program_id,
+            self.liquidity_pool.clone(),
+            self.deposit_account.clone(),
+            authority.clone(),
+            self.liquidity_owner.clone(),
+            self.admin.clone(),
+            dump,
+            &signers_seeds,
+        )?;
+
+        let amount = authority
+            .lamports()
+            .checked_sub(starting_lamports)
+            .ok_or(EverlendError::MathOverflow)?;
+
+        cpi::system::transfer(
+            authority.clone(),
+            liquidity_transit.clone(),
+            amount,
+            signers_seeds,
+        )?;
+
+        cpi::spl_token::sync_native(liquidity_transit.clone())?;
+
+        Ok((0, amount))
+    }
 }

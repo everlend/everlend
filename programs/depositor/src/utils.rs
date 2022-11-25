@@ -233,21 +233,23 @@ pub fn refresh<'a, 'b>(
             signers_seeds,
         )?
     } else {
-        msg!("Withdraw from collateral pool");
-        if collateral_storage.is_none() {
-            return Err(ProgramError::InvalidArgument);
-        }
+        if money_market.is_collateral_return() {
+            msg!("Withdraw from collateral pool");
+            if collateral_storage.is_none() {
+                return Err(ProgramError::InvalidArgument);
+            }
 
-        collateral_storage
-            .as_ref()
-            .unwrap()
-            .withdraw_collateral_tokens(
-                collateral_transit.clone(),
-                authority.clone(),
-                clock.clone(),
-                collateral_amount,
-                signers_seeds,
-            )?;
+            collateral_storage
+                .as_ref()
+                .unwrap()
+                .withdraw_collateral_tokens(
+                    collateral_transit.clone(),
+                    authority.clone(),
+                    clock.clone(),
+                    collateral_amount,
+                    signers_seeds,
+                )?;
+        }
 
         msg!("Redeem from Money market");
         let (collateral_amount, income_amount) = money_market.refresh_income(
@@ -263,24 +265,28 @@ pub fn refresh<'a, 'b>(
             signers_seeds,
         )?;
 
-        if collateral_amount == 0 {
-            return Err(EverlendError::CollateralLeak.into());
+        if money_market.is_collateral_return() {
+            if collateral_amount == 0 {
+                return Err(EverlendError::CollateralLeak.into());
+            }
+
+            msg!("Deposit into collateral pool");
+            if collateral_storage.is_none() {
+                return Err(ProgramError::InvalidArgument);
+            }
+
+            collateral_storage.unwrap().deposit_collateral_tokens(
+                collateral_transit.clone(),
+                authority.clone(),
+                clock.clone(),
+                collateral_amount,
+                signers_seeds,
+            )?;
+
+            (collateral_amount, income_amount)
+        } else {
+            (deposit_liquidity_amount, income_amount)
         }
-
-        msg!("Deposit into collateral pool");
-        if collateral_storage.is_none() {
-            return Err(ProgramError::InvalidArgument);
-        }
-
-        collateral_storage.unwrap().deposit_collateral_tokens(
-            collateral_transit.clone(),
-            authority.clone(),
-            clock.clone(),
-            collateral_amount,
-            signers_seeds,
-        )?;
-
-        (collateral_amount, income_amount)
     };
 
     // Deposit income into the income pool
