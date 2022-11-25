@@ -21,7 +21,8 @@ use solana_program::{
 use spl_token::state::Account;
 use std::{cmp::Ordering, iter::Enumerate, slice::Iter};
 
-const RESERVE_THRESHOLD: u64 = 20;
+/// Reserve Threshold
+pub const RESERVE_THRESHOLD: u64 = 20;
 
 /// Deposit
 #[allow(clippy::too_many_arguments)]
@@ -197,6 +198,107 @@ pub fn withdraw<'a, 'b>(
     }
 
     Ok(())
+}
+
+/// Refresh
+#[allow(clippy::too_many_arguments)]
+pub fn refresh<'a, 'b>(
+    income_pool_accounts: IncomePoolAccounts<'a, 'b>,
+    collateral_transit: &'a AccountInfo<'b>,
+    collateral_mint: &'a AccountInfo<'b>,
+    liquidity_transit: &'a AccountInfo<'b>,
+    liquidity_reserve_transit: &'a AccountInfo<'b>,
+    authority: &'a AccountInfo<'b>,
+    clock: &'a AccountInfo<'b>,
+    money_market: &Box<dyn MoneyMarket<'b> + 'a>,
+    is_mining: bool,
+    collateral_storage: Option<Box<dyn CollateralStorage<'b> + 'a>>,
+    collateral_amount: u64,
+    expected_liquidity_amount: u64,
+    deposit_liquidity_amount: u64,
+    signers_seeds: &[&[&[u8]]],
+) -> Result<u64, ProgramError> {
+    let (collateral_amount, income_amount) = if is_mining {
+        msg!("Withdraw from Mining and Redeem from Money market");
+        money_market.refresh_income_with_mining(
+            liquidity_reserve_transit.clone(),
+            collateral_mint.clone(),
+            liquidity_transit.clone(),
+            collateral_transit.clone(),
+            authority.clone(),
+            clock.clone(),
+            collateral_amount,
+            expected_liquidity_amount,
+            deposit_liquidity_amount,
+            signers_seeds,
+        )?
+    } else {
+        if money_market.is_collateral_return() {
+            msg!("Withdraw from collateral pool");
+            if collateral_storage.is_none() {
+                return Err(ProgramError::InvalidArgument);
+            }
+
+            collateral_storage
+                .as_ref()
+                .unwrap()
+                .withdraw_collateral_tokens(
+                    collateral_transit.clone(),
+                    authority.clone(),
+                    clock.clone(),
+                    collateral_amount,
+                    signers_seeds,
+                )?;
+        }
+
+        msg!("Redeem from Money market");
+        let (collateral_amount, income_amount) = money_market.refresh_income(
+            liquidity_reserve_transit.clone(),
+            collateral_mint.clone(),
+            liquidity_transit.clone(),
+            collateral_transit.clone(),
+            authority.clone(),
+            clock.clone(),
+            collateral_amount,
+            expected_liquidity_amount,
+            deposit_liquidity_amount,
+            signers_seeds,
+        )?;
+
+        if money_market.is_collateral_return() {
+            if collateral_amount == 0 {
+                return Err(EverlendError::CollateralLeak.into());
+            }
+
+            msg!("Deposit into collateral pool");
+            if collateral_storage.is_none() {
+                return Err(ProgramError::InvalidArgument);
+            }
+
+            collateral_storage.unwrap().deposit_collateral_tokens(
+                collateral_transit.clone(),
+                authority.clone(),
+                clock.clone(),
+                collateral_amount,
+                signers_seeds,
+            )?;
+
+            (collateral_amount, income_amount)
+        } else {
+            (deposit_liquidity_amount, income_amount)
+        }
+    };
+
+    // Deposit income into the income pool
+    everlend_income_pools::cpi::deposit(
+        income_pool_accounts,
+        liquidity_transit.clone(),
+        authority.clone(),
+        income_amount,
+        signers_seeds,
+    )?;
+
+    Ok(collateral_amount)
 }
 
 /// Money market
