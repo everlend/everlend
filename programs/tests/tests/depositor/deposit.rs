@@ -11,7 +11,7 @@ use everlend_registry::state::DistributionPubkeys;
 use everlend_utils::{
     find_program_address,
     integrations::{self, MoneyMarketPubkeys},
-    EverlendError,
+    EverlendError, PDA,
 };
 
 use crate::utils::*;
@@ -299,12 +299,12 @@ async fn success() {
         reserve_balance_before + rebalancing.steps[0].liquidity_amount,
     );
 
-    let (liquidity_transit, _) = everlend_depositor::find_transit_program_address(
-        &everlend_depositor::id(),
-        &test_depositor.depositor.pubkey(),
-        &general_pool.token_mint_pubkey,
-        "",
-    );
+    let (liquidity_transit, _) = everlend_depositor::TransitPDA {
+        seed: "",
+        depositor: test_depositor.depositor.pubkey(),
+        mint: general_pool.token_mint_pubkey,
+    }
+    .find_address(&everlend_depositor::id());
     assert_eq!(
         get_token_balance(&mut context, &liquidity_transit).await,
         100 * EXP - rebalancing.steps[0].liquidity_amount,
@@ -875,7 +875,6 @@ async fn fail_with_invalid_money_market_program_id() {
         integrations::deposit_accounts(&spl_token_lending::id(), &money_market_pubkeys);
 
     let deposit_collateral_storage_accounts = mm_pool.deposit_accounts(&mm_pool_market);
-
 
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::deposit(

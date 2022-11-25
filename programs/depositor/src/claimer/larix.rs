@@ -2,9 +2,10 @@ use crate::claimer::RewardClaimer;
 use crate::state::MiningType;
 use crate::utils::FillRewardAccounts;
 use everlend_utils::cpi::larix;
-use everlend_utils::{assert_account_key, AccountLoader, EverlendError};
+use everlend_utils::{assert_account_key, find_program_address, AccountLoader, EverlendError};
 use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
 use std::{iter::Enumerate, slice::Iter};
+use solana_program::program_pack::Pack;
 
 /// Container
 #[derive(Clone)]
@@ -20,7 +21,7 @@ pub struct LarixClaimer<'a, 'b> {
 impl<'a, 'b> LarixClaimer<'a, 'b> {
     ///
     pub fn init(
-        _staking_program_id: &Pubkey,
+        staking_program_id: &Pubkey,
         internal_mining_type: MiningType,
         with_subrewards: bool,
         fill_sub_rewards_accounts: Option<FillRewardAccounts<'a, 'b>>,
@@ -49,14 +50,26 @@ impl<'a, 'b> LarixClaimer<'a, 'b> {
             _ => return Err(EverlendError::MiningNotInitialized.into()),
         };
 
+        {
+            let registry = AccountLoader::next_with_owner(account_info_iter, &everlend_registry::id())?;
+            let registry_markets
+                = everlend_registry::state::RegistryMarkets::unpack_from_slice(&registry.data.borrow())?;
+            if !registry_markets.money_markets.contains(staking_program_id) {
+                return Err(ProgramError::InvalidArgument);
+            }
+        }
+
         let mining_account =
             AccountLoader::next_with_key(account_info_iter, &mining_account_pubkey)?;
 
-        // TODO add checks
         let mine_supply = AccountLoader::next_unchecked(account_info_iter)?;
-        let lending_market = AccountLoader::next_unchecked(account_info_iter)?;
-        let lending_market_authority = AccountLoader::next_unchecked(account_info_iter)?;
-        let reserve = AccountLoader::next_unchecked(account_info_iter)?;
+        let lending_market = AccountLoader::next_with_owner(account_info_iter, staking_program_id)?;
+        let lending_market_authority = {
+            let (lending_market_authority_pubkey, _) =
+                find_program_address(staking_program_id, lending_market.key);
+            AccountLoader::next_with_key(account_info_iter, &lending_market_authority_pubkey)?
+        };
+        let reserve = AccountLoader::next_with_owner(account_info_iter, staking_program_id)?;
         let reserve_liquidity_oracle = AccountLoader::next_unchecked(account_info_iter)?;
 
         Ok(LarixClaimer {

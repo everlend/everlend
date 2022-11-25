@@ -117,3 +117,10 @@ pub fn close_account<'a>(
 
     invoke_signed(&ix, &[account, destination, authority], signers_seeds)
 }
+
+/// SPL sync native instruction
+pub fn sync_native(account: AccountInfo) -> Result<(), ProgramError> {
+    let ix = spl_token::instruction::sync_native(&spl_token::id(), account.key)?;
+
+    invoke(&ix, &[account])
+}

@@ -7,6 +7,7 @@ use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError
 use spl_token::state::Account;
 
 mod collateral_pool;
+mod frakt;
 mod francium;
 mod jet;
 mod larix;
@@ -17,6 +18,7 @@ mod spl_lending;
 mod tulip;
 
 pub use collateral_pool::*;
+pub use frakt::*;
 pub use francium::*;
 pub use jet::*;
 pub use larix::*;
@@ -49,6 +51,9 @@ pub trait CollateralStorage<'a> {
 
 ///
 pub trait MoneyMarket<'a> {
+    ///
+    fn is_collateral_return(&self) -> bool;
+
     ///
     fn money_market_deposit(
         &self,

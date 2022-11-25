@@ -1,3 +1,4 @@
+use crate::migrations::MigrateCollateralPoolCommand;
 use crate::{print_commands, utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 
@@ -30,6 +31,7 @@ impl<'a> ToolkitCommand<'a> for MigrationsCommand {
             Box::new(MigrateLiquidityOracleCommand),
             Box::new(MigrateRewardsRootCommand),
             Box::new(MigrateRewardsPoolCommand),
+            Box::new(MigrateCollateralPoolCommand),
         ]
     }
 
