@@ -8,7 +8,7 @@ use everlend_utils::{
 use solana_program::program_pack::Pack;
 use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
 use spl_associated_token_account::get_associated_token_address;
-use spl_token::state::Account;
+use ::spl_token::state::Account;
 use std::{iter::Enumerate, slice::Iter};
 
 ///
