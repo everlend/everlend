@@ -127,6 +127,10 @@ impl<'a, 'b> PortFinance<'a, 'b> {
 }
 
 impl<'a, 'b> MoneyMarket<'b> for PortFinance<'a, 'b> {
+    fn is_collateral_return(&self) -> bool {
+        true
+    }
+
     fn money_market_deposit(
         &self,
         collateral_mint: AccountInfo<'b>,

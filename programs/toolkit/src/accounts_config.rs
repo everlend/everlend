@@ -164,6 +164,17 @@ pub struct JetAccounts {
 
 #[serde_as]
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
+pub struct FraktAccounts {
+    #[serde_as(as = "DisplayFromStr")]
+    pub program_id: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub liquidity_pool: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub pool_admin: Pubkey,
+}
+
+#[serde_as]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
 pub struct DefaultAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub sol_mint: Pubkey,
@@ -210,6 +221,8 @@ pub struct DefaultAccounts {
     pub francium_farming_pool_account: BTreeMap<String, StakingPoolAccounts>,
 
     pub jet: JetAccounts,
+
+    pub frakt: FraktAccounts,
 
     #[serde_as(as = "DisplayFromStr")]
     pub multisig_program_id: Pubkey,

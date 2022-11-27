@@ -4,7 +4,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use everlend_general_pool::find_withdrawal_requests_program_address;
 use everlend_liquidity_oracle::{find_token_oracle_program_address, state::DistributionArray};
 use everlend_utils::cpi::{francium, quarry, quarry_merge};
-use everlend_utils::find_program_address;
+use everlend_utils::{find_program_address, PDA};
 use solana_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
@@ -12,7 +12,7 @@ use solana_program::{
 };
 use spl_associated_token_account::get_associated_token_address;
 
-use crate::{find_rebalancing_program_address, find_transit_program_address, state::MiningType};
+use crate::{state::MiningType, InternalMiningPDA, RebalancingPDA, TransitPDA};
 
 /// Instructions supported by the program
 #[derive(Debug, BorshDeserialize, BorshSerialize, PartialEq)]
@@ -302,7 +302,13 @@ pub fn create_transit(
 ) -> Instruction {
     let seed = seed.unwrap_or_default();
     let (depositor_authority, _) = find_program_address(program_id, depositor);
-    let (transit, _) = find_transit_program_address(program_id, depositor, mint, &seed);
+
+    let (transit, _) = TransitPDA {
+        seed: &seed,
+        depositor: depositor.clone(),
+        mint: mint.clone(),
+    }
+    .find_address(program_id);
 
     let accounts = vec![
         AccountMeta::new_readonly(*depositor, false),
@@ -337,7 +343,11 @@ pub fn start_rebalancing(
     refresh_income: bool,
 ) -> Instruction {
     let (depositor_authority, _) = find_program_address(program_id, depositor);
-    let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, mint);
+    let (rebalancing, _) = RebalancingPDA {
+        depositor: depositor.clone(),
+        mint: mint.clone(),
+    }
+    .find_address(program_id);
     let (token_oracle, _) =
         find_token_oracle_program_address(&everlend_liquidity_oracle::id(), liquidity_oracle, mint);
     // General pool
@@ -359,8 +369,12 @@ pub fn start_rebalancing(
         general_pool_market,
         mint,
     );
-
-    let (liquidity_transit, _) = find_transit_program_address(program_id, depositor, mint, "");
+    let (liquidity_transit, _) = TransitPDA {
+        seed: "",
+        depositor: depositor.clone(),
+        mint: mint.clone(),
+    }
+    .find_address(program_id);
 
     let accounts = vec![
         AccountMeta::new_readonly(*registry, false),
@@ -404,8 +418,11 @@ pub fn reset_rebalancing(
     distributed_liquidity: DistributionArray,
     distribution_array: DistributionArray,
 ) -> Instruction {
-    let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
-
+    let (rebalancing, _) = RebalancingPDA {
+        depositor: depositor.clone(),
+        mint: liquidity_mint.clone(),
+    }
+    .find_address(program_id);
     let accounts = vec![
         AccountMeta::new_readonly(*registry, false),
         AccountMeta::new_readonly(*depositor, false),
@@ -439,19 +456,29 @@ pub fn deposit(
     collateral_storage_accounts: Vec<AccountMeta>,
 ) -> Instruction {
     let (depositor_authority, _) = find_program_address(program_id, depositor);
-    let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
-
-    let (liquidity_transit, _) =
-        find_transit_program_address(program_id, depositor, liquidity_mint, "");
-    let (collateral_transit, _) =
-        find_transit_program_address(program_id, depositor, collateral_mint, "");
-
-    let (internal_mining, _) = crate::find_internal_mining_program_address(
-        program_id,
-        liquidity_mint,
-        collateral_mint,
-        depositor,
-    );
+    let (rebalancing, _) = RebalancingPDA {
+        depositor: depositor.clone(),
+        mint: liquidity_mint.clone(),
+    }
+    .find_address(program_id);
+    let (liquidity_transit, _) = TransitPDA {
+        seed: "",
+        depositor: depositor.clone(),
+        mint: liquidity_mint.clone(),
+    }
+    .find_address(program_id);
+    let (collateral_transit, _) = TransitPDA {
+        seed: "",
+        depositor: depositor.clone(),
+        mint: collateral_mint.clone(),
+    }
+    .find_address(program_id);
+    let (internal_mining, _) = InternalMiningPDA {
+        liquidity_mint: liquidity_mint.clone(),
+        collateral_mint: collateral_mint.clone(),
+        depositor: depositor.clone(),
+    }
+    .find_address(program_id);
 
     let mut accounts = vec![
         AccountMeta::new_readonly(*registry, false),
@@ -494,8 +521,11 @@ pub fn withdraw(
     collateral_storage_accounts: Vec<AccountMeta>,
 ) -> Instruction {
     let (depositor_authority, _) = find_program_address(program_id, depositor);
-    let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
-
+    let (rebalancing, _) = RebalancingPDA {
+        depositor: depositor.clone(),
+        mint: liquidity_mint.clone(),
+    }
+    .find_address(program_id);
     // Income pool
     let (income_pool, _) = everlend_income_pools::find_pool_program_address(
         &everlend_income_pools::id(),
@@ -503,20 +533,32 @@ pub fn withdraw(
         liquidity_mint,
     );
 
-    let (collateral_transit, _) =
-        find_transit_program_address(program_id, depositor, collateral_mint, "");
-    let (liquidity_transit, _) =
-        find_transit_program_address(program_id, depositor, liquidity_mint, "");
+    let (collateral_transit, _) = TransitPDA {
+        seed: "",
+        depositor: depositor.clone(),
+        mint: collateral_mint.clone(),
+    }
+    .find_address(program_id);
+    let (liquidity_transit, _) = TransitPDA {
+        seed: "",
+        depositor: depositor.clone(),
+        mint: liquidity_mint.clone(),
+    }
+    .find_address(program_id);
 
-    let (liquidity_reserve_transit, _) =
-        find_transit_program_address(program_id, depositor, liquidity_mint, "reserve");
+    let (liquidity_reserve_transit, _) = TransitPDA {
+        seed: "reserve",
+        depositor: depositor.clone(),
+        mint: liquidity_mint.clone(),
+    }
+    .find_address(program_id);
 
-    let (internal_mining, _internal_mining_bump_seed) = crate::find_internal_mining_program_address(
-        program_id,
-        liquidity_mint,
-        collateral_mint,
-        depositor,
-    );
+    let (internal_mining, _) = InternalMiningPDA {
+        liquidity_mint: liquidity_mint.clone(),
+        collateral_mint: collateral_mint.clone(),
+        depositor: depositor.clone(),
+    }
+    .find_address(program_id);
 
     let mut accounts = vec![
         AccountMeta::new_readonly(*registry, false),
@@ -565,7 +607,11 @@ pub fn refresh_mm_incomes(
     collateral_storage_accounts: Vec<AccountMeta>,
 ) -> Instruction {
     let (depositor_authority, _) = find_program_address(program_id, depositor);
-    let (rebalancing, _) = find_rebalancing_program_address(program_id, depositor, liquidity_mint);
+    let (rebalancing, _) = RebalancingPDA {
+        depositor: depositor.clone(),
+        mint: liquidity_mint.clone(),
+    }
+    .find_address(program_id);
 
     // Income pool
     let (income_pool, _) = everlend_income_pools::find_pool_program_address(
@@ -574,20 +620,32 @@ pub fn refresh_mm_incomes(
         liquidity_mint,
     );
 
-    let (collateral_transit, _) =
-        find_transit_program_address(program_id, depositor, collateral_mint, "");
-    let (liquidity_transit, _) =
-        find_transit_program_address(program_id, depositor, liquidity_mint, "");
+    let (collateral_transit, _) = TransitPDA {
+        seed: "",
+        depositor: depositor.clone(),
+        mint: collateral_mint.clone(),
+    }
+    .find_address(program_id);
+    let (liquidity_transit, _) = TransitPDA {
+        seed: "",
+        depositor: depositor.clone(),
+        mint: liquidity_mint.clone(),
+    }
+    .find_address(program_id);
 
-    let (liquidity_reserve_transit, _) =
-        find_transit_program_address(program_id, depositor, liquidity_mint, "reserve");
+    let (liquidity_reserve_transit, _) = TransitPDA {
+        seed: "reserve",
+        depositor: depositor.clone(),
+        mint: liquidity_mint.clone(),
+    }
+    .find_address(program_id);
 
-    let (internal_mining, _internal_mining_bump_seed) = crate::find_internal_mining_program_address(
-        program_id,
-        liquidity_mint,
-        collateral_mint,
-        depositor,
-    );
+    let (internal_mining, _) = InternalMiningPDA {
+        liquidity_mint: liquidity_mint.clone(),
+        collateral_mint: collateral_mint.clone(),
+        depositor: depositor.clone(),
+    }
+    .find_address(program_id);
 
     let mut accounts = vec![
         AccountMeta::new_readonly(*registry, false),
@@ -693,12 +751,12 @@ pub fn init_mining_account(
     pubkeys: &InitMiningAccountsPubkeys,
     mining_type: MiningType,
 ) -> Instruction {
-    let (internal_mining, _) = crate::find_internal_mining_program_address(
-        program_id,
-        &pubkeys.liquidity_mint,
-        &pubkeys.collateral_mint,
-        &pubkeys.depositor,
-    );
+    let (internal_mining, _) = InternalMiningPDA {
+        liquidity_mint: pubkeys.liquidity_mint.clone(),
+        collateral_mint: pubkeys.collateral_mint.clone(),
+        depositor: pubkeys.depositor.clone(),
+    }
+    .find_address(program_id);
 
     let (depositor_authority, _) = find_program_address(program_id, &pubkeys.depositor);
 

@@ -1,4 +1,4 @@
-use crate::helpers::{init_registry, update_registry, update_registry_markets};
+use crate::helpers::{update_registry, update_registry_markets};
 use crate::utils::{arg_pubkey, REFRESH_INCOME_INTERVAL};
 use crate::{utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};

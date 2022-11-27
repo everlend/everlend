@@ -1,6 +1,6 @@
 use crate::{
-    find_internal_mining_program_address, find_transit_program_address,
     state::{Depositor, InternalMining, MiningType},
+    InternalMiningPDA, TransitPDA,
 };
 
 use borsh::BorshDeserialize;
@@ -8,6 +8,7 @@ use everlend_registry::state::Registry;
 use everlend_utils::cpi::francium;
 use everlend_utils::{
     assert_account_key, assert_owned_by, cpi, find_program_address, AccountLoader, EverlendError,
+    PDA,
 };
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
@@ -82,16 +83,15 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
             assert_account_key(self.manager, &registry.manager)?;
         }
 
-        let internal_mining_bump_seed = {
-            let (internal_mining_pubkey, internal_mining_bump_seed) =
-                find_internal_mining_program_address(
-                    program_id,
-                    self.liquidity_mint.key,
-                    self.collateral_mint.key,
-                    self.depositor.key,
-                );
+        let seeds = {
+            let pda = InternalMiningPDA {
+                liquidity_mint: *self.liquidity_mint.key,
+                collateral_mint: *self.collateral_mint.key,
+                depositor: *self.depositor.key,
+            };
+            let (internal_mining_pubkey, bump) = pda.find_address(program_id);
             assert_account_key(self.internal_mining, &internal_mining_pubkey)?;
-            internal_mining_bump_seed
+            pda.get_signing_seeds(bump)
         };
 
         // Check depositor authority account
@@ -106,19 +106,11 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
 
         // Create internal mining account
         if !self.internal_mining.owner.eq(program_id) {
-            let signers_seeds = &[
-                "internal_mining".as_bytes(),
-                &self.liquidity_mint.key.to_bytes()[..32],
-                &self.collateral_mint.key.to_bytes()[..32],
-                &self.depositor.key.to_bytes()[..32],
-                &[internal_mining_bump_seed],
-            ];
-
             cpi::system::create_account::<InternalMining>(
                 program_id,
                 self.manager.clone(),
                 self.internal_mining.clone(),
-                &[signers_seeds],
+                &[&seeds.as_seeds_slice()],
                 rent,
             )?;
         } else {
@@ -132,6 +124,19 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                 mining_account,
                 additional_reward_token_account,
             } => {
+                {
+                    let registry_markets =
+                        everlend_registry::state::RegistryMarkets::unpack_from_slice(
+                            &self.registry.data.borrow(),
+                        )?;
+                    if !registry_markets
+                        .money_markets
+                        .contains(self.staking_program_id.key)
+                    {
+                        return Err(ProgramError::InvalidArgument);
+                    }
+                }
+
                 let mining_account_info =
                     AccountLoader::next_with_key(account_info_iter, &mining_account)?;
                 assert_owned_by(mining_account_info, self.staking_program_id.key)?;
@@ -401,33 +406,33 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                     let farming_pool =
                         francium::FarmingPool::try_from_slice(&farming_pool_info.data.borrow())?;
 
-                    let (user_reward_a_check, _) = find_transit_program_address(
-                        program_id,
-                        &self.depositor.key,
-                        &farming_pool.rewards_token_mint,
-                        francium::FRANCIUM_REWARD_SEED,
-                    );
+                    let (user_reward_a_check, _) = TransitPDA {
+                        depositor: *self.depositor.key,
+                        mint: farming_pool.rewards_token_mint,
+                        seed: francium::FRANCIUM_REWARD_SEED,
+                    }
+                    .find_address(program_id);
 
                     assert_account_key(&user_reward_a_info, &user_reward_a_check)?;
 
-                    let (user_reward_b_check, _) = find_transit_program_address(
-                        program_id,
-                        &self.depositor.key,
-                        &farming_pool.rewards_token_mint_b,
-                        francium::FRANCIUM_REWARD_SEED,
-                    );
+                    let (user_reward_b_check, _) = TransitPDA {
+                        depositor: *self.depositor.key,
+                        mint: farming_pool.rewards_token_mint_b,
+                        seed: francium::FRANCIUM_REWARD_SEED,
+                    }
+                    .find_address(program_id);
 
                     assert_account_key(&user_reward_b_info, &user_reward_b_check)?;
                 }
 
                 let user_stake_info =
                     AccountLoader::next_with_key(account_info_iter, &user_stake_token_account)?;
-                let (user_stake, _) = find_transit_program_address(
-                    program_id,
-                    &self.depositor.key,
-                    &self.collateral_mint.key,
-                    "",
-                );
+                let (user_stake, _) = TransitPDA {
+                    depositor: *self.depositor.key,
+                    mint: *self.collateral_mint.key,
+                    seed: "",
+                }
+                .find_address(program_id);
 
                 assert_account_key(user_stake_info, &user_stake)?;
 

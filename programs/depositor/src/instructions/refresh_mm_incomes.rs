@@ -1,12 +1,11 @@
 use crate::{
-    find_internal_mining_program_address, find_rebalancing_program_address,
-    find_transit_program_address,
     state::{Depositor, Rebalancing, RebalancingOperation},
     utils::{collateral_storage, deposit, money_market, withdraw},
+    InternalMiningPDA, RebalancingPDA, TransitPDA,
 };
 use everlend_income_pools::utils::IncomePoolAccounts;
 use everlend_registry::state::RegistryMarkets;
-use everlend_utils::{assert_account_key, find_program_address, AccountLoader, EverlendError};
+use everlend_utils::{assert_account_key, find_program_address, AccountLoader, EverlendError, PDA};
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
     program_error::ProgramError, program_pack::Pack, pubkey::Pubkey, sysvar::clock, sysvar::Sysvar,
@@ -120,11 +119,11 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
 
         // Check rebalancing
         {
-            let (rebalancing_pubkey, _) = find_rebalancing_program_address(
-                program_id,
-                self.depositor.key,
-                self.liquidity_mint.key,
-            );
+            let (rebalancing_pubkey, _) = RebalancingPDA {
+                depositor: *self.depositor.key,
+                mint: *self.liquidity_mint.key,
+            }
+            .find_address(program_id);
             assert_account_key(self.rebalancing, &rebalancing_pubkey)?;
         }
 
@@ -138,23 +137,23 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
 
         // Check transit: liquidity
         {
-            let (liquidity_transit_pubkey, _) = find_transit_program_address(
-                program_id,
-                self.depositor.key,
-                self.liquidity_mint.key,
-                "",
-            );
+            let (liquidity_transit_pubkey, _) = TransitPDA {
+                seed: "",
+                depositor: *self.depositor.key,
+                mint: *self.liquidity_mint.key,
+            }
+            .find_address(program_id);
             assert_account_key(self.liquidity_transit, &liquidity_transit_pubkey)?;
         }
 
         // Check transit: liquidity reserve
         {
-            let (liquidity_reserve_transit_pubkey, _) = find_transit_program_address(
-                program_id,
-                self.depositor.key,
-                self.liquidity_mint.key,
-                "reserve",
-            );
+            let (liquidity_reserve_transit_pubkey, _) = TransitPDA {
+                seed: "reserve",
+                depositor: *self.depositor.key,
+                mint: *self.liquidity_mint.key,
+            }
+            .find_address(program_id);
             assert_account_key(
                 self.liquidity_reserve_transit,
                 &liquidity_reserve_transit_pubkey,
@@ -163,12 +162,12 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
 
         // Check transit: collateral
         {
-            let (collateral_transit_pubkey, _) = find_transit_program_address(
-                program_id,
-                self.depositor.key,
-                self.collateral_mint.key,
-                "",
-            );
+            let (collateral_transit_pubkey, _) = TransitPDA {
+                seed: "",
+                depositor: *self.depositor.key,
+                mint: *self.collateral_mint.key,
+            }
+            .find_address(program_id);
             assert_account_key(self.collateral_transit, &collateral_transit_pubkey)?;
         }
 
@@ -182,12 +181,12 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
 
         // Check internal mining account
         {
-            let (internal_mining_pubkey, _) = find_internal_mining_program_address(
-                program_id,
-                self.liquidity_mint.key,
-                self.collateral_mint.key,
-                self.depositor.key,
-            );
+            let (internal_mining_pubkey, _) = InternalMiningPDA {
+                liquidity_mint: *self.liquidity_mint.key,
+                collateral_mint: *self.collateral_mint.key,
+                depositor: *self.depositor.key,
+            }
+            .find_address(program_id);
             assert_account_key(self.internal_mining, &internal_mining_pubkey)?;
         }
 
@@ -202,6 +201,7 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
             self.collateral_mint,
             self.depositor_authority.key,
             self.depositor.key,
+            self.liquidity_mint,
         )?;
 
         let collateral_stor = collateral_storage(
