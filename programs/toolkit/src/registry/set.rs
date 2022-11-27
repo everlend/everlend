@@ -1,9 +1,6 @@
 use crate::helpers::{init_registry, update_registry, update_registry_markets};
 use crate::utils::{arg_pubkey, REFRESH_INCOME_INTERVAL};
-use crate::{
-    utils::{Config},
-    ToolkitCommand,
-};
+use crate::{utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 use everlend_registry::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
 use everlend_registry::state::DistributionPubkeys;
@@ -46,7 +43,6 @@ impl<'a> ToolkitCommand<'a> for SetRegistryCommand {
         money_market_program_ids[3] = default_accounts.tulip.program_id;
         money_market_program_ids[4] = default_accounts.francium.program_id;
         money_market_program_ids[5] = default_accounts.jet.program_id;
-        money_market_program_ids[6] = default_accounts.quarry_merge.mine_program_id;
 
         let mut collateral_pool_markets = DistributionPubkeys::default();
         let initialized_collateral_pool_markets = &initialized_accounts.collateral_pool_markets;

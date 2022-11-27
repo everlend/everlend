@@ -23,7 +23,6 @@ pub enum MoneyMarket {
     Tulip,
     Francium,
     Jet,
-    QuarryMerge
 }
 
 #[derive(Debug, IntoPrimitive, FromPrimitive, Clone, Copy, PartialEq)]

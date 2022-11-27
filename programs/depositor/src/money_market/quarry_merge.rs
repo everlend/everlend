@@ -1,15 +1,14 @@
 use super::CollateralStorage;
-use crate::money_market::MoneyMarket;
-use crate::state::MiningType;
+
 use everlend_utils::cpi::quarry_merge;
 use everlend_utils::{
     cpi::{quarry, spl_token},
-    AccountLoader, EverlendError,
+    AccountLoader,
 };
 use solana_program::program_pack::Pack;
 use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
 use spl_associated_token_account::get_associated_token_address;
-use ::spl_token::{state::Account};
+use spl_token::state::Account;
 use std::{iter::Enumerate, slice::Iter};
 
 ///
@@ -22,10 +21,14 @@ pub struct QuarryMerge<'a, 'b> {
     replica_mint_token_account: &'a AccountInfo<'b>,
     pool: &'a AccountInfo<'b>,
     merge_miner: &'a AccountInfo<'b>,
-    rewarder: &'a AccountInfo<'b>,
-    quarry: &'a AccountInfo<'b>,
-    miner: &'a AccountInfo<'b>,
-    miner_vault: &'a AccountInfo<'b>,
+    rewarder_primary: &'a AccountInfo<'b>,
+    rewarder_replica: &'a AccountInfo<'b>,
+    quarry_primary: &'a AccountInfo<'b>,
+    quarry_replica: &'a AccountInfo<'b>,
+    miner_primary: &'a AccountInfo<'b>,
+    miner_replica: &'a AccountInfo<'b>,
+    miner_vault_primary: &'a AccountInfo<'b>,
+    miner_vault_replica: &'a AccountInfo<'b>,
 }
 
 impl<'a, 'b> QuarryMerge<'a, 'b> {
@@ -34,29 +37,29 @@ impl<'a, 'b> QuarryMerge<'a, 'b> {
         account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
         depositor_authority_pubkey: &Pubkey,
         token_mint: &'a AccountInfo<'b>,
-        internal_mining_type: Option<MiningType>,
+        rewarder_primary: &Pubkey,
+        rewarder_replica: &Pubkey,
     ) -> Result<QuarryMerge<'a, 'b>, ProgramError> {
-        if internal_mining_type.is_none() {
-            return Err(EverlendError::MiningNotInitialized.into());
-        }
-
-        let (pool, rewarder) = match internal_mining_type {
-            Some(MiningType::QuarryMerge { pool, rewarder }) => (pool, rewarder),
-            _ => return Err(EverlendError::MiningNotInitialized.into()),
-        };
-
         let quarry_merge_mining_program_id_info =
             AccountLoader::next_with_key(account_info_iter, &quarry_merge::staking_program_id())?;
-        let mm_primary_token_account = AccountLoader::next_with_owner(account_info_iter, &::spl_token::id())?;
+        let mm_primary_token_account =
+            AccountLoader::next_with_owner(account_info_iter, &::spl_token::id())?;
+        let replica_mint_token_account =
+            AccountLoader::next_with_owner(account_info_iter, &::spl_token::id())?;
+        let pool = {
+            let (pool_pubkey, _) = quarry_merge::find_pool_program_address(
+                &quarry_merge::staking_program_id(),
+                token_mint.key,
+            );
+            AccountLoader::next_with_key(account_info_iter, &pool_pubkey)
+        }?;
         let replica_mint = {
             let (replica_mint_pubkey, _) = quarry_merge::find_replica_mint_program_address(
                 &quarry_merge::staking_program_id(),
-                &pool,
+                &pool.key,
             );
             AccountLoader::next_with_key(account_info_iter, &replica_mint_pubkey)
         }?;
-        let replica_mint_token_account = AccountLoader::next_with_owner(account_info_iter, &::spl_token::id())?;
-        let pool = AccountLoader::next_with_key(account_info_iter, &pool)?;
 
         let merge_miner = {
             let (merge_miner_pubkey, _) = quarry_merge::find_merge_miner_program_address(
@@ -66,25 +69,46 @@ impl<'a, 'b> QuarryMerge<'a, 'b> {
             );
             AccountLoader::next_with_key(account_info_iter, &merge_miner_pubkey)
         }?;
-        let rewarder = AccountLoader::next_with_key(account_info_iter, &rewarder)?;
-        let quarry = {
+        let rewarder_primary = AccountLoader::next_with_key(account_info_iter, &rewarder_primary)?;
+        let rewarder_replica = AccountLoader::next_with_key(account_info_iter, &rewarder_replica)?;
+        let quarry_primary = {
             let (quarry, _) = quarry::find_quarry_program_address(
                 &quarry::staking_program_id(),
-                rewarder.key,
+                rewarder_primary.key,
                 token_mint.key,
             );
             AccountLoader::next_with_key(account_info_iter, &quarry)
         }?;
-        let miner = {
+        let quarry_replica = {
+            let (quarry, _) = quarry::find_quarry_program_address(
+                &quarry::staking_program_id(),
+                rewarder_replica.key,
+                replica_mint.key,
+            );
+            AccountLoader::next_with_key(account_info_iter, &quarry)
+        }?;
+        let miner_primary = {
             let (miner_pubkey, _) = quarry::find_miner_program_address(
                 &quarry::staking_program_id(),
-                quarry.key,
+                quarry_primary.key,
                 merge_miner.key,
             );
             AccountLoader::next_with_key(account_info_iter, &miner_pubkey)
         }?;
-        let miner_vault = {
-            let miner_vault = get_associated_token_address(miner.key, token_mint.key);
+        let miner_replica = {
+            let (miner_pubkey, _) = quarry::find_miner_program_address(
+                &quarry::staking_program_id(),
+                quarry_replica.key,
+                merge_miner.key,
+            );
+            AccountLoader::next_with_key(account_info_iter, &miner_pubkey)
+        }?;
+        let miner_vault_primary = {
+            let miner_vault = get_associated_token_address(miner_primary.key, token_mint.key);
+            AccountLoader::next_with_key(account_info_iter, &miner_vault)
+        }?;
+        let miner_vault_replica = {
+            let miner_vault = get_associated_token_address(miner_replica.key, replica_mint.key);
             AccountLoader::next_with_key(account_info_iter, &miner_vault)
         }?;
 
@@ -96,90 +120,15 @@ impl<'a, 'b> QuarryMerge<'a, 'b> {
             replica_mint_token_account,
             pool,
             merge_miner,
-            rewarder,
-            quarry,
-            miner,
-            miner_vault,
+            rewarder_primary,
+            rewarder_replica,
+            quarry_primary,
+            quarry_replica,
+            miner_primary,
+            miner_replica,
+            miner_vault_primary,
+            miner_vault_replica,
         })
-    }
-}
-
-impl<'a, 'b> MoneyMarket<'b> for QuarryMerge<'a, 'b> {
-    ///
-    fn money_market_deposit(
-        &self,
-        _collateral_mint: AccountInfo<'b>,
-        _source_liquidity: AccountInfo<'b>,
-        _destination_collateral: AccountInfo<'b>,
-        _authority: AccountInfo<'b>,
-        _clock: AccountInfo<'b>,
-        amount: u64,
-        _signers_seeds: &[&[&[u8]]],
-    ) -> Result<u64, ProgramError> {
-        return Err(EverlendError::MiningIsRequired.into());
-    }
-
-    ///
-    fn money_market_redeem(
-        &self,
-        _collateral_mint: AccountInfo<'b>,
-        _source_collateral: AccountInfo<'b>,
-        _destination_liquidity: AccountInfo<'b>,
-        _authority: AccountInfo<'b>,
-        _clock: AccountInfo<'b>,
-        _amount: u64,
-        _signers_seeds: &[&[&[u8]]],
-    ) -> Result<(), ProgramError> {
-        return Err(EverlendError::MiningIsRequired.into());
-    }
-
-    ///
-    fn money_market_deposit_and_deposit_mining(
-        &self,
-        _collateral_mint: AccountInfo<'b>,
-        _source_liquidity: AccountInfo<'b>,
-        collateral_transit: AccountInfo<'b>,
-        authority: AccountInfo<'b>,
-        clock: AccountInfo<'b>,
-        _liquidity_amount: u64,
-        signers_seeds: &[&[&[u8]]],
-    ) -> Result<u64, ProgramError> {
-        let collateral_amount =
-            Account::unpack_unchecked(&collateral_transit.data.borrow())?.amount;
-
-        if collateral_amount == 0 {
-            return Err(EverlendError::CollateralLeak.into());
-        }
-
-        self.deposit_collateral_tokens(
-            collateral_transit,
-            authority,
-            clock,
-            collateral_amount,
-            signers_seeds,
-        )?;
-
-        Ok(collateral_amount)
-    }
-
-    ///
-    fn money_market_redeem_and_withdraw_mining(
-        &self,
-        _collateral_mint: AccountInfo<'b>,
-        collateral_transit: AccountInfo<'b>,
-        _liquidity_destination: AccountInfo<'b>,
-        authority: AccountInfo<'b>,
-        clock: AccountInfo<'b>,
-        collateral_amount: u64,
-        signers_seeds: &[&[&[u8]]],
-    ) -> Result<(), ProgramError> {
-        self.withdraw_collateral_tokens(
-            collateral_transit.clone(),
-            authority.clone(),
-            clock.clone(),
-            collateral_amount,
-            signers_seeds,
-        )
     }
 }
 
@@ -193,7 +142,7 @@ impl<'a, 'b> CollateralStorage<'b> for QuarryMerge<'a, 'b> {
         collateral_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
-       spl_token::transfer(
+        spl_token::transfer(
             collateral_transit.clone(),
             self.mm_primary_token_account.clone(),
             authority.clone(),
@@ -207,10 +156,10 @@ impl<'a, 'b> CollateralStorage<'b> for QuarryMerge<'a, 'b> {
             self.mm_primary_token_account.clone(),
             self.pool.clone(),
             self.merge_miner.clone(),
-            self.rewarder.clone(),
-            self.quarry.clone(),
-            self.miner.clone(),
-            self.miner_vault.clone(),
+            self.rewarder_primary.clone(),
+            self.quarry_primary.clone(),
+            self.miner_primary.clone(),
+            self.miner_vault_primary.clone(),
             signers_seeds,
         )?;
 
@@ -221,10 +170,10 @@ impl<'a, 'b> CollateralStorage<'b> for QuarryMerge<'a, 'b> {
             self.replica_mint_token_account.clone(),
             self.pool.clone(),
             self.merge_miner.clone(),
-            self.rewarder.clone(),
-            self.quarry.clone(),
-            self.miner.clone(),
-            self.miner_vault.clone(),
+            self.rewarder_replica.clone(),
+            self.quarry_replica.clone(),
+            self.miner_replica.clone(),
+            self.miner_vault_replica.clone(),
             signers_seeds,
         )?;
 
@@ -246,10 +195,10 @@ impl<'a, 'b> CollateralStorage<'b> for QuarryMerge<'a, 'b> {
             self.replica_mint_token_account.clone(),
             self.pool.clone(),
             self.merge_miner.clone(),
-            self.rewarder.clone(),
-            self.quarry.clone(),
-            self.miner.clone(),
-            self.miner_vault.clone(),
+            self.rewarder_replica.clone(),
+            self.quarry_replica.clone(),
+            self.miner_replica.clone(),
+            self.miner_vault_replica.clone(),
             signers_seeds,
         )?;
 
@@ -259,10 +208,10 @@ impl<'a, 'b> CollateralStorage<'b> for QuarryMerge<'a, 'b> {
             self.mm_primary_token_account.clone(),
             self.pool.clone(),
             self.merge_miner.clone(),
-            self.rewarder.clone(),
-            self.quarry.clone(),
-            self.miner.clone(),
-            self.miner_vault.clone(),
+            self.rewarder_primary.clone(),
+            self.quarry_primary.clone(),
+            self.miner_primary.clone(),
+            self.miner_vault_primary.clone(),
             collateral_amount,
             signers_seeds,
         )?;
@@ -289,10 +238,10 @@ impl<'a, 'b> CollateralStorage<'b> for QuarryMerge<'a, 'b> {
                 self.replica_mint_token_account.clone(),
                 self.pool.clone(),
                 self.merge_miner.clone(),
-                self.rewarder.clone(),
-                self.quarry.clone(),
-                self.miner.clone(),
-                self.miner_vault.clone(),
+                self.rewarder_replica.clone(),
+                self.quarry_replica.clone(),
+                self.miner_replica.clone(),
+                self.miner_vault_replica.clone(),
                 signers_seeds,
             )?;
         }

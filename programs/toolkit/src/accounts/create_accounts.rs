@@ -91,7 +91,6 @@ impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
         money_market_program_ids[3] = default_accounts.tulip.program_id;
         money_market_program_ids[4] = default_accounts.francium.program_id;
         money_market_program_ids[5] = default_accounts.jet.program_id;
-        money_market_program_ids[6] = default_accounts.quarry_merge.mine_program_id;
 
         let mm_collateral_pool_markets = vec![
             create_collateral_market(config, None)?,

@@ -48,10 +48,10 @@ pub enum MiningType {
     QuarryMerge {
         ///
         #[allow(dead_code)]
-        pool: Pubkey,
+        rewarder_primary: Pubkey,
         ///
         #[allow(dead_code)]
-        rewarder: Pubkey,
+        rewarder_replica: Pubkey,
     },
     ///
     Francium {

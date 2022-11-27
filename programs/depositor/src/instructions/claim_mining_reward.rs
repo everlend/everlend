@@ -201,6 +201,7 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
                         self.staking_program_id.key,
                         self.collateral_mint.key,
                         internal_mining_type,
+                        fill_sub_rewards_accounts.clone(),
                         account_info_iter,
                     )?;
 

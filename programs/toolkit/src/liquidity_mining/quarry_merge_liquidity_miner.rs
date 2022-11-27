@@ -15,7 +15,12 @@ use everlend_utils::cpi::{quarry, quarry_merge};
 
 pub struct QuarryMergeLiquidityMiner {}
 
-fn save_new_mining_account(config: &Config, token: &String, miner_vault: Pubkey) -> Result<()> {
+fn save_new_mining_account(
+    config: &Config,
+    token: &String,
+    miner_vault_primary: Pubkey,
+    miner_vault_replica: Pubkey,
+) -> Result<()> {
     let mut initialized_accounts = config.get_initialized_accounts();
     let quarry_merge_mining = initialized_accounts.quarry_merge_mining.get_mut(token);
     if quarry_merge_mining.is_none() {
@@ -28,7 +33,13 @@ fn save_new_mining_account(config: &Config, token: &String, miner_vault: Pubkey)
         .quarry_merge_mining
         .get_mut(token)
         .unwrap()
-        .miner_vault = miner_vault;
+        .miner_vault_primary = miner_vault_primary;
+    initialized_accounts
+        .quarry_merge_mining
+        .get_mut(token)
+        .unwrap()
+        .miner_vault_replica = miner_vault_replica;
+
     initialized_accounts.save(config.accounts_path.as_str())?;
     Ok(())
 }
@@ -40,7 +51,7 @@ impl LiquidityMiner for QuarryMergeLiquidityMiner {
             .quarry_merge_mining
             .get_mut(token)
             .unwrap_or(&mut QuarryMergeMining::default())
-            .miner_vault
+            .merge_miner
     }
 
     fn create_mining_account(
@@ -59,11 +70,16 @@ impl LiquidityMiner for QuarryMergeLiquidityMiner {
             find_program_address(&everlend_depositor::id(), &initialized_accounts.depositor);
 
         let collateral_mint =
-            collateral_mint_map.get(token).unwrap()[MoneyMarket::QuarryMerge as usize].unwrap();
+            collateral_mint_map.get(token).unwrap()[MoneyMarket::PortFinance as usize].unwrap();
 
         let (pool_pubkey, _) = quarry_merge::find_pool_program_address(
             &quarry_merge::staking_program_id(),
             &collateral_mint,
+        );
+
+        let (replica_mint, _) = quarry_merge::find_replica_mint_program_address(
+            &quarry_merge::staking_program_id(),
+            &pool_pubkey,
         );
 
         let (merge_miner_pubkey, _) = quarry_merge::find_merge_miner_program_address(
@@ -72,21 +88,36 @@ impl LiquidityMiner for QuarryMergeLiquidityMiner {
             &depositor_authority,
         );
 
-        let (quarry, _) = quarry::find_quarry_program_address(
+        let (quarry_primary, _) = quarry::find_quarry_program_address(
             &default_accounts.quarry.mine_program_id,
-            &default_accounts.quarry_merge.rewarder,
+            &default_accounts.quarry_merge.rewarder_primary,
             &collateral_mint,
         );
 
-        let (miner, _) = quarry::find_miner_program_address(
+        let (quarry_replica, _) = quarry::find_quarry_program_address(
             &default_accounts.quarry.mine_program_id,
-            &quarry,
+            &default_accounts.quarry_merge.rewarder_replica,
+            &replica_mint,
+        );
+
+        let (miner_primary, _) = quarry::find_miner_program_address(
+            &default_accounts.quarry.mine_program_id,
+            &quarry_primary,
             &merge_miner_pubkey,
         );
 
-        let miner_vault = spl_create_associated_token_account(config, &miner, &collateral_mint)?;
+        let (miner_replica, _) = quarry::find_miner_program_address(
+            &default_accounts.quarry.mine_program_id,
+            &quarry_replica,
+            &merge_miner_pubkey,
+        );
 
-        save_new_mining_account(config, token, miner_vault)?;
+        let miner_vault_primary =
+            spl_create_associated_token_account(config, &miner_primary, &collateral_mint)?;
+        let miner_vault_replica =
+            spl_create_associated_token_account(config, &miner_replica, &replica_mint)?;
+
+        save_new_mining_account(config, token, miner_vault_primary, miner_vault_replica)?;
         Ok(())
     }
 
@@ -97,14 +128,14 @@ impl LiquidityMiner for QuarryMergeLiquidityMiner {
         let liquidity_mint = mint_map.get(token).unwrap();
 
         let collateral_mint =
-            collateral_mint_map.get(token).unwrap()[MoneyMarket::QuarryMerge as usize].unwrap();
+            collateral_mint_map.get(token).unwrap()[MoneyMarket::PortFinance as usize].unwrap();
         Some(InitMiningAccountsPubkeys {
             liquidity_mint: *liquidity_mint,
             collateral_mint,
             depositor: initialized_accounts.depositor,
             registry: initialized_accounts.registry,
             manager: config.fee_payer.pubkey(),
-            money_market_program_id: default_accounts.quarry_merge.mine_program_id,
+            money_market_program_id: default_accounts.quarry_merge.merge_mine_program_id,
             lending_market: None,
         })
     }
@@ -112,27 +143,17 @@ impl LiquidityMiner for QuarryMergeLiquidityMiner {
     fn get_mining_type(
         &self,
         config: &Config,
-        token: &String,
+        _token: &String,
         _mining_pubkey: Pubkey,
         _sub_reward_token_mint: Option<Pubkey>,
         _reward_token_mint: Option<Pubkey>,
     ) -> MiningType {
         let default_accounts = config.get_default_accounts();
-
-        let (_, collateral_mint_map) = get_asset_maps(default_accounts.clone());
-        let collateral_mint =
-            collateral_mint_map.get(token).unwrap()[MoneyMarket::QuarryMerge as usize].unwrap();
-
-        let (pool, _) = quarry_merge::find_pool_program_address(
-            &quarry_merge::staking_program_id(),
-            &collateral_mint,
-        );
-
         let quarry_merge = default_accounts.quarry_merge;
 
         MiningType::QuarryMerge {
-            pool,
-            rewarder: quarry_merge.rewarder,
+            rewarder_primary: quarry_merge.rewarder_primary,
+            rewarder_replica: quarry_merge.rewarder_replica,
         }
     }
 }

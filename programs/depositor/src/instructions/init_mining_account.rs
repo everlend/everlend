@@ -250,13 +250,22 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                     &[signers_seeds.as_ref()],
                 )?;
             }
-            MiningType::QuarryMerge { pool, rewarder } => {
+            MiningType::QuarryMerge {
+                rewarder_primary,
+                rewarder_replica,
+            } => {
                 assert_account_key(
                     self.staking_program_id,
                     &cpi::quarry_merge::staking_program_id(),
                 )?;
 
-                let pool_info = AccountLoader::next_with_key(account_info_iter, &pool)?;
+                let pool_info = {
+                    let (pool_pubkey, _) = cpi::quarry_merge::find_pool_program_address(
+                        &cpi::quarry_merge::staking_program_id(),
+                        self.collateral_mint.key,
+                    );
+                    AccountLoader::next_with_key(account_info_iter, &pool_pubkey)
+                }?;
 
                 let merge_miner_info = {
                     let (merge_miner_pubkey, _) =
@@ -278,30 +287,61 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                     &[signers_seeds.as_ref()],
                 )?;
 
-                let quarry_info = {
+                let replica_mint = {
+                    let (replica_mint_pubkey, _) =
+                        cpi::quarry_merge::find_replica_mint_program_address(
+                            &cpi::quarry_merge::staking_program_id(),
+                            &pool_info.key,
+                        );
+                    AccountLoader::next_with_key(account_info_iter, &replica_mint_pubkey)
+                }?;
+                let quarry_primary = {
                     let (quarry, _) = cpi::quarry::find_quarry_program_address(
                         &cpi::quarry::staking_program_id(),
-                        &rewarder,
+                        &rewarder_primary,
                         self.collateral_mint.key,
                     );
-
+                    AccountLoader::next_with_key(account_info_iter, &quarry)
+                }?;
+                let quarry_replica = {
+                    let (quarry, _) = cpi::quarry::find_quarry_program_address(
+                        &cpi::quarry::staking_program_id(),
+                        &rewarder_replica,
+                        &replica_mint.key,
+                    );
                     AccountLoader::next_with_key(account_info_iter, &quarry)
                 }?;
 
-                let rewarder_info = AccountLoader::next_with_key(account_info_iter, &rewarder)?;
+                let rewarder_primary =
+                    AccountLoader::next_with_key(account_info_iter, &rewarder_primary)?;
+                let rewarder_replica =
+                    AccountLoader::next_with_key(account_info_iter, &rewarder_replica)?;
 
-                let miner_info = {
+                let miner_primary = {
                     let (miner_pubkey, _) = cpi::quarry::find_miner_program_address(
                         &cpi::quarry::staking_program_id(),
-                        quarry_info.key,
+                        quarry_primary.key,
+                        merge_miner_info.key,
+                    );
+                    AccountLoader::next_with_key(account_info_iter, &miner_pubkey)
+                }?;
+                let miner_replica = {
+                    let (miner_pubkey, _) = cpi::quarry::find_miner_program_address(
+                        &cpi::quarry::staking_program_id(),
+                        quarry_replica.key,
                         merge_miner_info.key,
                     );
                     AccountLoader::next_with_key(account_info_iter, &miner_pubkey)
                 }?;
 
-                let miner_vault_info = {
+                let miner_vault_primary = {
                     let miner_vault =
-                        get_associated_token_address(miner_info.key, self.collateral_mint.key);
+                        get_associated_token_address(miner_primary.key, self.collateral_mint.key);
+                    AccountLoader::next_with_key(account_info_iter, &miner_vault)
+                }?;
+                let miner_vault_replica = {
+                    let miner_vault =
+                        get_associated_token_address(miner_replica.key, &replica_mint.key);
                     AccountLoader::next_with_key(account_info_iter, &miner_vault)
                 }?;
 
@@ -312,11 +352,24 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                     self.staking_program_id.key,
                     pool_info.clone(),
                     merge_miner_info.clone(),
-                    miner_info.clone(),
-                    quarry_info.clone(),
-                    rewarder_info.clone(),
+                    miner_primary.clone(),
+                    quarry_primary.clone(),
+                    rewarder_primary.clone(),
                     self.collateral_mint.clone(),
-                    miner_vault_info.clone(),
+                    miner_vault_primary.clone(),
+                    self.depositor_authority.clone(),
+                    &[signers_seeds.as_ref()],
+                )?;
+
+                cpi::quarry_merge::init_miner(
+                    self.staking_program_id.key,
+                    pool_info.clone(),
+                    merge_miner_info.clone(),
+                    miner_replica.clone(),
+                    quarry_replica.clone(),
+                    rewarder_replica.clone(),
+                    replica_mint.clone(),
+                    miner_vault_replica.clone(),
                     self.depositor_authority.clone(),
                     &[signers_seeds.as_ref()],
                 )?;

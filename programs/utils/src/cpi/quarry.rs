@@ -1,20 +1,25 @@
 use anchor_lang::InstructionData;
 use quarry_mine::instruction::{ClaimRewardsV2, CreateMinerV2, StakeTokens, WithdrawTokens};
-use quarry_redeemer::instruction::{RedeemAllTokens};
+use quarry_redeemer::instruction::RedeemAllTokens;
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::{AccountMeta, Instruction};
 use solana_program::program::invoke_signed;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
 use solana_program::system_program;
+use std::str::FromStr;
 
 /// Generates rebalancing seed
 pub fn miner_seed() -> String {
     String::from("Miner")
 }
 
-pub fn staking_program_id() -> Pubkey{
-    return quarry_mine::id()
+pub fn staking_program_id() -> Pubkey {
+    return quarry_mine::id();
+}
+
+pub fn mine_wrapper_program_id() -> Pubkey {
+    return Pubkey::from_str("QMWoBmAyJLAsA1Lh9ugMTw2gciTihncciphzdNzdZYV").unwrap();
 }
 /// Generates internal mining address
 pub fn find_miner_program_address(
@@ -48,6 +53,22 @@ pub fn find_quarry_program_address(
     )
 }
 
+/// Generates minter address
+pub fn find_minter_program_address(
+    program_id: &Pubkey,
+    mint_wrapper: &Pubkey,
+    minter_authority: &Pubkey,
+) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[
+            b"MintWrapperMinter".as_ref(),
+            &mint_wrapper.to_bytes(),
+            &minter_authority.to_bytes(),
+        ],
+        program_id,
+    )
+}
+
 /// Create miner
 #[allow(clippy::too_many_arguments)]
 pub fn create_miner<'a>(
@@ -61,7 +82,6 @@ pub fn create_miner<'a>(
     miner_vault: AccountInfo<'a>,
     signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
-
     let instruction = Instruction {
         program_id: *program_id,
         accounts: vec![
@@ -193,7 +213,6 @@ pub fn claim_rewards<'a>(
     quarry_rewarder: AccountInfo<'a>,
     signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
-
     let instruction = Instruction {
         program_id: *program_id,
         accounts: vec![
@@ -230,7 +249,7 @@ pub fn claim_rewards<'a>(
 }
 
 /// Claim rewards
-pub fn redeem_all_tokens <'a>(
+pub fn redeem_all_tokens<'a>(
     quarry_redeemer_program_id: &Pubkey,
     redeemer: AccountInfo<'a>,
     iou_mint: AccountInfo<'a>,
@@ -240,7 +259,6 @@ pub fn redeem_all_tokens <'a>(
     authority: AccountInfo<'a>,
     signers_seeds: &[&[&[u8]]],
 ) -> Result<(), ProgramError> {
-
     let instruction = Instruction {
         program_id: *quarry_redeemer_program_id,
         accounts: vec![
@@ -268,7 +286,7 @@ pub fn redeem_all_tokens <'a>(
             iou_mint,
             iou_source,
             redemption_vault,
-            redemption_destination
+            redemption_destination,
         ],
         signers_seeds,
     )
