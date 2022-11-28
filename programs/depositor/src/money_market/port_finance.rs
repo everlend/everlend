@@ -248,6 +248,15 @@ impl<'a, 'b> MoneyMarket<'b> for PortFinance<'a, 'b> {
                 collateral_amount,
                 signers_seeds,
             )?
+        } else if self.quarry_merge_mining.is_some() {
+            let quarry_merge_mining = self.quarry_merge_mining.as_ref().unwrap();
+            quarry_merge_mining.deposit_collateral_tokens(
+                collateral_transit,
+                authority,
+                clock,
+                collateral_amount,
+                signers_seeds,
+            )?
         } else {
             return Err(EverlendError::MiningNotInitialized.into());
         };
@@ -277,6 +286,15 @@ impl<'a, 'b> MoneyMarket<'b> for PortFinance<'a, 'b> {
         } else if self.quarry_mining.is_some() {
             let quarry_mining = self.quarry_mining.as_ref().unwrap();
             quarry_mining.withdraw_collateral_tokens(
+                collateral_transit.clone(),
+                authority.clone(),
+                clock.clone(),
+                collateral_amount,
+                signers_seeds,
+            )?
+        } else if self.quarry_merge_mining.is_some() {
+            let quarry_merge_mining = self.quarry_merge_mining.as_ref().unwrap();
+            quarry_merge_mining.withdraw_collateral_tokens(
                 collateral_transit.clone(),
                 authority.clone(),
                 clock.clone(),
