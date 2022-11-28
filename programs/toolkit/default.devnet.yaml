@@ -51,6 +51,10 @@ francium:
   lending_market: "11111111111111111111111111111111"
   reserve_liquidity_supply: "11111111111111111111111111111111"
   reserve_sol: "11111111111111111111111111111111"
+  staking_program_id: "11111111111111111111111111111111"
+francium_farming_pool_account:
+  SOL:
+    staking_pool: "11111111111111111111111111111111"
 tulip:
   program_id: CbTkd91iCd48cMsqGejvYh9K2dwmy76hF8CQH4gt4Ykx
   lending_market: 6Z76FPMsFVXggtL2npzQ6nx6ghBGo1CCtueEYPvjFHz6
@@ -61,6 +65,10 @@ jet:
   program_id: JPPooLEqRo3NCSx82EdE2VZY5vUaSsgskpZPBHNGVLZ
   margin_pool_sol: 3w9nDi3rB9e44J7xMvayXKrg59kD7ofeXqGZsYWtT1V9
   vault_sol: HefDXf74p9vRaLWX4yjZiGS99hg72y2EbXiajyYsgwXB
+frakt:
+  program_id: A66HabVL3DzNzeJgcHYtRRNW1ZRMKwBfrdSR4kLsZ9DJ
+  liquidity_pool: 4TY2PBNBgQU4ExX45LdC5PvF8sctjScg5C9DYSYJPGh7
+  pool_admin: Gu6faGp621MczGbkVtTppFNjJaoBSGQTM51NsQdJXLyR
 multisig_program_id: 3ktyhEXgbiUyDG7RXCzzXWzjXJpThpqqePhJb85eVqFa
 sol_collateral:
   - Hk4Rp3kaPssB6hnjah3Mrqpt5CAXWGoqFT5dVsWA3TaM
@@ -69,6 +77,7 @@ sol_collateral:
   - 4vb2gBGaL6Q1Pmt4KeiGFEMko5ofivbRLoJQzN1tsTLn
   - "11111111111111111111111111111111"
   - AbQfDjFBypnj4fTZUjvcEGsuYvqSjiQA9jG52PnkZe1q
+  - "11111111111111111111111111111111"
 usdc_collateral:
   - HyxraiKfdajDbYTC6MVRToEUBdevBN5M5gfyR4LC3WSF
   - CLgRwCmZ49wbKxQjqEs5tHrNvx8ZoXjybN8hsiRwEVPm

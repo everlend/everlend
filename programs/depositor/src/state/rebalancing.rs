@@ -316,8 +316,11 @@ impl Rebalancing {
     }
 
     /// Get sum of distributed liquidity in MMs
-    pub fn total_distributed_liquidity(&self) -> u64 {
-        self.distributed_liquidity.iter().sum()
+    pub fn total_distributed_liquidity(&self) -> Result<u64, ProgramError> {
+        self.distributed_liquidity
+            .iter()
+            .try_fold(0u64, |acc, &x| acc.checked_add(x))
+            .ok_or(EverlendError::MathOverflow.into())
     }
 
     /// Check all steps are executed

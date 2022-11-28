@@ -16,7 +16,8 @@ pub enum IncomePoolsInstruction {
     ///
     /// Accounts:
     /// [W] Income pool market - uninitialized
-    /// [R] Market manager
+    /// [RS] Market manager
+    /// [R] General pool market
     /// [R] Rent sysvar
     InitPoolMarket,
 
@@ -96,7 +97,7 @@ pub fn init_pool_market(
 ) -> Instruction {
     let accounts = vec![
         AccountMeta::new(*pool_market, false),
-        AccountMeta::new_readonly(*manager, false),
+        AccountMeta::new_readonly(*manager, true),
         AccountMeta::new_readonly(*general_pool_market, false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];

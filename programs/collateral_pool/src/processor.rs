@@ -2,9 +2,10 @@
 
 use borsh::BorshDeserialize;
 use everlend_utils::{
-    assert_account_key, assert_owned_by, assert_rent_exempt, assert_signer, assert_uninitialized,
-    assert_non_zero_amount, cpi, find_program_address, EverlendError,
+    assert_account_key, assert_non_zero_amount, assert_owned_by, assert_rent_exempt, assert_signer,
+    assert_uninitialized, cpi, find_program_address, EverlendError,
 };
+use solana_program::program_error::ProgramError;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
@@ -16,6 +17,7 @@ use solana_program::{
 };
 
 use crate::{
+    find_legacy_pool_withdraw_authority_program_address,
     find_pool_borrow_authority_program_address, find_pool_program_address,
     find_pool_withdraw_authority_program_address,
     instruction::CollateralPoolsInstruction,
@@ -38,6 +40,7 @@ impl Processor {
         let rent_info = next_account_info(account_info_iter)?;
         let rent = &Rent::from_account_info(rent_info)?;
 
+        assert_signer(manager_info)?;
         assert_rent_exempt(rent, pool_market_info)?;
 
         // Check programs
@@ -76,6 +79,12 @@ impl Processor {
 
         let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
         assert_account_key(manager_info, &pool_market.manager)?;
+
+        {
+            let (pool_market_authority_pubkey, _) =
+                find_program_address(program_id, pool_market_info.key);
+            assert_account_key(pool_market_authority_info, &pool_market_authority_pubkey)?;
+        }
 
         let (pool_pubkey, bump_seed) =
             find_pool_program_address(program_id, pool_market_info.key, token_mint_info.key);
@@ -157,6 +166,7 @@ impl Processor {
         assert_account_key(pool_borrow_authority_info, &pool_borrow_authority_pubkey)?;
 
         let signers_seeds = &[
+            b"borrow".as_ref(),
             &pool_info.key.to_bytes()[..32],
             &borrow_authority_info.key.to_bytes()[..32],
             &[bump_seed],
@@ -323,6 +333,7 @@ impl Processor {
         )?;
 
         let signers_seeds = &[
+            b"withdraw".as_ref(),
             &pool_info.key.to_bytes()[..32],
             &withdraw_authority_info.key.to_bytes()[..32],
             &[bump_seed],
@@ -454,8 +465,12 @@ impl Processor {
             withdraw_authority_info,
             &pool_withdraw_authority.withdraw_authority,
         )?;
-        let (_, bump_seed) = find_program_address(program_id, pool_market_info.key);
-        let signers_seeds = &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]];
+        let signers_seeds = {
+            let (pool_market_authority_pubkey, bump_seed) =
+                find_program_address(program_id, pool_market_info.key);
+            assert_account_key(pool_market_authority_info, &pool_market_authority_pubkey)?;
+            &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]]
+        };
         cpi::spl_token::transfer(
             token_account_info.clone(),
             destination_info.clone(),
@@ -492,6 +507,11 @@ impl Processor {
         assert_account_key(pool_market_info, &pool.pool_market)?;
         assert_account_key(token_account_info, &pool.token_account)?;
 
+        // Check the impossibility of self borrow
+        if token_account_info.key == destination_info.key {
+            return Err(ProgramError::InvalidArgument);
+        }
+
         let mut pool_borrow_authority =
             PoolBorrowAuthority::unpack(&pool_borrow_authority_info.data.borrow())?;
 
@@ -517,8 +537,12 @@ impl Processor {
         )?;
         Pool::pack(pool, *pool_info.data.borrow_mut())?;
 
-        let (_, bump_seed) = find_program_address(program_id, pool_market_info.key);
-        let signers_seeds = &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]];
+        let signers_seeds = {
+            let (pool_market_authority_pubkey, bump_seed) =
+                find_program_address(program_id, pool_market_info.key);
+            assert_account_key(pool_market_authority_info, &pool_market_authority_pubkey)?;
+            &[&pool_market_info.key.to_bytes()[..32], &[bump_seed]]
+        };
 
         // Transfer from token account to destination borrower
         cpi::spl_token::transfer(
@@ -583,7 +607,9 @@ impl Processor {
             source_info.clone(),
             token_account_info.clone(),
             user_transfer_authority_info.clone(),
-            amount + interest_amount,
+            amount
+                .checked_add(interest_amount)
+                .ok_or(EverlendError::MathOverflow)?,
             &[],
         )?;
 
@@ -608,6 +634,105 @@ impl Processor {
         pool_market.manager = *new_manager_info.key;
 
         PoolMarket::pack(pool_market, *pool_market_info.data.borrow_mut())?;
+
+        Ok(())
+    }
+
+    /// Process MigratePoolWithdrawAuthority instruction
+    pub fn migrate_pool_withdraw_authority(
+        program_id: &Pubkey,
+        accounts: &[AccountInfo],
+    ) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let pool_market_info = next_account_info(account_info_iter)?;
+        let pool_info = next_account_info(account_info_iter)?;
+        let pool_withdraw_authority_info = next_account_info(account_info_iter)?;
+        let manager_info = next_account_info(account_info_iter)?;
+        let _system_program_info = next_account_info(account_info_iter)?;
+
+        assert_signer(manager_info)?;
+        assert_owned_by(pool_market_info, program_id)?;
+        assert_owned_by(pool_info, program_id)?;
+        assert_owned_by(pool_withdraw_authority_info, program_id)?;
+
+        let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+        assert_account_key(manager_info, &pool_market.manager)?;
+
+        let pool = Pool::unpack(&pool_info.data.borrow())?;
+        assert_account_key(pool_market_info, &pool.pool_market)?;
+
+        let pool_withdraw_authority =
+            PoolWithdrawAuthority::unpack(&pool_withdraw_authority_info.data.borrow())?;
+        assert_account_key(pool_info, &pool_withdraw_authority.pool)?;
+
+        {
+            let (pool_withdraw_authority_pubkey, _) =
+                find_legacy_pool_withdraw_authority_program_address(
+                    program_id,
+                    pool_info.key,
+                    &pool_withdraw_authority.withdraw_authority,
+                );
+            assert_account_key(
+                pool_withdraw_authority_info,
+                &pool_withdraw_authority_pubkey,
+            )?;
+        }
+
+        // Close old pool withdraw authority accounte
+        let receiver_starting_lamports = manager_info.lamports();
+        let pool_withdraw_authority_lamports = pool_withdraw_authority_info.lamports();
+        **pool_withdraw_authority_info.lamports.borrow_mut() = 0;
+        **manager_info.lamports.borrow_mut() = receiver_starting_lamports
+            .checked_add(pool_withdraw_authority_lamports)
+            .ok_or(EverlendError::MathOverflow)?;
+
+        Ok(())
+    }
+
+    /// Process MigratePoolBorrowAuthority instruction
+    pub fn migrate_pool_borrow_authority(
+        program_id: &Pubkey,
+        accounts: &[AccountInfo],
+    ) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+        let pool_market_info = next_account_info(account_info_iter)?;
+        let pool_info = next_account_info(account_info_iter)?;
+        let pool_borrow_authority_info = next_account_info(account_info_iter)?;
+        let manager_info = next_account_info(account_info_iter)?;
+        let _system_program_info = next_account_info(account_info_iter)?;
+
+        assert_signer(manager_info)?;
+        assert_owned_by(pool_market_info, program_id)?;
+        assert_owned_by(pool_info, program_id)?;
+        assert_owned_by(pool_borrow_authority_info, program_id)?;
+
+        let pool_market = PoolMarket::unpack(&pool_market_info.data.borrow())?;
+        assert_account_key(manager_info, &pool_market.manager)?;
+
+        let pool = Pool::unpack(&pool_info.data.borrow())?;
+        assert_account_key(pool_market_info, &pool.pool_market)?;
+
+        let pool_borrow_authority =
+            PoolBorrowAuthority::unpack(&pool_borrow_authority_info.data.borrow())?;
+        assert_account_key(pool_info, &pool_borrow_authority.pool)?;
+
+        {
+            let (pool_borrow_authority_pubkey, _) =
+                find_legacy_pool_withdraw_authority_program_address(
+                    program_id,
+                    pool_info.key,
+                    &pool_borrow_authority.borrow_authority,
+                );
+            assert_account_key(pool_borrow_authority_info, &pool_borrow_authority_pubkey)?;
+        }
+
+        // Close old pool borrow authority accounte
+        let receiver_starting_lamports = manager_info.lamports();
+        let pool_borrow_authority_lamports = pool_borrow_authority_info.lamports();
+        **pool_borrow_authority_info.lamports.borrow_mut() = 0;
+        **manager_info.lamports.borrow_mut() = receiver_starting_lamports
+            .checked_add(pool_borrow_authority_lamports)
+            .ok_or(EverlendError::MathOverflow)?;
 
         Ok(())
     }
@@ -682,6 +807,16 @@ impl Processor {
             CollateralPoolsInstruction::UpdateManager => {
                 msg!("CollateralPoolsInstruction: UpdateManager");
                 Self::update_manager(program_id, accounts)
+            }
+
+            CollateralPoolsInstruction::MigratePoolWithdrawAuthority => {
+                msg!("CollateralPoolsInstruction: MigratePoolWithdrawAuthority");
+                Self::migrate_pool_withdraw_authority(program_id, accounts)
+            }
+
+            CollateralPoolsInstruction::MigratePoolBorrowAuthority => {
+                msg!("CollateralPoolsInstruction: MigratePoolBorrowAuthority");
+                Self::migrate_pool_borrow_authority(program_id, accounts)
             }
         }
     }
