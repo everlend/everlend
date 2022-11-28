@@ -95,6 +95,8 @@ pub trait MoneyMarket<'a> {
         &self,
         collateral_amount: u64,
         expected_liquidity_amount: u64,
-        clock: AccountInfo<'a>,
     ) -> Result<bool, ProgramError>;
+
+    ///
+    fn refresh_reserve(&self, clock: AccountInfo<'a>) -> Result<(), ProgramError>;
 }

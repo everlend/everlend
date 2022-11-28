@@ -54,13 +54,6 @@ impl<'a, 'b> MoneyMarket<'b> for Tulip<'a, 'b> {
         amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<u64, ProgramError> {
-        tulip::refresh_reserve(
-            &self.money_market_program_id,
-            self.reserve.clone(),
-            self.reserve_liquidity_oracle.clone(),
-            clock.clone(),
-        )?;
-
         tulip::deposit(
             &self.money_market_program_id,
             source_liquidity,
@@ -93,13 +86,6 @@ impl<'a, 'b> MoneyMarket<'b> for Tulip<'a, 'b> {
         amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
-        tulip::refresh_reserve(
-            &self.money_market_program_id,
-            self.reserve.clone(),
-            self.reserve_liquidity_oracle.clone(),
-            clock.clone(),
-        )?;
-
         tulip::redeem(
             &self.money_market_program_id,
             source_collateral,
@@ -148,18 +134,19 @@ impl<'a, 'b> MoneyMarket<'b> for Tulip<'a, 'b> {
         &self,
         collateral_amount: u64,
         expected_liquidity_amount: u64,
-        clock: AccountInfo<'b>,
     ) -> Result<bool, ProgramError> {
+        let real_liquidity_amount =
+            tulip::get_real_liquidity_amount(self.reserve.clone(), collateral_amount)?;
+
+        Ok(real_liquidity_amount > expected_liquidity_amount)
+    }
+
+    fn refresh_reserve(&self, clock: AccountInfo<'b>) -> Result<(), ProgramError> {
         tulip::refresh_reserve(
             &self.money_market_program_id,
             self.reserve.clone(),
             self.reserve_liquidity_oracle.clone(),
             clock.clone(),
-        )?;
-
-        let real_liquidity_amount =
-            tulip::get_real_liquidity_amount(self.reserve.clone(), collateral_amount)?;
-
-        Ok(real_liquidity_amount > expected_liquidity_amount)
+        )
     }
 }

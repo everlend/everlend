@@ -221,6 +221,8 @@ impl<'a, 'b> WithdrawContext<'a, 'b> {
 
         let clock = Clock::from_account_info(self.clock)?;
 
+        money_market.refresh_reserve(self.clock.clone())?;
+
         msg!("Withdraw");
         withdraw(
             self.income_pool_accounts,
