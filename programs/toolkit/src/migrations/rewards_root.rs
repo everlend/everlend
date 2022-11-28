@@ -25,17 +25,6 @@ impl<'a> ToolkitCommand<'a> for MigrateRewardsRootCommand {
     fn handle(&self, config: &Config, _arg_matches: Option<&ArgMatches>) -> anyhow::Result<()> {
         let acc = config.get_initialized_accounts();
 
-        let tx = Transaction::new_with_payer(
-            &[everlend_rewards::instruction::migrate_root(
-                &everlend_rewards::id(),
-                &acc.rewards_root,
-                &config.fee_payer.pubkey(),
-            )],
-            Some(&config.fee_payer.pubkey()),
-        );
-
-        config.sign_and_send_and_confirm_transaction(tx, vec![config.fee_payer.as_ref()])?;
-
         let r: RewardsRoot = config.get_account_unpack(&acc.rewards_root)?;
         println!("Migration of rewards root: \n{:?}", &r);
 

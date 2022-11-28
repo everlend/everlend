@@ -118,4 +118,3 @@ impl TestPoolBorrowAuthority {
         context.banks_client.process_transaction(tx).await
     }
 }
-

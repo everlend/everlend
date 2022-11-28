@@ -1,8 +1,8 @@
-use crate::find_transit_program_address;
 use crate::money_market::{CollateralStorage, MoneyMarket};
 use crate::state::MiningType;
+use crate::TransitPDA;
 use everlend_utils::cpi::francium;
-use everlend_utils::{assert_account_key, AccountLoader, EverlendError};
+use everlend_utils::{assert_account_key, AccountLoader, EverlendError, PDA};
 use solana_program::{
     account_info::AccountInfo, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,
 };
@@ -99,21 +99,21 @@ impl<'a, 'b> Francium<'a, 'b> {
                 let token_mint_address_b_info =
                     AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
 
-                let (user_reward_a_check, _) = find_transit_program_address(
-                    program_id,
-                    &depositor,
-                    &token_mint_address_a_info.key,
-                    francium::FRANCIUM_REWARD_SEED,
-                );
+                let (user_reward_a_check, _) = TransitPDA {
+                    depositor: depositor.clone(),
+                    mint: token_mint_address_a_info.key.clone(),
+                    seed: francium::FRANCIUM_REWARD_SEED,
+                }
+                .find_address(program_id);
 
                 assert_account_key(&user_reward_a_info, &user_reward_a_check)?;
 
-                let (user_reward_b_check, _) = find_transit_program_address(
-                    program_id,
-                    &depositor,
-                    &token_mint_address_b_info.key,
-                    francium::FRANCIUM_REWARD_SEED,
-                );
+                let (user_reward_b_check, _) = TransitPDA {
+                    depositor: depositor.clone(),
+                    mint: token_mint_address_b_info.key.clone(),
+                    seed: francium::FRANCIUM_REWARD_SEED,
+                }
+                .find_address(program_id);
 
                 assert_account_key(&user_reward_b_info, &user_reward_b_check)?;
 
@@ -137,6 +137,11 @@ impl<'a, 'b> Francium<'a, 'b> {
 }
 
 impl<'a, 'b> MoneyMarket<'b> for Francium<'a, 'b> {
+    ///
+    fn is_collateral_return(&self) -> bool {
+        true
+    }
+
     ///
     fn money_market_deposit(
         &self,

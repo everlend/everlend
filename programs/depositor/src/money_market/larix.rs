@@ -73,6 +73,10 @@ impl<'a, 'b> Larix<'a, 'b> {
 }
 
 impl<'a, 'b> MoneyMarket<'b> for Larix<'a, 'b> {
+    fn is_collateral_return(&self) -> bool {
+        true
+    }
+
     fn money_market_deposit(
         &self,
         collateral_mint: AccountInfo<'b>,

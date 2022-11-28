@@ -47,6 +47,10 @@ impl<'a, 'b> Solend<'a, 'b> {
 }
 
 impl<'a, 'b> MoneyMarket<'b> for Solend<'a, 'b> {
+    fn is_collateral_return(&self) -> bool {
+        true
+    }
+
     fn money_market_deposit(
         &self,
         collateral_mint: AccountInfo<'b>,
