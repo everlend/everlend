@@ -1044,41 +1044,49 @@ async fn rebalancing_check_rollback_math() {
     let mut p = DistributionPubkeys::default();
     p[0] = Keypair::new().pubkey();
     p[1] = Keypair::new().pubkey();
+    p[2] = Keypair::new().pubkey();
 
-    let distr_amount: u64 = 10001;
+    let distr_amount: u64 = 10_001;
     let mut oracle = TokenOracle::default();
     let mut r = Rebalancing::default();
 
-    d[0] = 500_000_000;
-    d[1] = 0;
+    d[0] = 300_000_000;
+    d[1] = 200_000_000;
+    d[2] = 100_000_000;
 
     oracle.reserve_rates.updated_at = 1;
     oracle.update_liquidity_distribution(2, d).unwrap();
     r.compute(&p, oracle.clone(), distr_amount, 1).unwrap();
-    r.execute_step(RebalancingOperation::Deposit, Some(5000), 3)
+    r.execute_step(RebalancingOperation::Deposit, Some(3000), 3)
+        .unwrap();
+    r.execute_step(RebalancingOperation::Deposit, Some(2000), 3)
+        .unwrap();
+    r.execute_step(RebalancingOperation::Deposit, Some(1000), 3)
         .unwrap();
 
     struct TestCase {
-        distribution: (u64, u64),
-        res_distributed_liquidity: [u64; 2],
-        res_distribution: [u64; 2],
+        distribution: (u64, u64, u64),
+        res_distribution: Vec<u64>,
     }
+
+    let res_distributed_liquidity: Vec<u64> = vec![3000, 2000, 1000];
 
     for (i, elem) in vec![
         TestCase {
-            distribution: (500_000_000, 500_000_000),
-            res_distributed_liquidity: [5000, 0],
-            res_distribution: [500_000_000, 0],
+            distribution: (300_100_000, 200_000_000, 100_000_000),
+            res_distribution: vec![299_970_002, 200_000_000, 100_000_000],
         },
         TestCase {
-            distribution: (600_000_000, 0),
-            res_distributed_liquidity: [5000, 0],
-            res_distribution: [499950004, 0],
+            distribution: (500_000_000, 300_000_000, 200_000_000),
+            res_distribution: vec![299_970_002, 199_980_001, 99990000],
         },
         TestCase {
-            distribution: (1_000_000_000, 0),
-            res_distributed_liquidity: [5000, 0],
-            res_distribution: [499950004, 0],
+            distribution: (500_000_000, 200_000_000, 300_000_000),
+            res_distribution: vec![299_970_002, 200_000_000, 99990000],
+        },
+        TestCase {
+            distribution: (300_000_000, 200_000_000, 500_000_000),
+            res_distribution: vec![300_000_000, 200_000_000, 99990000],
         },
     ]
     .iter()
@@ -1086,17 +1094,18 @@ async fn rebalancing_check_rollback_math() {
     {
         d[0] = elem.distribution.0;
         d[1] = elem.distribution.1;
+        d[2] = elem.distribution.2;
         oracle
             .update_liquidity_distribution(3 + i as u64, d)
             .unwrap();
         r.compute(&p, oracle.clone(), distr_amount, 1).unwrap();
-        r.rollback_deposit(4 + i as u64).unwrap();
 
-        assert_eq!(
-            r.distributed_liquidity[0..2],
-            elem.res_distributed_liquidity
-        );
-        assert_eq!(r.liquidity_distribution.values[0..2], elem.res_distribution);
+        for _ in r.steps.clone().iter() {
+            r.rollback_deposit(4 + i as u64).unwrap();
+        }
+
+        assert_eq!(r.distributed_liquidity[0..3], res_distributed_liquidity);
+        assert_eq!(r.liquidity_distribution.values[0..3], elem.res_distribution);
     }
 }
 
