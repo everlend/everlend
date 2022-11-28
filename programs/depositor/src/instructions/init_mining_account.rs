@@ -330,6 +330,7 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                     );
                     AccountLoader::next_with_key(account_info_iter, &miner_pubkey)
                 }?;
+                assert_owned_by(miner_primary, &self.system_program.key)?;
                 let miner_replica = {
                     let (miner_pubkey, _) = cpi::quarry::find_miner_program_address(
                         &cpi::quarry::staking_program_id(),
@@ -338,6 +339,7 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                     );
                     AccountLoader::next_with_key(account_info_iter, &miner_pubkey)
                 }?;
+                assert_owned_by(miner_replica, &self.system_program.key)?;
 
                 let miner_vault_primary = {
                     let miner_vault =
