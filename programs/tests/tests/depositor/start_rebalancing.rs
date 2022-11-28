@@ -1041,8 +1041,6 @@ async fn rebalancing_check_steps() {
 #[tokio::test]
 async fn rebalancing_check_rollback_math() {
     let mut d: DistributionArray = DistributionArray::default();
-    let mut res_distribution = DistributionArray::default();
-    let mut res_distributed_liquidity = DistributionArray::default();
     let mut p = DistributionPubkeys::default();
     p[0] = Keypair::new().pubkey();
     p[1] = Keypair::new().pubkey();
@@ -1062,30 +1060,25 @@ async fn rebalancing_check_rollback_math() {
 
     struct TestCase {
         distribution: (u64, u64),
-        res_distributed_liquidity: (u64, u64),
-        res_distribution: (u64, u64),
+        res_distributed_liquidity: [u64; 2],
+        res_distribution: [u64; 2],
     }
 
     for (i, elem) in vec![
         TestCase {
             distribution: (500_000_000, 500_000_000),
-            res_distributed_liquidity: (5000, 0),
-            res_distribution: (500_000_000, 0),
+            res_distributed_liquidity: [5000, 0],
+            res_distribution: [500_000_000, 0],
         },
         TestCase {
             distribution: (600_000_000, 0),
-            res_distributed_liquidity: (5000, 0),
-            res_distribution: (500_000_000, 0),
+            res_distributed_liquidity: [5000, 0],
+            res_distribution: [499950004, 0],
         },
         TestCase {
             distribution: (1_000_000_000, 0),
-            res_distributed_liquidity: (5000, 0),
-            res_distribution: (499950004, 0),
-        },
-        TestCase {
-            distribution: (500_000_000, 500_000_000),
-            res_distributed_liquidity: (5000, 0),
-            res_distribution: (500_000_000, 0),
+            res_distributed_liquidity: [5000, 0],
+            res_distribution: [499950004, 0],
         },
     ]
     .iter()
@@ -1099,14 +1092,11 @@ async fn rebalancing_check_rollback_math() {
         r.compute(&p, oracle.clone(), distr_amount, 1).unwrap();
         r.rollback_deposit(4 + i as u64).unwrap();
 
-        res_distributed_liquidity[0] = elem.res_distributed_liquidity.0;
-        res_distributed_liquidity[1] = elem.res_distributed_liquidity.1;
-
-        res_distribution[0] = elem.res_distribution.0;
-        res_distribution[1] = elem.res_distribution.1;
-
-        assert_eq!(r.distributed_liquidity, res_distributed_liquidity);
-        assert_eq!(r.liquidity_distribution.values, res_distribution);
+        assert_eq!(
+            r.distributed_liquidity[0..2],
+            elem.res_distributed_liquidity
+        );
+        assert_eq!(r.liquidity_distribution.values[0..2], elem.res_distribution);
     }
 }
 
