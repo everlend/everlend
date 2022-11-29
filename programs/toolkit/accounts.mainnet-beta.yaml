@@ -616,15 +616,15 @@ token_accounts:
     port_finance_obligation_account: "11111111111111111111111111111111"
     mining_accounts:
       - staking_account: "11111111111111111111111111111111"
-        internal_mining_account: "11111111111111111111111111111111"
+        internal_mining_account: 2B9Swfd3WqdQkHUnRnkw7n74qsqz1J6kmjoqmwa1XSkU
       - staking_account: Cr2RCmWZkPAVjZt8GeuQv6JzmAuaKxpZtMfXiB5WdaBh
         internal_mining_account: Ezrerc1yGdYEHu4XMFwuoVX8wSMygGLcZnBwhkd9ps1b
       - staking_account: "11111111111111111111111111111111"
         internal_mining_account: "11111111111111111111111111111111"
       - staking_account: "11111111111111111111111111111111"
         internal_mining_account: "11111111111111111111111111111111"
-      - staking_account: "11111111111111111111111111111111"
-        internal_mining_account: "11111111111111111111111111111111"
+      - staking_account: 6FL1U6vtbg2vCxWPAM4kyHaKegnfEFapuZfM8kaTdWWC
+        internal_mining_account: 2B9Swfd3WqdQkHUnRnkw7n74qsqz1J6kmjoqmwa1XSkU
       - staking_account: "11111111111111111111111111111111"
         internal_mining_account: "11111111111111111111111111111111"
 liquidity_oracle: 7ow9UCNZZpyEyELAhshi5Ar27QgNkwf5aQXpHSW4ZEew

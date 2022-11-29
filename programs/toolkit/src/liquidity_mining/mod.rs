@@ -4,6 +4,7 @@ use crate::utils::*;
 use anyhow::Result;
 use everlend_depositor::{instruction::InitMiningAccountsPubkeys, state::MiningType};
 use everlend_utils::integrations::MoneyMarket;
+use everlend_utils::PDA;
 use solana_client::client_error::ClientError;
 use solana_program::pubkey::Pubkey;
 use solana_program::system_instruction;
@@ -14,6 +15,7 @@ pub mod larix_raw_test;
 pub mod port_liquidity_miner;
 pub mod quarry_liquidity_miner;
 pub mod quarry_raw_test;
+pub mod francium_liquidity_miner;
 
 pub fn execute_account_creation(
     config: &Config,
@@ -66,12 +68,14 @@ pub fn get_internal_mining_account(
     let liquidity_mint = mint_map.get(token).unwrap();
     let collateral_mint = collateral_mint_map.get(token).unwrap()[money_market as usize].unwrap();
     // Generate internal mining account
-    let (internal_mining_account, _) = everlend_depositor::find_internal_mining_program_address(
-        &everlend_depositor::id(),
-        liquidity_mint,
-        &collateral_mint,
-        &initialized_accounts.depositor,
-    );
+    let (internal_mining_account, _) = everlend_depositor::InternalMiningPDA {
+        liquidity_mint: liquidity_mint.clone(),
+
+        collateral_mint,
+        depositor: initialized_accounts.depositor,
+    }
+    .find_address(&everlend_depositor::id());
+
     internal_mining_account
 }
 
@@ -102,6 +106,7 @@ pub trait LiquidityMiner {
         token: &String,
         mining_account: &Keypair,
         sub_reward_token_mint: Option<Pubkey>,
+        reward_token_mint: Option<Pubkey>,
     ) -> Result<()>;
     fn get_pubkeys(&self, config: &Config, token: &String) -> Option<InitMiningAccountsPubkeys>;
     fn get_mining_type(
@@ -110,5 +115,6 @@ pub trait LiquidityMiner {
         token: &String,
         mining_pubkey: Pubkey,
         sub_reward_token_mint: Option<Pubkey>,
+        reward_token_mint: Option<Pubkey>,
     ) -> MiningType;
 }

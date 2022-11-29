@@ -51,6 +51,10 @@ impl<'a, 'b> SPLLending<'a, 'b> {
 }
 
 impl<'a, 'b> MoneyMarket<'b> for SPLLending<'a, 'b> {
+    fn is_collateral_return(&self) -> bool {
+        true
+    }
+
     fn money_market_deposit(
         &self,
         collateral_mint: AccountInfo<'b>,

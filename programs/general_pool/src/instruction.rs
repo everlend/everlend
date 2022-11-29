@@ -89,12 +89,15 @@ pub enum LiquidityPoolsInstruction {
     /// [R] Pool config
     /// [R] Pool market
     /// [R] Pool
-    /// [W] Source account (for token mint)
-    /// [W] Destination account (for pool mint)
-    /// [W] Token account
+    /// [W] Source token account (for token mint)
+    /// [W] Destination token account (for pool mint)
+    /// [W] Pool token account
     /// [W] Pool mint account
     /// [R] Pool market authority
     /// [RS] User transfer authority
+    /// [W] Mining reward pool
+    /// [W] User mining reward account
+    /// [R] Everlend rewards program
     /// [R] Token program id
     Deposit {
         /// Amount to deposit
@@ -167,11 +170,14 @@ pub enum LiquidityPoolsInstruction {
     /// [W] Pool mint account
     /// [W] Withdrawal requests account
     /// [W] Withdrawal request account
-    /// [W] Source account (for pool mint)
-    /// [R] Destination account (for token mint)
+    /// [W] Source token account (for pool mint)
+    /// [R] Destination token  account (for token mint)
     /// [W] Pool token account
     /// [W] Collateral transit account
     /// [RS] User transfer authority
+    /// [W] Mining reward pool
+    /// [W] User mining reward account
+    /// [R] Everlend rewards program
     /// [R] Rent sysvar
     /// [R] Clock sysvar
     /// [R] System program

@@ -1,11 +1,13 @@
-use crate::claimer::{LarixClaimer, PortFinanceClaimer, QuarryClaimer, RewardClaimer};
+use crate::claimer::{
+    FranciumClaimer, LarixClaimer, PortFinanceClaimer, QuarryClaimer, RewardClaimer,
+};
 use crate::{
-    find_internal_mining_program_address,
     state::{Depositor, InternalMining, MiningType},
     utils::{parse_fill_reward_accounts, FillRewardAccounts},
+    InternalMiningPDA,
 };
 use everlend_rewards::{cpi::fill_vault, state::RewardPool};
-use everlend_utils::{assert_account_key, find_program_address, AccountLoader, EverlendError};
+use everlend_utils::{assert_account_key, find_program_address, AccountLoader, EverlendError, PDA};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
     program_pack::Pack, pubkey::Pubkey,
@@ -74,12 +76,13 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
         }
 
         {
-            let (internal_mining_pubkey, _) = find_internal_mining_program_address(
-                program_id,
-                self.liquidity_mint.key,
-                self.collateral_mint.key,
-                self.depositor.key,
-            );
+            let (internal_mining_pubkey, _) = InternalMiningPDA {
+                liquidity_mint: *self.liquidity_mint.key,
+                collateral_mint: *self.collateral_mint.key,
+                depositor: *self.depositor.key,
+            }
+            .find_address(program_id);
+
             assert_account_key(self.internal_mining, &internal_mining_pubkey)
         }?;
 
@@ -96,8 +99,6 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
             self.rewards_program_id.key,
             account_info_iter,
         )?;
-
-        reward_accounts.check_transit_reward_destination(program_id, self.depositor.key)?;
 
         let mut fill_sub_rewards_accounts: Option<FillRewardAccounts> = None;
 
@@ -123,6 +124,9 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
         let claimer: Box<dyn RewardClaimer<'b> + 'a> = {
             match internal_mining_type {
                 MiningType::Larix { .. } => {
+                    reward_accounts
+                        .check_transit_reward_destination(program_id, self.depositor.key)?;
+
                     //Larix has manual distribution of subreward so we dont need this check
                     // fill_sub_rewards_accounts.check_transit_reward_destination()?;
 
@@ -137,8 +141,13 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
                     Box::new(larix)
                 }
                 MiningType::PortFinance { .. } => {
+                    reward_accounts
+                        .check_transit_reward_destination(program_id, self.depositor.key)?;
+
                     if with_subrewards {
-                        reward_accounts
+                        fill_sub_rewards_accounts
+                            .as_ref()
+                            .unwrap()
                             .check_transit_reward_destination(program_id, self.depositor.key)?;
                     };
 
@@ -153,9 +162,12 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
                     Box::new(port_finance)
                 }
                 MiningType::Quarry { .. } => {
+                    reward_accounts
+                        .check_transit_reward_destination(program_id, self.depositor.key)?;
+
                     // Quarry doesn't have subreward tokens
                     if with_subrewards {
-                        return Err(ProgramError::InvalidArgument)
+                        return Err(ProgramError::InvalidArgument);
                     }
 
                     let quarry = QuarryClaimer::init(
@@ -169,6 +181,19 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
                     )?;
 
                     Box::new(quarry)
+                }
+                MiningType::Francium { .. } => {
+                    let francium = FranciumClaimer::init(
+                        program_id,
+                        self.staking_program_id.key,
+                        self.depositor_authority.key,
+                        internal_mining_type,
+                        reward_accounts.clone(),
+                        fill_sub_rewards_accounts.clone(),
+                        account_info_iter,
+                    )?;
+
+                    Box::new(francium)
                 }
                 _ => return Err(EverlendError::MiningNotInitialized.into()),
             }

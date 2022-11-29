@@ -5,12 +5,14 @@ pub mod cpi;
 mod error;
 pub mod integrations;
 pub mod math;
+pub mod pda;
 
 use std::iter::Enumerate;
 
 pub use asserts::*;
 pub use error::*;
 pub use math::*;
+pub use pda::*;
 
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use solana_program::{account_info::AccountInfo, msg, program_error::ProgramError, pubkey::Pubkey};

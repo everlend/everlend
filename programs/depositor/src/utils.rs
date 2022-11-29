@@ -1,17 +1,17 @@
 //! Utils
 
 use crate::money_market::{CollateralPool, CollateralStorage, Francium, MoneyMarket, Tulip};
-use crate::money_market::{Larix, PortFinance, SPLLending, Solend, Jet};
+use crate::money_market::{Frakt, Jet, Larix, PortFinance, SPLLending, Solend};
 use crate::{
-    find_transit_program_address,
     state::{InternalMining, MiningType},
+    TransitPDA,
 };
 use everlend_collateral_pool::find_pool_withdraw_authority_program_address;
 use everlend_income_pools::utils::IncomePoolAccounts;
 use everlend_registry::state::DistributionPubkeys;
 use everlend_utils::{
     abs_diff, assert_account_key, cpi, find_program_address, integrations, AccountLoader,
-    EverlendError,
+    EverlendError, PDA,
 };
 use num_traits::Zero;
 use solana_program::{
@@ -65,7 +65,13 @@ pub fn deposit<'a, 'b>(
         )?;
 
         if collateral_amount == 0 {
-            return Err(EverlendError::CollateralLeak.into());
+            if money_market.is_collateral_return() {
+                return Err(EverlendError::CollateralLeak.into());
+            }
+
+            // For money markets that do not return collateral tokens,
+            // the collateral amount should be returned as a liquidity amount
+            return Ok(liquidity_amount);
         }
 
         msg!("Deposit into collateral pool");
@@ -118,22 +124,24 @@ pub fn withdraw<'a, 'b>(
             signers_seeds,
         )?;
     } else {
-        msg!("Withdraw from collateral pool");
+        if money_market.is_collateral_return() {
+            msg!("Withdraw from collateral pool");
 
-        if collateral_storage.is_none() {
-            return Err(ProgramError::InvalidArgument);
+            if collateral_storage.is_none() {
+                return Err(ProgramError::InvalidArgument);
+            }
+
+            collateral_storage
+                .as_ref()
+                .unwrap()
+                .withdraw_collateral_tokens(
+                    collateral_transit.clone(),
+                    authority.clone(),
+                    clock.clone(),
+                    collateral_amount,
+                    signers_seeds,
+                )?;
         }
-
-        collateral_storage
-            .as_ref()
-            .unwrap()
-            .withdraw_collateral_tokens(
-                collateral_transit.clone(),
-                authority.clone(),
-                clock.clone(),
-                collateral_amount,
-                signers_seeds,
-            )?;
 
         msg!("Redeem from Money market");
         money_market.money_market_redeem(
@@ -200,6 +208,8 @@ pub fn money_market<'a, 'b>(
     internal_mining: &AccountInfo<'b>,
     collateral_token_mint: &Pubkey,
     depositor_authority: &Pubkey,
+    depositor: &Pubkey,
+    liquidity_mint: &'a AccountInfo<'b>,
 ) -> Result<(Box<dyn MoneyMarket<'b> + 'a>, bool), ProgramError> {
     let internal_mining_type = if internal_mining.owner == program_id {
         Some(InternalMining::unpack(&internal_mining.data.borrow())?.mining_type)
@@ -262,6 +272,9 @@ pub fn money_market<'a, 'b>(
                 *money_market_program.key,
                 market,
                 money_market_account_info_iter,
+                depositor,
+                depositor_authority,
+                internal_mining_type,
             )?;
             Ok((Box::new(francium), is_mining))
         }
@@ -272,6 +285,16 @@ pub fn money_market<'a, 'b>(
                 money_market_account_info_iter,
             )?;
             return Ok((Box::new(jet), is_mining));
+        }
+        integrations::MoneyMarket::Frakt => {
+            let frakt = Frakt::init(
+                money_market_program.key.clone(),
+                program_id.clone(),
+                depositor_authority,
+                liquidity_mint,
+                money_market_account_info_iter,
+            )?;
+            Ok((Box::new(frakt), is_mining))
         }
     }
 }
@@ -380,12 +403,12 @@ impl<'a, 'b> FillRewardAccounts<'a, 'b> {
         program_id: &Pubkey,
         depositor_id: &Pubkey,
     ) -> Result<(), ProgramError> {
-        let (reward_token_account, _) = find_transit_program_address(
-            program_id,
-            depositor_id,
-            self.reward_mint_info.key,
-            "lm_reward",
-        );
+        let (reward_token_account, _) = TransitPDA {
+            seed: "lm_reward",
+            depositor: depositor_id.clone(),
+            mint: *self.reward_mint_info.key,
+        }
+        .find_address(program_id);
         assert_account_key(self.reward_transit_info, &reward_token_account)?;
 
         Ok(())

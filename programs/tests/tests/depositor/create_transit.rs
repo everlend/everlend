@@ -3,8 +3,7 @@ use solana_program_test::*;
 use solana_sdk::transaction::{Transaction, TransactionError};
 use solana_sdk::{signature::Keypair, signer::Signer};
 
-use everlend_depositor::find_transit_program_address;
-use everlend_utils::find_program_address;
+use everlend_utils::{find_program_address, PDA};
 
 use crate::utils::*;
 
@@ -51,12 +50,12 @@ async fn success() {
         .await
         .unwrap();
 
-    let (transit_pubkey, _) = find_transit_program_address(
-        &everlend_depositor::id(),
-        &test_depositor.depositor.pubkey(),
-        &token_mint.pubkey(),
-        "",
-    );
+    let (transit_pubkey, _) = everlend_depositor::TransitPDA {
+        seed: "",
+        depositor: test_depositor.depositor.pubkey(),
+        mint: token_mint.pubkey(),
+    }
+    .find_address(&everlend_depositor::id());
 
     let (depositor_authority, _) = find_program_address(
         &everlend_depositor::id(),
@@ -70,7 +69,7 @@ async fn success() {
 }
 
 #[tokio::test]
-async fn success_with_different_seed() {
+async fn fail_with_not_reserved_seed() {
     let (mut context, test_depositor) = setup().await;
 
     let token_mint = Keypair::new();
@@ -79,30 +78,6 @@ async fn success_with_different_seed() {
     create_mint(&mut context, &token_mint, &payer_pubkey)
         .await
         .unwrap();
-
-    test_depositor
-        .create_transit(&mut context, &token_mint.pubkey(), None)
-        .await
-        .unwrap();
-
-    context.warp_to_slot(3).unwrap();
-
-    let (transit_pubkey, _) = find_transit_program_address(
-        &everlend_depositor::id(),
-        &test_depositor.depositor.pubkey(),
-        &token_mint.pubkey(),
-        "",
-    );
-
-    let (depositor_authority, _) = find_program_address(
-        &everlend_depositor::id(),
-        &test_depositor.depositor.pubkey(),
-    );
-
-    let transit = get_token_account_data(&mut context, &transit_pubkey).await;
-
-    assert_eq!(transit.mint, token_mint.pubkey());
-    assert_eq!(transit.owner, depositor_authority);
 
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::create_transit(
@@ -117,19 +92,15 @@ async fn success_with_different_seed() {
         context.last_blockhash,
     );
 
-    context.banks_client.process_transaction(tx).await.unwrap();
-
-    let (transit_pubkey_second, _) = find_transit_program_address(
-        &everlend_depositor::id(),
-        &test_depositor.depositor.pubkey(),
-        &token_mint.pubkey(),
-        "second",
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
     );
-
-    let transit = get_token_account_data(&mut context, &transit_pubkey_second).await;
-
-    assert_eq!(transit.mint, token_mint.pubkey());
-    assert_eq!(transit.owner, depositor_authority);
 }
 
 #[tokio::test]
@@ -171,5 +142,40 @@ async fn fail_double_create() {
             .unwrap_err()
             .unwrap(),
         TransactionError::InstructionError(0, InstructionError::AccountAlreadyInitialized)
+    );
+}
+
+#[tokio::test]
+async fn fail_rebalancing_seed() {
+    let (mut context, test_depositor) = setup().await;
+
+    let token_mint = Keypair::new();
+    let payer_pubkey = context.payer.pubkey();
+
+    create_mint(&mut context, &token_mint, &payer_pubkey)
+        .await
+        .unwrap();
+
+    let tx = Transaction::new_signed_with_payer(
+        &[everlend_depositor::instruction::create_transit(
+            &everlend_depositor::id(),
+            &test_depositor.depositor.pubkey(),
+            &token_mint.pubkey(),
+            &context.payer.pubkey(),
+            Some("rebalancing".to_string()),
+        )],
+        Some(&context.payer.pubkey()),
+        &[&context.payer],
+        context.last_blockhash,
+    );
+
+    assert_eq!(
+        context
+            .banks_client
+            .process_transaction(tx)
+            .await
+            .unwrap_err()
+            .unwrap(),
+        TransactionError::InstructionError(0, InstructionError::InvalidArgument)
     );
 }

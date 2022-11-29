@@ -107,6 +107,8 @@ pub struct FranciumAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub lending_market: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
+    pub staking_program_id: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
     pub reserve_liquidity_supply: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
     pub reserve_sol: Pubkey,
@@ -121,6 +123,17 @@ pub struct JetAccounts {
     pub margin_pool_sol: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
     pub vault_sol: Pubkey,
+}
+
+#[serde_as]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
+pub struct FraktAccounts {
+    #[serde_as(as = "DisplayFromStr")]
+    pub program_id: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub liquidity_pool: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub pool_admin: Pubkey,
 }
 
 #[serde_as]
@@ -154,7 +167,7 @@ pub struct DefaultAccounts {
 
     pub port_finance: Vec<PortFinanceAccounts>,
 
-    pub port_accounts: BTreeMap<String, PortAccounts>,
+    pub port_accounts: BTreeMap<String, StakingPoolAccounts>,
 
     pub larix: Vec<LarixAccounts>,
 
@@ -166,7 +179,11 @@ pub struct DefaultAccounts {
 
     pub francium: Vec<FranciumAccounts>,
 
+    pub francium_farming_pool_account: BTreeMap<String, StakingPoolAccounts>,
+
     pub jet: Vec<JetAccounts>,
+
+    pub frakt: FraktAccounts,
 
     #[serde_as(as = "DisplayFromStr")]
     pub multisig_program_id: Pubkey,
@@ -207,7 +224,7 @@ pub struct DefaultAccounts {
 
 #[serde_as]
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
-pub struct PortAccounts {
+pub struct StakingPoolAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub staking_pool: Pubkey,
 }

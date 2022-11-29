@@ -9,16 +9,13 @@ use solana_program_test::*;
 use solana_sdk::signature::{Keypair, Signer};
 use solana_sdk::transaction::{Transaction, TransactionError};
 
-use everlend_depositor::{
-    find_rebalancing_program_address, find_transit_program_address,
-    instruction::DepositorInstruction,
-};
+use everlend_depositor::instruction::DepositorInstruction;
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::state::{MoneyMarket, MoneyMarkets};
 use everlend_utils::{
     find_program_address,
     integrations::{self, MoneyMarketPubkeys},
-    EverlendError,
+    EverlendError, PDA,
 };
 
 use crate::utils::*;
@@ -178,12 +175,12 @@ async fn setup() -> (
         )
         .await
         .unwrap();
-    let (reserve_transit_pubkey, _) = find_transit_program_address(
-        &everlend_depositor::id(),
-        &test_depositor.depositor.pubkey(),
-        &general_pool.token_mint_pubkey,
-        "reserve",
-    );
+    let (reserve_transit_pubkey, _) = everlend_depositor::TransitPDA {
+        seed: "reserve",
+        depositor: test_depositor.depositor.pubkey(),
+        mint: general_pool.token_mint_pubkey.clone(),
+    }
+    .find_address(&everlend_depositor::id());
     token_transfer(
         &mut env.context,
         &liquidity_provider.token_account,
@@ -1337,11 +1334,11 @@ async fn fail_with_invalid_withdraw_authority() {
         &everlend_depositor::id(),
         &test_depositor.depositor.pubkey(),
     );
-    let (rebalancing, _) = find_rebalancing_program_address(
-        &everlend_depositor::id(),
-        &test_depositor.depositor.pubkey(),
-        &liquidity_mint,
-    );
+    let (rebalancing, _) = everlend_depositor::RebalancingPDA {
+        depositor: test_depositor.depositor.pubkey(),
+        mint: liquidity_mint.clone(),
+    }
+    .find_address(&everlend_depositor::id());
 
     let (income_pool_address, _) = everlend_income_pools::find_pool_program_address(
         &everlend_income_pools::id(),
@@ -1349,25 +1346,25 @@ async fn fail_with_invalid_withdraw_authority() {
         &liquidity_mint,
     );
 
-    let (collateral_transit, _) = find_transit_program_address(
-        &everlend_depositor::id(),
-        &test_depositor.depositor.pubkey(),
-        &collateral_mint,
-        "",
-    );
-    let (liquidity_transit, _) = find_transit_program_address(
-        &everlend_depositor::id(),
-        &test_depositor.depositor.pubkey(),
-        &liquidity_mint,
-        "",
-    );
+    let (collateral_transit, _) = everlend_depositor::TransitPDA {
+        seed: "",
+        depositor: test_depositor.depositor.pubkey(),
+        mint: collateral_mint.clone(),
+    }
+    .find_address(&everlend_depositor::id());
+    let (liquidity_transit, _) = everlend_depositor::TransitPDA {
+        seed: "",
+        depositor: test_depositor.depositor.pubkey(),
+        mint: liquidity_mint.clone(),
+    }
+    .find_address(&everlend_depositor::id());
 
-    let (liquidity_reserve_transit, _) = find_transit_program_address(
-        &everlend_depositor::id(),
-        &test_depositor.depositor.pubkey(),
-        &liquidity_mint,
-        "reserve",
-    );
+    let (liquidity_reserve_transit, _) = everlend_depositor::TransitPDA {
+        seed: "reserve",
+        depositor: test_depositor.depositor.pubkey(),
+        mint: liquidity_mint.clone(),
+    }
+    .find_address(&everlend_depositor::id());
 
     let collateral_pool_withdraw_accounts = mm_pool.withdraw_accounts(
         &mm_pool_market,

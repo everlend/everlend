@@ -1,10 +1,10 @@
 use crate::{
-    find_rebalancing_program_address,
     state::{Depositor, Rebalancing},
+    RebalancingPDA,
 };
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::state::Registry;
-use everlend_utils::{assert_account_key, AccountLoader};
+use everlend_utils::{assert_account_key, AccountLoader, PDA};
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
     program_pack::Pack, pubkey::Pubkey,
@@ -60,11 +60,11 @@ impl<'a, 'b> SetRebalancingContext<'a, 'b> {
         assert_account_key(self.manager, &registry.manager)?;
 
         // Check rebalancing
-        let (rebalancing_pubkey, _) = find_rebalancing_program_address(
-            program_id,
-            self.depositor.key,
-            self.liquidity_mint.key,
-        );
+        let (rebalancing_pubkey, _) = RebalancingPDA {
+            depositor: *self.depositor.key,
+            mint: *self.liquidity_mint.key,
+        }
+        .find_address(program_id);
         assert_account_key(self.rebalancing, &rebalancing_pubkey)?;
 
         let mut rebalancing = Rebalancing::unpack(&self.rebalancing.data.borrow())?;

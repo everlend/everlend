@@ -2,12 +2,13 @@ use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use num_enum::{FromPrimitive, IntoPrimitive};
 use solana_program::{instruction::AccountMeta, pubkey::Pubkey};
 
+pub mod frakt;
 pub mod francium;
+pub mod jet;
 pub mod larix;
 pub mod solend;
 pub mod spl_token_lending;
 pub mod tulip;
-pub mod jet;
 
 // Program IDs
 pub const SPL_TOKEN_LENDING_PROGRAM_ID: &str = "Bp1MJ1qr4g8t9AQJjm5H6zDB2NmRrkJL8H8zuvb1g7oV";
@@ -34,6 +35,7 @@ pub enum MoneyMarket {
     Tulip,
     Francium,
     Jet,
+    Frakt,
 }
 
 impl Default for MoneyMarket {
@@ -51,6 +53,7 @@ pub enum StakingMoneyMarket {
     Larix,
     Solend,
     Quarry,
+    Francium,
 }
 
 #[derive(Debug)]
@@ -62,6 +65,7 @@ pub enum MoneyMarketPubkeys {
     Tulip(tulip::AccountPubkeys),
     Francium(francium::AccountPubkeys),
     Jet(jet::AccountPubkeys),
+    Frakt(frakt::AccountPubkeys),
 }
 
 pub fn deposit_accounts(program_id: &Pubkey, pubkeys: &MoneyMarketPubkeys) -> Vec<AccountMeta> {
@@ -74,6 +78,7 @@ pub fn deposit_accounts(program_id: &Pubkey, pubkeys: &MoneyMarketPubkeys) -> Ve
         MoneyMarketPubkeys::Tulip(pubkeys) => tulip::accounts::deposit(program_id, pubkeys),
         MoneyMarketPubkeys::Francium(pubkeys) => francium::accounts::deposit(program_id, pubkeys),
         MoneyMarketPubkeys::Jet(pubkeys) => jet::accounts::deposit(program_id, pubkeys),
+        MoneyMarketPubkeys::Frakt(pubkeys) => frakt::accounts::deposit(program_id, pubkeys),
         _ => vec![],
     }
 }
@@ -88,6 +93,7 @@ pub fn withdraw_accounts(program_id: &Pubkey, pubkeys: &MoneyMarketPubkeys) -> V
         MoneyMarketPubkeys::Tulip(pubkeys) => tulip::accounts::withdraw(program_id, pubkeys),
         MoneyMarketPubkeys::Francium(pubkeys) => francium::accounts::withdraw(program_id, pubkeys),
         MoneyMarketPubkeys::Jet(pubkeys) => jet::accounts::withdraw(program_id, pubkeys),
+        MoneyMarketPubkeys::Frakt(pubkeys) => frakt::accounts::withdraw(program_id, pubkeys),
         _ => vec![],
     }
 }

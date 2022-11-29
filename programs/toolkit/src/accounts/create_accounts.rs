@@ -82,6 +82,7 @@ impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
         distribution[3] = 0;
         distribution[4] = 0;
         distribution[5] = 0;
+        distribution[6] = 0;
 
         println!("Registry");
         let mut money_market_program_ids = MoneyMarkets::default();
@@ -113,6 +114,11 @@ impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
         money_market_program_ids[5] = MoneyMarket {
             id: everlend_utils::integrations::MoneyMarket::Jet,
             program_id: default_accounts.jet[0].program_id,
+            lending_market: Default::default(),
+        };
+        money_market_program_ids[6] = MoneyMarket {
+            id: everlend_utils::integrations::MoneyMarket::Frakt,
+            program_id: default_accounts.frakt[0].program_id,
             lending_market: Default::default(),
         };
 

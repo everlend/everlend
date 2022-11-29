@@ -82,6 +82,10 @@ impl Pack for Registry {
     }
 
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
+        if src.len() != REGISTRY_LEN + REGISTRY_MARKETS_LEN {
+            return Err(ProgramError::InvalidAccountData);
+        }
+
         let mut src_mut = &src[0..REGISTRY_LEN];
         Self::deserialize(&mut src_mut).map_err(|err| {
             msg!("Failed to deserialize");
@@ -162,6 +166,10 @@ impl Pack for RegistryMarkets {
     }
 
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
+        if src.len() != REGISTRY_LEN + REGISTRY_MARKETS_LEN {
+            return Err(ProgramError::InvalidAccountData);
+        }
+
         let mut src_mut = &src[REGISTRY_LEN..REGISTRY_LEN + REGISTRY_MARKETS_LEN];
 
         Self::deserialize(&mut src_mut).map_err(|err| {
@@ -198,5 +206,34 @@ impl MoneyMarket {
             msg!(&err.to_string());
             ProgramError::InvalidAccountData
         })
+    }
+}
+
+#[cfg(test)]
+pub mod tests {
+    use crate::state::registry::{REGISTRY_LEN, REGISTRY_MARKETS_LEN};
+    use crate::state::{Registry, RegistryMarkets};
+    use solana_program::program_error::ProgramError;
+    use solana_program::program_pack::Pack;
+
+    #[test]
+    fn unpack_registry() {
+        // Valid data size case
+        let data = vec![0u8; REGISTRY_LEN + REGISTRY_MARKETS_LEN];
+
+        Registry::unpack_from_slice(&data).unwrap();
+        RegistryMarkets::unpack_from_slice(&data).unwrap();
+
+        // Invalid data size case
+        let wrong_sized_data = vec![0u8; REGISTRY_LEN + REGISTRY_MARKETS_LEN + 1];
+
+        assert_eq!(
+            Registry::unpack_from_slice(&wrong_sized_data).unwrap_err(),
+            ProgramError::InvalidAccountData,
+        );
+        assert_eq!(
+            RegistryMarkets::unpack_from_slice(&wrong_sized_data).unwrap_err(),
+            ProgramError::InvalidAccountData,
+        )
     }
 }
