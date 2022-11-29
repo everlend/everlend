@@ -264,21 +264,27 @@ pub fn withdraw_mining(
 pub fn claim(
     program_id: &Pubkey,
     reward_pool: &Pubkey,
-    reward_mint: &Pubkey,
-    vault: &Pubkey,
+    reward_mints: Vec<Pubkey>,
+    vaults: Vec<Pubkey>,
     mining: &Pubkey,
     user: &Pubkey,
-    user_reward_token: &Pubkey,
+    user_reward_tokens: Vec<Pubkey>,
 ) -> Instruction {
-    let accounts = vec![
-        AccountMeta::new_readonly(*reward_pool, false),
-        AccountMeta::new_readonly(*reward_mint, false),
-        AccountMeta::new(*vault, false),
+    let mut accounts = vec![AccountMeta::new_readonly(*reward_pool, false)];
+    for reward_mint in reward_mints {
+        accounts.push(AccountMeta::new_readonly(reward_mint, false))
+    }
+    for vault in vaults {
+        accounts.push(AccountMeta::new(vault, false))
+    }
+    accounts.append(&mut vec![
         AccountMeta::new(*mining, false),
         AccountMeta::new_readonly(*user, true),
-        AccountMeta::new(*user_reward_token, false),
-        AccountMeta::new_readonly(spl_token::id(), false),
-    ];
+    ]);
+    for user_reward in user_reward_tokens {
+        accounts.push(AccountMeta::new(user_reward, false))
+    }
+    accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
 
     Instruction::new_with_borsh(*program_id, &RewardsInstruction::Claim, accounts)
 }
