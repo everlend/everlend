@@ -7,6 +7,7 @@ use solana_program::program_error::ProgramError;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar;
+use spl_token_lending::math::{Decimal, TryAdd, TryDiv};
 use std::str::FromStr;
 
 pub const FRANCIUM_REWARD_SEED: &str = "francium_reward";
@@ -383,6 +384,21 @@ pub fn find_user_farming_address(
         &get_staking_program_id(),
     );
     user_farming
+}
+
+pub fn get_real_liquidity_amount(
+    reserve: AccountInfo,
+    collateral_amount: u64,
+) -> Result<u64, ProgramError> {
+    let reserve = state::LendingPool::unpack(*reserve.data.borrow())?;
+
+    let total_asset = Decimal::from(reserve.liquidity.available_amount)
+        .try_add(reserve.liquidity.borrowed_amount_wads)?;
+    let rate = Decimal::from(reserve.shares.mint_total_supply).try_div(total_asset)?;
+
+    Decimal::from(collateral_amount)
+        .try_div(rate)?
+        .try_floor_u64()
 }
 
 pub fn is_deposit_disabled(reserve: AccountInfo) -> Result<bool, ProgramError> {

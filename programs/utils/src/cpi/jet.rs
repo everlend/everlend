@@ -206,6 +206,15 @@ pub fn redeem<'a>(
     )
 }
 
+pub fn get_real_liquidity_amount(
+    margin_pool: AccountInfo,
+    collateral_amount: u64,
+) -> Result<u64, ProgramError> {
+    let mp = MarginPool::try_from_slice(*margin_pool.data.borrow())?;
+
+    Ok(mp.convert_amount(collateral_amount))
+}
+
 pub fn is_deposit_disabled(margin_pool: AccountInfo) -> Result<bool, ProgramError> {
     let mp: MarginPool = MarginPool::try_from_slice(*margin_pool.data.borrow())?;
 

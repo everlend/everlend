@@ -124,13 +124,6 @@ impl<'a, 'b> MoneyMarket<'b> for PortFinance<'a, 'b> {
         liquidity_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<u64, ProgramError> {
-        port_finance::refresh_reserve(
-            &self.money_market_program_id,
-            self.reserve.clone(),
-            self.reserve_liquidity_oracle.clone(),
-            clock.clone(),
-        )?;
-
         port_finance::deposit(
             &self.money_market_program_id,
             source_liquidity,
@@ -162,13 +155,6 @@ impl<'a, 'b> MoneyMarket<'b> for PortFinance<'a, 'b> {
         collateral_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
-        port_finance::refresh_reserve(
-            &self.money_market_program_id,
-            self.reserve.clone(),
-            self.reserve_liquidity_oracle.clone(),
-            clock.clone(),
-        )?;
-
         port_finance::redeem(
             &self.money_market_program_id,
             source_collateral,
@@ -257,6 +243,7 @@ impl<'a, 'b> MoneyMarket<'b> for PortFinance<'a, 'b> {
                 collateral_amount,
                 signers_seeds,
             )?;
+            self.refresh_reserve(clock.clone())?;
         } else if self.quarry_mining.is_some() {
             let quarry_mining = self.quarry_mining.as_ref().unwrap();
             quarry_mining.withdraw_collateral_tokens(
@@ -281,6 +268,26 @@ impl<'a, 'b> MoneyMarket<'b> for PortFinance<'a, 'b> {
         )
     }
 
+    fn is_income(
+        &self,
+        collateral_amount: u64,
+        expected_liquidity_amount: u64,
+    ) -> Result<bool, ProgramError> {
+        let real_liquidity_amount =
+            port_finance::get_real_liquidity_amount(self.reserve.clone(), collateral_amount)?;
+
+        Ok(real_liquidity_amount > expected_liquidity_amount)
+    }
+
+    fn refresh_reserve(&self, clock: AccountInfo<'b>) -> Result<(), ProgramError> {
+        port_finance::refresh_reserve(
+            &self.money_market_program_id,
+            self.reserve.clone(),
+            self.reserve_liquidity_oracle.clone(),
+            clock.clone(),
+        )
+    }
+
     fn is_deposit_disabled(&self) -> Result<bool, ProgramError> {
         // Not presented
         Ok(false)
@@ -300,12 +307,7 @@ impl<'a, 'b> CollateralStorage<'b> for PortFinance<'a, 'b> {
             return Err(EverlendError::MiningNotInitialized.into());
         }
 
-        port_finance::refresh_reserve(
-            &self.money_market_program_id,
-            self.reserve.clone(),
-            self.reserve_liquidity_oracle.clone(),
-            clock.clone(),
-        )?;
+        self.refresh_reserve(clock.clone())?;
 
         let mining = self.mining.as_ref().unwrap();
 
@@ -340,13 +342,6 @@ impl<'a, 'b> CollateralStorage<'b> for PortFinance<'a, 'b> {
         if self.mining.is_none() {
             return Err(EverlendError::MiningNotInitialized.into());
         }
-
-        port_finance::refresh_reserve(
-            &self.money_market_program_id,
-            self.reserve.clone(),
-            self.reserve_liquidity_oracle.clone(),
-            clock.clone(),
-        )?;
 
         let mining = self.mining.as_ref().unwrap();
 

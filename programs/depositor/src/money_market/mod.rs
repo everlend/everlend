@@ -96,5 +96,15 @@ pub trait MoneyMarket<'a> {
     ) -> Result<(), ProgramError>;
 
     ///
+    fn is_income(
+        &self,
+        collateral_amount: u64,
+        expected_liquidity_amount: u64,
+    ) -> Result<bool, ProgramError>;
+
+    ///
+    fn refresh_reserve(&self, clock: AccountInfo<'a>) -> Result<(), ProgramError>;
+
+    ///
     fn is_deposit_disabled(&self) -> Result<bool, ProgramError>;
 }

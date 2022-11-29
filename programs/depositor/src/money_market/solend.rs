@@ -61,14 +61,6 @@ impl<'a, 'b> MoneyMarket<'b> for Solend<'a, 'b> {
         liquidity_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<u64, ProgramError> {
-        solend::refresh_reserve(
-            &self.money_market_program_id,
-            self.reserve.clone(),
-            self.reserve_liquidity_pyth_oracle.clone(),
-            self.reserve_liquidity_switchboard_oracle.clone(),
-            clock.clone(),
-        )?;
-
         solend::deposit(
             &self.money_market_program_id,
             source_liquidity,
@@ -100,14 +92,6 @@ impl<'a, 'b> MoneyMarket<'b> for Solend<'a, 'b> {
         collateral_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
-        solend::refresh_reserve(
-            &self.money_market_program_id,
-            self.reserve.clone(),
-            self.reserve_liquidity_pyth_oracle.clone(),
-            self.reserve_liquidity_switchboard_oracle.clone(),
-            clock.clone(),
-        )?;
-
         solend::redeem(
             &self.money_market_program_id,
             source_collateral,
@@ -150,6 +134,27 @@ impl<'a, 'b> MoneyMarket<'b> for Solend<'a, 'b> {
         _signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
         return Err(EverlendError::MiningNotInitialized.into());
+    }
+
+    fn is_income(
+        &self,
+        collateral_amount: u64,
+        expected_liquidity_amount: u64,
+    ) -> Result<bool, ProgramError> {
+        let real_liquidity_amount =
+            solend::get_real_liquidity_amount(self.reserve.clone(), collateral_amount)?;
+
+        Ok(real_liquidity_amount > expected_liquidity_amount)
+    }
+
+    fn refresh_reserve(&self, clock: AccountInfo<'b>) -> Result<(), ProgramError> {
+        solend::refresh_reserve(
+            &self.money_market_program_id,
+            self.reserve.clone(),
+            self.reserve_liquidity_pyth_oracle.clone(),
+            self.reserve_liquidity_switchboard_oracle.clone(),
+            clock.clone(),
+        )
     }
 
     fn is_deposit_disabled(&self) -> Result<bool, ProgramError> {

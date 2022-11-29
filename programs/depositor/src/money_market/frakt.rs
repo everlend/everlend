@@ -229,6 +229,18 @@ impl<'a, 'b> MoneyMarket<'b> for Frakt<'a, 'b> {
         Err(EverlendError::MiningNotImplemented.into())
     }
 
+    fn is_income(
+        &self,
+        _collateral_amount: u64,
+        _expected_liquidity_amount: u64,
+    ) -> Result<bool, ProgramError> {
+        Ok(true)
+    }
+
+    fn refresh_reserve(&self, _clock: AccountInfo<'b>) -> Result<(), ProgramError> {
+        Ok(())
+    }
+
     fn is_deposit_disabled(&self) -> Result<bool, ProgramError> {
         Ok(false)
     }

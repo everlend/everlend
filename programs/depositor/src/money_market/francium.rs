@@ -153,8 +153,6 @@ impl<'a, 'b> MoneyMarket<'b> for Francium<'a, 'b> {
         amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<u64, ProgramError> {
-        francium::refresh_reserve(&self.money_market_program_id, self.reserve.clone())?;
-
         francium::deposit(
             &self.money_market_program_id,
             source_liquidity,
@@ -187,8 +185,6 @@ impl<'a, 'b> MoneyMarket<'b> for Francium<'a, 'b> {
         amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
-        francium::refresh_reserve(&self.money_market_program_id, self.reserve.clone())?;
-
         francium::redeem(
             &self.money_market_program_id,
             source_collateral,
@@ -280,6 +276,21 @@ impl<'a, 'b> MoneyMarket<'b> for Francium<'a, 'b> {
             collateral_amount,
             signers_seeds,
         )
+    }
+
+    fn is_income(
+        &self,
+        collateral_amount: u64,
+        expected_liquidity_amount: u64,
+    ) -> Result<bool, ProgramError> {
+        let real_liquidity_amount =
+            francium::get_real_liquidity_amount(self.reserve.clone(), collateral_amount)?;
+
+        Ok(real_liquidity_amount > expected_liquidity_amount)
+    }
+
+    fn refresh_reserve(&self, _clock: AccountInfo<'b>) -> Result<(), ProgramError> {
+        francium::refresh_reserve(&self.money_market_program_id, self.reserve.clone())
     }
 
     fn is_deposit_disabled(&self) -> Result<bool, ProgramError> {

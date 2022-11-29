@@ -120,6 +120,15 @@ pub fn redeem<'a>(
     )
 }
 
+pub fn get_real_liquidity_amount(
+    reserve: AccountInfo,
+    collateral_amount: u64,
+) -> Result<u64, ProgramError> {
+    let mut reserve = solend_program::state::Reserve::unpack(&reserve.data.borrow())?;
+
+    reserve.redeem_collateral(collateral_amount)
+}
+
 pub fn is_deposit_disabled(reserve: AccountInfo) -> Result<bool, ProgramError> {
     let reserve = solend_program::state::Reserve::unpack(&reserve.data.borrow())?;
     let total_asset = reserve
