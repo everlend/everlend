@@ -184,11 +184,11 @@ impl<'a, 'b> DepositContext<'a, 'b> {
             }
             let clock = Clock::from_account_info(self.clock)?;
 
+            money_market.refresh_reserve(self.clock.clone())?;
             if money_market.is_deposit_disabled()? {
                 msg!("The deposit is disabled. Executing rollback.");
                 rebalancing.rollback_deposit(clock.slot)?;
             } else {
-                money_market.refresh_reserve(self.clock.clone())?;
                 msg!("Deposit");
                 let collateral_amount = deposit(
                     self.collateral_transit,
