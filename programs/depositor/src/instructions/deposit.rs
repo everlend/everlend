@@ -182,6 +182,7 @@ impl<'a, 'b> DepositContext<'a, 'b> {
             {
                 return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
             }
+            money_market.refresh_reserve(self.clock.clone())?;
             msg!("Deposit");
             let collateral_amount = deposit(
                 self.collateral_transit,

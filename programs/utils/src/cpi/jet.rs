@@ -1,11 +1,10 @@
+use borsh::{BorshDeserialize, BorshSerialize};
+use jet_proto_math::Number;
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::{AccountMeta, Instruction};
-use solana_program::program::{invoke_signed};
+use solana_program::program::invoke_signed;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
-use borsh::{BorshSerialize, BorshDeserialize};
-use jet_proto_math::Number;
-
 
 /// `global:deposit` anchor program instruction
 const DEPOSIT_INSTRUCTION: [u8; 8] = [242, 35, 198, 137, 82, 225, 242, 182];
@@ -19,7 +18,7 @@ pub enum ChangeKind {
     ShiftBy,
 }
 
-#[derive(Debug, Default, BorshSerialize, BorshDeserialize,)]
+#[derive(Debug, Default, BorshSerialize, BorshDeserialize)]
 pub struct MarginPool {
     pub id: [u8; 8],
 
@@ -60,7 +59,6 @@ pub struct MarginPool {
 
 #[derive(Debug, Default, BorshSerialize, BorshDeserialize, Clone, Eq, PartialEq)]
 pub struct MarginPoolConfig {
-
     pub flags: u64,
 
     pub utilization_rate_1: u16,
@@ -113,7 +111,7 @@ pub fn deposit<'a>(
 ) -> Result<(), ProgramError> {
     #[derive(Debug, PartialEq, BorshSerialize)]
     pub struct DepositToLendingPool {
-        instruction: [u8;8],
+        instruction: [u8; 8],
         change_kind: ChangeKind,
         liquidity_amount: u64,
     }
@@ -134,7 +132,7 @@ pub fn deposit<'a>(
             change_kind: ChangeKind::ShiftBy,
             liquidity_amount,
         }
-            .try_to_vec()?,
+        .try_to_vec()?,
     };
 
     invoke_signed(
@@ -165,7 +163,7 @@ pub fn redeem<'a>(
 ) -> Result<(), ProgramError> {
     #[derive(Debug, PartialEq, BorshSerialize)]
     pub struct WithdrawFromLendingPool {
-        instruction: [ u8;8 ],
+        instruction: [u8; 8],
         change_kind: ChangeKind,
         liquidity_amount: u64,
     }
@@ -189,7 +187,7 @@ pub fn redeem<'a>(
             change_kind: ChangeKind::ShiftBy,
             liquidity_amount,
         }
-            .try_to_vec()?,
+        .try_to_vec()?,
     };
 
     invoke_signed(
@@ -204,4 +202,13 @@ pub fn redeem<'a>(
         ],
         signers_seeds,
     )
+}
+
+pub fn get_real_liquidity_amount(
+    margin_pool: AccountInfo,
+    collateral_amount: u64,
+) -> Result<u64, ProgramError> {
+    let mp = MarginPool::try_from_slice(*margin_pool.data.borrow())?;
+
+    Ok(mp.convert_amount(collateral_amount))
 }

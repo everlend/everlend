@@ -303,6 +303,24 @@ impl Rebalancing {
 
         self.steps.iter().all(|&step| step.executed_at.is_some())
     }
+
+    /// Skip refresh income steps
+    pub fn skip_refresh_steps(&mut self, slot: Slot) -> Result<(), ProgramError> {
+        let index = self
+            .steps
+            .iter()
+            .position(|&step| step.executed_at.is_none())
+            .unwrap();
+        // If index is last element
+        if index == (self.steps.len() - 1) {
+            return Err(EverlendError::InvalidRebalancingOperation.into());
+        }
+
+        self.steps[index].set_executed_at(slot);
+        self.steps[index + 1].set_executed_at(slot);
+
+        Ok(())
+    }
 }
 
 /// Initialize a Rebalancing params

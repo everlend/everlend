@@ -94,4 +94,14 @@ pub trait MoneyMarket<'a> {
         collateral_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError>;
+
+    ///
+    fn is_income(
+        &self,
+        collateral_amount: u64,
+        expected_liquidity_amount: u64,
+    ) -> Result<bool, ProgramError>;
+
+    ///
+    fn refresh_reserve(&self, clock: AccountInfo<'a>) -> Result<(), ProgramError>;
 }

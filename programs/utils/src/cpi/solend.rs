@@ -1,3 +1,4 @@
+use solana_program::program_pack::Pack;
 use solana_program::{
     account_info::AccountInfo,
     program::{invoke, invoke_signed},
@@ -116,4 +117,13 @@ pub fn redeem<'a>(
         ],
         signers_seeds,
     )
+}
+
+pub fn get_real_liquidity_amount(
+    reserve: AccountInfo,
+    collateral_amount: u64,
+) -> Result<u64, ProgramError> {
+    let mut reserve = solend_program::state::Reserve::unpack(&reserve.data.borrow())?;
+
+    reserve.redeem_collateral(collateral_amount)
 }

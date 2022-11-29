@@ -1,4 +1,6 @@
 use larix_lending::instruction::LendingInstruction;
+use larix_lending::math::{Decimal, TryAdd, TryDiv, TrySub};
+use solana_program::program_pack::Pack;
 use solana_program::{
     account_info::AccountInfo,
     entrypoint::ProgramResult,
@@ -293,4 +295,20 @@ pub fn refresh_mine<'a>(
     };
 
     invoke(&ix, &[mining, reserve])
+}
+
+pub fn get_real_liquidity_amount(
+    reserve: AccountInfo,
+    collateral_amount: u64,
+) -> Result<u64, ProgramError> {
+    let reserve = larix_lending::state::reserve::Reserve::unpack(&reserve.data.borrow())?;
+
+    let total_asset = Decimal::from(reserve.liquidity.available_amount)
+        .try_add(reserve.liquidity.borrowed_amount_wads)?
+        .try_sub(reserve.liquidity.owner_unclaimed)?;
+    let rate = Decimal::from(reserve.collateral.mint_total_supply).try_div(total_asset)?;
+
+    Decimal::from(collateral_amount)
+        .try_div(rate)?
+        .try_floor_u64()
 }
