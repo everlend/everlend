@@ -129,5 +129,5 @@ pub fn is_deposit_disabled(reserve: AccountInfo) -> Result<bool, ProgramError> {
             reserve.liquidity.available_amount,
         ))?
         .try_floor_u64()?;
-    Ok(reserve.config.deposit_limit == 0 || total_asset > reserve.config.deposit_limit)
+    Ok(reserve.config.deposit_limit == 0 || total_asset >= reserve.config.deposit_limit)
 }
