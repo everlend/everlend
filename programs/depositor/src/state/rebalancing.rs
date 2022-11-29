@@ -6,7 +6,7 @@ use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 pub use deprecated::DeprecatedRebalancing;
 use everlend_liquidity_oracle::state::{Distribution, DistributionArray, TokenOracle};
 use everlend_registry::state::{DistributionPubkeys, TOTAL_DISTRIBUTIONS};
-use everlend_utils::{math, EverlendError};
+use everlend_utils::{math, EverlendError, PRECISION_SCALER};
 use solana_program::{
     clock::Slot,
     msg,
@@ -278,6 +278,34 @@ impl Rebalancing {
                 .checked_sub(collateral_amount)
                 .ok_or(EverlendError::MathOverflow)?,
         };
+
+        Ok(())
+    }
+
+    /// Rollback next deposit rebalancing step
+    pub fn rollback_deposit(&mut self, slot: Slot) -> Result<(), ProgramError> {
+        let step = self.next_step_mut();
+        if step.operation != RebalancingOperation::Deposit {
+            return Err(EverlendError::InvalidRebalancingOperation.into());
+        }
+        let rollback_amount = step.liquidity_amount;
+
+        step.set_executed_at(slot);
+
+        let money_market_index = usize::from(step.money_market_index);
+
+        let old_distributed_liquidity = self.distributed_liquidity[money_market_index]
+            .checked_sub(rollback_amount)
+            .ok_or(EverlendError::MathOverflow)?;
+
+        self.liquidity_distribution.values[money_market_index] = (old_distributed_liquidity as u128)
+            .checked_mul(PRECISION_SCALER)
+            .ok_or(EverlendError::MathOverflow)?
+            .checked_div(self.amount_to_distribute as u128)
+            .ok_or(EverlendError::MathOverflow)?
+            as u64;
+
+        self.distributed_liquidity[money_market_index] = old_distributed_liquidity;
 
         Ok(())
     }

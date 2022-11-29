@@ -154,4 +154,9 @@ impl<'a, 'b> MoneyMarket<'b> for Tulip<'a, 'b> {
             clock.clone(),
         )
     }
+
+    fn is_deposit_disabled(&self) -> Result<bool, ProgramError> {
+        // Not presented
+        Ok(false)
+    }
 }

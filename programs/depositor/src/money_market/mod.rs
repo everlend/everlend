@@ -104,4 +104,7 @@ pub trait MoneyMarket<'a> {
 
     ///
     fn refresh_reserve(&self, clock: AccountInfo<'a>) -> Result<(), ProgramError>;
+
+    ///
+    fn is_deposit_disabled(&self) -> Result<bool, ProgramError>;
 }

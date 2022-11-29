@@ -287,6 +287,11 @@ impl<'a, 'b> MoneyMarket<'b> for PortFinance<'a, 'b> {
             clock.clone(),
         )
     }
+
+    fn is_deposit_disabled(&self) -> Result<bool, ProgramError> {
+        // Not presented
+        Ok(false)
+    }
 }
 
 impl<'a, 'b> CollateralStorage<'b> for PortFinance<'a, 'b> {

@@ -12,6 +12,8 @@ use std::str::FromStr;
 
 pub const FRANCIUM_REWARD_SEED: &str = "francium_reward";
 
+const DISABLED_DEPOSIT_VALUE: u8 = 0xFF;
+
 #[derive(Debug, BorshSerialize, BorshDeserialize)]
 pub struct FarmingPool {
     pub version: u8,
@@ -397,6 +399,11 @@ pub fn get_real_liquidity_amount(
     Decimal::from(collateral_amount)
         .try_div(rate)?
         .try_floor_u64()
+}
+
+pub fn is_deposit_disabled(reserve: AccountInfo) -> Result<bool, ProgramError> {
+    let reserve = state::LendingPool::unpack(&reserve.data.borrow())?;
+    Ok(reserve.version == DISABLED_DEPOSIT_VALUE)
 }
 
 mod state {

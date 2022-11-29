@@ -292,6 +292,10 @@ impl<'a, 'b> MoneyMarket<'b> for Francium<'a, 'b> {
     fn refresh_reserve(&self, _clock: AccountInfo<'b>) -> Result<(), ProgramError> {
         francium::refresh_reserve(&self.money_market_program_id, self.reserve.clone())
     }
+
+    fn is_deposit_disabled(&self) -> Result<bool, ProgramError> {
+        francium::is_deposit_disabled(self.reserve.clone())
+    }
 }
 
 impl<'a, 'b> CollateralStorage<'b> for Francium<'a, 'b> {

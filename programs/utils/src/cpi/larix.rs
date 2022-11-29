@@ -312,3 +312,8 @@ pub fn get_real_liquidity_amount(
         .try_div(rate)?
         .try_floor_u64()
 }
+
+pub fn is_deposit_disabled(reserve: AccountInfo) -> Result<bool, ProgramError> {
+    let reserve = larix_lending::state::reserve::Reserve::unpack(&reserve.data.borrow())?;
+    Ok(reserve.config.deposit_paused)
+}

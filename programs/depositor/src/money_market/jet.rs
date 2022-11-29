@@ -132,4 +132,8 @@ impl<'a, 'b> MoneyMarket<'b> for Jet<'a, 'b> {
     fn refresh_reserve(&self, _clock: AccountInfo<'b>) -> Result<(), ProgramError> {
         Ok(())
     }
+
+    fn is_deposit_disabled(&self) -> Result<bool, ProgramError> {
+        jet::is_deposit_disabled(self.margin_pool.clone())
+    }
 }

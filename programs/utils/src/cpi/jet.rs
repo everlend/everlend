@@ -10,6 +10,8 @@ use solana_program::pubkey::Pubkey;
 const DEPOSIT_INSTRUCTION: [u8; 8] = [242, 35, 198, 137, 82, 225, 242, 182];
 /// `global:withdraw` anchor program instruction
 const REDEEM_INSTRUCTION: [u8; 8] = [183, 18, 70, 156, 148, 109, 161, 34];
+/// Enable deposit flag value
+const ENABLE_DEPOSIT_FLAG_VALUE: u64 = 2;
 
 #[derive(BorshSerialize, Debug, PartialEq)]
 #[repr(u8)]
@@ -211,4 +213,10 @@ pub fn get_real_liquidity_amount(
     let mp = MarginPool::try_from_slice(*margin_pool.data.borrow())?;
 
     Ok(mp.convert_amount(collateral_amount))
+}
+
+pub fn is_deposit_disabled(margin_pool: AccountInfo) -> Result<bool, ProgramError> {
+    let mp: MarginPool = MarginPool::try_from_slice(*margin_pool.data.borrow())?;
+
+    Ok(mp.config.flags != ENABLE_DEPOSIT_FLAG_VALUE)
 }

@@ -156,4 +156,8 @@ impl<'a, 'b> MoneyMarket<'b> for Solend<'a, 'b> {
             clock.clone(),
         )
     }
+
+    fn is_deposit_disabled(&self) -> Result<bool, ProgramError> {
+        Ok(solend::is_deposit_disabled(self.reserve.clone())?)
+    }
 }

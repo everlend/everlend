@@ -151,4 +151,9 @@ impl<'a, 'b> MoneyMarket<'b> for SPLLending<'a, 'b> {
             clock.clone(),
         )
     }
+
+    fn is_deposit_disabled(&self) -> Result<bool, ProgramError> {
+        // Not presented
+        Ok(false)
+    }
 }
