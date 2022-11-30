@@ -54,7 +54,7 @@ async fn setup() -> (ProgramTestContext, TestRewards, Pubkey, Pubkey, Pubkey) {
     .unwrap();
 
     let vault = test_reward_pool
-        .add_vault(&mut env.context, &fee_keypair.pubkey())
+        .add_vault(&mut env.context, &fee_keypair.pubkey(), &test_reward_pool.token_mint_pubkey)
         .await;
 
     (
@@ -71,7 +71,7 @@ async fn success() {
     let (mut context, test_rewards, vault, fee, rewarder) = setup().await;
 
     test_rewards
-        .fill_vault(&mut context, &fee, &rewarder, 1_000_000)
+        .fill_vault(&mut context, &fee, &rewarder, &test_rewards.token_mint_pubkey, 1_000_000)
         .await
         .unwrap();
 

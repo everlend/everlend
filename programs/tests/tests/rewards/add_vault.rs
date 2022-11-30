@@ -37,7 +37,7 @@ async fn success() {
     let (mut context, test_rewards, fee_keypair) = setup().await;
 
     test_rewards
-        .add_vault(&mut context, &fee_keypair.pubkey())
+        .add_vault(&mut context, &fee_keypair.pubkey(), &test_rewards.token_mint_pubkey)
         .await;
 
     let reward_pool_account = get_account(&mut context, &test_rewards.mining_reward_pool).await;

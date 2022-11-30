@@ -1,8 +1,11 @@
-use crate::utils::{get_liquidity_mint, transfer, BanksClientResult};
+use std::borrow::Borrow;
+use solana_program::program_pack::Pack;
+use crate::utils::{get_liquidity_mint, transfer, BanksClientResult, get_account};
 use solana_program::pubkey::Pubkey;
 use solana_program_test::ProgramTestContext;
 use solana_sdk::signature::{Keypair, Signer};
 use solana_sdk::transaction::Transaction;
+use everlend_rewards::state::RewardPool;
 
 #[derive(Debug)]
 pub struct TestRewards {
@@ -40,7 +43,7 @@ impl TestRewards {
     }
 
     pub async fn initialize_pool(&self, context: &mut ProgramTestContext) -> BanksClientResult<()> {
-        transfer(context, &self.root_authority.pubkey(), 10000000)
+        transfer(context, &self.root_authority.pubkey(), 20000000)
             .await
             .unwrap();
         // Initialize mining pool
@@ -152,12 +155,13 @@ impl TestRewards {
         &self,
         context: &mut ProgramTestContext,
         fee_account: &Pubkey,
+        reward_mint: &Pubkey,
     ) -> Pubkey {
         let (vault_pubkey, _) = Pubkey::find_program_address(
             &[
                 b"vault".as_ref(),
                 self.mining_reward_pool.as_ref(),
-                self.token_mint_pubkey.as_ref(),
+                reward_mint.as_ref(),
             ],
             &everlend_rewards::id(),
         );
@@ -167,7 +171,7 @@ impl TestRewards {
                 &everlend_rewards::id(),
                 &self.rewards_root.pubkey(),
                 &self.mining_reward_pool,
-                &self.token_mint_pubkey,
+                reward_mint,
                 &vault_pubkey,
                 fee_account,
                 &self.root_authority.pubkey(),
@@ -187,13 +191,14 @@ impl TestRewards {
         context: &mut ProgramTestContext,
         fee_account: &Pubkey,
         from: &Pubkey,
+        reward_mint: &Pubkey,
         amount: u64,
     ) -> BanksClientResult<()> {
         let (vault_pubkey, _) = Pubkey::find_program_address(
             &[
                 b"vault".as_ref(),
                 self.mining_reward_pool.as_ref(),
-                self.token_mint_pubkey.as_ref(),
+                reward_mint.as_ref(),
             ],
             &everlend_rewards::id(),
         );
@@ -202,7 +207,7 @@ impl TestRewards {
             &[everlend_rewards::instruction::fill_vault(
                 &everlend_rewards::id(),
                 &self.mining_reward_pool,
-                &self.token_mint_pubkey,
+                reward_mint,
                 &vault_pubkey,
                 fee_account,
                 &context.payer.pubkey(),
@@ -216,29 +221,35 @@ impl TestRewards {
 
         context.banks_client.process_transaction(tx).await
     }
-
     pub async fn claim(
         &self,
         context: &mut ProgramTestContext,
         user: &Keypair,
         mining_account: &Pubkey,
-        user_reward_token: &Pubkey,
+        user_reward_token: Vec<Pubkey>,
     ) -> BanksClientResult<()> {
-        let (vault_pubkey, _) = Pubkey::find_program_address(
-            &[
-                b"vault".as_ref(),
-                self.mining_reward_pool.as_ref(),
-                self.token_mint_pubkey.as_ref(),
-            ],
-            &everlend_rewards::id(),
-        );
+        let reward_pool = get_account(context, &self.mining_reward_pool).await;
+        let reward_pool_unpack = RewardPool::unpack(reward_pool.data.borrow()).unwrap();
+        let mut vaults = vec![];
+        let mut reward_mints = vec![];
+        for vault in reward_pool_unpack.vaults.iter() {
+            reward_mints.push(vault.reward_mint);
+            vaults.push(Pubkey::find_program_address(
+                &[
+                    b"vault".as_ref(),
+                    self.mining_reward_pool.as_ref(),
+                    vault.reward_mint.as_ref(),
+                ],
+                &everlend_rewards::id(),
+            ).0);
+        }
 
         let tx = Transaction::new_signed_with_payer(
             &[everlend_rewards::instruction::claim(
                 &everlend_rewards::id(),
                 &self.mining_reward_pool,
-                &self.token_mint_pubkey,
-                &vault_pubkey,
+                reward_mints,
+                vaults,
                 mining_account,
                 &user.pubkey(),
                 user_reward_token,
