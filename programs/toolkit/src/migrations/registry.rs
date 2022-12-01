@@ -1,7 +1,7 @@
 use crate::helpers::migrate_registry;
 use crate::{Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
-use everlend_registry::state::{MoneyMarket, MoneyMarkets};
+use everlend_registry::state::MoneyMarkets;
 
 pub struct MigrateRegistryCommand;
 
@@ -29,30 +29,21 @@ impl<'a> ToolkitCommand<'a> for MigrateRegistryCommand {
         let initialized_accounts = config.get_initialized_accounts();
 
         let mut money_markets = MoneyMarkets::default();
-        money_markets[0] = MoneyMarket {
-            id: everlend_utils::integrations::MoneyMarket::PortFinance,
-            program_id: default_accounts.port_finance[0].program_id,
-            lending_market: default_accounts.port_finance[0].lending_market,
+        money_markets[0] = everlend_utils::integrations::MoneyMarket::PortFinance {
+            money_market_program_id: default_accounts.port_finance.program_id,
         };
-        money_markets[1] = MoneyMarket {
-            id: everlend_utils::integrations::MoneyMarket::Larix,
-            program_id: default_accounts.larix[0].program_id,
-            lending_market: default_accounts.larix[0].lending_market,
+        money_markets[1] = everlend_utils::integrations::MoneyMarket::Larix {
+            money_market_program_id: default_accounts.larix.program_id,
         };
-        money_markets[2] = MoneyMarket {
-            id: everlend_utils::integrations::MoneyMarket::Solend,
-            program_id: default_accounts.solend[0].program_id,
-            lending_market: default_accounts.solend[0].lending_market,
+        money_markets[2] = everlend_utils::integrations::MoneyMarket::Solend {
+            money_market_program_id: default_accounts.solend.program_id,
+            lending_market: default_accounts.solend.lending_market,
         };
-        money_markets[3] = MoneyMarket {
-            id: everlend_utils::integrations::MoneyMarket::Tulip,
-            program_id: default_accounts.tulip[0].program_id,
-            lending_market: default_accounts.tulip[0].lending_market,
+        money_markets[3] = everlend_utils::integrations::MoneyMarket::Tulip {
+            money_market_program_id: default_accounts.tulip.program_id,
         };
-        money_markets[4] = MoneyMarket {
-            id: everlend_utils::integrations::MoneyMarket::Francium,
-            program_id: default_accounts.francium[0].program_id,
-            lending_market: default_accounts.francium[0].lending_market,
+        money_markets[4] = everlend_utils::integrations::MoneyMarket::Francium {
+            money_market_program_id: default_accounts.francium.program_id,
         };
 
         migrate_registry(config, &initialized_accounts.registry, money_markets)?;

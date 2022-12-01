@@ -5,7 +5,6 @@ use anyhow::Result;
 use everlend_depositor::{instruction::InitMiningAccountsPubkeys, state::MiningType};
 use everlend_utils::cpi::quarry::{find_miner_program_address, find_quarry_program_address};
 use everlend_utils::find_program_address;
-use everlend_utils::integrations::MoneyMarket;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::signature::Keypair;
 
@@ -44,7 +43,7 @@ impl LiquidityMiner for QuarryLiquidityMiner {
         token: &String,
         _mining_account: &Keypair,
         _sub_reward_token_mint: Option<Pubkey>,
-        _reward_token_mint : Option<Pubkey>,
+        _reward_token_mint: Option<Pubkey>,
     ) -> Result<()> {
         println!("Create and Init quarry mining accont");
         let default_accounts = config.get_default_accounts();
@@ -55,8 +54,7 @@ impl LiquidityMiner for QuarryLiquidityMiner {
             find_program_address(&everlend_depositor::id(), &initialized_accounts.depositor);
 
         // Get by Port Finance index cause Quarry work now only with Port
-        let collateral_mint =
-            collateral_mint_map.get(token).unwrap()[MoneyMarket::PortFinance as usize].unwrap();
+        let collateral_mint = collateral_mint_map.get(token).unwrap()[0].unwrap();
 
         let (quarry, _) = find_quarry_program_address(
             &default_accounts.quarry.mine_program_id,
@@ -83,8 +81,7 @@ impl LiquidityMiner for QuarryLiquidityMiner {
         let (mint_map, collateral_mint_map) = get_asset_maps(default_accounts.clone());
         let liquidity_mint = mint_map.get(token).unwrap();
         // Get by Port Finance index cause Quarry work now only with Port
-        let collateral_mint =
-            collateral_mint_map.get(token).unwrap()[MoneyMarket::PortFinance as usize].unwrap();
+        let collateral_mint = collateral_mint_map.get(token).unwrap()[0].unwrap();
         Some(InitMiningAccountsPubkeys {
             liquidity_mint: *liquidity_mint,
             collateral_mint,

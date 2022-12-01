@@ -76,40 +76,43 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
 
         let sol_oracle = default_accounts.sol_oracle;
         let port_finance_pubkeys = integrations::spl_token_lending::AccountPubkeys {
-            reserve: default_accounts.port_finance[0].reserve_sol,
-            reserve_liquidity_supply: default_accounts.port_finance[0].reserve_sol_supply,
+            reserve: default_accounts.port_finance.reserve_sol,
+            reserve_liquidity_supply: default_accounts.port_finance.reserve_sol_supply,
             reserve_liquidity_oracle: sol_oracle,
-            lending_market: default_accounts.port_finance[0].lending_market,
+            lending_market: default_accounts.port_finance.lending_market,
         };
         let larix_pubkeys = integrations::larix::AccountPubkeys {
-            reserve: default_accounts.larix[0].reserve_sol,
-            reserve_liquidity_supply: default_accounts.larix[0].reserve_sol_supply,
+            reserve: default_accounts.larix.reserve_sol,
+            reserve_liquidity_supply: default_accounts.larix.reserve_sol_supply,
             reserve_liquidity_oracle: sol_oracle,
-            lending_market: default_accounts.larix[0].lending_market,
+            lending_market: default_accounts.larix.lending_market,
         };
 
         let solend_pubkeys = integrations::solend::AccountPubkeys {
-            reserve: default_accounts.solend[0].reserve_sol,
-            reserve_liquidity_supply: default_accounts.solend[0]
+            reserve: default_accounts.solend.reserve_sol,
+            reserve_liquidity_supply: default_accounts
+                .solend
                 .reserve_sol_supply
                 .context("`solend_reserve_sol_supply` invalid value")
                 .unwrap(),
-            reserve_liquidity_pyth_oracle: default_accounts.solend[0]
+            reserve_liquidity_pyth_oracle: default_accounts
+                .solend
                 .reserve_pyth_oracle
                 .context("`solend_reserve_pyth_oracle` invalid value")
                 .unwrap(),
-            reserve_liquidity_switchboard_oracle: default_accounts.solend[0]
+            reserve_liquidity_switchboard_oracle: default_accounts
+                .solend
                 .reserve_switchboard_oracle
                 .context("`solend_reserve_switchboard_oracle` invalid value")
                 .unwrap(),
-            lending_market: default_accounts.solend[0].lending_market,
+            lending_market: default_accounts.solend.lending_market,
         };
 
         let tulip_pubkeys = integrations::tulip::AccountPubkeys {
-            lending_market: default_accounts.tulip[0].lending_market,
-            reserve_liquidity_oracle: default_accounts.tulip[0].reserve_liquidity_oracle,
-            reserve: default_accounts.tulip[0].reserve_sol,
-            reserve_liquidity_supply: default_accounts.tulip[0].reserve_liquidity_supply,
+            lending_market: default_accounts.tulip.lending_market,
+            reserve_liquidity_oracle: default_accounts.tulip.reserve_liquidity_oracle,
+            reserve: default_accounts.tulip.reserve_sol,
+            reserve_liquidity_supply: default_accounts.tulip.reserve_liquidity_supply,
         };
 
         let get_balance = |pk: &Pubkey| config.rpc_client.get_token_account_balance(pk);
@@ -160,17 +163,17 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
 
         let deposit = |i: usize| {
             println!("Rebalancing: Deposit: {}", i);
-            let pubkeys = match registry_markets.money_markets[i].id {
-                integrations::MoneyMarket::PortFinance => {
+            let pubkeys = match registry_markets.money_markets[i] {
+                integrations::MoneyMarket::PortFinance { .. } => {
                     MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone())
                 }
-                integrations::MoneyMarket::Larix => {
+                integrations::MoneyMarket::Larix { .. } => {
                     MoneyMarketPubkeys::Larix(larix_pubkeys.clone())
                 }
-                integrations::MoneyMarket::Solend => {
+                integrations::MoneyMarket::Solend { .. } => {
                     MoneyMarketPubkeys::Solend(solend_pubkeys.clone())
                 }
-                integrations::MoneyMarket::Tulip => {
+                integrations::MoneyMarket::Tulip { .. } => {
                     MoneyMarketPubkeys::Tulip(tulip_pubkeys.clone())
                 }
                 _ => panic!("wrong pubkey idx"),
@@ -182,9 +185,9 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
                 &depositor,
                 &sol.mint,
                 &sol.collateral_pools[i].token_mint,
-                &registry_markets.money_markets[i].program_id,
+                &registry_markets.money_markets[i].program_id(),
                 integrations::deposit_accounts(
-                    &registry_markets.money_markets[i].program_id,
+                    &registry_markets.money_markets[i].program_id(),
                     &pubkeys,
                 ),
                 everlend_depositor::utils::collateral_pool_deposit_accounts(
@@ -197,17 +200,17 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
 
         let withdraw = |i: usize| {
             println!("Rebalancing: Withdraw: {}", i);
-            let pubkeys = match &registry_markets.money_markets[i].id {
-                integrations::MoneyMarket::PortFinance => {
+            let pubkeys = match &registry_markets.money_markets[i] {
+                integrations::MoneyMarket::PortFinance { .. } => {
                     MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone())
                 }
-                integrations::MoneyMarket::Larix => {
+                integrations::MoneyMarket::Larix { .. } => {
                     MoneyMarketPubkeys::Larix(larix_pubkeys.clone())
                 }
-                integrations::MoneyMarket::Solend => {
+                integrations::MoneyMarket::Solend { .. } => {
                     MoneyMarketPubkeys::Solend(solend_pubkeys.clone())
                 }
-                integrations::MoneyMarket::Tulip => {
+                integrations::MoneyMarket::Tulip { .. } => {
                     MoneyMarketPubkeys::Tulip(tulip_pubkeys.clone())
                 }
                 _ => panic!("wrong pubkey idx"),
@@ -221,9 +224,9 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
                 &sol.income_pool_token_account,
                 &sol.collateral_pools[i].token_mint,
                 &sol.mint,
-                &registry_markets.money_markets[i].program_id,
+                &registry_markets.money_markets[i].program_id(),
                 integrations::withdraw_accounts(
-                    &registry_markets.money_markets[i].program_id,
+                    &registry_markets.money_markets[i].program_id(),
                     &pubkeys,
                 ),
                 everlend_depositor::utils::collateral_pool_withdraw_accounts(

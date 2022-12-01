@@ -2,7 +2,7 @@ use crate::liquidity_mining::execute_account_creation;
 use crate::utils::*;
 use anyhow::Result;
 use everlend_depositor::{instruction::InitMiningAccountsPubkeys, state::MiningType};
-use everlend_utils::{find_program_address, integrations::MoneyMarket};
+use everlend_utils::find_program_address;
 use solana_program::pubkey::Pubkey;
 use solana_sdk::signature::write_keypair_file;
 use solana_sdk::{signature::Keypair, signer::Signer};
@@ -33,7 +33,7 @@ fn save_new_mining_account(
         .token_accounts
         .get_mut(token)
         .unwrap()
-        .mining_accounts[MoneyMarket::Larix as usize]
+        .mining_accounts[1]
         .staking_account = mining_account.pubkey();
 
     initialized_accounts
@@ -49,7 +49,7 @@ impl LiquidityMiner for LarixLiquidityMiner {
             .token_accounts
             .get_mut(token)
             .unwrap()
-            .mining_accounts[MoneyMarket::Larix as usize]
+            .mining_accounts[1]
             .staking_account
     }
 
@@ -59,7 +59,7 @@ impl LiquidityMiner for LarixLiquidityMiner {
         token: &String,
         mining_account: &Keypair,
         sub_reward_token_mint: Option<Pubkey>,
-        _reward_token_mint : Option<Pubkey>,
+        _reward_token_mint: Option<Pubkey>,
     ) -> Result<()> {
         let default_accounts = config.get_default_accounts();
         let initialized_accounts = config.get_initialized_accounts();
@@ -78,7 +78,7 @@ impl LiquidityMiner for LarixLiquidityMiner {
 
         execute_account_creation(
             config,
-            &default_accounts.larix[0].program_id,
+            &default_accounts.larix.program_id,
             mining_account,
             LARIX_MINING_SIZE,
         )?;
@@ -91,16 +91,15 @@ impl LiquidityMiner for LarixLiquidityMiner {
         let initialized_accounts = config.get_initialized_accounts();
         let (mint_map, collateral_mint_map) = get_asset_maps(default_accounts.clone());
         let liquidity_mint = mint_map.get(token).unwrap();
-        let collateral_mint =
-            collateral_mint_map.get(token).unwrap()[MoneyMarket::Larix as usize].unwrap();
+        let collateral_mint = collateral_mint_map.get(token).unwrap()[1].unwrap();
         Some(InitMiningAccountsPubkeys {
             liquidity_mint: *liquidity_mint,
             collateral_mint,
             depositor: initialized_accounts.depositor,
             registry: initialized_accounts.registry,
             manager: config.fee_payer.pubkey(),
-            money_market_program_id: default_accounts.larix[0].program_id,
-            lending_market: Some(default_accounts.larix[0].lending_market),
+            money_market_program_id: default_accounts.larix.program_id,
+            lending_market: Some(default_accounts.larix.lending_market),
         })
     }
 

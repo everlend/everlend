@@ -1,4 +1,4 @@
-use crate::money_market::{assert_valid_money_market, MoneyMarket};
+use crate::money_market::MoneyMarket;
 use everlend_utils::{cpi::tulip, AccountLoader, EverlendError};
 use solana_program::{
     account_info::AccountInfo, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,
@@ -20,7 +20,6 @@ impl<'a, 'b> Tulip<'a, 'b> {
     ///
     pub fn init(
         money_market_program_id: Pubkey,
-        money_market: everlend_registry::state::MoneyMarket,
         account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
     ) -> Result<Tulip<'a, 'b>, ProgramError> {
         let reserve_info =
@@ -31,12 +30,6 @@ impl<'a, 'b> Tulip<'a, 'b> {
             AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
         let lending_market_authority_info = AccountLoader::next_unchecked(account_info_iter)?;
         let reserve_liquidity_oracle_info = AccountLoader::next_unchecked(account_info_iter)?;
-
-        assert_valid_money_market(
-            money_market,
-            &money_market_program_id,
-            lending_market_info.key,
-        )?;
 
         Ok(Tulip {
             money_market_program_id,

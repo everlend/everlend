@@ -125,8 +125,6 @@ impl<'a, 'b> StartRebalancingContext<'a, 'b> {
         assert_account_key(self.general_pool_market, &registry.general_pool_market)?;
         assert_account_key(self.liquidity_oracle, &registry.liquidity_oracle)?;
 
-        let registry_markets = RegistryMarkets::unpack_from_slice(&self.registry.data.borrow())?;
-
         let seed = {
             // Check rebalancing
             let pda = RebalancingPDA {
@@ -304,7 +302,7 @@ impl<'a, 'b> StartRebalancingContext<'a, 'b> {
                 .iter()
                 .enumerate()
                 .filter_map(|(index, mm)| {
-                    if mm != &Default::default() {
+                    if mm.ne(&Default::default()) {
                         return Some(index);
                     }
                     None

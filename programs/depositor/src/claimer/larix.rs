@@ -2,10 +2,11 @@ use crate::claimer::RewardClaimer;
 use crate::state::MiningType;
 use crate::utils::FillRewardAccounts;
 use everlend_utils::cpi::larix;
+use everlend_utils::integrations::MoneyMarket;
 use everlend_utils::{assert_account_key, find_program_address, AccountLoader, EverlendError};
+use solana_program::program_pack::Pack;
 use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};
 use std::{iter::Enumerate, slice::Iter};
-use solana_program::program_pack::Pack;
 
 /// Container
 #[derive(Clone)]
@@ -51,10 +52,17 @@ impl<'a, 'b> LarixClaimer<'a, 'b> {
         };
 
         {
-            let registry = AccountLoader::next_with_owner(account_info_iter, &everlend_registry::id())?;
-            let registry_markets
-                = everlend_registry::state::RegistryMarkets::unpack_from_slice(&registry.data.borrow())?;
-            if !registry_markets.money_markets.contains(staking_program_id) {
+            let registry =
+                AccountLoader::next_with_owner(account_info_iter, &everlend_registry::id())?;
+            let registry_markets = everlend_registry::state::RegistryMarkets::unpack_from_slice(
+                &registry.data.borrow(),
+            )?;
+            if !registry_markets
+                .money_markets
+                .contains(&MoneyMarket::Larix {
+                    money_market_program_id: *staking_program_id,
+                })
+            {
                 return Err(ProgramError::InvalidArgument);
             }
         }

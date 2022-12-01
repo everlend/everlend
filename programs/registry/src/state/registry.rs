@@ -3,6 +3,7 @@
 use super::AccountType;
 use crate::state::{DeprecatedRegistry, DeprecatedRegistryMarkets};
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+use everlend_utils::integrations::MoneyMarket;
 use everlend_utils::Uninitialized;
 use solana_program::{
     clock::Slot,
@@ -22,7 +23,7 @@ pub type MoneyMarkets = [MoneyMarket; TOTAL_DISTRIBUTIONS];
 pub type DistributionPubkeys = [Pubkey; TOTAL_DISTRIBUTIONS];
 
 const REGISTRY_LEN: usize = 1 + (32 + 32 + 32 + 32 + 8);
-const REGISTRY_MONEY_MARKET_LEN: usize = 1 + 32 + 32;
+const REGISTRY_MONEY_MARKET_LEN: usize = 1 + 32;
 const REGISTRY_MARKETS_LEN: usize =
     (REGISTRY_MONEY_MARKET_LEN * TOTAL_DISTRIBUTIONS) + (32 * TOTAL_DISTRIBUTIONS);
 
@@ -152,6 +153,24 @@ impl RegistryMarkets {
             ProgramError::InvalidAccountData
         })
     }
+
+    ///
+    pub fn unpack_money_markets_with_index(
+        src: &[u8],
+        index: usize,
+    ) -> Result<MoneyMarket, ProgramError> {
+        if index >= TOTAL_DISTRIBUTIONS {
+            return Err(ProgramError::InvalidArgument);
+        }
+
+        let mut src_mut = &src[REGISTRY_LEN + (REGISTRY_MONEY_MARKET_LEN * index)
+            ..REGISTRY_LEN + (REGISTRY_MONEY_MARKET_LEN * (index + 1))];
+        MoneyMarket::deserialize(&mut src_mut).map_err(|err| {
+            msg!("Failed to deserialize");
+            msg!(&err.to_string());
+            ProgramError::InvalidAccountData
+        })
+    }
 }
 
 impl Sealed for RegistryMarkets {}
@@ -159,7 +178,7 @@ impl Pack for RegistryMarkets {
     const LEN: usize = REGISTRY_MARKETS_LEN;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
-        let mut slice = Vec::with_capacity(REGISTRY_MARKETS_LEN);
+        let mut slice = Vec::with_capacity(dst.len());
         self.serialize(&mut slice).unwrap();
 
         dst[REGISTRY_LEN..REGISTRY_LEN + REGISTRY_MARKETS_LEN].copy_from_slice(&slice)
@@ -172,35 +191,6 @@ impl Pack for RegistryMarkets {
 
         let mut src_mut = &src[REGISTRY_LEN..REGISTRY_LEN + REGISTRY_MARKETS_LEN];
 
-        Self::deserialize(&mut src_mut).map_err(|err| {
-            msg!("Failed to deserialize");
-            msg!(&err.to_string());
-            ProgramError::InvalidAccountData
-        })
-    }
-}
-
-/// Money Market
-#[repr(C)]
-#[derive(Debug, BorshDeserialize, Default, BorshSerialize, BorshSchema, PartialEq, Copy, Clone)]
-pub struct MoneyMarket {
-    /// Money market ID
-    pub id: everlend_utils::integrations::MoneyMarket,
-    /// Program ID
-    pub program_id: Pubkey,
-    /// Lending market
-    pub lending_market: Pubkey,
-}
-
-impl MoneyMarket {
-    /// Unpack money market from slice with index
-    pub fn unpack_from_slice_with_index(src: &[u8], index: usize) -> Result<Self, ProgramError> {
-        if index >= TOTAL_DISTRIBUTIONS {
-            return Err(ProgramError::InvalidArgument);
-        }
-
-        let mut src_mut = &src[REGISTRY_LEN + (REGISTRY_MONEY_MARKET_LEN * index)
-            ..REGISTRY_LEN + (REGISTRY_MONEY_MARKET_LEN * (index + 1))];
         Self::deserialize(&mut src_mut).map_err(|err| {
             msg!("Failed to deserialize");
             msg!(&err.to_string());

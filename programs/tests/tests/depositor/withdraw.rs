@@ -11,7 +11,7 @@ use solana_sdk::transaction::{Transaction, TransactionError};
 
 use everlend_depositor::instruction::DepositorInstruction;
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::{MoneyMarket, MoneyMarkets};
+use everlend_registry::state::MoneyMarkets;
 use everlend_utils::{
     find_program_address,
     integrations::{self, MoneyMarketPubkeys},
@@ -215,10 +215,8 @@ async fn setup() -> (
         .unwrap();
 
     let mut money_markets = MoneyMarkets::default();
-    money_markets[0] = MoneyMarket {
-        id: Default::default(),
-        program_id: spl_token_lending::id(),
-        lending_market: env.spl_token_lending.market_pubkey,
+    money_markets[0] = integrations::MoneyMarket::PortFinance {
+        money_market_program_id: spl_token_lending::id(),
     };
 
     let ten = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];

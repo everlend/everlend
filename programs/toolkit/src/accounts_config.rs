@@ -131,9 +131,10 @@ pub struct FraktAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub program_id: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
-    pub liquidity_pool: Pubkey,
+    pub main_liquidity_pool: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
     pub pool_admin: Pubkey,
+    pub liquidity_pools: Vec<Pubkey>,
 }
 
 #[serde_as]
@@ -165,23 +166,23 @@ pub struct DefaultAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub sol_oracle: Pubkey,
 
-    pub port_finance: Vec<PortFinanceAccounts>,
+    pub port_finance: PortFinanceAccounts,
 
     pub port_accounts: BTreeMap<String, StakingPoolAccounts>,
 
-    pub larix: Vec<LarixAccounts>,
+    pub larix: LarixAccounts,
 
     pub quarry: QuarryAccounts,
 
-    pub solend: Vec<SolendAccounts>,
+    pub solend: SolendAccounts,
 
-    pub tulip: Vec<TulipAccounts>,
+    pub tulip: TulipAccounts,
 
-    pub francium: Vec<FranciumAccounts>,
+    pub francium: FranciumAccounts,
 
     pub francium_farming_pool_account: BTreeMap<String, StakingPoolAccounts>,
 
-    pub jet: Vec<JetAccounts>,
+    pub jet: JetAccounts,
 
     pub frakt: FraktAccounts,
 

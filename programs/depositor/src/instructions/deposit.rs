@@ -3,7 +3,7 @@ use crate::{
     utils::{collateral_storage, deposit, money_market},
     InternalMiningPDA, RebalancingPDA, TransitPDA,
 };
-use everlend_registry::state::{MoneyMarket, RegistryMarkets};
+use everlend_registry::state::RegistryMarkets;
 use everlend_utils::{assert_account_key, find_program_address, AccountLoader, EverlendError, PDA};
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -152,7 +152,7 @@ impl<'a, 'b> DepositContext<'a, 'b> {
             return Err(EverlendError::InvalidRebalancingOperation.into());
         }
 
-        let market = MoneyMarket::unpack_from_slice_with_index(
+        let market = RegistryMarkets::unpack_money_markets_with_index(
             &self.registry.data.borrow(),
             usize::from(step.money_market_index),
         )?;

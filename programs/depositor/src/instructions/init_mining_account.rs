@@ -6,6 +6,7 @@ use crate::{
 use borsh::BorshDeserialize;
 use everlend_registry::state::Registry;
 use everlend_utils::cpi::francium;
+use everlend_utils::integrations::MoneyMarket;
 use everlend_utils::{
     assert_account_key, assert_owned_by, cpi, find_program_address, AccountLoader, EverlendError,
     PDA,
@@ -131,7 +132,9 @@ impl<'a, 'b> InitMiningAccountContext<'a, 'b> {
                         )?;
                     if !registry_markets
                         .money_markets
-                        .contains(self.staking_program_id.key)
+                        .contains(&MoneyMarket::Larix {
+                            money_market_program_id: self.staking_program_id.key.clone(),
+                        })
                     {
                         return Err(ProgramError::InvalidArgument);
                     }

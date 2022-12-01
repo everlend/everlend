@@ -3,7 +3,8 @@ use everlend_depositor::state::{Rebalancing, RebalancingOperation};
 use everlend_depositor::utils::calculate_amount_to_distribute;
 use everlend_liquidity_oracle::state::{DistributionArray, TokenOracle};
 use everlend_registry::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
-use everlend_registry::state::{DistributionPubkeys, MoneyMarket, MoneyMarkets};
+use everlend_registry::state::MoneyMarkets;
+use everlend_utils::integrations::MoneyMarket;
 use everlend_utils::{abs_diff, percent_ratio, PDA};
 use everlend_utils::{
     find_program_address,
@@ -205,10 +206,8 @@ async fn setup(
         .unwrap();
 
     let mut money_markets = MoneyMarkets::default();
-    money_markets[0] = MoneyMarket {
-        id: Default::default(),
-        program_id: spl_token_lending::id(),
-        lending_market: env.spl_token_lending.market_pubkey,
+    money_markets[0] = integrations::MoneyMarket::PortFinance {
+        money_market_program_id: spl_token_lending::id(),
     };
 
     let ten = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
@@ -915,20 +914,14 @@ async fn fail_with_invalid_liquidity_oracle() {
 async fn rebalancing_math_round() {
     let mut d: DistributionArray = DistributionArray::default();
     let mut p = MoneyMarkets::default();
-    p[0] = MoneyMarket {
-        id: integrations::MoneyMarket::PortFinance,
-        program_id: Keypair::new().pubkey(),
-        lending_market: Keypair::new().pubkey(),
+    p[0] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
     };
-    p[1] = MoneyMarket {
-        id: integrations::MoneyMarket::PortFinance,
-        program_id: Keypair::new().pubkey(),
-        lending_market: Keypair::new().pubkey(),
+    p[1] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
     };
-    p[2] = MoneyMarket {
-        id: integrations::MoneyMarket::PortFinance,
-        program_id: Keypair::new().pubkey(),
-        lending_market: Keypair::new().pubkey(),
+    p[2] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
     };
 
     let distr_amount: u64 = 4610400063;
@@ -977,15 +970,11 @@ async fn rebalancing_math_round() {
 async fn rebalancing_check_steps() {
     let mut d: DistributionArray = DistributionArray::default();
     let mut p = MoneyMarkets::default();
-    p[0] = MoneyMarket {
-        id: integrations::MoneyMarket::PortFinance,
-        program_id: Keypair::new().pubkey(),
-        lending_market: Keypair::new().pubkey(),
+    p[0] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
     };
-    p[1] = MoneyMarket {
-        id: integrations::MoneyMarket::PortFinance,
-        program_id: Keypair::new().pubkey(),
-        lending_market: Keypair::new().pubkey(),
+    p[1] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
     };
 
     let distr_amount: u64 = 10001;
@@ -1068,20 +1057,14 @@ async fn rebalancing_check_steps() {
 #[tokio::test]
 async fn rebalancing_check_steps_math() {
     let mut p = MoneyMarkets::default();
-    p[0] = MoneyMarket {
-        id: integrations::MoneyMarket::PortFinance,
-        program_id: Keypair::new().pubkey(),
-        lending_market: Keypair::new().pubkey(),
+    p[0] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
     };
-    p[1] = MoneyMarket {
-        id: integrations::MoneyMarket::PortFinance,
-        program_id: Keypair::new().pubkey(),
-        lending_market: Keypair::new().pubkey(),
+    p[1] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
     };
-    p[2] = MoneyMarket {
-        id: integrations::MoneyMarket::PortFinance,
-        program_id: Keypair::new().pubkey(),
-        lending_market: Keypair::new().pubkey(),
+    p[2] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
     };
 
     let mut d: DistributionArray = DistributionArray::default();
@@ -1162,20 +1145,14 @@ async fn rebalancing_percent_ratio() {
 #[tokio::test]
 async fn collateral_leak_test() {
     let mut p = MoneyMarkets::default();
-    p[0] = MoneyMarket {
-        id: integrations::MoneyMarket::PortFinance,
-        program_id: Keypair::new().pubkey(),
-        lending_market: Keypair::new().pubkey(),
+    p[0] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
     };
-    p[1] = MoneyMarket {
-        id: integrations::MoneyMarket::PortFinance,
-        program_id: Keypair::new().pubkey(),
-        lending_market: Keypair::new().pubkey(),
+    p[1] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
     };
-    p[2] = MoneyMarket {
-        id: integrations::MoneyMarket::PortFinance,
-        program_id: Keypair::new().pubkey(),
-        lending_market: Keypair::new().pubkey(),
+    p[2] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
     };
 
     let mut d: DistributionArray = DistributionArray::default();
@@ -1231,15 +1208,11 @@ async fn collateral_leak_test() {
 async fn collateral_leak_test2() {
     let mut d: DistributionArray = DistributionArray::default();
     let mut p = MoneyMarkets::default();
-    p[0] = MoneyMarket {
-        id: integrations::MoneyMarket::PortFinance,
-        program_id: Keypair::new().pubkey(),
-        lending_market: Keypair::new().pubkey(),
+    p[0] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
     };
-    p[1] = MoneyMarket {
-        id: integrations::MoneyMarket::PortFinance,
-        program_id: Keypair::new().pubkey(),
-        lending_market: Keypair::new().pubkey(),
+    p[1] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
     };
 
     let mut oracle = TokenOracle::default();

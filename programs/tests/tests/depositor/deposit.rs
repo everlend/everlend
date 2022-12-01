@@ -7,7 +7,7 @@ use solana_sdk::signer::Signer;
 use solana_sdk::transaction::{Transaction, TransactionError};
 
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::{DistributionPubkeys, MoneyMarket, MoneyMarkets};
+use everlend_registry::state::{DistributionPubkeys, MoneyMarkets};
 use everlend_utils::{
     find_program_address,
     integrations::{self, MoneyMarketPubkeys},
@@ -177,10 +177,8 @@ async fn setup() -> (
         .unwrap();
 
     let mut money_markets = MoneyMarkets::default();
-    money_markets[0] = MoneyMarket {
-        id: Default::default(),
-        program_id: spl_token_lending::id(),
-        lending_market: env.spl_token_lending.market_pubkey,
+    money_markets[0] = integrations::MoneyMarket::PortFinance {
+        money_market_program_id: spl_token_lending::id(),
     };
 
     let mut collateral_pool_markets = DistributionPubkeys::default();
@@ -903,7 +901,7 @@ async fn fail_with_invalid_money_market_program_id() {
             &get_liquidity_mint().1,
             &mm_pool.token_mint_pubkey,
             &context.payer.pubkey(),
-            &spl_token_lending::id(),
+            &Pubkey::new_unique(),
             deposit_accounts,
             deposit_collateral_storage_accounts,
         )],

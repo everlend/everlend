@@ -201,7 +201,7 @@ pub fn withdraw<'a, 'b>(
 
 /// Money market
 pub fn money_market<'a, 'b>(
-    market: everlend_registry::state::MoneyMarket,
+    market: integrations::MoneyMarket,
     program_id: &Pubkey,
     money_market_program: &AccountInfo<'b>,
     money_market_account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
@@ -217,24 +217,27 @@ pub fn money_market<'a, 'b>(
         None
     };
 
+    if market.eq(&Default::default()) {
+        return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
+    }
+
     let is_mining =
         internal_mining_type.is_some() && internal_mining_type != Some(MiningType::None);
 
     // Only for tests
     if money_market_program.key.to_string() == integrations::SPL_TOKEN_LENDING_PROGRAM_ID {
-        let spl = SPLLending::init(
-            *money_market_program.key,
-            market,
-            money_market_account_info_iter,
-        )?;
+        let spl = SPLLending::init(*money_market_program.key, money_market_account_info_iter)?;
         return Ok((Box::new(spl), is_mining));
     }
 
-    match market.id {
-        integrations::MoneyMarket::PortFinance => {
+    match market {
+        integrations::MoneyMarket::PortFinance {
+            money_market_program_id,
+        } => {
+            assert_account_key(money_market_program, &money_market_program_id)?;
+
             let port = PortFinance::init(
                 *money_market_program.key,
-                market,
                 money_market_account_info_iter,
                 internal_mining_type,
                 collateral_token_mint,
@@ -242,35 +245,46 @@ pub fn money_market<'a, 'b>(
             )?;
             Ok((Box::new(port), is_mining))
         }
-        integrations::MoneyMarket::Larix => {
+        integrations::MoneyMarket::Larix {
+            money_market_program_id,
+        } => {
+            assert_account_key(money_market_program, &money_market_program_id)?;
+
             let larix = Larix::init(
                 *money_market_program.key,
-                market,
                 money_market_account_info_iter,
                 internal_mining_type,
             )?;
             Ok((Box::new(larix), is_mining))
         }
-        integrations::MoneyMarket::Solend => {
-            let solend = Solend::init(
-                *money_market_program.key,
-                market,
-                money_market_account_info_iter,
-            )?;
+        integrations::MoneyMarket::Solend {
+            money_market_program_id,
+            ..
+        } => {
+            assert_account_key(money_market_program, &money_market_program_id)?;
+
+            let solend = Solend::init(*money_market_program.key, money_market_account_info_iter)?;
             Ok((Box::new(solend), is_mining))
         }
-        integrations::MoneyMarket::Tulip => {
+        integrations::MoneyMarket::Tulip {
+            money_market_program_id,
+        } => {
+            assert_account_key(money_market_program, &money_market_program_id)?;
+
             let tulip = Tulip::init(
-                *money_market_program.key,
-                market,
+                money_market_program.key.clone(),
                 money_market_account_info_iter,
             )?;
             Ok((Box::new(tulip), is_mining))
         }
-        integrations::MoneyMarket::Francium => {
+        integrations::MoneyMarket::Francium {
+            money_market_program_id,
+        } => {
+            assert_account_key(money_market_program, &money_market_program_id)?;
+
             let francium = Francium::init(
-                *money_market_program.key,
-                market,
+                program_id,
+                money_market_program.key.clone(),
                 money_market_account_info_iter,
                 depositor,
                 depositor_authority,
@@ -278,21 +292,30 @@ pub fn money_market<'a, 'b>(
             )?;
             Ok((Box::new(francium), is_mining))
         }
-        integrations::MoneyMarket::Jet => {
+        integrations::MoneyMarket::Jet {
+            money_market_program_id,
+        } => {
+            assert_account_key(money_market_program, &money_market_program_id)?;
+
             let jet = Jet::init(
                 money_market_program.key.clone(),
-                market,
                 money_market_account_info_iter,
             )?;
             return Ok((Box::new(jet), is_mining));
         }
-        integrations::MoneyMarket::Frakt => {
+        integrations::MoneyMarket::Frakt {
+            money_market_program_id,
+            liquidity_pool,
+        } => {
+            assert_account_key(money_market_program, &money_market_program_id)?;
+
             let frakt = Frakt::init(
                 money_market_program.key.clone(),
                 program_id.clone(),
                 depositor_authority,
                 liquidity_mint,
                 money_market_account_info_iter,
+                &liquidity_pool,
             )?;
             Ok((Box::new(frakt), is_mining))
         }

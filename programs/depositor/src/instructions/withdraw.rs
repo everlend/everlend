@@ -4,7 +4,7 @@ use crate::{
     InternalMiningPDA, RebalancingPDA, TransitPDA,
 };
 use everlend_income_pools::utils::IncomePoolAccounts;
-use everlend_registry::state::{MoneyMarket, RegistryMarkets};
+use everlend_registry::state::RegistryMarkets;
 use everlend_utils::{assert_account_key, find_program_address, AccountLoader, EverlendError, PDA};
 use solana_program::{
     account_info::AccountInfo, clock::Clock, entrypoint::ProgramResult, msg,
@@ -190,7 +190,7 @@ impl<'a, 'b> WithdrawContext<'a, 'b> {
             assert_account_key(self.internal_mining, &internal_mining_pubkey)?;
         }
 
-        let market = MoneyMarket::unpack_from_slice_with_index(
+        let market = RegistryMarkets::unpack_money_markets_with_index(
             &self.registry.data.borrow(),
             usize::from(step.money_market_index),
         )?;

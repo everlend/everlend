@@ -4,7 +4,6 @@ use crate::Config;
 use anyhow::Result;
 use everlend_depositor::instruction::InitMiningAccountsPubkeys;
 use everlend_depositor::state::MiningType;
-use everlend_utils::integrations::MoneyMarket;
 use everlend_utils::{find_program_address, PDA};
 use solana_program::pubkey::Pubkey;
 
@@ -23,7 +22,7 @@ fn save_new_mining_account(config: &Config, token: &String, mining_account: Pubk
         .token_accounts
         .get_mut(token)
         .unwrap()
-        .mining_accounts[MoneyMarket::Francium as usize]
+        .mining_accounts[4]
         .staking_account = mining_account;
 
     initialized_accounts
@@ -40,7 +39,7 @@ impl LiquidityMiner for FranciumLiquidityMiner {
             .token_accounts
             .get(token)
             .unwrap()
-            .mining_accounts[MoneyMarket::Francium as usize]
+            .mining_accounts[4]
             .staking_account
     }
 
@@ -101,8 +100,7 @@ impl LiquidityMiner for FranciumLiquidityMiner {
             }
         }
         let (_, collateral_mint_map) = get_asset_maps(default_accounts.clone());
-        let collateral_mint =
-            collateral_mint_map.get(token).unwrap()[MoneyMarket::Francium as usize].unwrap();
+        let collateral_mint = collateral_mint_map.get(token).unwrap()[4].unwrap();
 
         let (user_stake_account, _) = TransitPDA {
             depositor: initialized_accounts.depositor,
@@ -131,8 +129,7 @@ impl LiquidityMiner for FranciumLiquidityMiner {
         let initialized_accounts = config.get_initialized_accounts();
         let (mint_map, collateral_mint_map) = get_asset_maps(default_accounts.clone());
         let liquidity_mint = mint_map.get(token).unwrap();
-        let collateral_mint =
-            collateral_mint_map.get(token).unwrap()[MoneyMarket::Francium as usize].unwrap();
+        let collateral_mint = collateral_mint_map.get(token).unwrap()[4].unwrap();
         Some(InitMiningAccountsPubkeys {
             liquidity_mint: *liquidity_mint,
             collateral_mint,
@@ -156,8 +153,7 @@ impl LiquidityMiner for FranciumLiquidityMiner {
         let initialized_accounts = config.get_initialized_accounts();
 
         let (_, collateral_mint_map) = get_asset_maps(default_accounts.clone());
-        let collateral_mint =
-            collateral_mint_map.get(token).unwrap()[MoneyMarket::Francium as usize].unwrap();
+        let collateral_mint = collateral_mint_map.get(token).unwrap()[4].unwrap();
 
         let (user_stake_account, _) = TransitPDA {
             depositor: initialized_accounts.depositor,

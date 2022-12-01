@@ -425,7 +425,7 @@ pub mod tests {
     use super::*;
     use crate::state::RebalancingOperation;
     use everlend_liquidity_oracle::state::DistributionArray;
-    use everlend_registry::state::{MoneyMarket, MoneyMarkets};
+    use everlend_registry::state::{MoneyMarkets, RegistryMoneyMarket};
 
     #[test]
     fn packing() {
@@ -462,12 +462,12 @@ pub mod tests {
         });
 
         let mut money_market_program_ids = MoneyMarkets::default();
-        money_market_program_ids[0] = MoneyMarket {
+        money_market_program_ids[0] = RegistryMoneyMarket {
             id: Default::default(),
             program_id: pk,
             lending_market: Default::default(),
         };
-        money_market_program_ids[1] = MoneyMarket {
+        money_market_program_ids[1] = RegistryMoneyMarket {
             id: Default::default(),
             program_id: pk,
             lending_market: Default::default(),
@@ -505,12 +505,12 @@ pub mod tests {
         });
 
         let mut money_market_program_ids = MoneyMarkets::default();
-        money_market_program_ids[0] = MoneyMarket {
+        money_market_program_ids[0] = RegistryMoneyMarket {
             id: Default::default(),
             program_id: pk,
             lending_market: Default::default(),
         };
-        money_market_program_ids[1] = MoneyMarket {
+        money_market_program_ids[1] = RegistryMoneyMarket {
             id: Default::default(),
             program_id: pk,
             lending_market: Default::default(),

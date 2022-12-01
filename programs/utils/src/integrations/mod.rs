@@ -15,32 +15,81 @@ pub const SPL_TOKEN_LENDING_PROGRAM_ID: &str = "Bp1MJ1qr4g8t9AQJjm5H6zDB2NmRrkJL
 // pub const PORT_FINANCE_PROGRAM_ID: &str = "pdQ2rQQU5zH2rDgZ7xH2azMBJegUzUyunJ5Jd637hC4";
 // pub const LARIX_PROGRAM_ID: &str = "BDBsJpBPWtMfTgxejekYCWUAJu1mvQshiwrKuTjdEeT3";
 
-#[derive(
-    Debug,
-    IntoPrimitive,
-    FromPrimitive,
-    BorshSchema,
-    BorshDeserialize,
-    BorshSerialize,
-    PartialEq,
-    Clone,
-    Copy,
-)]
-#[repr(usize)]
+#[derive(Debug, BorshSchema, BorshDeserialize, BorshSerialize, PartialEq, Clone, Copy)]
 pub enum MoneyMarket {
-    #[num_enum(default)]
-    PortFinance,
-    Larix,
-    Solend,
-    Tulip,
-    Francium,
-    Jet,
-    Frakt,
+    PortFinance {
+        money_market_program_id: Pubkey,
+    },
+    Larix {
+        money_market_program_id: Pubkey,
+    },
+    Solend {
+        money_market_program_id: Pubkey,
+        lending_market: Pubkey,
+    },
+    Tulip {
+        money_market_program_id: Pubkey,
+    },
+    Francium {
+        money_market_program_id: Pubkey,
+    },
+    Jet {
+        money_market_program_id: Pubkey,
+    },
+    Frakt {
+        money_market_program_id: Pubkey,
+        liquidity_pool: Pubkey,
+    },
+}
+
+impl MoneyMarket {
+    pub fn program_id(&self) -> Pubkey {
+        match self {
+            MoneyMarket::PortFinance {
+                money_market_program_id,
+            } => *money_market_program_id,
+            MoneyMarket::Larix {
+                money_market_program_id,
+            } => *money_market_program_id,
+            MoneyMarket::Solend {
+                money_market_program_id,
+                ..
+            } => *money_market_program_id,
+            MoneyMarket::Tulip {
+                money_market_program_id,
+            } => *money_market_program_id,
+            MoneyMarket::Francium {
+                money_market_program_id,
+            } => *money_market_program_id,
+            MoneyMarket::Jet {
+                money_market_program_id,
+            } => *money_market_program_id,
+            MoneyMarket::Frakt {
+                money_market_program_id,
+                ..
+            } => *money_market_program_id,
+        }
+    }
+
+    // num_enum doesn't work for non-unit enums
+    pub fn num(&self) -> usize {
+        match self {
+            MoneyMarket::PortFinance { .. } => 0,
+            MoneyMarket::Larix { .. } => 1,
+            MoneyMarket::Solend { .. } => 2,
+            MoneyMarket::Tulip { .. } => 3,
+            MoneyMarket::Francium { .. } => 4,
+            MoneyMarket::Jet { .. } => 5,
+            MoneyMarket::Frakt { .. } => 6,
+        }
+    }
 }
 
 impl Default for MoneyMarket {
     fn default() -> Self {
-        Self::PortFinance
+        Self::PortFinance {
+            money_market_program_id: Pubkey::default(),
+        }
     }
 }
 

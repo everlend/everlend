@@ -40,35 +40,37 @@ quarry:
   minter: GEoTC3gN12qHDniaDD7Zxvd5xtcZyEKkTPy42B44s82y
   rewards_token_mint: iouQcQBAiEXe6cKLS85zmZxUqaCqBdeHFpqKoSz615u
 solend:
-  - program_id: ALend7Ketfx5bxh6ghsCDXAoDrhvEmsXT3cynB6aPLgx
-    lending_market: GvjoVKNjBvQcFaSKUW1gTE7DxhSpjHbE69umVR5nPuQp
-    reserve_pyth_oracle: J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix
-    reserve_switchboard_oracle: AdtRGGhmqvom3Jemp5YNrxd9q9unX36BZk1pujkkXijL
-    reserve_sol: 5VVLD7BQp8y3bTgyF5ezm1ResyMTR3PhYsT4iHFU8Sxz
-    reserve_sol_supply: furd3XUtjXZ2gRvSsoUts9A5m8cMJNqdsyR2Rt8vY9s
+  program_id: ALend7Ketfx5bxh6ghsCDXAoDrhvEmsXT3cynB6aPLgx
+  lending_market: GvjoVKNjBvQcFaSKUW1gTE7DxhSpjHbE69umVR5nPuQp
+  reserve_pyth_oracle: J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix
+  reserve_switchboard_oracle: AdtRGGhmqvom3Jemp5YNrxd9q9unX36BZk1pujkkXijL
+  reserve_sol: 5VVLD7BQp8y3bTgyF5ezm1ResyMTR3PhYsT4iHFU8Sxz
+  reserve_sol_supply: furd3XUtjXZ2gRvSsoUts9A5m8cMJNqdsyR2Rt8vY9s
 francium:
-  - program_id: "11111111111111111111111111111111"
-    lending_market: "11111111111111111111111111111111"
-    reserve_liquidity_supply: "11111111111111111111111111111111"
-    reserve_sol: "11111111111111111111111111111111"
-    staking_program_id: "11111111111111111111111111111111"
+  program_id: "11111111111111111111111111111111"
+  lending_market: "11111111111111111111111111111111"
+  reserve_liquidity_supply: "11111111111111111111111111111111"
+  reserve_sol: "11111111111111111111111111111111"
+  staking_program_id: "11111111111111111111111111111111"
 francium_farming_pool_account:
   SOL:
     staking_pool: "11111111111111111111111111111111"
 tulip:
-  - program_id: CbTkd91iCd48cMsqGejvYh9K2dwmy76hF8CQH4gt4Ykx
-    lending_market: 6Z76FPMsFVXggtL2npzQ6nx6ghBGo1CCtueEYPvjFHz6
-    reserve_liquidity_oracle: rekSA4si7yyWMmr9U1kDjk9yYTBnPBSrArnE491drGk
-    reserve_liquidity_supply: HaswPBzu8wCBMvsnVPyj3zcV2x7tgz5WHay7dUHfqyFP
-    reserve_sol: Zb3AcFwZ3HDSdpPHYWGqTnEE1yFQR4LyE6jjLTvSTQw
+  program_id: CbTkd91iCd48cMsqGejvYh9K2dwmy76hF8CQH4gt4Ykx
+  lending_market: 6Z76FPMsFVXggtL2npzQ6nx6ghBGo1CCtueEYPvjFHz6
+  reserve_liquidity_oracle: rekSA4si7yyWMmr9U1kDjk9yYTBnPBSrArnE491drGk
+  reserve_liquidity_supply: HaswPBzu8wCBMvsnVPyj3zcV2x7tgz5WHay7dUHfqyFP
+  reserve_sol: Zb3AcFwZ3HDSdpPHYWGqTnEE1yFQR4LyE6jjLTvSTQw
 jet:
-  - program_id: JPPooLEqRo3NCSx82EdE2VZY5vUaSsgskpZPBHNGVLZ
-    margin_pool_sol: 3w9nDi3rB9e44J7xMvayXKrg59kD7ofeXqGZsYWtT1V9
-    vault_sol: HefDXf74p9vRaLWX4yjZiGS99hg72y2EbXiajyYsgwXB
+  program_id: JPPooLEqRo3NCSx82EdE2VZY5vUaSsgskpZPBHNGVLZ
+  margin_pool_sol: 3w9nDi3rB9e44J7xMvayXKrg59kD7ofeXqGZsYWtT1V9
+  vault_sol: HefDXf74p9vRaLWX4yjZiGS99hg72y2EbXiajyYsgwXB
 frakt:
-  - program_id: A66HabVL3DzNzeJgcHYtRRNW1ZRMKwBfrdSR4kLsZ9DJ
-    liquidity_pool: 4TY2PBNBgQU4ExX45LdC5PvF8sctjScg5C9DYSYJPGh7
-    pool_admin: Gu6faGp621MczGbkVtTppFNjJaoBSGQTM51NsQdJXLyR
+  program_id: A66HabVL3DzNzeJgcHYtRRNW1ZRMKwBfrdSR4kLsZ9DJ
+  main_liquidity_pool: 4TY2PBNBgQU4ExX45LdC5PvF8sctjScg5C9DYSYJPGh7
+  pool_admin: Gu6faGp621MczGbkVtTppFNjJaoBSGQTM51NsQdJXLyR
+  liquidity_pools:
+    - 4TY2PBNBgQU4ExX45LdC5PvF8sctjScg5C9DYSYJPGh7
 multisig_program_id: 3ktyhEXgbiUyDG7RXCzzXWzjXJpThpqqePhJb85eVqFa
 sol_collateral:
   - Hk4Rp3kaPssB6hnjah3Mrqpt5CAXWGoqFT5dVsWA3TaM

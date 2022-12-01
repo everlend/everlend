@@ -1,4 +1,4 @@
-use crate::money_market::{assert_valid_money_market, CollateralStorage, MoneyMarket};
+use crate::money_market::{CollateralStorage, MoneyMarket};
 use crate::state::MiningType;
 use crate::TransitPDA;
 use everlend_utils::cpi::francium;
@@ -37,7 +37,6 @@ impl<'a, 'b> Francium<'a, 'b> {
     pub fn init(
         program_id: &Pubkey,
         money_market_program_id: Pubkey,
-        money_market: everlend_registry::state::MoneyMarket,
         account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
         depositor: &Pubkey,
         depositor_authority: &Pubkey,
@@ -50,12 +49,6 @@ impl<'a, 'b> Francium<'a, 'b> {
         let lending_market_info =
             AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
         let lending_market_authority_info = AccountLoader::next_unchecked(account_info_iter)?;
-
-        assert_valid_money_market(
-            money_market,
-            &money_market_program_id,
-            lending_market_info.key,
-        )?;
 
         let mut francium = Francium {
             money_market_program_id,
