@@ -1,4 +1,5 @@
 use anchor_lang::Key;
+use solana_program::program_pack::Pack;
 use solana_program::{
     account_info::AccountInfo,
     program::{invoke, invoke_signed},
@@ -401,4 +402,16 @@ pub fn claim_reward<'a>(
     accounts.append(&mut sub_reward_accounts);
 
     invoke_signed(&instruction, &accounts, signers_seeds)
+}
+
+pub fn get_real_liquidity_amount(
+    reserve: AccountInfo,
+    collateral_amount: u64,
+) -> Result<u64, ProgramError> {
+    let reserve =
+        port_variable_rate_lending_instructions::state::Reserve::unpack(&reserve.data.borrow())?;
+
+    reserve
+        .collateral_exchange_rate()?
+        .collateral_to_liquidity(collateral_amount)
 }

@@ -87,12 +87,6 @@ impl<'a, 'b> MoneyMarket<'b> for Larix<'a, 'b> {
         liquidity_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<u64, ProgramError> {
-        larix::refresh_reserve(
-            &self.money_market_program_id,
-            self.reserve.clone(),
-            self.reserve_liquidity_oracle.clone(),
-        )?;
-
         larix::deposit(
             &self.money_market_program_id,
             source_liquidity,
@@ -123,12 +117,6 @@ impl<'a, 'b> MoneyMarket<'b> for Larix<'a, 'b> {
         collateral_amount: u64,
         signers_seeds: &[&[&[u8]]],
     ) -> Result<(), ProgramError> {
-        larix::refresh_reserve(
-            &self.money_market_program_id,
-            self.reserve.clone(),
-            self.reserve_liquidity_oracle.clone(),
-        )?;
-
         larix::redeem(
             &self.money_market_program_id,
             source_collateral,
@@ -202,6 +190,8 @@ impl<'a, 'b> MoneyMarket<'b> for Larix<'a, 'b> {
             signers_seeds,
         )?;
 
+        self.refresh_reserve(clock.clone())?;
+
         self.money_market_redeem(
             collateral_mint,
             collateral_transit.clone(),
@@ -210,6 +200,25 @@ impl<'a, 'b> MoneyMarket<'b> for Larix<'a, 'b> {
             clock.clone(),
             collateral_amount,
             signers_seeds,
+        )
+    }
+
+    fn is_income(
+        &self,
+        collateral_amount: u64,
+        expected_liquidity_amount: u64,
+    ) -> Result<bool, ProgramError> {
+        let real_liquidity_amount =
+            larix::get_real_liquidity_amount(self.reserve.clone(), collateral_amount)?;
+
+        Ok(real_liquidity_amount > expected_liquidity_amount)
+    }
+
+    fn refresh_reserve(&self, _clock: AccountInfo<'b>) -> Result<(), ProgramError> {
+        larix::refresh_reserve(
+            &self.money_market_program_id,
+            self.reserve.clone(),
+            self.reserve_liquidity_oracle.clone(),
         )
     }
 }
@@ -227,11 +236,7 @@ impl<'a, 'b> CollateralStorage<'b> for Larix<'a, 'b> {
             return Err(ProgramError::InvalidArgument);
         }
 
-        larix::refresh_reserve(
-            &self.money_market_program_id,
-            self.reserve.clone(),
-            self.reserve_liquidity_oracle.clone(),
-        )?;
+        self.refresh_reserve(_clock)?;
 
         let mining = self.mining.as_ref().unwrap();
         larix::deposit_mining(
@@ -259,12 +264,6 @@ impl<'a, 'b> CollateralStorage<'b> for Larix<'a, 'b> {
         if self.mining.is_none() {
             return Err(ProgramError::InvalidArgument);
         }
-
-        larix::refresh_reserve(
-            &self.money_market_program_id,
-            self.reserve.clone(),
-            self.reserve_liquidity_oracle.clone(),
-        )?;
 
         let mining = self.mining.as_ref().unwrap();
 

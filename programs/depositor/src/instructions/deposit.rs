@@ -181,6 +181,7 @@ impl<'a, 'b> DepositContext<'a, 'b> {
         )?;
 
         {
+            money_market.refresh_reserve(self.clock.clone())?;
             msg!("Deposit");
             let collateral_amount = deposit(
                 self.collateral_transit,

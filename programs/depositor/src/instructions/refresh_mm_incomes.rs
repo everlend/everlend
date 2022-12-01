@@ -231,48 +231,59 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
             return Err(EverlendError::InvalidRebalancingOperation.into());
         }
 
+        money_market.refresh_reserve(self.clock.clone())?;
+
+        // Skip the refresh steps if the money market has no income and the amount of liquidity is the same for withdrawal and deposit
+        if !money_market.is_income(
+            withdraw_step.collateral_amount.unwrap(),
+            withdraw_step.liquidity_amount,
+        )? && withdraw_step.liquidity_amount == deposit_step.liquidity_amount
         {
-            msg!("Refresh Withdraw");
-            withdraw(
-                self.income_pool_accounts,
-                self.collateral_transit,
-                self.collateral_mint,
-                self.liquidity_transit,
-                self.liquidity_reserve_transit,
-                self.depositor_authority,
-                self.clock,
-                &money_market,
-                is_mining,
-                &collateral_stor,
-                withdraw_step.collateral_amount.unwrap(),
-                withdraw_step.liquidity_amount,
-                &[signers_seeds],
-            )?;
+            msg!("Zero income amount. Skipping refresh step");
+            rebalancing.skip_refresh_steps(clock.slot)?;
+            Rebalancing::pack(rebalancing, *self.rebalancing.data.borrow_mut())?;
 
-            rebalancing.execute_step(RebalancingOperation::RefreshWithdraw, None, clock.slot)?;
+            return Ok(());
         }
+        msg!("Refresh Withdraw");
+        withdraw(
+            self.income_pool_accounts,
+            self.collateral_transit,
+            self.collateral_mint,
+            self.liquidity_transit,
+            self.liquidity_reserve_transit,
+            self.depositor_authority,
+            self.clock,
+            &money_market,
+            is_mining,
+            &collateral_stor,
+            withdraw_step.collateral_amount.unwrap(),
+            withdraw_step.liquidity_amount,
+            &[signers_seeds],
+        )?;
 
-        {
-            msg!("Refresh Deposit");
-            let collateral_amount = deposit(
-                self.collateral_transit,
-                self.collateral_mint,
-                self.liquidity_transit,
-                self.depositor_authority,
-                self.clock,
-                &money_market,
-                is_mining,
-                collateral_stor,
-                deposit_step.liquidity_amount,
-                &[signers_seeds],
-            )?;
+        rebalancing.execute_step(RebalancingOperation::RefreshWithdraw, None, clock.slot)?;
 
-            rebalancing.execute_step(
-                RebalancingOperation::RefreshDeposit,
-                Some(collateral_amount),
-                clock.slot,
-            )?;
-        }
+        money_market.refresh_reserve(self.clock.clone())?;
+        msg!("Refresh Deposit");
+        let collateral_amount = deposit(
+            self.collateral_transit,
+            self.collateral_mint,
+            self.liquidity_transit,
+            self.depositor_authority,
+            self.clock,
+            &money_market,
+            is_mining,
+            collateral_stor,
+            deposit_step.liquidity_amount,
+            &[signers_seeds],
+        )?;
+
+        rebalancing.execute_step(
+            RebalancingOperation::RefreshDeposit,
+            Some(collateral_amount),
+            clock.slot,
+        )?;
 
         Rebalancing::pack(rebalancing, *self.rebalancing.data.borrow_mut())?;
 

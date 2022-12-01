@@ -49,9 +49,9 @@ token_accounts:
       - pool: DD3LQdn3BJoSu8VEnx8z7AtMrcixGqUeuULtZy1nU8Kw
         pool_token_account: GTB759zJcNGqWUm1tDpfSguqr2S9RfpNtPRdTHaKFqjJ
         token_mint: Hk8b6i2C7PxFBPdd1TCrGssuZpCDEg4fh8yFuyHNJuJe
-      - pool: "11111111111111111111111111111111"
-        pool_token_account: "11111111111111111111111111111111"
-        token_mint: "11111111111111111111111111111111"
+      - pool: AsxMpiEp6XoYCMQsfxEFvNH5KCxvFeYPqCtufs41H5tm
+        pool_token_account: Gd7UhDebb5k7myusAQwpNJsxYKr3dJWk9y8HEz8uDah1
+        token_mint: DXuc1LwGsmM4JoWHQB63fWUPanxT6Nsj4hSxWNcPJeMb
     liquidity_transit: 7UM6SnXLDGG7fEg2n19cazDCTo2JmNwZhZWyoCAF9FND
     port_finance_obligation_account: "11111111111111111111111111111111"
     mining_accounts:

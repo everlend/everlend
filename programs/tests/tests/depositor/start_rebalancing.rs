@@ -493,6 +493,130 @@ async fn success_with_refresh_income() {
 }
 
 #[tokio::test]
+async fn success_with_skipped_refresh_steps() {
+    let (
+        mut context,
+        money_market,
+        pyth_oracle,
+        registry,
+        general_pool_market,
+        general_pool,
+        _,
+        income_pool_market,
+        income_pool,
+        mm_pool_market,
+        mm_pool,
+        _,
+        test_depositor,
+        test_liquidity_oracle,
+        test_token_oracle,
+        mut distribution,
+    ) = setup(100 * EXP).await;
+    let payer_pubkey = context.payer.pubkey();
+    let reserve = money_market.get_reserve_data(&mut context).await;
+    let money_market_pubkeys =
+        MoneyMarketPubkeys::SPL(integrations::spl_token_lending::AccountPubkeys {
+            reserve: money_market.reserve_pubkey,
+            reserve_liquidity_supply: reserve.liquidity.supply_pubkey,
+            reserve_liquidity_oracle: reserve.liquidity.oracle_pubkey,
+            lending_market: money_market.market_pubkey,
+        });
+
+    // Start rebalancing
+    test_depositor
+        .start_rebalancing(
+            &mut context,
+            &registry,
+            &general_pool_market,
+            &general_pool,
+            &test_liquidity_oracle,
+            false,
+            DistributionArray::default(),
+        )
+        .await
+        .unwrap();
+
+    // Rates should be refreshed
+    context.warp_to_slot(REFRESH_INCOME_INTERVAL).unwrap();
+    pyth_oracle
+        .update(&mut context, REFRESH_INCOME_INTERVAL)
+        .await;
+
+    test_depositor
+        .deposit(
+            &mut context,
+            &registry,
+            &mm_pool_market,
+            &mm_pool,
+            &spl_token_lending::id(),
+            &money_market_pubkeys,
+        )
+        .await
+        .unwrap();
+
+    distribution[0] = 0;
+    test_token_oracle
+        .update(
+            &mut context,
+            &test_liquidity_oracle,
+            payer_pubkey,
+            distribution,
+        )
+        .await
+        .unwrap();
+
+    test_depositor
+        .start_rebalancing(
+            &mut context,
+            &registry,
+            &general_pool_market,
+            &general_pool,
+            &test_liquidity_oracle,
+            true,
+            DistributionArray::default(),
+        )
+        .await
+        .unwrap();
+
+    // Rates should be refreshed
+    context.warp_to_slot(REFRESH_INCOME_INTERVAL + 5).unwrap();
+    pyth_oracle
+        .update(&mut context, REFRESH_INCOME_INTERVAL + 5)
+        .await;
+
+    test_depositor
+        .refresh_mm_incomes(
+            &mut context,
+            &registry,
+            &income_pool_market,
+            &income_pool,
+            &mm_pool_market,
+            &mm_pool,
+            &spl_token_lending::id(),
+            &money_market_pubkeys,
+        )
+        .await
+        .unwrap();
+
+    // Refresh steps should be skipped and marked as executed
+    let rebalancing = test_depositor
+        .get_rebalancing_data(&mut context, &general_pool.token_mint_pubkey)
+        .await;
+
+    assert_eq!(
+        rebalancing.steps[0].executed_at,
+        Some(REFRESH_INCOME_INTERVAL + 5)
+    );
+    assert_eq!(
+        rebalancing.steps[1].executed_at,
+        Some(REFRESH_INCOME_INTERVAL + 5)
+    );
+
+    let income_balance = get_token_balance(&mut context, &income_pool.token_account.pubkey()).await;
+    assert_eq!(income_balance, 0);
+}
+
+#[tokio::test]
 async fn fail_with_already_refreshed_income() {
     let (
         mut context,
