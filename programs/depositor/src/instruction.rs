@@ -686,14 +686,54 @@ pub fn refresh_mm_incomes(
 #[allow(clippy::too_many_arguments)]
 pub fn migrate_depositor(
     program_id: &Pubkey,
-    _depositor: &Pubkey,
-    _registry: &Pubkey,
-    _manager: &Pubkey,
-    _rebalancing: &Pubkey,
-    _liquidity_mint: &Pubkey,
-    _amount_to_distribute: u64,
+    depositor: &Pubkey,
+    registry: &Pubkey,
+    manager: &Pubkey,
+    rebalancing: &Pubkey,
+    liquidity_mint: &Pubkey,
+    general_pool_market: &Pubkey,
+    general_pool_token_account: &Pubkey,
 ) -> Instruction {
-    let accounts = vec![];
+
+    let (depositor_authority, _) = find_program_address(program_id, depositor);
+
+    // General pool
+    let (general_pool_market_authority, _) =
+        find_program_address(&everlend_general_pool::id(), general_pool_market);
+    let (general_pool, _) = everlend_general_pool::find_pool_program_address(
+        &everlend_general_pool::id(),
+        general_pool_market,
+        liquidity_mint,
+    );
+    let (general_pool_borrow_authority, _) =
+        everlend_general_pool::find_pool_borrow_authority_program_address(
+            &everlend_general_pool::id(),
+            &general_pool,
+            &depositor_authority,
+        );
+
+    let (liquidity_transit, _) = TransitPDA {
+        seed: "",
+        depositor: depositor.clone(),
+        mint: liquidity_mint.clone(),
+    }
+        .find_address(program_id);
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*registry, false),
+        AccountMeta::new_readonly(*depositor, false),
+        AccountMeta::new_readonly(depositor_authority, false),
+        AccountMeta::new(*rebalancing, false),
+        AccountMeta::new_readonly(*liquidity_mint, false),
+        AccountMeta::new_readonly(*general_pool_market, false),
+        AccountMeta::new_readonly(general_pool_market_authority, false),
+        AccountMeta::new(general_pool, false),
+        AccountMeta::new(*general_pool_token_account, false),
+        AccountMeta::new_readonly(general_pool_borrow_authority, false),
+
+        AccountMeta::new(liquidity_transit, false),
+        AccountMeta::new_readonly(*manager, true),
+    ];
 
     Instruction::new_with_borsh(
         *program_id,
