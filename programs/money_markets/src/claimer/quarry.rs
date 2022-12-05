@@ -1,6 +1,6 @@
 use crate::claimer::RewardClaimer;
-use crate::state::MiningType;
-use crate::TransitPDA;
+use everlend_depositor::state::MiningType;
+use everlend_depositor::TransitPDA;
 use everlend_utils::cpi::quarry;
 use everlend_utils::{AccountLoader, EverlendError, PDA};
 use solana_program::{account_info::AccountInfo, program_error::ProgramError, pubkey::Pubkey};

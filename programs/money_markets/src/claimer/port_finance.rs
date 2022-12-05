@@ -1,6 +1,6 @@
 use crate::claimer::RewardClaimer;
-use crate::state::MiningType;
-use crate::utils::FillRewardAccounts;
+use everlend_depositor::state::MiningType;
+use everlend_depositor::utils::FillRewardAccounts;
 use everlend_utils::cpi::port_finance;
 use everlend_utils::{AccountLoader, EverlendError};
 use solana_program::{

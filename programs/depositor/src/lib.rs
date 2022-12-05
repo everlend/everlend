@@ -2,20 +2,19 @@
 
 //! Depositor contract
 
-pub mod claimer;
 pub mod instruction;
 pub mod instructions;
-pub mod money_market;
 pub mod processor;
 pub mod state;
 pub mod utils;
+pub mod cpi;
 
 #[cfg(not(feature = "no-entrypoint"))]
 pub mod entrypoint;
 
 // Export current sdk types for downstream users building with a different sdk version
 use everlend_utils::cpi::francium::FRANCIUM_REWARD_SEED;
-use everlend_utils::{Seeds, PDA};
+use everlend_utils::{PDA, Seeds};
 pub use solana_program;
 use solana_program::pubkey::Pubkey;
 

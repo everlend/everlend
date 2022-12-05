@@ -1,6 +1,6 @@
 use crate::claimer::RewardClaimer;
-use crate::state::MiningType;
-use crate::utils::FillRewardAccounts;
+use everlend_depositor::state::MiningType;
+use everlend_depositor::utils::FillRewardAccounts;
 use borsh::BorshDeserialize;
 use everlend_utils::cpi::francium;
 use everlend_utils::{assert_account_key, AccountLoader, EverlendError};

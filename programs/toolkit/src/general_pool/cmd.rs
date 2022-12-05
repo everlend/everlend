@@ -3,6 +3,7 @@ use super::{
 };
 use crate::{print_commands, utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
+use crate::general_pool::CreateGeneralPool;
 
 #[derive(Clone, Copy)]
 pub struct GeneralPoolCommand;
@@ -25,6 +26,7 @@ impl<'a> ToolkitCommand<'a> for GeneralPoolCommand {
             Box::new(CancelWithdrawRequestCommand),
             Box::new(SetPoolConfigCommand),
             Box::new(InitPoolMarketCommand),
+            Box::new(CreateGeneralPool),
         ]
     }
 

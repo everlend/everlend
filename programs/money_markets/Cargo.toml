@@ -1,0 +1,32 @@
+[package]
+name = "everlend-money-markets"
+version = "0.1.0"
+edition = "2018"
+
+[features]
+no-entrypoint = []
+test-bpf = []
+
+[dependencies]
+num-derive = "0.3"
+num-traits = "0.2"
+thiserror = "1.0"
+solana-program = "1.9.13"
+spl-token = { version = "3.1", features = [ "no-entrypoint" ] }
+spl-associated-token-account = { version = "1.0.3", features = [ "no-entrypoint" ] }
+spl-token-lending = { git = "https://github.com/everlend/solana-program-library", features = [ "no-entrypoint" ] }
+everlend-general-pool = { path = "../general_pool", features = [ "no-entrypoint" ] }
+everlend-depositor = { path = "../depositor", features = [ "no-entrypoint" ] }
+everlend-collateral-pool = { path = "../collateral_pool", features = [ "no-entrypoint" ] }
+everlend-income-pools = { path = "../income_pools", features = [ "no-entrypoint" ] }
+everlend-liquidity-oracle = { path = "../liquidity_oracle", features = [ "no-entrypoint" ] }
+everlend-registry = { path = "../registry", features = [ "no-entrypoint" ] }
+everlend-rewards = { path = "../rewards", features = [ "no-entrypoint" ] }
+everlend-utils = { path = "../utils" }
+borsh = "0.9.0"
+
+[dev-dependencies]
+solana-sdk = "1.9.13"
+
+[lib]
+crate-type = ["cdylib", "lib"]

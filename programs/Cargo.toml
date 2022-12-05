@@ -2,6 +2,7 @@
 members = [
   "utils",
   "depositor",
+  "money_markets",
   "liquidity_oracle",
   "general_pool",
   "income_pools",

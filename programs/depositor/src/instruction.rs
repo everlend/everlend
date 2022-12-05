@@ -876,3 +876,87 @@ pub fn init_mining_account(
         accounts,
     )
 }
+
+/// Instructions supported by the program
+#[derive(Debug, BorshDeserialize, BorshSerialize, PartialEq)]
+pub enum MoneyMarketInstruction {
+    /// Deposit into MM
+    ///
+    /// Accounts:
+    /// [W] Collateral token mint
+    /// [W] Source liquidity token account
+    /// [W] Collateral destination token account
+    /// [S] Authority
+    /// [R] Clock
+    /// MM accounts
+    Deposit {
+        /// TODO Change enum
+        mm: u8,
+        ///
+        liquidity_amount: u64,
+    },
+    //
+    // /// Withdraw from MM
+    // ///
+    // /// Accounts:
+    // Withdraw {
+    //     /// TODO Change enum
+    //     mm: u8,
+    // },
+    //
+    // /// DepositMining from MM
+    // ///
+    // /// Accounts:
+    // DepositMining {
+    //     /// TODO Change enum
+    //     mm: u8,
+    // },
+    //
+    // /// WithdrawMining from MM
+    // ///
+    // /// Accounts:
+    // WithdrawMining {
+    //     /// TODO Change enum
+    //     mm: u8,
+    // },
+    //
+    //
+    // ///Claim tokens
+    // Claim {
+    //     /// TODO Change enum
+    //     mm: u8,
+    // },
+}
+
+/// Creates 'Deposit' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn deposit_money_market(
+    program_id: &Pubkey,
+    depositor_authority: &Pubkey,
+    liquidity_mint: &Pubkey,
+    collateral_transit: &Pubkey,
+    collateral_mint: &Pubkey,
+
+    money_market_program_id: &Pubkey,
+    money_market_accounts: Vec<AccountMeta>,
+
+    mm: u8,
+    liquidity_amount: u64,
+) -> Instruction {
+
+    let mut accounts = vec![
+        AccountMeta::new_readonly(*depositor_authority, false),
+        // Common
+        AccountMeta::new_readonly(*liquidity_mint, false),
+        AccountMeta::new(*collateral_transit, false),
+        AccountMeta::new(*collateral_mint, false),
+
+        AccountMeta::new_readonly(sysvar::clock::id(), false),
+        // Money market
+        AccountMeta::new_readonly(*money_market_program_id, false),
+    ];
+
+    accounts.extend(money_market_accounts);
+
+    Instruction::new_with_borsh(*program_id, &MoneyMarketInstruction::Deposit{mm, liquidity_amount}, accounts)
+}

@@ -1,6 +1,6 @@
 use crate::{
     state::{Depositor, Rebalancing, RebalancingOperation},
-    utils::{collateral_storage, money_market, withdraw},
+    // utils::{collateral_storage, money_market, withdraw},
     InternalMiningPDA, RebalancingPDA, TransitPDA,
 };
 use everlend_income_pools::utils::IncomePoolAccounts;
@@ -198,47 +198,47 @@ impl<'a, 'b> WithdrawContext<'a, 'b> {
             assert_account_key(self.internal_mining, &internal_mining_pubkey)?;
         }
 
-        let (money_market, is_mining) = money_market(
-            &registry_markets,
-            program_id,
-            self.money_market_program,
-            account_info_iter,
-            self.internal_mining,
-            self.collateral_mint.key,
-            self.depositor_authority.key,
-            self.depositor.key,
-            self.liquidity_mint,
-        )?;
-
-        let collateral_stor = collateral_storage(
-            &registry_markets,
-            self.collateral_mint,
-            self.depositor_authority,
-            account_info_iter,
-            true,
-            is_mining,
-        )?;
-
+        // let (money_market, is_mining) = money_market(
+        //     &registry_markets,
+        //     program_id,
+        //     self.money_market_program,
+        //     account_info_iter,
+        //     self.internal_mining,
+        //     self.collateral_mint.key,
+        //     self.depositor_authority.key,
+        //     self.depositor.key,
+        //     self.liquidity_mint,
+        // )?;
+        //
+        // let collateral_stor = collateral_storage(
+        //     &registry_markets,
+        //     self.collateral_mint,
+        //     self.depositor_authority,
+        //     account_info_iter,
+        //     true,
+        //     is_mining,
+        // )?;
+        //
         let clock = Clock::from_account_info(self.clock)?;
-
-        money_market.refresh_reserve(self.clock.clone())?;
-
-        msg!("Withdraw");
-        withdraw(
-            self.income_pool_accounts,
-            self.collateral_transit,
-            self.collateral_mint,
-            self.liquidity_transit,
-            self.liquidity_reserve_transit,
-            self.depositor_authority,
-            self.clock,
-            &money_market,
-            is_mining,
-            &collateral_stor,
-            step.collateral_amount.unwrap(),
-            step.liquidity_amount,
-            &[signers_seeds],
-        )?;
+        //
+        // money_market.refresh_reserve(self.clock.clone())?;
+        //
+        // msg!("Withdraw");
+        // withdraw(
+        //     self.income_pool_accounts,
+        //     self.collateral_transit,
+        //     self.collateral_mint,
+        //     self.liquidity_transit,
+        //     self.liquidity_reserve_transit,
+        //     self.depositor_authority,
+        //     self.clock,
+        //     &money_market,
+        //     is_mining,
+        //     &collateral_stor,
+        //     step.collateral_amount.unwrap(),
+        //     step.liquidity_amount,
+        //     &[signers_seeds],
+        // )?;
 
         rebalancing.execute_step(RebalancingOperation::Withdraw, None, clock.slot)?;
 

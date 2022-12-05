@@ -1,6 +1,6 @@
 use crate::{
     state::{Depositor, Rebalancing, RebalancingOperation},
-    utils::{collateral_storage, deposit, money_market, withdraw},
+    // utils::{collateral_storage, deposit, money_market, withdraw},
     InternalMiningPDA, RebalancingPDA, TransitPDA,
 };
 use everlend_income_pools::utils::IncomePoolAccounts;
@@ -192,26 +192,26 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
 
         let clock = Clock::from_account_info(self.clock)?;
 
-        let (money_market, is_mining) = money_market(
-            &registry_markets,
-            program_id,
-            self.money_market_program,
-            account_info_iter,
-            self.internal_mining,
-            self.collateral_mint.key,
-            self.depositor_authority.key,
-            self.depositor.key,
-            self.liquidity_mint,
-        )?;
+        // let (money_market, is_mining) = money_market(
+        //     &registry_markets,
+        //     program_id,
+        //     self.money_market_program,
+        //     account_info_iter,
+        //     self.internal_mining,
+        //     self.collateral_mint.key,
+        //     self.depositor_authority.key,
+        //     self.depositor.key,
+        //     self.liquidity_mint,
+        // )?;
 
-        let collateral_stor = collateral_storage(
-            &registry_markets,
-            self.collateral_mint,
-            self.depositor_authority,
-            account_info_iter,
-            true,
-            is_mining,
-        )?;
+        // let collateral_stor = collateral_storage(
+        //     &registry_markets,
+        //     self.collateral_mint,
+        //     self.depositor_authority,
+        //     account_info_iter,
+        //     true,
+        //     is_mining,
+        // )?;
 
         // Check two step operation
         let (withdraw_step, deposit_step) = rebalancing.next_refresh_steps()?;
@@ -233,54 +233,54 @@ impl<'a, 'b> RefreshMMIncomesContext<'a, 'b> {
             return Err(EverlendError::InvalidRebalancingOperation.into());
         }
 
-        money_market.refresh_reserve(self.clock.clone())?;
+        // money_market.refresh_reserve(self.clock.clone())?;
 
         // Skip the refresh steps if the money market has no income and the amount of liquidity is the same for withdrawal and deposit
-        if !money_market.is_income(
-            withdraw_step.collateral_amount.unwrap(),
-            withdraw_step.liquidity_amount,
-        )? && withdraw_step.liquidity_amount == deposit_step.liquidity_amount
-        {
-            msg!("Zero income amount. Skipping refresh step");
-            rebalancing.skip_refresh_steps(clock.slot)?;
-            Rebalancing::pack(rebalancing, *self.rebalancing.data.borrow_mut())?;
-
-            return Ok(());
-        }
+        // if !money_market.is_income(
+        //     withdraw_step.collateral_amount.unwrap(),
+        //     withdraw_step.liquidity_amount,
+        // )? && withdraw_step.liquidity_amount == deposit_step.liquidity_amount
+        // {
+        //     msg!("Zero income amount. Skipping refresh step");
+        //     rebalancing.skip_refresh_steps(clock.slot)?;
+        //     Rebalancing::pack(rebalancing, *self.rebalancing.data.borrow_mut())?;
+        //
+        //     return Ok(());
+        // }
         msg!("Refresh Withdraw");
-        withdraw(
-            self.income_pool_accounts,
-            self.collateral_transit,
-            self.collateral_mint,
-            self.liquidity_transit,
-            self.liquidity_reserve_transit,
-            self.depositor_authority,
-            self.clock,
-            &money_market,
-            is_mining,
-            &collateral_stor,
-            withdraw_step.collateral_amount.unwrap(),
-            withdraw_step.liquidity_amount,
-            &[signers_seeds],
-        )?;
+        // withdraw(
+        //     self.income_pool_accounts,
+        //     self.collateral_transit,
+        //     self.collateral_mint,
+        //     self.liquidity_transit,
+        //     self.liquidity_reserve_transit,
+        //     self.depositor_authority,
+        //     self.clock,
+        //     &money_market,
+        //     is_mining,
+        //     &collateral_stor,
+        //     withdraw_step.collateral_amount.unwrap(),
+        //     withdraw_step.liquidity_amount,
+        //     &[signers_seeds],
+        // )?;
 
         rebalancing.execute_step(RebalancingOperation::RefreshWithdraw, None, clock.slot)?;
 
-        money_market.refresh_reserve(self.clock.clone())?;
+        // money_market.refresh_reserve(self.clock.clone())?;
         msg!("Refresh Deposit");
-        let collateral_amount = deposit(
-            self.collateral_transit,
-            self.collateral_mint,
-            self.liquidity_transit,
-            self.depositor_authority,
-            self.clock,
-            &money_market,
-            is_mining,
-            collateral_stor,
-            deposit_step.liquidity_amount,
-            &[signers_seeds],
-        )?;
-
+        // let collateral_amount = deposit(
+        //     self.collateral_transit,
+        //     self.collateral_mint,
+        //     self.liquidity_transit,
+        //     self.depositor_authority,
+        //     self.clock,
+        //     &money_market,
+        //     is_mining,
+        //     collateral_stor,
+        //     deposit_step.liquidity_amount,
+        //     &[signers_seeds],
+        // )?;
+let collateral_amount = 0;
         rebalancing.execute_step(
             RebalancingOperation::RefreshDeposit,
             Some(collateral_amount),
