@@ -1,9 +1,9 @@
-use crate::claimer::{
-    FranciumClaimer, LarixClaimer, PortFinanceClaimer, QuarryClaimer, RewardClaimer,
-};
+// use crate::claimer::{
+//     // FranciumClaimer, LarixClaimer, PortFinanceClaimer, QuarryClaimer, RewardClaimer,
+// };
 use crate::{
     state::{Depositor, InternalMining, MiningType},
-    utils::{parse_fill_reward_accounts, FillRewardAccounts},
+    // utils::{parse_fill_reward_accounts, FillRewardAccounts},
     InternalMiningPDA,
 };
 use everlend_rewards::{cpi::fill_vault, state::RewardPool};
@@ -94,140 +94,140 @@ impl<'a, 'b> ClaimMiningRewardContext<'a, 'b> {
             assert_account_key(self.liquidity_mint, &reward_pool.liquidity_mint)?;
         }
 
-        let reward_accounts = parse_fill_reward_accounts(
-            self.reward_pool.key,
-            self.rewards_program_id.key,
-            account_info_iter,
-        )?;
-
-        let mut fill_sub_rewards_accounts: Option<FillRewardAccounts> = None;
-
-        let signers_seeds = {
-            // Create depositor authority account
-            let (depositor_authority_pubkey, bump_seed) =
-                find_program_address(program_id, self.depositor.key);
-            assert_account_key(self.depositor_authority, &depositor_authority_pubkey)?;
-            &[&self.depositor.key.to_bytes()[..32], &[bump_seed]]
-        };
-
-        // Parse and check additional reward token account
-        if with_subrewards {
-            let sub_reward_accounts = parse_fill_reward_accounts(
-                self.reward_pool.key,
-                self.rewards_program_id.key,
-                account_info_iter,
-            )?;
-
-            fill_sub_rewards_accounts = Some(sub_reward_accounts);
-        };
-
-        let claimer: Box<dyn RewardClaimer<'b> + 'a> = {
-            match internal_mining_type {
-                MiningType::Larix { .. } => {
-                    reward_accounts
-                        .check_transit_reward_destination(program_id, self.depositor.key)?;
-
-                    //Larix has manual distribution of subreward so we dont need this check
-                    // fill_sub_rewards_accounts.check_transit_reward_destination()?;
-
-                    let larix = LarixClaimer::init(
-                        self.staking_program_id.key,
-                        internal_mining_type,
-                        with_subrewards,
-                        fill_sub_rewards_accounts.clone(),
-                        account_info_iter,
-                    )?;
-
-                    Box::new(larix)
-                }
-                MiningType::PortFinance { .. } => {
-                    reward_accounts
-                        .check_transit_reward_destination(program_id, self.depositor.key)?;
-
-                    if with_subrewards {
-                        fill_sub_rewards_accounts
-                            .as_ref()
-                            .unwrap()
-                            .check_transit_reward_destination(program_id, self.depositor.key)?;
-                    };
-
-                    let port_finance = PortFinanceClaimer::init(
-                        self.staking_program_id.key,
-                        internal_mining_type,
-                        with_subrewards,
-                        fill_sub_rewards_accounts.clone(),
-                        account_info_iter,
-                    )?;
-
-                    Box::new(port_finance)
-                }
-                MiningType::Quarry { .. } => {
-                    reward_accounts
-                        .check_transit_reward_destination(program_id, self.depositor.key)?;
-
-                    // Quarry doesn't have subreward tokens
-                    if with_subrewards {
-                        return Err(ProgramError::InvalidArgument);
-                    }
-
-                    let quarry = QuarryClaimer::init(
-                        program_id,
-                        self.depositor.key,
-                        self.depositor_authority.key,
-                        self.collateral_mint.key,
-                        self.staking_program_id.key,
-                        internal_mining_type,
-                        account_info_iter,
-                    )?;
-
-                    Box::new(quarry)
-                }
-                MiningType::Francium { .. } => {
-                    let francium = FranciumClaimer::init(
-                        program_id,
-                        self.staking_program_id.key,
-                        self.depositor_authority.key,
-                        internal_mining_type,
-                        reward_accounts.clone(),
-                        fill_sub_rewards_accounts.clone(),
-                        account_info_iter,
-                    )?;
-
-                    Box::new(francium)
-                }
-                _ => return Err(EverlendError::MiningNotInitialized.into()),
-            }
-        };
-
-        claimer.claim_reward(
-            self.staking_program_id.key,
-            reward_accounts.reward_transit_info.clone(),
-            self.depositor_authority.clone(),
-            &[signers_seeds.as_ref()],
-        )?;
-
-        let mut fill_itr = vec![reward_accounts];
-
-        if let Some(accounts) = fill_sub_rewards_accounts {
-            fill_itr.push(accounts);
-        }
-
-        fill_itr.iter().try_for_each(|reward_accounts| {
-            let reward_transit_account =
-                Account::unpack(&reward_accounts.reward_transit_info.data.borrow())?;
-
-            fill_vault(
-                self.rewards_program_id.key,
-                self.reward_pool.clone(),
-                reward_accounts.reward_mint_info.clone(),
-                reward_accounts.fee_account_info.clone(),
-                reward_accounts.vault_info.clone(),
-                reward_accounts.reward_transit_info.clone(),
-                self.depositor_authority.clone(),
-                reward_transit_account.amount,
-                &[signers_seeds.as_ref()],
-            )
-        })?;
+        // let reward_accounts = parse_fill_reward_accounts(
+        //     self.reward_pool.key,
+        //     self.rewards_program_id.key,
+        //     account_info_iter,
+        // )?;
+        //
+        // let mut fill_sub_rewards_accounts: Option<FillRewardAccounts> = None;
+        //
+        // let signers_seeds = {
+        //     // Create depositor authority account
+        //     let (depositor_authority_pubkey, bump_seed) =
+        //         find_program_address(program_id, self.depositor.key);
+        //     assert_account_key(self.depositor_authority, &depositor_authority_pubkey)?;
+        //     &[&self.depositor.key.to_bytes()[..32], &[bump_seed]]
+        // };
+        //
+        // // Parse and check additional reward token account
+        // if with_subrewards {
+        //     let sub_reward_accounts = parse_fill_reward_accounts(
+        //         self.reward_pool.key,
+        //         self.rewards_program_id.key,
+        //         account_info_iter,
+        //     )?;
+        //
+        //     fill_sub_rewards_accounts = Some(sub_reward_accounts);
+        // };
+        //
+        // let claimer: Box<dyn RewardClaimer<'b> + 'a> = {
+        //     match internal_mining_type {
+        //         MiningType::Larix { .. } => {
+        //             reward_accounts
+        //                 .check_transit_reward_destination(program_id, self.depositor.key)?;
+        //
+        //             //Larix has manual distribution of subreward so we dont need this check
+        //             // fill_sub_rewards_accounts.check_transit_reward_destination()?;
+        //
+        //             let larix = LarixClaimer::init(
+        //                 self.staking_program_id.key,
+        //                 internal_mining_type,
+        //                 with_subrewards,
+        //                 fill_sub_rewards_accounts.clone(),
+        //                 account_info_iter,
+        //             )?;
+        //
+        //             Box::new(larix)
+        //         }
+        //         MiningType::PortFinance { .. } => {
+        //             reward_accounts
+        //                 .check_transit_reward_destination(program_id, self.depositor.key)?;
+        //
+        //             if with_subrewards {
+        //                 fill_sub_rewards_accounts
+        //                     .as_ref()
+        //                     .unwrap()
+        //                     .check_transit_reward_destination(program_id, self.depositor.key)?;
+        //             };
+        //
+        //             let port_finance = PortFinanceClaimer::init(
+        //                 self.staking_program_id.key,
+        //                 internal_mining_type,
+        //                 with_subrewards,
+        //                 fill_sub_rewards_accounts.clone(),
+        //                 account_info_iter,
+        //             )?;
+        //
+        //             Box::new(port_finance)
+        //         }
+        //         MiningType::Quarry { .. } => {
+        //             reward_accounts
+        //                 .check_transit_reward_destination(program_id, self.depositor.key)?;
+        //
+        //             // Quarry doesn't have subreward tokens
+        //             if with_subrewards {
+        //                 return Err(ProgramError::InvalidArgument);
+        //             }
+        //
+        //             let quarry = QuarryClaimer::init(
+        //                 program_id,
+        //                 self.depositor.key,
+        //                 self.depositor_authority.key,
+        //                 self.collateral_mint.key,
+        //                 self.staking_program_id.key,
+        //                 internal_mining_type,
+        //                 account_info_iter,
+        //             )?;
+        //
+        //             Box::new(quarry)
+        //         }
+        //         MiningType::Francium { .. } => {
+        //             let francium = FranciumClaimer::init(
+        //                 program_id,
+        //                 self.staking_program_id.key,
+        //                 self.depositor_authority.key,
+        //                 internal_mining_type,
+        //                 reward_accounts.clone(),
+        //                 fill_sub_rewards_accounts.clone(),
+        //                 account_info_iter,
+        //             )?;
+        //
+        //             Box::new(francium)
+        //         }
+        //         _ => return Err(EverlendError::MiningNotInitialized.into()),
+        //     }
+        // };
+        //
+        // claimer.claim_reward(
+        //     self.staking_program_id.key,
+        //     reward_accounts.reward_transit_info.clone(),
+        //     self.depositor_authority.clone(),
+        //     &[signers_seeds.as_ref()],
+        // )?;
+        //
+        // let mut fill_itr = vec![reward_accounts];
+        //
+        // if let Some(accounts) = fill_sub_rewards_accounts {
+        //     fill_itr.push(accounts);
+        // }
+        //
+        // fill_itr.iter().try_for_each(|reward_accounts| {
+        //     let reward_transit_account =
+        //         Account::unpack(&reward_accounts.reward_transit_info.data.borrow())?;
+        //
+        //     fill_vault(
+        //         self.rewards_program_id.key,
+        //         self.reward_pool.clone(),
+        //         reward_accounts.reward_mint_info.clone(),
+        //         reward_accounts.fee_account_info.clone(),
+        //         reward_accounts.vault_info.clone(),
+        //         reward_accounts.reward_transit_info.clone(),
+        //         self.depositor_authority.clone(),
+        //         reward_transit_account.amount,
+        //         &[signers_seeds.as_ref()],
+        //     )
+        // })?;
 
         Ok(())
     }

@@ -1,8 +1,4 @@
-use crate::{
-    state::{Depositor, Rebalancing, RebalancingOperation},
-    utils::{collateral_storage, deposit, money_market},
-    InternalMiningPDA, RebalancingPDA, TransitPDA,
-};
+use crate::{state::{Depositor, Rebalancing, RebalancingOperation}, InternalMiningPDA, RebalancingPDA, TransitPDA, cpi};
 use everlend_registry::state::RegistryMarkets;
 use everlend_utils::{assert_account_key, find_program_address, AccountLoader, EverlendError, PDA};
 use solana_program::{
@@ -29,6 +25,8 @@ pub struct DepositContext<'a, 'b> {
     internal_mining: &'a AccountInfo<'b>,
 
     money_market_program: &'a AccountInfo<'b>,
+
+    everlend_money_market_proxy: &'a AccountInfo<'b>,
 }
 
 impl<'a, 'b> DepositContext<'a, 'b> {
@@ -56,6 +54,7 @@ impl<'a, 'b> DepositContext<'a, 'b> {
 
         let _token_program = AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
 
+        let everlend_money_market_proxy= AccountLoader::next_unchecked(account_info_iter)?;
         let money_market_program = AccountLoader::next_unchecked(account_info_iter)?;
         let internal_mining = AccountLoader::next_optional(account_info_iter, program_id)?;
 
@@ -72,6 +71,7 @@ impl<'a, 'b> DepositContext<'a, 'b> {
             executor,
             money_market_program,
             clock,
+            everlend_money_market_proxy,
         })
     }
 
@@ -148,27 +148,27 @@ impl<'a, 'b> DepositContext<'a, 'b> {
 
         let registry_markets = RegistryMarkets::unpack_from_slice(&self.registry.data.borrow())?;
 
-        // let money_market =
-        let (money_market, is_mining) = money_market(
-            &registry_markets,
-            program_id,
-            self.money_market_program,
-            account_info_iter,
-            self.internal_mining,
-            self.collateral_mint.key,
-            self.depositor_authority.key,
-            self.depositor.key,
-            self.liquidity_mint,
-        )?;
-
-        let collateral_stor = collateral_storage(
-            &registry_markets,
-            self.collateral_mint,
-            self.depositor_authority,
-            account_info_iter,
-            false,
-            is_mining,
-        )?;
+        // // let money_market =
+        // let (money_market, is_mining) = money_market(
+        //     &registry_markets,
+        //     program_id,
+        //     self.money_market_program,
+        //     account_info_iter,
+        //     self.internal_mining,
+        //     self.collateral_mint.key,
+        //     self.depositor_authority.key,
+        //     self.depositor.key,
+        //     self.liquidity_mint,
+        // )?;
+        //
+        // let collateral_stor = collateral_storage(
+        //     &registry_markets,
+        //     self.collateral_mint,
+        //     self.depositor_authority,
+        //     account_info_iter,
+        //     false,
+        //     is_mining,
+        // )?;
 
         {
             let step = rebalancing.next_step();
@@ -182,23 +182,44 @@ impl<'a, 'b> DepositContext<'a, 'b> {
             {
                 return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
             }
-            money_market.refresh_reserve(self.clock.clone())?;
+            // money_market.refresh_reserve(self.clock.clone())?;
             msg!("Deposit");
-            let collateral_amount = deposit(
-                self.collateral_transit,
-                self.collateral_mint,
-                self.liquidity_transit,
-                self.depositor_authority,
-                self.clock,
-                &money_market,
-                is_mining,
-                collateral_stor,
+
+            let mut mm_accounts : Vec<AccountInfo> = vec![];
+            while AccountLoader::has_more(account_info_iter) {
+                mm_accounts.push( AccountLoader::next_unchecked(account_info_iter)?.clone());
+            };
+
+            cpi::deposit_money_market(
+                // TODO program if of proxy contract
+                &Pubkey::default(),
+                self.liquidity_mint.clone(),
+                self.collateral_transit.clone(),
+                self.collateral_mint.clone(),
+                self.depositor_authority.clone(),
+                self.money_market_program.clone(),
+                mm_accounts,
+                0,
                 step.liquidity_amount,
-                &[signers_seeds],
+                &[signers_seeds.as_slice()],
+                // signers_seeds,
             )?;
+            // let collateral_amount = deposit(
+            //     self.collateral_transit,
+            //     self.collateral_mint,
+            //     self.liquidity_transit,
+            //     self.depositor_authority,
+            //     self.clock,
+            //     &money_market,
+            //     is_mining,
+            //     collateral_stor,
+            //     step.liquidity_amount,
+            //     &[signers_seeds],
+            // )?;
 
             let clock = Clock::from_account_info(self.clock)?;
 
+            let collateral_amount = 0;
             rebalancing.execute_step(
                 RebalancingOperation::Deposit,
                 Some(collateral_amount),

@@ -1,5 +1,5 @@
 use super::{CollateralStorage, MoneyMarket};
-use crate::state::MiningType;
+use everlend_depositor::state::MiningType;
 use everlend_utils::{cpi::larix, AccountLoader, EverlendError};
 use solana_program::{
     account_info::AccountInfo, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,

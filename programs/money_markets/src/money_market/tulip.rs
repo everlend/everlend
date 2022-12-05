@@ -1,4 +1,4 @@
-use crate::money_market::MoneyMarket;
+use super::MoneyMarket;
 use everlend_utils::{cpi::tulip, AccountLoader, EverlendError};
 use solana_program::{
     account_info::AccountInfo, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,

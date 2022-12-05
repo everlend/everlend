@@ -1,5 +1,5 @@
-use crate::find_transit_sol_unwrap_address;
-use crate::money_market::MoneyMarket;
+use everlend_depositor::find_transit_sol_unwrap_address;
+use super::MoneyMarket;
 use everlend_utils::cpi;
 use everlend_utils::cpi::frakt::{find_deposit_address, find_owner_address};
 use everlend_utils::{AccountLoader, EverlendError};
