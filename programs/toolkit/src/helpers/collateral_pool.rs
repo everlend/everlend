@@ -183,7 +183,7 @@ pub fn bulk_migrate_pool_withdraw_authority(
                     &authority.pool,
                     &authority.withdraw_authority,
                     &config.fee_payer.pubkey(),
-            );
+                );
 
             let accounts = vec![
                 AccountMeta::new_readonly(*market_pubkey, false),
@@ -193,14 +193,15 @@ pub fn bulk_migrate_pool_withdraw_authority(
                 AccountMeta::new_readonly(system_program::id(), false),
             ];
 
-            let migrate =  Instruction::new_with_borsh(
+            let migrate = Instruction::new_with_borsh(
                 everlend_collateral_pool::id(),
                 &CollateralPoolsInstruction::MigratePoolWithdrawAuthority,
                 accounts,
             );
 
             vec![create_new_instr, migrate]
-        }).collect();
+        })
+        .collect();
 
     let tx = Transaction::new_with_payer(&instructions.concat(), Some(&config.fee_payer.pubkey()));
 

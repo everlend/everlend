@@ -1,6 +1,6 @@
 use super::{
     CreateDepositorCommand, CreateDepositorTransitAccountCommand, DumpAccountsCommand,
-    GetRebalancingAccountCommand, ResetRebalancingCommand, InitMiningCommand,
+    GetRebalancingAccountCommand, InitMiningCommand, ResetRebalancingCommand,
 };
 use crate::{print_commands, utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};

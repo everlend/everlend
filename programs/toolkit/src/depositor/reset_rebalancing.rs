@@ -26,7 +26,8 @@ impl<'a> ToolkitCommand<'a> for ResetRebalancingCommand {
         vec![
             arg_pubkey(ARG_TOKEN_MINT, true).help("Token mint pubkey"),
             arg_amount(ARG_AMOUNT, true).help("Amount to distribute"),
-            arg_multiple(ARG_DISTRIBUTED_LIQUIDITY, true).help("Distributed liduidity")
+            arg_multiple(ARG_DISTRIBUTED_LIQUIDITY, true)
+                .help("Distributed liduidity")
                 .number_of_values(10),
             arg_multiple(ARG_DISTRIBUTION, true)
                 .value_name("DISTRIBUTION")

@@ -25,8 +25,8 @@ use crate::general_pool::{CancelWithdrawRequestCommand, GeneralPoolCommand};
 use crate::income_pools::IncomePoolCommand;
 use crate::liquidity_oracle::LiquidityOracleCommand;
 use crate::multisig::MultisigCommand;
-use crate::root::TestCommand;
 use crate::root::AnchorEncodeCommand;
+use crate::root::TestCommand;
 
 mod accounts;
 mod accounts_config;

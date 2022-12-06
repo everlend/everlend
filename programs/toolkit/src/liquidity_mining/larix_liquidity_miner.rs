@@ -59,7 +59,7 @@ impl LiquidityMiner for LarixLiquidityMiner {
         token: &String,
         mining_account: &Keypair,
         sub_reward_token_mint: Option<Pubkey>,
-        _reward_token_mint : Option<Pubkey>,
+        _reward_token_mint: Option<Pubkey>,
     ) -> Result<()> {
         let default_accounts = config.get_default_accounts();
         let initialized_accounts = config.get_initialized_accounts();

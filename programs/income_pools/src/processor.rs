@@ -342,6 +342,63 @@ impl Processor {
         Ok(())
     }
 
+    /// Process UpdateManager instruction
+    pub fn flush_reward(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+        let account_info_iter = &mut accounts.iter();
+
+        let income_pool_market_info = next_account_info(account_info_iter)?;
+        let pool_market_authority_info = next_account_info(account_info_iter)?;
+        let token_mint_info = next_account_info(account_info_iter)?;
+        let safety_fund_token_account_info = next_account_info(account_info_iter)?;
+        let reward_destination_token_account_info = next_account_info(account_info_iter)?;
+        let manager_info = next_account_info(account_info_iter)?;
+
+        assert_signer(manager_info)?;
+
+        assert_owned_by(income_pool_market_info, program_id)?;
+
+
+        let pool_market = IncomePoolMarket::unpack(&income_pool_market_info.data.borrow())?;
+        assert_account_key(manager_info, &pool_market.manager)?;
+
+        let (safety_fund_token_account_pubkey, _) = find_safety_fund_token_account_address(
+            program_id,
+            income_pool_market_info.key,
+            token_mint_info.key,
+        );
+
+        assert_account_key(
+            safety_fund_token_account_info,
+            &safety_fund_token_account_pubkey,
+        )?;
+
+        let (_, bump_seed) = find_program_address(program_id, income_pool_market_info.key);
+        let signers_seeds = &[&income_pool_market_info.key.to_bytes()[..32], &[bump_seed]];
+
+        let safety_fund_token_account =
+            Account::unpack(&safety_fund_token_account_info.data.borrow())?;
+        if !safety_fund_token_account.mint.eq(token_mint_info.key) {
+            return Err(ProgramError::InvalidArgument)
+        }
+
+        let reward_destination_token_account =
+            Account::unpack(&reward_destination_token_account_info.data.borrow())?;
+        if !reward_destination_token_account.mint.eq(token_mint_info.key) {
+            return Err(ProgramError::InvalidArgument)
+        }
+
+        // Initialize transit token account for spl token
+        cpi::spl_token::transfer(
+            safety_fund_token_account_info.clone(),
+            reward_destination_token_account_info.clone(),
+            pool_market_authority_info.clone(),
+            safety_fund_token_account.amount,
+            &[signers_seeds],
+        )?;
+
+        Ok(())
+    }
+
     /// Instruction processing router
     pub fn process_instruction(
         program_id: &Pubkey,
@@ -379,6 +436,11 @@ impl Processor {
             IncomePoolsInstruction::UpdateManager => {
                 msg!("IncomePoolsInstruction: UpdateManager");
                 Self::update_manager(program_id, accounts)
+            }
+
+            IncomePoolsInstruction::FlushReward => {
+                msg!("IncomePoolsInstruction: FlushReward");
+                Self::flush_reward(program_id, accounts)
             }
         }
     }

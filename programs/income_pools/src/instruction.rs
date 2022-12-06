@@ -85,6 +85,16 @@ pub enum IncomePoolsInstruction {
     /// [RS] New manager
     ///
     UpdateManager,
+
+    /// Flush rewards from safety pool token account
+    ///
+    /// Accounts:
+    /// [R] Income pool market
+    /// [R] Token mint
+    /// [W] Safety fund token account
+    /// [W] Reward destination token account
+    /// [S] Manager
+    FlushReward,
 }
 
 /// Creates 'InitPoolMarket' instruction.
@@ -242,6 +252,36 @@ pub fn update_manager(
     Instruction::new_with_borsh(
         *program_id,
         &IncomePoolsInstruction::UpdateManager,
+        accounts,
+    )
+}
+
+
+/// Creates 'FlushReward' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn flush_reward(
+    program_id: &Pubkey,
+    pool_market: &Pubkey,
+    token_mint: &Pubkey,
+    reward_destination_token_account: &Pubkey,
+    manager: &Pubkey,
+) -> Instruction {
+    let (pool_market_authority, _) = find_program_address(program_id, pool_market);
+    let (safety_fund_token_account, _) =
+        find_safety_fund_token_account_address(program_id, pool_market, token_mint);
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*pool_market, false),
+        AccountMeta::new_readonly(pool_market_authority, false),
+        AccountMeta::new_readonly(*token_mint, false),
+        AccountMeta::new(safety_fund_token_account, false),
+        AccountMeta::new(*reward_destination_token_account, false),
+        AccountMeta::new(*manager, true),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &IncomePoolsInstruction::FlushReward,
         accounts,
     )
 }
