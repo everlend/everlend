@@ -1,8 +1,7 @@
 use crate::helpers::{migrate_depositor, migrate_rebalancing};
+use crate::utils::arg_multiple;
 use crate::{utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
-use crate::utils::arg_multiple;
-use crate::utils::get_asset_maps;
 pub struct MigrateDepositorCommand;
 
 const ARG_MINTS: &str = "mints";
@@ -17,9 +16,7 @@ impl<'a> ToolkitCommand<'a> for MigrateDepositorCommand {
     }
 
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
-        vec![
-            arg_multiple(ARG_MINTS, true).short("m"),
-        ]
+        vec![arg_multiple(ARG_MINTS, true).short("m")]
     }
 
     fn get_subcommands(&self) -> Vec<Box<dyn ToolkitCommand<'a>>> {
@@ -34,7 +31,7 @@ impl<'a> ToolkitCommand<'a> for MigrateDepositorCommand {
         let initialized_accounts = config.get_initialized_accounts();
 
         for key in required_mints {
-           let token_accounts =  initialized_accounts.token_accounts.get(key).unwrap();
+            let token_accounts = initialized_accounts.token_accounts.get(key).unwrap();
 
             migrate_depositor(
                 config,
@@ -45,7 +42,6 @@ impl<'a> ToolkitCommand<'a> for MigrateDepositorCommand {
                 &token_accounts.general_pool_token_account,
             )?;
         }
-
 
         println!("Migration of Rebalancing accounts finished",);
 

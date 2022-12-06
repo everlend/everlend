@@ -1,6 +1,4 @@
-use super::{
-    CancelWithdrawRequestCommand, InitPoolMarketCommand, SetPoolConfigCommand,
-};
+use super::{CancelWithdrawRequestCommand, InitPoolMarketCommand, SetPoolConfigCommand};
 use crate::{print_commands, utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 

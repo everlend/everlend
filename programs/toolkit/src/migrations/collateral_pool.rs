@@ -39,7 +39,7 @@ impl<'a> ToolkitCommand<'a> for MigrateCollateralPoolCommand {
         for (_, mm_collateral_mint) in collateral_mint_map.iter() {
             for (money_market_index, collateral_mint) in mm_collateral_mint.iter().enumerate() {
                 if collateral_mint.is_none() {
-                    continue
+                    continue;
                 }
                 let collateral_mint = collateral_mint.unwrap();
                 let collateral_pool_market_pubkey =

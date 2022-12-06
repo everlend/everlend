@@ -1,4 +1,4 @@
-use super::{CreateSafetyFundTokenAccountCommand, InitPoolMarketCommand};
+use super::{CreateSafetyFundTokenAccountCommand, FlushRewardCommand, InitPoolMarketCommand};
 use crate::{print_commands, utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
 
@@ -22,6 +22,7 @@ impl<'a> ToolkitCommand<'a> for IncomePoolCommand {
         vec![
             Box::new(CreateSafetyFundTokenAccountCommand),
             Box::new(InitPoolMarketCommand),
+            Box::new(FlushRewardCommand),
         ]
     }
 

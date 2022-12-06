@@ -44,7 +44,7 @@ impl LiquidityMiner for QuarryLiquidityMiner {
         token: &String,
         _mining_account: &Keypair,
         _sub_reward_token_mint: Option<Pubkey>,
-        _reward_token_mint : Option<Pubkey>,
+        _reward_token_mint: Option<Pubkey>,
     ) -> Result<()> {
         println!("Create and Init quarry mining accont");
         let default_accounts = config.get_default_accounts();

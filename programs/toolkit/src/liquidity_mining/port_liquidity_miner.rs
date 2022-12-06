@@ -88,7 +88,7 @@ impl LiquidityMiner for PortLiquidityMiner {
         token: &String,
         mining_account: &Keypair,
         sub_reward_token_mint: Option<Pubkey>,
-        _reward_token_mint : Option<Pubkey>,
+        _reward_token_mint: Option<Pubkey>,
     ) -> Result<()> {
         let initialized_accounts = config.get_initialized_accounts();
         let token_accounts = initialized_accounts.token_accounts.get(token).unwrap();

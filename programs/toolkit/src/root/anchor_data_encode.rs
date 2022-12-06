@@ -1,14 +1,13 @@
-use crate::utils::{ arg };
+use crate::utils::arg;
 use crate::{utils::Config, ToolkitCommand};
 use clap::{Arg, ArgMatches};
-use solana_clap_utils::input_parsers::{ value_of };
 use sha2::{Digest, Sha256};
+use solana_clap_utils::input_parsers::value_of;
 
 const SIGHASH_STATE_NAMESPACE: &str = "state";
 const SIGHASH_GLOBAL_NAMESPACE: &str = "global";
 const ARG_IX_NAME: &str = "name";
-const ARG_IS_GLOBAL_NAMESPACE: &str  = "is_global";
-
+const ARG_IS_GLOBAL_NAMESPACE: &str = "is_global";
 
 #[derive(Clone, Copy)]
 pub struct AnchorEncodeCommand;
@@ -25,8 +24,7 @@ impl<'a> ToolkitCommand<'a> for AnchorEncodeCommand {
     fn get_args(&self) -> Vec<Arg<'a, 'a>> {
         vec![
             arg(ARG_IX_NAME, true),
-            arg(ARG_IS_GLOBAL_NAMESPACE, true)
-                .help("Function name"),
+            arg(ARG_IS_GLOBAL_NAMESPACE, true).help("Function name"),
         ]
     }
 
