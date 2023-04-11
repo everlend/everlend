@@ -61,6 +61,7 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
             liquidity_oracle,
             depositor,
             quarry_mining: _,
+            quarry_merge_mining: _,
             rebalance_executor: _,
             rewards_root: _,
         } = initialized_accounts;

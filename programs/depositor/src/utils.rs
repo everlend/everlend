@@ -206,7 +206,7 @@ pub fn money_market<'a, 'b>(
     money_market_program: &AccountInfo<'b>,
     money_market_account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
     internal_mining: &AccountInfo<'b>,
-    collateral_token_mint: &Pubkey,
+    collateral_token_mint: &'a AccountInfo<'b>,
     depositor_authority: &Pubkey,
     depositor: &Pubkey,
     liquidity_mint: &'a AccountInfo<'b>,

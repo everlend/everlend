@@ -155,7 +155,7 @@ impl<'a, 'b> DepositContext<'a, 'b> {
             self.money_market_program,
             account_info_iter,
             self.internal_mining,
-            self.collateral_mint.key,
+            self.collateral_mint,
             self.depositor_authority.key,
             self.depositor.key,
             self.liquidity_mint,

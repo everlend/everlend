@@ -255,6 +255,7 @@ impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
             token_accounts,
             liquidity_oracle: liquidity_oracle_pubkey,
             depositor: depositor_pubkey,
+            quarry_merge_mining: BTreeMap::new(),
             quarry_mining: BTreeMap::new(),
             rebalance_executor,
             rewards_root,

@@ -66,6 +66,43 @@ pub struct QuarryAccounts {
 
 #[serde_as]
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
+pub struct QuarryMergeAccounts {
+    #[serde_as(as = "DisplayFromStr")]
+    pub merge_mine_program_id: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub merge_miner: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub pool: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub rewarder_primary: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub rewarder_replica: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub quarry_primary: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub quarry_replica: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub primary_mint: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub replica_mint: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub mint_wrapper_primary: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub mint_wrapper_replica: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub mint_wrapper_program: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub minter_primary: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub minter_replica: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub rewards_token_mint_primary: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub rewards_token_mint_replica: Pubkey,
+}
+
+#[serde_as]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
 pub struct SolendAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub program_id: Pubkey,
@@ -173,6 +210,8 @@ pub struct DefaultAccounts {
 
     pub quarry: QuarryAccounts,
 
+    pub quarry_merge: QuarryMergeAccounts,
+
     pub solend: SolendAccounts,
 
     pub tulip: TulipAccounts,
@@ -260,6 +299,30 @@ impl QuarryMining {
 }
 
 #[serde_as]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
+pub struct QuarryMergeMining {
+    #[serde_as(as = "DisplayFromStr")]
+    pub pool: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub miner_vault_primary: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub miner_vault_replica: Pubkey,
+    #[serde_as(as = "DisplayFromStr")]
+    pub merge_miner: Pubkey,
+}
+
+impl QuarryMergeMining {
+    pub fn default() -> QuarryMergeMining {
+        QuarryMergeMining {
+            pool: Pubkey::default(),
+            miner_vault_primary: Pubkey::default(),
+            miner_vault_replica: Pubkey::default(),
+            merge_miner: Pubkey::default(),
+        }
+    }
+}
+
+#[serde_as]
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
 pub struct InitializedAccounts {
     #[serde_as(as = "DisplayFromStr")]
@@ -286,6 +349,8 @@ pub struct InitializedAccounts {
     pub depositor: Pubkey,
 
     pub quarry_mining: BTreeMap<String, QuarryMining>,
+
+    pub quarry_merge_mining: BTreeMap<String, QuarryMergeMining>,
     #[serde_as(as = "DisplayFromStr")]
     pub rebalance_executor: Pubkey,
 

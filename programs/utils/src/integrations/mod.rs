@@ -36,6 +36,7 @@ pub enum StakingMoneyMarket {
     Larix,
     Solend,
     Quarry,
+    QuarryMerge,
     Francium,
 }
 

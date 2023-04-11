@@ -1,5 +1,6 @@
 use super::quarry::Quarry;
 use super::{CollateralStorage, MoneyMarket};
+use crate::money_market::QuarryMerge;
 use crate::state::MiningType;
 use everlend_utils::{assert_account_key, cpi::port_finance, AccountLoader, EverlendError};
 use solana_program::{
@@ -19,6 +20,7 @@ pub struct PortFinance<'a, 'b> {
 
     mining: Option<PortFinanceMining<'a, 'b>>,
     quarry_mining: Option<Quarry<'a, 'b>>,
+    quarry_merge_mining: Option<QuarryMerge<'a, 'b>>,
 }
 
 ///
@@ -36,7 +38,7 @@ impl<'a, 'b> PortFinance<'a, 'b> {
         money_market_program_id: Pubkey,
         account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
         internal_mining_type: Option<MiningType>,
-        collateral_token_mint: &Pubkey,
+        collateral_token_mint: &'a AccountInfo<'b>,
         depositor_authority: &Pubkey,
     ) -> Result<PortFinance<'a, 'b>, ProgramError> {
         let reserve_info =
@@ -58,6 +60,7 @@ impl<'a, 'b> PortFinance<'a, 'b> {
 
             mining: None,
             quarry_mining: None,
+            quarry_merge_mining: None,
         };
 
         // Parse mining  accounts if presented
@@ -66,11 +69,25 @@ impl<'a, 'b> PortFinance<'a, 'b> {
                 let quarry = Quarry::init(
                     account_info_iter,
                     depositor_authority,
-                    collateral_token_mint,
+                    collateral_token_mint.key,
                     &rewarder,
                 )?;
 
                 port_finance.quarry_mining = Some(quarry)
+            }
+            Some(MiningType::QuarryMerge {
+                rewarder_primary,
+                rewarder_replica,
+            }) => {
+                let quarry_merge = QuarryMerge::init(
+                    account_info_iter,
+                    depositor_authority,
+                    collateral_token_mint,
+                    &rewarder_primary,
+                    &rewarder_replica,
+                )?;
+
+                port_finance.quarry_merge_mining = Some(quarry_merge)
             }
             Some(MiningType::PortFinance {
                 staking_program_id,
@@ -217,6 +234,15 @@ impl<'a, 'b> MoneyMarket<'b> for PortFinance<'a, 'b> {
                 collateral_amount,
                 signers_seeds,
             )?
+        } else if self.quarry_merge_mining.is_some() {
+            let quarry_merge_mining = self.quarry_merge_mining.as_ref().unwrap();
+            quarry_merge_mining.deposit_collateral_tokens(
+                collateral_transit,
+                authority,
+                clock,
+                collateral_amount,
+                signers_seeds,
+            )?
         } else {
             return Err(EverlendError::MiningNotInitialized.into());
         };
@@ -247,6 +273,15 @@ impl<'a, 'b> MoneyMarket<'b> for PortFinance<'a, 'b> {
         } else if self.quarry_mining.is_some() {
             let quarry_mining = self.quarry_mining.as_ref().unwrap();
             quarry_mining.withdraw_collateral_tokens(
+                collateral_transit.clone(),
+                authority.clone(),
+                clock.clone(),
+                collateral_amount,
+                signers_seeds,
+            )?
+        } else if self.quarry_merge_mining.is_some() {
+            let quarry_merge_mining = self.quarry_merge_mining.as_ref().unwrap();
+            quarry_merge_mining.withdraw_collateral_tokens(
                 collateral_transit.clone(),
                 authority.clone(),
                 clock.clone(),

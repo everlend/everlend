@@ -10,12 +10,13 @@ use solana_program::pubkey::Pubkey;
 use solana_program::system_instruction;
 use solana_sdk::{signature::Keypair, signer::Signer, transaction::Transaction};
 
+pub mod francium_liquidity_miner;
 pub mod larix_liquidity_miner;
 pub mod larix_raw_test;
 pub mod port_liquidity_miner;
 pub mod quarry_liquidity_miner;
+pub mod quarry_merge_liquidity_miner;
 pub mod quarry_raw_test;
-pub mod francium_liquidity_miner;
 
 pub fn execute_account_creation(
     config: &Config,
