@@ -10,12 +10,12 @@ use solana_program::pubkey::Pubkey;
 use solana_program::system_instruction;
 use solana_sdk::{signature::Keypair, signer::Signer, transaction::Transaction};
 
+pub mod francium_liquidity_miner;
 pub mod larix_liquidity_miner;
 pub mod larix_raw_test;
 pub mod port_liquidity_miner;
 pub mod quarry_liquidity_miner;
 pub mod quarry_raw_test;
-pub mod francium_liquidity_miner;
 
 pub fn execute_account_creation(
     config: &Config,
@@ -66,7 +66,7 @@ pub fn get_internal_mining_account(
     let default_accounts = config.get_default_accounts();
     let (mint_map, collateral_mint_map) = get_asset_maps(default_accounts);
     let liquidity_mint = mint_map.get(token).unwrap();
-    let collateral_mint = collateral_mint_map.get(token).unwrap()[money_market as usize].unwrap();
+    let collateral_mint = collateral_mint_map.get(token).unwrap()[money_market.num()].unwrap();
     // Generate internal mining account
     let (internal_mining_account, _) = everlend_depositor::InternalMiningPDA {
         liquidity_mint: liquidity_mint.clone(),
@@ -90,8 +90,8 @@ pub fn save_mining_accounts(
         .token_accounts
         .get_mut(token)
         .unwrap()
-        .mining_accounts[money_market as usize]
-        .internal_mining_account = internal_mining_account;
+        .mining_accounts[money_market.num()]
+    .internal_mining_account = internal_mining_account;
     initialized_accounts
         .save(config.accounts_path.as_str())
         .unwrap();

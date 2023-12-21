@@ -12,11 +12,11 @@ ray_mint: 4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R
 srm_mint: SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt
 sol_oracle: H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG
 port_finance:
-  program_id: Port7uDYB3wk6GJAw4KT1WpTeMtSu9bTcChBHkX2LfR
-  staking_program_id: stkarvwmSzv2BygN5e2LeTwimTczLWHCKPKGC2zVLiq
-  lending_market: 6T4XxKerq744sSuj3jaoV6QiZ8acirf4TrPwQzHAoSy5
-  reserve_sol: X9ByyhmtQH3Wjku9N5obPy54DbVjZV7Z99TPJZ2rwcs
-  reserve_sol_supply: BLAFX12cDmsumyB6k3L6whJZqNqySaWeCmS5rVuzy3SS
+  - program_id: Port7uDYB3wk6GJAw4KT1WpTeMtSu9bTcChBHkX2LfR
+    staking_program_id: stkarvwmSzv2BygN5e2LeTwimTczLWHCKPKGC2zVLiq
+    lending_market: 6T4XxKerq744sSuj3jaoV6QiZ8acirf4TrPwQzHAoSy5
+    reserve_sol: X9ByyhmtQH3Wjku9N5obPy54DbVjZV7Z99TPJZ2rwcs
+    reserve_sol_supply: BLAFX12cDmsumyB6k3L6whJZqNqySaWeCmS5rVuzy3SS
 port_accounts:
   SOL:
     staking_pool: 11111111111111111111111111111111
@@ -25,13 +25,13 @@ port_accounts:
   mSOL:
     staking_pool: GoNeG1rhoZMuLqy6aUNfzyHjkCe9dwFuWTFwENPfU3q8
 larix:
-  program_id: 7Zb1bGi32pfsrBkzWdqd4dFhUXwp5Nybr1zuaEwN34hy
-  lending_market: 5geyZJdffDBNoMqEbogbPvdgH9ue7NREobtW8M3C1qfe
-  reserve_sol: 2RcrbkGNcfy9mbarLCCRYdW3hxph7pSbP38x35MR2Bjt
-  reserve_sol_supply: 5eSFSTPte1Hbqcvhe8H4DSgqNGuzSLjgA7ynpCucdGqg
-  uncollateralized_ltoken_supply_sol: 11111111111111111111111111111111
-  ltoken_mint: 11111111111111111111111111111111
-  mining_supply: 11111111111111111111111111111111
+  - program_id: 7Zb1bGi32pfsrBkzWdqd4dFhUXwp5Nybr1zuaEwN34hy
+    lending_market: 5geyZJdffDBNoMqEbogbPvdgH9ue7NREobtW8M3C1qfe
+    reserve_sol: 2RcrbkGNcfy9mbarLCCRYdW3hxph7pSbP38x35MR2Bjt
+    reserve_sol_supply: 5eSFSTPte1Hbqcvhe8H4DSgqNGuzSLjgA7ynpCucdGqg
+    uncollateralized_ltoken_supply_sol: 11111111111111111111111111111111
+    ltoken_mint: 11111111111111111111111111111111
+    mining_supply: 11111111111111111111111111111111
 quarry:
   mine_program_id: QMNeHCGYnLVDn1icRAfQZpjPLBNkfGbSKRB83G5d8KB
 #  Port Finance rewarder
@@ -70,8 +70,10 @@ jet:
   vault_sol: HefDXf74p9vRaLWX4yjZiGS99hg72y2EbXiajyYsgwXB
 frakt:
   program_id: A66HabVL3DzNzeJgcHYtRRNW1ZRMKwBfrdSR4kLsZ9DJ
-  liquidity_pool: FuydvCEeh5sa4YyPzQuoJFBRJ4sF5mwT4rbeaWMi3nuN
+  main_liquidity_pool: FuydvCEeh5sa4YyPzQuoJFBRJ4sF5mwT4rbeaWMi3nuN
   pool_admin: 9aTtUqAnuSMndCpjcPosRNf3fCkrTQAV8C8GERf3tZi3
+  liquidity_pools:
+    - FuydvCEeh5sa4YyPzQuoJFBRJ4sF5mwT4rbeaWMi3nuN
 sol_collateral:
   - 8ezDtNNhX91t1NbSLe8xV2PcCEfoQjEm2qDVGjt3rjhg
   - ArWoXQYvvERzuoeGTpyyvf7pNNVEPB3x7kQg5W6zQdaB

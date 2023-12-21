@@ -1,7 +1,9 @@
 //! Program state definitions
 
 use super::AccountType;
+use crate::state::{DeprecatedRegistry, DeprecatedRegistryMarkets};
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
+use everlend_utils::integrations::MoneyMarket;
 use everlend_utils::Uninitialized;
 use solana_program::{
     clock::Slot,
@@ -14,11 +16,16 @@ use solana_program::{
 /// Total number of money market distributions
 pub const TOTAL_DISTRIBUTIONS: usize = 10;
 
+/// Money Markets
+pub type MoneyMarkets = [MoneyMarket; TOTAL_DISTRIBUTIONS];
+
 /// Distribution pubkeys
 pub type DistributionPubkeys = [Pubkey; TOTAL_DISTRIBUTIONS];
 
 const REGISTRY_LEN: usize = 1 + (32 + 32 + 32 + 32 + 8);
-const REGISTRY_MARKETS_LEN: usize = (32 * TOTAL_DISTRIBUTIONS) + (32 * TOTAL_DISTRIBUTIONS);
+const REGISTRY_MONEY_MARKET_LEN: usize = 1 + 32;
+const REGISTRY_MARKETS_LEN: usize =
+    (REGISTRY_MONEY_MARKET_LEN * TOTAL_DISTRIBUTIONS) + (32 * TOTAL_DISTRIBUTIONS);
 
 /// Registry
 #[repr(C)]
@@ -37,7 +44,7 @@ pub struct Registry {
     /// Refresh income interval
     pub refresh_income_interval: Slot,
     // Program ids for money markets
-    // pub money_market_program_ids: DistributionPubkeys,
+    // pub money_market_program_ids: MoneyMarkets,
     // Collateral pool markets
     // pub collateral_pool_markets: DistributionPubkeys,
 }
@@ -49,6 +56,18 @@ impl Registry {
             account_type: AccountType::Registry,
             manager,
             ..Default::default()
+        }
+    }
+
+    /// Migrate registry
+    pub fn migrate(deprecated_registry: &DeprecatedRegistry) -> Registry {
+        Registry {
+            account_type: deprecated_registry.account_type.clone(),
+            manager: deprecated_registry.manager,
+            general_pool_market: deprecated_registry.general_pool_market,
+            income_pool_market: deprecated_registry.income_pool_market,
+            liquidity_oracle: deprecated_registry.liquidity_oracle,
+            refresh_income_interval: deprecated_registry.refresh_income_interval,
         }
     }
 }
@@ -93,10 +112,65 @@ impl Uninitialized for Registry {
 #[repr(C)]
 #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default, PartialEq, Copy, Clone)]
 pub struct RegistryMarkets {
-    /// Money market program ids
-    pub money_markets: DistributionPubkeys,
+    /// Money markets
+    pub money_markets: MoneyMarkets,
     /// Collateral pool market program ids
     pub collateral_pool_markets: DistributionPubkeys,
+}
+
+impl RegistryMarkets {
+    /// Migrate registry markets
+    pub fn migrate(
+        deprecated_markets: &DeprecatedRegistryMarkets,
+        money_markets: MoneyMarkets,
+    ) -> RegistryMarkets {
+        RegistryMarkets {
+            money_markets,
+            collateral_pool_markets: deprecated_markets.collateral_pool_markets,
+        }
+    }
+
+    /// Unpack collateral pool from slice
+    pub fn unpack_collateral_pool_markets(src: &[u8]) -> Result<DistributionPubkeys, ProgramError> {
+        let mut src_mut = &src[REGISTRY_LEN + (REGISTRY_MONEY_MARKET_LEN * TOTAL_DISTRIBUTIONS)
+            ..REGISTRY_LEN + REGISTRY_MARKETS_LEN];
+
+        DistributionPubkeys::deserialize(&mut src_mut).map_err(|err| {
+            msg!("Failed to deserialize");
+            msg!(&err.to_string());
+            ProgramError::InvalidAccountData
+        })
+    }
+
+    ///
+    pub fn unpack_money_markets(src: &[u8]) -> Result<MoneyMarkets, ProgramError> {
+        let mut src_mut =
+            &src[REGISTRY_LEN..REGISTRY_LEN + REGISTRY_MONEY_MARKET_LEN * TOTAL_DISTRIBUTIONS];
+
+        MoneyMarkets::deserialize(&mut src_mut).map_err(|err| {
+            msg!("Failed to deserialize");
+            msg!(&err.to_string());
+            ProgramError::InvalidAccountData
+        })
+    }
+
+    ///
+    pub fn unpack_money_markets_with_index(
+        src: &[u8],
+        index: usize,
+    ) -> Result<MoneyMarket, ProgramError> {
+        if index >= TOTAL_DISTRIBUTIONS {
+            return Err(ProgramError::InvalidArgument);
+        }
+
+        let mut src_mut = &src[REGISTRY_LEN + (REGISTRY_MONEY_MARKET_LEN * index)
+            ..REGISTRY_LEN + (REGISTRY_MONEY_MARKET_LEN * (index + 1))];
+        MoneyMarket::deserialize(&mut src_mut).map_err(|err| {
+            msg!("Failed to deserialize");
+            msg!(&err.to_string());
+            ProgramError::InvalidAccountData
+        })
+    }
 }
 
 impl Sealed for RegistryMarkets {}
@@ -104,7 +178,7 @@ impl Pack for RegistryMarkets {
     const LEN: usize = REGISTRY_MARKETS_LEN;
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
-        let mut slice = Vec::with_capacity(REGISTRY_MARKETS_LEN);
+        let mut slice = Vec::with_capacity(dst.len());
         self.serialize(&mut slice).unwrap();
 
         dst[REGISTRY_LEN..REGISTRY_LEN + REGISTRY_MARKETS_LEN].copy_from_slice(&slice)

@@ -16,11 +16,14 @@ use clap::{Arg, ArgMatches};
 use everlend_liquidity_oracle::state::DistributionArray;
 use everlend_registry::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
 use everlend_registry::state::DistributionPubkeys;
+use everlend_utils::integrations::MoneyMarket;
+use everlend_utils::integrations::MoneyMarket::Frakt;
 use solana_clap_utils::input_parsers::{keypair_of, pubkey_of};
 use solana_client::client_error::ClientError;
 use solana_program::pubkey::Pubkey;
 use spl_associated_token_account::get_associated_token_address;
 use std::collections::BTreeMap;
+use std::convert::TryInto;
 
 const ARG_MINTS: &str = "mints";
 const ARG_REBALANCE_EXECUTOR: &str = "rebalance-executor";
@@ -85,14 +88,32 @@ impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
         distribution[6] = 0;
 
         println!("Registry");
-        let mut money_market_program_ids = DistributionPubkeys::default();
-        money_market_program_ids[0] = default_accounts.port_finance.program_id;
-        money_market_program_ids[1] = default_accounts.larix.program_id;
-        money_market_program_ids[2] = default_accounts.solend.program_id;
-        money_market_program_ids[3] = default_accounts.tulip.program_id;
-        money_market_program_ids[4] = default_accounts.francium.program_id;
-        money_market_program_ids[5] = default_accounts.jet.program_id;
-        money_market_program_ids[6] = default_accounts.frakt.program_id;
+        let mut money_markets = vec![];
+        money_markets[0] = MoneyMarket::PortFinance {
+            money_market_program_id: default_accounts.port_finance.program_id,
+        };
+        money_markets[1] = MoneyMarket::Larix {
+            money_market_program_id: default_accounts.larix.program_id,
+        };
+        money_markets[2] = MoneyMarket::Solend {
+            money_market_program_id: default_accounts.solend.program_id,
+            lending_market: default_accounts.solend.lending_market,
+        };
+        money_markets[3] = MoneyMarket::Tulip {
+            money_market_program_id: default_accounts.tulip.program_id,
+        };
+        money_markets[4] = MoneyMarket::Francium {
+            money_market_program_id: default_accounts.francium.program_id,
+        };
+        money_markets[5] = MoneyMarket::Jet {
+            money_market_program_id: default_accounts.jet.program_id,
+        };
+        for liquidity_pool in default_accounts.frakt.liquidity_pools {
+            money_markets.push(Frakt {
+                money_market_program_id: default_accounts.frakt.program_id,
+                liquidity_pool,
+            });
+        }
 
         let mm_collateral_pool_markets = vec![
             create_collateral_market(config, None)?,
@@ -121,7 +142,7 @@ impl<'a> ToolkitCommand<'a> for CreateAccountsCommand {
             config,
             &registry_pubkey,
             UpdateRegistryMarketsData {
-                money_markets: Some(money_market_program_ids),
+                money_markets: Some(money_markets.try_into().unwrap()),
                 collateral_pool_markets: Some(collateral_pool_markets),
             },
         )?;

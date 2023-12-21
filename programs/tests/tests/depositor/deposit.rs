@@ -7,7 +7,7 @@ use solana_sdk::signer::Signer;
 use solana_sdk::transaction::{Transaction, TransactionError};
 
 use everlend_liquidity_oracle::state::DistributionArray;
-use everlend_registry::state::DistributionPubkeys;
+use everlend_registry::state::{DistributionPubkeys, MoneyMarkets};
 use everlend_utils::{
     find_program_address,
     integrations::{self, MoneyMarketPubkeys},
@@ -176,6 +176,11 @@ async fn setup() -> (
         .await
         .unwrap();
 
+    let mut money_markets = MoneyMarkets::default();
+    money_markets[0] = integrations::MoneyMarket::PortFinance {
+        money_market_program_id: spl_token_lending::id(),
+    };
+
     let mut collateral_pool_markets = DistributionPubkeys::default();
     collateral_pool_markets[0] = mm_pool_market.keypair.pubkey();
 
@@ -196,7 +201,7 @@ async fn setup() -> (
         .update_registry_markets(
             &mut env.context,
             UpdateRegistryMarketsData {
-                money_markets: None,
+                money_markets: Some(money_markets),
                 collateral_pool_markets: Some(collateral_pool_markets),
             },
         )
@@ -876,6 +881,18 @@ async fn fail_with_invalid_money_market_program_id() {
 
     let deposit_collateral_storage_accounts = mm_pool.deposit_accounts(&mm_pool_market);
 
+    // Update registry markets data to set empty money markets
+    registry
+        .update_registry_markets(
+            &mut context,
+            UpdateRegistryMarketsData {
+                money_markets: Some(Default::default()),
+                collateral_pool_markets: None,
+            },
+        )
+        .await
+        .unwrap();
+
     let tx = Transaction::new_signed_with_payer(
         &[everlend_depositor::instruction::deposit(
             &everlend_depositor::id(),
@@ -902,7 +919,7 @@ async fn fail_with_invalid_money_market_program_id() {
             .unwrap(),
         TransactionError::InstructionError(
             0,
-            InstructionError::Custom(EverlendError::IncorrectInstructionProgramId as u32),
+            InstructionError::Custom(EverlendError::InvalidRebalancingMoneyMarket as u32),
         )
     );
 }

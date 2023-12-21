@@ -2,7 +2,7 @@ use super::CollateralStorage;
 use everlend_collateral_pool::{
     cpi, find_pool_withdraw_authority_program_address, utils::CollateralPoolAccounts,
 };
-use everlend_registry::state::RegistryMarkets;
+use everlend_registry::state::DistributionPubkeys;
 use everlend_utils::{assert_account_key, AccountLoader};
 use solana_program::{
     account_info::AccountInfo, msg, program_error::ProgramError, program_pack::Pack,
@@ -22,7 +22,7 @@ pub struct CollateralPool<'a, 'b> {
 impl<'a, 'b> CollateralPool<'a, 'b> {
     ///
     pub fn init(
-        registry_markets: &RegistryMarkets,
+        collateral_pool_markets: DistributionPubkeys,
         collateral_mint: &AccountInfo<'b>,
         authority: &AccountInfo<'b>,
         account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
@@ -39,10 +39,7 @@ impl<'a, 'b> CollateralPool<'a, 'b> {
             AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
 
         // Check collateral pool market
-        if !registry_markets
-            .collateral_pool_markets
-            .contains(collateral_pool_market_info.key)
-        {
+        if !collateral_pool_markets.contains(collateral_pool_market_info.key) {
             return Err(ProgramError::InvalidArgument);
         }
 

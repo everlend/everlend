@@ -131,9 +131,10 @@ pub struct FraktAccounts {
     #[serde_as(as = "DisplayFromStr")]
     pub program_id: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
-    pub liquidity_pool: Pubkey,
+    pub main_liquidity_pool: Pubkey,
     #[serde_as(as = "DisplayFromStr")]
     pub pool_admin: Pubkey,
+    pub liquidity_pools: Vec<Pubkey>,
 }
 
 #[serde_as]

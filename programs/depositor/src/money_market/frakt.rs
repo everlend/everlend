@@ -33,9 +33,10 @@ impl<'a, 'b> Frakt<'a, 'b> {
         authority: &Pubkey,
         token_mint: &'a AccountInfo<'b>,
         account_info_iter: &mut Enumerate<Iter<'a, AccountInfo<'b>>>,
+        liquidity_pool_pubkey: &Pubkey,
     ) -> Result<Frakt<'a, 'b>, ProgramError> {
         let liquidity_pool =
-            AccountLoader::next_with_owner(account_info_iter, &money_market_program_id)?;
+            AccountLoader::next_with_key(account_info_iter, &liquidity_pool_pubkey)?;
 
         let liquidity_owner = {
             let (liquidity_owner_pubkey, _) =

@@ -1,7 +1,7 @@
+use crate::liquidity_mining::francium_liquidity_miner::FranciumLiquidityMiner;
 use crate::liquidity_mining::larix_liquidity_miner::LarixLiquidityMiner;
 use crate::liquidity_mining::port_liquidity_miner::PortLiquidityMiner;
 use crate::liquidity_mining::quarry_liquidity_miner::QuarryLiquidityMiner;
-use crate::liquidity_mining::francium_liquidity_miner::FranciumLiquidityMiner;
 use crate::liquidity_mining::{execute_init_mining_accounts, save_mining_accounts, LiquidityMiner};
 use crate::utils::arg;
 use crate::{Config, ToolkitCommand};
@@ -89,16 +89,30 @@ impl<'a> ToolkitCommand<'a> for InitMiningCommand {
         };
 
         let pubkeys = liquidity_miner.get_pubkeys(config, &token);
-        let mining_type =
-            liquidity_miner.get_mining_type(config, &token, mining_pubkey, sub_reward_mint, reward_mint);
+        let mining_type = liquidity_miner.get_mining_type(
+            config,
+            &token,
+            mining_pubkey,
+            sub_reward_mint,
+            reward_mint,
+        );
 
         execute_init_mining_accounts(config, &pubkeys.unwrap(), mining_type)?;
 
         let money_market = match staking_money_market {
-            StakingMoneyMarket::Larix => MoneyMarket::Larix,
-            StakingMoneyMarket::Solend => MoneyMarket::Solend,
-            StakingMoneyMarket::Francium => MoneyMarket::Francium,
-            _ => MoneyMarket::PortFinance,
+            StakingMoneyMarket::Larix => MoneyMarket::Larix {
+                money_market_program_id: Default::default(),
+            },
+            StakingMoneyMarket::Solend => MoneyMarket::Solend {
+                money_market_program_id: Default::default(),
+                lending_market: Default::default(),
+            },
+            StakingMoneyMarket::Francium => MoneyMarket::Francium {
+                money_market_program_id: Default::default(),
+            },
+            _ => MoneyMarket::PortFinance {
+                money_market_program_id: Default::default(),
+            },
         };
 
         save_mining_accounts(config, &token, money_market)?;

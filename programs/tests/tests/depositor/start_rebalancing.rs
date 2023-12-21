@@ -3,7 +3,8 @@ use everlend_depositor::state::{Rebalancing, RebalancingOperation};
 use everlend_depositor::utils::calculate_amount_to_distribute;
 use everlend_liquidity_oracle::state::{DistributionArray, TokenOracle};
 use everlend_registry::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
-use everlend_registry::state::DistributionPubkeys;
+use everlend_registry::state::MoneyMarkets;
+use everlend_utils::integrations::MoneyMarket;
 use everlend_utils::{abs_diff, percent_ratio, PDA};
 use everlend_utils::{
     find_program_address,
@@ -204,6 +205,11 @@ async fn setup(
         .await
         .unwrap();
 
+    let mut money_markets = MoneyMarkets::default();
+    money_markets[0] = integrations::MoneyMarket::PortFinance {
+        money_market_program_id: spl_token_lending::id(),
+    };
+
     let ten = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
     let mut collateral_pool_markets = ten.map(|_| mm_pool_market.keypair.pubkey().clone());
     collateral_pool_markets[0] = mm_pool_market.keypair.pubkey();
@@ -225,7 +231,7 @@ async fn setup(
         .update_registry_markets(
             &mut env.context,
             UpdateRegistryMarketsData {
-                money_markets: None,
+                money_markets: Some(money_markets),
                 collateral_pool_markets: Some(collateral_pool_markets),
             },
         )
@@ -1031,10 +1037,16 @@ async fn fail_with_invalid_liquidity_oracle() {
 #[tokio::test]
 async fn rebalancing_math_round() {
     let mut d: DistributionArray = DistributionArray::default();
-    let mut p = DistributionPubkeys::default();
-    p[0] = Keypair::new().pubkey();
-    p[1] = Keypair::new().pubkey();
-    p[2] = Keypair::new().pubkey();
+    let mut p = MoneyMarkets::default();
+    p[0] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
+    };
+    p[1] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
+    };
+    p[2] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
+    };
 
     let distr_amount: u64 = 4610400063;
     let mut oracle = TokenOracle::default();
@@ -1059,7 +1071,7 @@ async fn rebalancing_math_round() {
         oracle
             .update_liquidity_distribution(i as u64 + 1, d)
             .unwrap();
-        r.compute(&p, oracle.clone(), distr_amount, current_slot)
+        r.compute(vec![0, 1, 2], oracle.clone(), distr_amount, current_slot)
             .unwrap();
         println!("{}", r.total_distributed_liquidity().unwrap());
         assert_eq!(
@@ -1067,7 +1079,7 @@ async fn rebalancing_math_round() {
             true
         );
 
-        r.compute_with_refresh_income(&p, 0, i as u64 + 1, distr_amount)
+        r.compute_with_refresh_income(vec![0, 1, 2], 0, i as u64 + 1, distr_amount)
             .unwrap();
         println!("{}", r.total_distributed_liquidity().unwrap());
         println!("{:?}", r.steps);
@@ -1081,9 +1093,13 @@ async fn rebalancing_math_round() {
 #[tokio::test]
 async fn rebalancing_check_steps() {
     let mut d: DistributionArray = DistributionArray::default();
-    let mut p = DistributionPubkeys::default();
-    p[0] = Keypair::new().pubkey();
-    p[1] = Keypair::new().pubkey();
+    let mut p = MoneyMarkets::default();
+    p[0] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
+    };
+    p[1] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
+    };
 
     let distr_amount: u64 = 10001;
     let mut oracle = TokenOracle::default();
@@ -1136,7 +1152,7 @@ async fn rebalancing_check_steps() {
         oracle
             .update_liquidity_distribution(i as u64 + 1, d)
             .unwrap();
-        r.compute(&p, oracle.clone(), distr_amount, current_slot)
+        r.compute(vec![0, 1, 2], oracle.clone(), distr_amount, current_slot)
             .unwrap();
 
         println!(
@@ -1164,10 +1180,16 @@ async fn rebalancing_check_steps() {
 
 #[tokio::test]
 async fn rebalancing_check_steps_math() {
-    let mut p = DistributionPubkeys::default();
-    p[0] = Keypair::new().pubkey();
-    p[1] = Keypair::new().pubkey();
-    p[2] = Keypair::new().pubkey();
+    let mut p = MoneyMarkets::default();
+    p[0] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
+    };
+    p[1] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
+    };
+    p[2] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
+    };
 
     let mut d: DistributionArray = DistributionArray::default();
     d[0] = 500_000_000;
@@ -1199,8 +1221,13 @@ async fn rebalancing_check_steps_math() {
     let amount_to_distribute = 25365814993;
     let current_slot = 1;
     oracle.reserve_rates.updated_at = current_slot;
-    r.compute(&p, oracle.clone(), amount_to_distribute, current_slot)
-        .unwrap();
+    r.compute(
+        vec![0, 1, 2],
+        oracle.clone(),
+        amount_to_distribute,
+        current_slot,
+    )
+    .unwrap();
 
     println!("{:?}", r.steps);
 
@@ -1241,10 +1268,16 @@ async fn rebalancing_percent_ratio() {
 
 #[tokio::test]
 async fn collateral_leak_test() {
-    let mut p = DistributionPubkeys::default();
-    p[0] = Keypair::new().pubkey();
-    p[1] = Keypair::new().pubkey();
-    p[2] = Keypair::new().pubkey();
+    let mut p = MoneyMarkets::default();
+    p[0] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
+    };
+    p[1] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
+    };
+    p[2] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
+    };
 
     let mut d: DistributionArray = DistributionArray::default();
     d[0] = 500_000_000;
@@ -1260,8 +1293,13 @@ async fn collateral_leak_test() {
 
     oracle.liquidity_distribution.updated_at = current_slot;
     oracle.reserve_rates.updated_at = current_slot;
-    r.compute(&p, oracle.clone(), amount_to_distribute, current_slot)
-        .unwrap();
+    r.compute(
+        vec![0, 1, 2],
+        oracle.clone(),
+        amount_to_distribute,
+        current_slot,
+    )
+    .unwrap();
 
     assert_eq!(r.total_distributed_liquidity().unwrap(), 100_000_000);
 
@@ -1279,8 +1317,13 @@ async fn collateral_leak_test() {
         .update_reserve_rates(current_slot, reserve_rates)
         .unwrap();
 
-    r.compute(&p, oracle.clone(), amount_to_distribute, current_slot)
-        .unwrap();
+    r.compute(
+        vec![0, 1, 2],
+        oracle.clone(),
+        amount_to_distribute,
+        current_slot,
+    )
+    .unwrap();
 
     assert_eq!(r.total_distributed_liquidity().unwrap(), 999_999_90);
 }
@@ -1288,9 +1331,13 @@ async fn collateral_leak_test() {
 #[tokio::test]
 async fn collateral_leak_test2() {
     let mut d: DistributionArray = DistributionArray::default();
-    let mut p = DistributionPubkeys::default();
-    p[0] = Keypair::new().pubkey();
-    p[1] = Keypair::new().pubkey();
+    let mut p = MoneyMarkets::default();
+    p[0] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
+    };
+    p[1] = MoneyMarket::PortFinance {
+        money_market_program_id: Keypair::new().pubkey(),
+    };
 
     let mut oracle = TokenOracle::default();
     let mut rates = DistributionArray::default();
@@ -1355,8 +1402,13 @@ async fn collateral_leak_test2() {
         )
         .unwrap();
 
-        r.compute(&p, oracle.clone(), amount_to_distribute, current_slot)
-            .unwrap();
+        r.compute(
+            vec![0, 1, 2],
+            oracle.clone(),
+            amount_to_distribute,
+            current_slot,
+        )
+        .unwrap();
 
         println!(
             "amount_to_distribute: {} distributed_liquidity:{} \n\n",

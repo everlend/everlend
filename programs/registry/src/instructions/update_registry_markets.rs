@@ -5,14 +5,14 @@ use solana_program::{
     program_pack::Pack, pubkey::Pubkey,
 };
 
-use crate::state::{DistributionPubkeys, Registry, RegistryMarkets};
+use crate::state::{DistributionPubkeys, MoneyMarkets, Registry, RegistryMarkets};
 
 /// Instruction data
 #[derive(BorshDeserialize, BorshSerialize, Clone, PartialEq, Debug)]
 
 pub struct UpdateRegistryMarketsData {
     ///
-    pub money_markets: Option<DistributionPubkeys>,
+    pub money_markets: Option<MoneyMarkets>,
     ///
     pub collateral_pool_markets: Option<DistributionPubkeys>,
 }

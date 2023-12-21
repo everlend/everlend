@@ -111,8 +111,6 @@ impl<'a, 'b> WithdrawContext<'a, 'b> {
             assert_account_key(self.registry, &depositor.registry)?;
         }
 
-        let registry_markets = RegistryMarkets::unpack_from_slice(&self.registry.data.borrow())?;
-
         {
             // Check rebalancing
             let (rebalancing_pubkey, _) = RebalancingPDA {
@@ -181,12 +179,6 @@ impl<'a, 'b> WithdrawContext<'a, 'b> {
             return Err(EverlendError::InvalidRebalancingOperation.into());
         }
 
-        if !registry_markets.money_markets[usize::from(step.money_market_index)]
-            .eq(self.money_market_program.key)
-        {
-            return Err(EverlendError::InvalidRebalancingMoneyMarket.into());
-        }
-
         {
             // Check internal mining account
             let (internal_mining_pubkey, _) = InternalMiningPDA {
@@ -198,8 +190,15 @@ impl<'a, 'b> WithdrawContext<'a, 'b> {
             assert_account_key(self.internal_mining, &internal_mining_pubkey)?;
         }
 
+        let market = RegistryMarkets::unpack_money_markets_with_index(
+            &self.registry.data.borrow(),
+            usize::from(step.money_market_index),
+        )?;
+        let collateral_pool_markets =
+            RegistryMarkets::unpack_collateral_pool_markets(&self.registry.data.borrow())?;
+
         let (money_market, is_mining) = money_market(
-            &registry_markets,
+            market,
             program_id,
             self.money_market_program,
             account_info_iter,
@@ -211,7 +210,7 @@ impl<'a, 'b> WithdrawContext<'a, 'b> {
         )?;
 
         let collateral_stor = collateral_storage(
-            &registry_markets,
+            collateral_pool_markets,
             self.collateral_mint,
             self.depositor_authority,
             account_info_iter,

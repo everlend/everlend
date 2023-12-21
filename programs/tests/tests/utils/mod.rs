@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use everlend_registry::instructions::{UpdateRegistryData, UpdateRegistryMarketsData};
-use everlend_registry::state::DistributionPubkeys;
+use everlend_registry::state::MoneyMarkets;
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::*;
 use solana_program_test::{ProgramTest, ProgramTestContext};
@@ -36,6 +36,7 @@ pub use collateral_pool_borrow_authority::*;
 pub use collateral_pool_market::*;
 pub use collateral_pool_withdraw_authority::*;
 pub use depositor::*;
+use everlend_utils::integrations::MoneyMarket;
 pub use general_pool::*;
 pub use general_pool_borrow_authority::*;
 pub use general_pool_market::*;
@@ -160,9 +161,13 @@ pub async fn presetup() -> TestEnvironment {
     let registry = TestRegistry::new();
     registry.init(&mut context).await.unwrap();
 
-    let mut mm_program_ids = DistributionPubkeys::default();
-    mm_program_ids[0] = spl_token_lending::id();
-    mm_program_ids[1] = larix_lending::id();
+    let mut mm_program_ids = MoneyMarkets::default();
+    mm_program_ids[0] = MoneyMarket::PortFinance {
+        money_market_program_id: spl_token_lending::id(),
+    };
+    mm_program_ids[1] = MoneyMarket::PortFinance {
+        money_market_program_id: spl_token_lending::id(),
+    };
 
     registry
         .update_registry(

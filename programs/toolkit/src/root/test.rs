@@ -163,11 +163,19 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
 
         let deposit = |i: usize| {
             println!("Rebalancing: Deposit: {}", i);
-            let pubkeys = match i {
-                0 => MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
-                1 => MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
-                2 => MoneyMarketPubkeys::Solend(solend_pubkeys.clone()),
-                3 => MoneyMarketPubkeys::Tulip(tulip_pubkeys.clone()),
+            let pubkeys = match registry_markets.money_markets[i] {
+                integrations::MoneyMarket::PortFinance { .. } => {
+                    MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone())
+                }
+                integrations::MoneyMarket::Larix { .. } => {
+                    MoneyMarketPubkeys::Larix(larix_pubkeys.clone())
+                }
+                integrations::MoneyMarket::Solend { .. } => {
+                    MoneyMarketPubkeys::Solend(solend_pubkeys.clone())
+                }
+                integrations::MoneyMarket::Tulip { .. } => {
+                    MoneyMarketPubkeys::Tulip(tulip_pubkeys.clone())
+                }
                 _ => panic!("wrong pubkey idx"),
             };
 
@@ -177,8 +185,11 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
                 &depositor,
                 &sol.mint,
                 &sol.collateral_pools[i].token_mint,
-                &registry_markets.money_markets[i],
-                integrations::deposit_accounts(&registry_markets.money_markets[i], &pubkeys),
+                &registry_markets.money_markets[i].program_id(),
+                integrations::deposit_accounts(
+                    &registry_markets.money_markets[i].program_id(),
+                    &pubkeys,
+                ),
                 everlend_depositor::utils::collateral_pool_deposit_accounts(
                     &collateral_pool_markets[i],
                     &sol.collateral_pools[i].token_mint,
@@ -187,13 +198,21 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
             )
         };
 
-        let withdraw = |i| {
+        let withdraw = |i: usize| {
             println!("Rebalancing: Withdraw: {}", i);
-            let pubkeys = match i {
-                0 => MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone()),
-                1 => MoneyMarketPubkeys::Larix(larix_pubkeys.clone()),
-                2 => MoneyMarketPubkeys::Solend(solend_pubkeys.clone()),
-                3 => MoneyMarketPubkeys::Tulip(tulip_pubkeys.clone()),
+            let pubkeys = match &registry_markets.money_markets[i] {
+                integrations::MoneyMarket::PortFinance { .. } => {
+                    MoneyMarketPubkeys::SPL(port_finance_pubkeys.clone())
+                }
+                integrations::MoneyMarket::Larix { .. } => {
+                    MoneyMarketPubkeys::Larix(larix_pubkeys.clone())
+                }
+                integrations::MoneyMarket::Solend { .. } => {
+                    MoneyMarketPubkeys::Solend(solend_pubkeys.clone())
+                }
+                integrations::MoneyMarket::Tulip { .. } => {
+                    MoneyMarketPubkeys::Tulip(tulip_pubkeys.clone())
+                }
                 _ => panic!("wrong pubkey idx"),
             };
 
@@ -205,8 +224,11 @@ impl<'a> ToolkitCommand<'a> for TestCommand {
                 &sol.income_pool_token_account,
                 &sol.collateral_pools[i].token_mint,
                 &sol.mint,
-                &registry_markets.money_markets[i],
-                integrations::withdraw_accounts(&registry_markets.money_markets[i], &pubkeys),
+                &registry_markets.money_markets[i].program_id(),
+                integrations::withdraw_accounts(
+                    &registry_markets.money_markets[i].program_id(),
+                    &pubkeys,
+                ),
                 everlend_depositor::utils::collateral_pool_withdraw_accounts(
                     &collateral_pool_markets[i],
                     &sol.collateral_pools[i].token_mint,
